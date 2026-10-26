@@ -141,6 +141,7 @@ describe('html preload', () => {
         'ai:web-search',
         'ai:read-url',
         'ai:image-search',
+        'ai:tool-capabilities',
       ].sort(),
     )
   })

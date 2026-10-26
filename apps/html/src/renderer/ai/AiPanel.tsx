@@ -673,6 +673,29 @@ export function AiPanel({
   }, [panelWidth])
 
   const settingsRef = useRef<AiSettings | null>(null)
+  /** whether generate_image can run, as the main process answers (refreshed on mount and window focus) */
+  const imageGenAvailableRef = useRef(false)
+  useEffect(() => {
+    let alive = true
+    const refresh = () => {
+      // tests render the panel without a full preload bridge: a missing call must not take it down
+      Promise.resolve()
+        .then(() => window.htmlApi.aiToolCapabilities())
+        .then((capabilities) => {
+          if (alive)
+            imageGenAvailableRef.current = capabilities?.imageGeneration?.available === true
+        })
+        .catch(() => {
+          if (alive) imageGenAvailableRef.current = false
+        })
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    return () => {
+      alive = false
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
   const langRef = useRef(lang)
   langRef.current = lang
   const depsRef = useRef(deps)
@@ -889,32 +912,35 @@ export function AiPanel({
     loopRef.current = new AgentLoop<DocSnapshot>({
       transport: transportRef.current,
       skill: composeWithDrive('html+search', '', () => loopRef.current?.messages ?? [], [
-        createDocumentSkill({
-          getText: () => depsRef.current.access.getText(),
-          getVersion: () => depsRef.current.access.getVersion(),
-          getMap: () => depsRef.current.access.getMap(),
-          getLastManualVersion: () => depsRef.current.access.getLastManualVersion(),
-          getFilePath: () => depsRef.current.access.getFilePath(),
-          getSelectedSid: () =>
-            queueRunRef.current ? null : depsRef.current.access.getSelectedSid(),
-          applyOps: (ops, label) => depsRef.current.access.applyOps(ops, label),
-          replaceAll: (html, label) => depsRef.current.access.replaceAll(html, label),
-          askClarification: (questions) =>
-            new Promise((resolve) => {
-              clarifyResolverRef.current = resolve
-              setActiveClarify(questions)
-            }),
-          confirmBrief: (brief) =>
-            new Promise((resolve) => {
-              briefResolverRef.current = resolve
-              setActiveBrief(brief)
-            }),
-          writePage: (spec, signal) => runPageWriterRef.current(spec, signal),
-          planBrief: (spec, signal) => runBriefWriterRef.current(spec, signal),
-          getInstruction: () => runInstructionRef.current,
-          resolveAttachmentSrc: (ref) => resolveAttachmentSrc(ref),
-          listAttachmentNames: () => availableAttachments().map((a) => a.name),
-        }),
+        createDocumentSkill(
+          {
+            getText: () => depsRef.current.access.getText(),
+            getVersion: () => depsRef.current.access.getVersion(),
+            getMap: () => depsRef.current.access.getMap(),
+            getLastManualVersion: () => depsRef.current.access.getLastManualVersion(),
+            getFilePath: () => depsRef.current.access.getFilePath(),
+            getSelectedSid: () =>
+              queueRunRef.current ? null : depsRef.current.access.getSelectedSid(),
+            applyOps: (ops, label) => depsRef.current.access.applyOps(ops, label),
+            replaceAll: (html, label) => depsRef.current.access.replaceAll(html, label),
+            askClarification: (questions) =>
+              new Promise((resolve) => {
+                clarifyResolverRef.current = resolve
+                setActiveClarify(questions)
+              }),
+            confirmBrief: (brief) =>
+              new Promise((resolve) => {
+                briefResolverRef.current = resolve
+                setActiveBrief(brief)
+              }),
+            writePage: (spec, signal) => runPageWriterRef.current(spec, signal),
+            planBrief: (spec, signal) => runBriefWriterRef.current(spec, signal),
+            getInstruction: () => runInstructionRef.current,
+            resolveAttachmentSrc: (ref) => resolveAttachmentSrc(ref),
+            listAttachmentNames: () => availableAttachments().map((a) => a.name),
+          },
+          () => imageGenAvailableRef.current,
+        ),
         createSearchSkill(),
         createFilesSkill(availableAttachments),
         createIntentSkill(

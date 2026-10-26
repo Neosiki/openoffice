@@ -52,6 +52,10 @@ export const es = {
   aiToolWebSearchDone: 'Búsqueda de «{query}» · {count} resultados',
   aiToolReadUrl: 'Leer página web',
   aiToolReadUrlDone: 'Leído {host} · {chars} caracteres',
+  aiToolImageSearch: 'Búsqueda de imágenes',
+  aiToolImageSearchDone: 'Búsqueda de imágenes «{query}» ({count} imágenes)',
+  aiToolGenImage: 'Generar imagen',
+  aiToolGenImageDone: 'Imagen generada por IA insertada',
   aiTruncatedNote: '(La respuesta fue cortada por el límite de longitud y puede estar incompleta.)',
   aiTurnLimit:
     'Se alcanzó el límite de pasos por ejecución; envía otra instrucción para continuar.',

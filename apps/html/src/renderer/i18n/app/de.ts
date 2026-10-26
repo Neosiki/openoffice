@@ -102,6 +102,7 @@ export const de = {
   alignLeft: 'Linksbündig',
   alignCenter: 'Zentriert',
   alignRight: 'Rechtsbündig',
+  alignJustify: 'Blocksatz',
   fontSizeDec: 'Schriftgrad verkleinern',
   fontSizeInc: 'Schriftgrad vergrößern',
   typography: 'Typografie',

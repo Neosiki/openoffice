@@ -593,4 +593,7 @@ export const de = {
   appOdtLabelObject: 'Objekt (in Hancom sichtbar)',
   appOdtLabelNotice:
     'Als beschriftete Kästen gezeichnete Objekte können anders aussehen als in Hancom Office.',
+  appMergeSourceLoaded: '{name} geladen ({n} Datensätze)',
+  appMergeWritten: '{n} Dokumente geschrieben',
+  appMergeNothingToWrite: 'Es gibt nichts zu schreiben',
 } satisfies Record<keyof typeof zh, string>

@@ -193,6 +193,7 @@ const api: HtmlApi = {
   imageSearch: (query, maxResults) =>
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
   fetchImage: (url) => ipcRenderer.invoke(HTML_CHANNELS.fetchImage, url),
+  aiToolCapabilities: () => ipcRenderer.invoke(AI_CHANNELS.toolCapabilities),
   aiGenerateImage: (op) => ipcRenderer.invoke(HTML_CHANNELS.aiGenerateImage, op),
   // the generate hand-off (8.5): no handler (standalone, older shell) rejects; the panel reads that as "nothing"
   takeGenerateHandoff: () => ipcRenderer.invoke(HTML_HANDOFF_CHANNELS.take),

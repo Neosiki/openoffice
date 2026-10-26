@@ -584,4 +584,7 @@ export const pl = {
   appOdtLabelObject: 'Obiekt (widoczny w Hancom)',
   appOdtLabelNotice:
     'Obiekty narysowane jako opisane ramki mogą wyglądać inaczej niż w Hancom Office.',
+  appMergeSourceLoaded: 'Wczytano {name} ({n} rekordów)',
+  appMergeWritten: 'Zapisano dokumentów: {n}',
+  appMergeNothingToWrite: 'Nie ma czego zapisać',
 } satisfies Record<keyof typeof zh, string>

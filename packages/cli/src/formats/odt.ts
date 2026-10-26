@@ -157,6 +157,8 @@ const ODT_DISABLED_OPS: Record<string, string> = {
   edit_chart: 'charts',
   insert_text_box: 'text boxes',
   set_watermark: 'watermarks',
+  wrap_content_control: 'content controls',
+  unwrap_content_control: 'content controls',
 }
 
 /** insertField types that make captions, cross-references, citations or tables of contents. */

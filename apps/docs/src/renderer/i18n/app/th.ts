@@ -573,4 +573,7 @@ export const th = {
   appOdtLabelRevision: 'การติดตามการเปลี่ยนแปลง (แสดงใน Hancom)',
   appOdtLabelObject: 'วัตถุ (แสดงใน Hancom)',
   appOdtLabelNotice: 'วัตถุที่วาดเป็นกล่องป้ายกำกับอาจดูแตกต่างจากที่ Hancom Office แสดง',
+  appMergeSourceLoaded: 'โหลด {name} แล้ว ({n} ระเบียน)',
+  appMergeWritten: 'เขียนเอกสารแล้ว {n} ฉบับ',
+  appMergeNothingToWrite: 'ไม่มีเอกสารให้เขียน',
 } satisfies Record<keyof typeof zh, string>
