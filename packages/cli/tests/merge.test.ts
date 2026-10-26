@@ -505,6 +505,54 @@ describe('genoffice merge', () => {
   })
 
   it.skipIf(!sidecar)(
+    'reports a placeholder inside an xlsx formula instead of leaving it silently',
+    async () => {
+      const dir = tempDir()
+      const table = join(dir, 'formula.json')
+      writeFileSync(
+        table,
+        JSON.stringify([
+          ['Customer', '{{name}}'],
+          ['Greeting', '="Dear {{name}}"'],
+          ['Total', '=LEN(B1)'],
+        ]),
+      )
+      const template = join(dir, 'formula.xlsx')
+      expect(
+        (await run(['create', '--type', 'xlsx', '--from', table, '--out', template])).code,
+      ).toBe(0)
+      const out = join(dir, 'formula-out.xlsx')
+      const data = dataFile(dir, DATA)
+      const r = await run(['merge', template, '--data', data, '--out', out, '--json'])
+      expect(r.code).toBe(0)
+      // the plain cell is filled; the formula is never rewritten, so its placeholder is reported
+      expect(r.json().summary).toBe('1 placeholders filled, 1 unresolved')
+      expect(r.json().detail.unresolved_placeholders).toEqual([
+        {
+          placeholder: '{{name}}',
+          key: 'name',
+          reason: 'formula_cell',
+          location: { sheet: 'formula', cell: 'B2' },
+        },
+      ])
+      expect(r.json().warnings[0].suggestion).toMatch(/plain text cell/)
+      const strict = await run([
+        'merge',
+        template,
+        '--data',
+        data,
+        '--out',
+        out,
+        '--force',
+        '--strict',
+        '--json',
+      ])
+      expect(strict.code).toBe(1)
+      expect(strict.json().error).toBe('unresolved_placeholder')
+    },
+  )
+
+  it.skipIf(!sidecar)(
     'fills an xlsx template whose used range exceeds the DSL expansion cap',
     async () => {
       const dir = tempDir()
