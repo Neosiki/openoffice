@@ -2593,6 +2593,8 @@ export const agentPlugin = {
       } catch {
         return null
       }
+      // no document yet (or a host that cannot read one): nothing to compare
+      if (!Array.isArray(entries)) return null
       const before = memoKnown
       memoKnown = entries.map(memoSummaryOf)
       if (notify && before && before.length > 0) {
