@@ -239,6 +239,13 @@ async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Pr
   try {
     const exported = documentHtml(doc)
     const markdown = await htmlToMarkdown(exported.html)
+    if (exported.nestedTablesAsText > 0) {
+      ctx.warn({
+        code: 'nested_tables_flattened',
+        message: `${exported.nestedTablesAsText} nested table(s) were kept as cell text because Markdown cannot nest tables`,
+        suggestion: 'keep the DOCX when nested table layout matters',
+      })
+    }
     if (exported.skipped.images > 0) {
       ctx.warn({
         code: 'images_dropped',
@@ -252,6 +259,9 @@ async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Pr
         blocks: doc.editor.state.doc.childCount,
         skipped: exported.skipped,
         formulas_as_text: exported.formulasAsText,
+        ...(exported.nestedTablesAsText > 0
+          ? { nested_tables_as_text: exported.nestedTablesAsText }
+          : {}),
       },
     }
   } finally {

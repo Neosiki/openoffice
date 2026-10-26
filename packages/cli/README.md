@@ -45,7 +45,7 @@ ieumoffice create --type docx --from report.md --out report.docx      # or --fro
 ieumoffice convert notes.md --to docx|html
 ieumoffice convert report.docx --to html               # the Word editor's standalone-HTML export
 ieumoffice convert page.html --to docx                 # html2docx, same as the HTML app's Export as Word
-ieumoffice convert report.docx --to md                 # GFM via the markdown editor's serializer
+ieumoffice convert report.docx --to md                 # GFM via the markdown editor's serializer; nested tables become cell text with a nested_tables_flattened warning
 ieumoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as displayed, UTF-8 BOM, CRLF
 ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge docx (pdf/html: a temporary docx the app exports, always deleted)
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
