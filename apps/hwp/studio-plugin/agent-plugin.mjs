@@ -1759,13 +1759,25 @@ function coveredCells(doc, table) {
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 /**
+ * The fields a form asks to be filled in: click-here fields and named table cells, in
+ * document order. The engine lists every field, also a formula (a table's =SUM total) and
+ * a hyperlink, which are not answers: filling one would overwrite the computed value or
+ * the link text. listFields numbers these, and fillField and readTable use the numbers.
+ */
+function formFieldsOf(doc) {
+  return parse(doc.getFieldList()).filter(
+    (field) => field.cellField === true || field.fieldType === 'clickhere',
+  )
+}
+
+/**
  * The click-here fields that sit directly in a table cell, by table and cell. A cell that
  * holds one is filled through the field: text typed beside an empty field would leave its
  * guide text standing next to the answer.
  */
 function fieldsByCell(doc) {
   const byCell = new Map()
-  parse(doc.getFieldList()).forEach((field, index) => {
+  formFieldsOf(doc).forEach((field, index) => {
     if (field.cellField === true) return
     const where = field.location
     const path = where && Array.isArray(where.path) ? where.path : []
@@ -4321,7 +4333,7 @@ export const agentPlugin = {
        */
       listFields: guarded(() =>
         host.read((doc) =>
-          parse(doc.getFieldList()).map((field, index) => ({
+          formFieldsOf(doc).map((field, index) => ({
             field: index + 1,
             name: field.name ?? '',
             guide: field.guide ?? '',
@@ -4335,12 +4347,12 @@ export const agentPlugin = {
       /** Set the value of the field with this number (1-based, as listed by listFields). */
       fillField: guarded((number, value) => {
         checkReplacement(value)
-        const count = host.read((doc) => parse(doc.getFieldList()).length)
+        const count = host.read((doc) => formFieldsOf(doc).length)
         if (!Number.isInteger(number) || number < 1 || number > count) {
           return { ok: false, reason: 'no_such_field', count }
         }
         return change('fill-field', (doc) => {
-          const field = parse(doc.getFieldList())[number - 1]
+          const field = formFieldsOf(doc)[number - 1]
           if (!field) throw fail('CHANGED', 'the document changed mid-call')
           expectOk(doc.setFieldValue(field.fieldId, value), 'fill the field')
           plainAnswerFields(doc, new Set([field.fieldId]))
