@@ -91,6 +91,41 @@ function withTextBox(doc: HwpDocument): string {
   return path
 }
 
+/** A one-cell table in paragraph 1 with a memo on its whole text `cell text`. */
+function tableWithCellMemo() {
+  const doc = blank(['title', ''])
+  doc.pasteHtml(0, 1, 0, '<table><tr><td>cell text</td></tr></table>')
+  const path = JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }])
+  const made = JSON.parse(
+    doc.insertMemoByPath(
+      0,
+      1,
+      path,
+      0,
+      4,
+      JSON.stringify({ author: 'cell author', text: 'cell memo' }),
+    ),
+  ) as { ok: true; id: number; index: number }
+  return { doc, made, path }
+}
+
+/** A text box holding `box text`, with a memo on its whole text. */
+function textBoxWithMemo() {
+  const doc = blank(['anchor'])
+  const path = withTextBox(doc)
+  const made = JSON.parse(
+    doc.insertMemoByPath(
+      0,
+      0,
+      path,
+      0,
+      3,
+      JSON.stringify({ author: 'box author', text: 'box memo' }),
+    ),
+  ) as { ok: true; id: number; index: number }
+  return { doc, made, path }
+}
+
 function openEditor(doc: HwpDocument) {
   document.body.innerHTML = '<div id="scroll-container"><div id="scroll-content"></div></div>'
   let current = doc
@@ -310,6 +345,166 @@ describe('an AI edit that would take a memo with it', () => {
     if (!made.ok) return
     expect(editor.plugin.setMemo(made.id, 'changed')).toEqual({ ok: true })
     expect(editor.plugin.removeMemo(made.id)).toEqual({ ok: true })
+  })
+})
+
+describe('replacing text in a memo’s cell', () => {
+  it('keeps a cell memo when its whole anchor is replaced with text of the same length', () => {
+    const { doc, made, path } = tableWithCellMemo()
+    const editor = openEditor(doc)
+
+    expect(editor.plugin.replaceText('cell', 'CELL')).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+      id: made.id,
+      author: 'cell author',
+      text: 'cell memo',
+      place: 'tableCell',
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+    expect(editor.doc().getTextInCellByPath(0, 1, path, 0, 20)).toBe('CELL text')
+  })
+
+  it('keeps a cell memo when its anchor is replaced with shorter or longer text', () => {
+    for (const replacement of ['C', 'a much longer replacement', 'abcdefg😀tail']) {
+      const { doc, made, path } = tableWithCellMemo()
+      const editor = openEditor(doc)
+
+      expect(editor.plugin.replaceText('cell', replacement)).toMatchObject({ ok: true })
+      expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+        id: made.id,
+        author: 'cell author',
+        text: 'cell memo',
+        startCharIdx: 0,
+        endCharIdx: Array.from(replacement).length,
+      })
+      expect(editor.doc().getTextInCellByPath(0, 1, path, 0, 60)).toBe(`${replacement} text`)
+    }
+  })
+
+  it('keeps a text-box memo when its whole anchor is replaced', () => {
+    const { doc, made, path } = textBoxWithMemo()
+    const editor = openEditor(doc)
+
+    expect(editor.plugin.replaceText('box', 'BOXX')).toMatchObject({ ok: true })
+    expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+      id: made.id,
+      author: 'box author',
+      text: 'box memo',
+      place: 'textBox',
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+    expect(editor.doc().getTextInCellByPath(0, 0, path, 0, 20)).toBe('BOXX text')
+  })
+
+  it('keeps a cell’s click-here field when its text is replaced', () => {
+    const doc = blank(['title', ''])
+    doc.pasteHtml(0, 1, 0, '<table><tr><td>cell text</td></tr></table>')
+    const path = JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }])
+    doc.insertClickHereFieldByPath(0, 1, path, 0, 'guide', '', 'field', true)
+    const editor = openEditor(doc)
+
+    const before = editor.plugin.listFields()
+    expect(before).toHaveLength(1)
+    expect(editor.plugin.replaceText('cell', 'CELL')).toMatchObject({ ok: true })
+    const after = editor.plugin.listFields()
+    expect(after).toHaveLength(1)
+    expect(after[0]!.field).toBe(before[0]!.field)
+  })
+
+  it('keeps a cell memo through replaceAll', () => {
+    const { doc, made } = tableWithCellMemo()
+    const editor = openEditor(doc)
+
+    expect(editor.plugin.replaceAllText('cell', 'CELL')).toMatchObject({ ok: true, count: 1 })
+    expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+      id: made.id,
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+  })
+
+  it('keeps a cell memo and a text-box memo through replaceSelection', () => {
+    const cell = tableWithCellMemo()
+    const first = openEditor(cell.doc)
+    const cellMemo = first.plugin.listMemos().memos[0]!
+    expect(
+      first.plugin.replaceSelection([{ ...cellMemo.anchor!, text: 'cell' }], ['CELL']),
+    ).toMatchObject({ ok: true })
+    expect(first.plugin.listMemos().memos[0]).toMatchObject({
+      id: cell.made.id,
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+
+    const box = textBoxWithMemo()
+    const second = openEditor(box.doc)
+    const boxMemo = second.plugin.listMemos().memos[0]!
+    expect(
+      second.plugin.replaceSelection([{ ...boxMemo.anchor!, text: 'box' }], ['BOXX']),
+    ).toMatchObject({ ok: true })
+    expect(second.plugin.listMemos().memos[0]).toMatchObject({
+      id: box.made.id,
+      place: 'textBox',
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+  })
+
+  it('still asks before an empty replacement in a cell, and removes it with the allowance', () => {
+    const { doc } = tableWithCellMemo()
+    const editor = openEditor(doc)
+
+    const result = editor.plugin.replaceText('cell', '')
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'memo_removal_requires_approval',
+      count: 1,
+    })
+    expect(editor.plugin.listMemos().count).toBe(1)
+
+    expect(editor.plugin.replaceText('cell', '', null, { allowMemoRemoval: true })).toMatchObject({
+      ok: true,
+    })
+    expect(editor.plugin.listMemos().count).toBe(0)
+  })
+
+  it('still asks before an empty replacement in a text box', () => {
+    const { doc } = textBoxWithMemo()
+    const editor = openEditor(doc)
+
+    expect(editor.plugin.replaceText('box', '')).toMatchObject({
+      ok: false,
+      reason: 'memo_removal_requires_approval',
+      count: 1,
+    })
+    expect(editor.plugin.listMemos().count).toBe(1)
+
+    expect(editor.plugin.replaceText('box', '', null, { allowMemoRemoval: true })).toMatchObject({
+      ok: true,
+    })
+    expect(editor.plugin.listMemos().count).toBe(0)
+  })
+
+  it('does not ask when text inside a cell or text-box memo is replaced', () => {
+    const cell = tableWithCellMemo()
+    const first = openEditor(cell.doc)
+    expect(first.plugin.replaceText('el', 'ip')).toMatchObject({ ok: true })
+    expect(first.plugin.listMemos().memos[0]).toMatchObject({
+      id: cell.made.id,
+      startCharIdx: 0,
+      endCharIdx: 4,
+    })
+
+    const box = textBoxWithMemo()
+    const second = openEditor(box.doc)
+    expect(second.plugin.replaceText('bo', 'BO')).toMatchObject({ ok: true })
+    expect(second.plugin.listMemos().memos[0]).toMatchObject({
+      id: box.made.id,
+      startCharIdx: 0,
+      endCharIdx: 3,
+    })
   })
 })
 

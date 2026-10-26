@@ -891,25 +891,78 @@ function expectOk(json, what) {
   if (result && result.ok === false) throw fail('ENGINE_REFUSED', `the editor refused to ${what}`)
 }
 
+/** How many UTF-16 units the engine's one-call cell replace takes at a time. */
+const MAX_CELL_REPLACE_UNITS = 8
+
+/** The first part of a cell replacement the engine takes at once, never cutting a surrogate pair. */
+function cellReplaceHead(text) {
+  let end = Math.min(MAX_CELL_REPLACE_UNITS, text.length)
+  if (end > 0 && end < text.length) {
+    const last = text.charCodeAt(end - 1)
+    const next = text.charCodeAt(end)
+    if (last >= 0xd800 && last <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) end -= 1
+  }
+  return end
+}
+
 function replaceHit(doc, hit, replacement) {
   const path = cellPathOf(hit)
   if (!path) {
     expectOk(doc.replaceText(hit.sec, hit.para, hit.charOffset, hit.length, replacement), 'replace')
     return
   }
-  // the engine's one-call cell replace only takes very short text (it serves typing), so a
-  // cell is rewritten as delete + insert; inside one transaction that is still one undo step
   const json = JSON.stringify(path)
+  if (replacement.length === 0) {
+    // an empty replacement is a deletion: a memo whose whole anchor goes with it is the
+    // engine's removal, which the memo guard asks the user about
+    expectOk(
+      doc.deleteTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, hit.length),
+      'delete',
+    )
+    return
+  }
+  const last = path[path.length - 1]
+  if (path.length === 1 && typeof doc.replaceTextInCellDeferredPagination === 'function') {
+    // one engine call keeps a memo on the replaced text. It takes up to eight units, so a
+    // longer replacement is the head in that call and the rest typed right after it.
+    const head = cellReplaceHead(replacement)
+    expectOk(
+      doc.replaceTextInCellDeferredPagination(
+        hit.sec,
+        hit.para,
+        last.controlIndex,
+        last.cellIndex,
+        last.cellParaIndex,
+        hit.charOffset,
+        hit.length,
+        replacement.slice(0, head),
+      ),
+      'replace',
+    )
+    if (head < replacement.length) {
+      expectOk(
+        doc.insertTextInCellByPath(
+          hit.sec,
+          hit.para,
+          json,
+          hit.charOffset + head,
+          replacement.slice(head),
+        ),
+        'insert',
+      )
+    }
+    return
+  }
+  // a table inside a table cell has no path-taking one-call replace; an engine without it
+  // (an older build) is written as delete + insert too
   expectOk(
     doc.deleteTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, hit.length),
     'delete',
   )
-  if (replacement.length > 0) {
-    expectOk(
-      doc.insertTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, replacement),
-      'insert',
-    )
-  }
+  expectOk(
+    doc.insertTextInCellByPath(hit.sec, hit.para, json, hit.charOffset, replacement),
+    'insert',
+  )
 }
 
 /**
