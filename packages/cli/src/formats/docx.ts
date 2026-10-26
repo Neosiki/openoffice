@@ -505,7 +505,7 @@ export async function applyDocOps(
   // a received ODT: protected cells and locked object stand-ins must come out of every op unchanged
   const guard = doc.odt ? new OdtEditGuard(doc.odt.bridge, doc.editor.state.doc) : null
   for (const [index, op] of ops.entries()) {
-    const name = typeof op.op === 'string' ? op.op : ''
+    const name = typeof op?.op === 'string' ? op.op : ''
     // a rejected op left the document as it was: the executor applies each call whole or not at all
     const rejected = (output: string, reason?: OpFailure['reason']): boolean => {
       const failure = { ...classifyOpError(index, name, output), ...(reason ? { reason } : {}) }
@@ -519,6 +519,13 @@ export async function applyDocOps(
       }
       failures.push(failure)
       return true
+    }
+    if (!op || typeof op !== 'object' || Array.isArray(op)) {
+      rejected('expected an op object', 'invalid_argument')
+      if (mode === 'stop_on_error') {
+        return { results, failures, skipped: ops.length - index - 1 }
+      }
+      continue
     }
     let failed = false
     const odtOff = doc.odt ? odtDisabledFeature(op) : null
