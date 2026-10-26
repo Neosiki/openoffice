@@ -7,6 +7,7 @@ import {
 } from '@genoffice/ai-provider'
 import type { AiSettings, AiSubscriptionStatus } from '@genoffice/ai-provider'
 import {
+  advancedPaneUseChoice,
   advancedProviderIds,
   aiSelectionChoices,
   aiSelectionValue,
@@ -160,6 +161,46 @@ describe('picking a choice', () => {
     expect(pick('openai').provider).toBe('openai')
     expect(pick('auto').provider).toBe('auto')
     expect(pick('openai').providers).toEqual(settings.providers)
+  })
+})
+
+describe('"use this AI" in the Advanced key pane', () => {
+  it('is offered for a filled-in key provider that is not in use, and picking it selects only that', () => {
+    const settings = withOpenAiKey(settingsWith({ provider: 'auto' }))
+    const choice = advancedPaneUseChoice(settings, 'openai')
+    expect(choice).toMatchObject({ value: 'openai', kind: 'key' })
+    const next = withAiSelection(settings, choice!)
+    expect(next.provider).toBe('openai')
+    expect(next.providers).toEqual(settings.providers)
+  })
+
+  it('is not offered before the key and model are both there, or once the provider is in use', () => {
+    expect(advancedPaneUseChoice(settingsWith(), 'openai')).toBeUndefined()
+    const noModel = settingsWith({
+      providers: { ...defaultAiSettings().providers, openai: { apiKey: 'sk-test', model: '' } },
+    })
+    expect(advancedPaneUseChoice(noModel, 'openai')).toBeUndefined()
+    const inUse = withOpenAiKey(settingsWith({ provider: 'openai' }))
+    expect(advancedPaneUseChoice(inUse, 'openai')).toBeUndefined()
+  })
+
+  it('never offers a subscription', () => {
+    expect(advancedPaneUseChoice(settingsWith(), 'codex')).toBeUndefined()
+  })
+
+  it('matches a self-hosted endpoint by its id', () => {
+    const settings = settingsWith({
+      provider: 'custom',
+      customEndpoints: [
+        { id: 'ep-a', name: 'Local', baseUrl: 'http://127.0.0.1:1/v1', apiKey: '', model: 'a' },
+        { id: 'ep-b', name: 'Lab', baseUrl: 'http://127.0.0.1:2/v1', apiKey: '', model: 'b' },
+      ],
+      customEndpoint: 'ep-a',
+    })
+    expect(advancedPaneUseChoice(settings, 'custom', 'ep-a')).toBeUndefined()
+    const other = advancedPaneUseChoice(settings, 'custom', 'ep-b')
+    expect(other).toMatchObject({ value: 'custom::ep-b' })
+    expect(withAiSelection(settings, other!).customEndpoint).toBe('ep-b')
   })
 })
 
@@ -344,6 +385,16 @@ describe('the Advanced key pane', () => {
     expect(initialAdvancedProvider({ provider: 'retired-provider' as never }, AI_PROVIDERS)).toBe(
       first,
     )
+  })
+
+  it('opens on a filled-in key provider while none is selected, so its saved key is in view', () => {
+    const withKey = withOpenAiKey(settingsWith({ provider: 'auto' }))
+    expect(initialAdvancedProvider(withKey, AI_PROVIDERS)).toBe('openai')
+    expect(initialAdvancedProvider({ ...withKey, provider: 'claude-code' }, AI_PROVIDERS)).toBe(
+      'openai',
+    )
+    // the stored selection still comes first
+    expect(initialAdvancedProvider({ ...withKey, provider: 'codex' }, AI_PROVIDERS)).toBe('codex')
   })
 })
 

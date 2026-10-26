@@ -41,11 +41,11 @@ interface Hit {
   key: string
   location: Record<string, string | number | boolean>
   /** set while scanning when no fill path reaches the spot */
-  reason?: 'unreachable_nested'
+  reason?: 'unreachable_nested' | 'formula_cell'
 }
 
 interface Unresolved extends Omit<Hit, 'reason'> {
-  reason: 'no_key' | 'split_placeholder' | 'unreachable_nested'
+  reason: 'no_key' | 'split_placeholder' | 'unreachable_nested' | 'formula_cell'
 }
 
 interface Merged {
@@ -126,11 +126,12 @@ export const mergeCommand: CommandDef = {
     if (report.unresolved.length) {
       const shown = report.unresolved.slice(0, 5).map((u) => `${u.placeholder} (${where(u)})`)
       const nested = report.unresolved.some((u) => u.reason === 'unreachable_nested')
+      const inFormula = report.unresolved.some((u) => u.reason === 'formula_cell')
       result.warnings = [
         {
           code: 'unresolved_placeholder',
           message: `${report.unresolved.length} placeholders were left in place: ${shown.join(', ')}${report.unresolved.length > shown.length ? ', …' : ''}`,
-          suggestion: `add the missing keys to --data${nested ? ', ungroup the nested groups' : ''}, or pass --strict to fail instead`,
+          suggestion: `add the missing keys to --data${nested ? ', ungroup the nested groups' : ''}${inFormula ? ', move a placeholder out of a formula into a plain text cell' : ''}, or pass --strict to fail instead`,
         },
       ]
     }
@@ -464,7 +465,14 @@ async function mergeXlsx(
     read.rows.forEach((row, r) =>
       row.forEach((value, c) => {
         const address = `${columnLabel(c)}${r + 1}`
-        if (typeof value !== 'string' || read.formulas[address]) return
+        const formula = read.formulas[address]
+        if (formula) {
+          // a formula is never rewritten, so a placeholder inside its text stays; say so
+          const location = { sheet: sheet.name, cell: address }
+          for (const h of hits(formula)) found.push({ ...h, location, reason: 'formula_cell' })
+          return
+        }
+        if (typeof value !== 'string') return
         const inCell = hits(value)
         if (!inCell.length) return
         const location = { sheet: sheet.name, cell: address }
