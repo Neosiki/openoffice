@@ -50,6 +50,8 @@ export interface Pdfium {
   _FPDFText_GetTextObject(textPage: number, index: number): number
   _FPDFText_GetLooseCharBox(textPage: number, index: number, rect: number): number
   _FPDFText_GetCharOrigin(textPage: number, index: number, x: number, y: number): number
+  _FPDFText_GetFontSize(textPage: number, index: number): number
+  _FPDFText_IsGenerated(textPage: number, index: number): number
   _FPDFText_LoadFont(doc: number, data: number, size: number, fontType: number, cid: number): number
   _FPDFText_SetText(textObj: number, text: number): number
   _FPDFPage_CountObjects(page: number): number
