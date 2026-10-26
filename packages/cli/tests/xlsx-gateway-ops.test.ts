@@ -382,6 +382,17 @@ describe('genoffice sheet apply --ops: gateway-written features', () => {
       `name="${longName.slice(0, 27)} (2)"`,
     )
 
+    // the default copy name is cut at 31 units; an emoji straddling the cut is dropped whole
+    const emojiName = `${'가'.repeat(26)}😀`
+    expect(emojiName).toHaveLength(28)
+    expect(
+      (await apply(out, [{ op: 'rename_sheet', sheet: longName, name: emojiName }])).code,
+    ).toBe(0)
+    expect((await apply(out, [{ op: 'duplicate_sheet', sheet: emojiName }])).code).toBe(0)
+    const copiedBook = (await parts(out)).get('xl/workbook.xml')!
+    expect(copiedBook).toContain(`name="${'가'.repeat(26)} (2)"`)
+    expect(copiedBook).not.toContain('\uFFFD')
+
     // the copy is cloned from the file, so it cannot share a batch with cell edits
     const mixed = await apply(out, [
       { op: 'set_cell', sheet: 'sales', address: 'A9', value: 'x' },
