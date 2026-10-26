@@ -366,7 +366,14 @@ describe('replacing text in a memo’s cell', () => {
   })
 
   it('keeps a cell memo when its anchor is replaced with shorter or longer text', () => {
-    for (const replacement of ['C', 'a much longer replacement', 'abcdefg😀tail']) {
+    for (const replacement of [
+      'C',
+      'a much longer replacement',
+      'abcdefg😀tail',
+      'a😀bcdefgh',
+      'abcdefgh😀tail',
+      '😀😀😀😀😀',
+    ]) {
       const { doc, made, path } = tableWithCellMemo()
       const editor = openEditor(doc)
 
@@ -398,6 +405,24 @@ describe('replacing text in a memo’s cell', () => {
     expect(editor.doc().getTextInCellByPath(0, 0, path, 0, 20)).toBe('BOXX text')
   })
 
+  it('keeps a text-box memo with non-BMP replacement text', () => {
+    for (const replacement of ['a😀bcdefgh', '😀😀😀😀😀']) {
+      const { doc, made, path } = textBoxWithMemo()
+      const editor = openEditor(doc)
+
+      expect(editor.plugin.replaceText('box', replacement)).toMatchObject({ ok: true })
+      expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+        id: made.id,
+        author: 'box author',
+        text: 'box memo',
+        place: 'textBox',
+        startCharIdx: 0,
+        endCharIdx: Array.from(replacement).length,
+      })
+      expect(editor.doc().getTextInCellByPath(0, 0, path, 0, 60)).toBe(`${replacement} text`)
+    }
+  })
+
   it('keeps a cell’s click-here field when its text is replaced', () => {
     const doc = blank(['title', ''])
     doc.pasteHtml(0, 1, 0, '<table><tr><td>cell text</td></tr></table>')
@@ -414,42 +439,52 @@ describe('replacing text in a memo’s cell', () => {
   })
 
   it('keeps a cell memo through replaceAll', () => {
-    const { doc, made } = tableWithCellMemo()
-    const editor = openEditor(doc)
+    for (const replacement of ['CELL', 'a😀bcdefgh']) {
+      const { doc, made, path } = tableWithCellMemo()
+      const editor = openEditor(doc)
 
-    expect(editor.plugin.replaceAllText('cell', 'CELL')).toMatchObject({ ok: true, count: 1 })
-    expect(editor.plugin.listMemos().memos[0]).toMatchObject({
-      id: made.id,
-      startCharIdx: 0,
-      endCharIdx: 4,
-    })
+      expect(editor.plugin.replaceAllText('cell', replacement)).toMatchObject({
+        ok: true,
+        count: 1,
+      })
+      expect(editor.plugin.listMemos().memos[0]).toMatchObject({
+        id: made.id,
+        startCharIdx: 0,
+        endCharIdx: Array.from(replacement).length,
+      })
+      expect(editor.doc().getTextInCellByPath(0, 1, path, 0, 60)).toBe(`${replacement} text`)
+    }
   })
 
   it('keeps a cell memo and a text-box memo through replaceSelection', () => {
-    const cell = tableWithCellMemo()
-    const first = openEditor(cell.doc)
-    const cellMemo = first.plugin.listMemos().memos[0]!
-    expect(
-      first.plugin.replaceSelection([{ ...cellMemo.anchor!, text: 'cell' }], ['CELL']),
-    ).toMatchObject({ ok: true })
-    expect(first.plugin.listMemos().memos[0]).toMatchObject({
-      id: cell.made.id,
-      startCharIdx: 0,
-      endCharIdx: 4,
-    })
+    for (const replacement of ['CELL', 'a😀bcdefgh']) {
+      const cell = tableWithCellMemo()
+      const first = openEditor(cell.doc)
+      const cellMemo = first.plugin.listMemos().memos[0]!
+      expect(
+        first.plugin.replaceSelection([{ ...cellMemo.anchor!, text: 'cell' }], [replacement]),
+      ).toMatchObject({ ok: true })
+      expect(first.plugin.listMemos().memos[0]).toMatchObject({
+        id: cell.made.id,
+        startCharIdx: 0,
+        endCharIdx: Array.from(replacement).length,
+      })
+      expect(first.doc().getTextInCellByPath(0, 1, cell.path, 0, 60)).toBe(`${replacement} text`)
 
-    const box = textBoxWithMemo()
-    const second = openEditor(box.doc)
-    const boxMemo = second.plugin.listMemos().memos[0]!
-    expect(
-      second.plugin.replaceSelection([{ ...boxMemo.anchor!, text: 'box' }], ['BOXX']),
-    ).toMatchObject({ ok: true })
-    expect(second.plugin.listMemos().memos[0]).toMatchObject({
-      id: box.made.id,
-      place: 'textBox',
-      startCharIdx: 0,
-      endCharIdx: 4,
-    })
+      const box = textBoxWithMemo()
+      const second = openEditor(box.doc)
+      const boxMemo = second.plugin.listMemos().memos[0]!
+      expect(
+        second.plugin.replaceSelection([{ ...boxMemo.anchor!, text: 'box' }], [replacement]),
+      ).toMatchObject({ ok: true })
+      expect(second.plugin.listMemos().memos[0]).toMatchObject({
+        id: box.made.id,
+        place: 'textBox',
+        startCharIdx: 0,
+        endCharIdx: Array.from(replacement).length,
+      })
+      expect(second.doc().getTextInCellByPath(0, 0, box.path, 0, 60)).toBe(`${replacement} text`)
+    }
   })
 
   it('still asks before an empty replacement in a cell, and removes it with the allowance', () => {

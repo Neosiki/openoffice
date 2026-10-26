@@ -891,18 +891,12 @@ function expectOk(json, what) {
   if (result && result.ok === false) throw fail('ENGINE_REFUSED', `the editor refused to ${what}`)
 }
 
-/** How many UTF-16 units the engine's one-call cell replace takes at a time. */
-const MAX_CELL_REPLACE_UNITS = 8
+/** How many engine characters (code points) the one-call cell replace takes at a time. */
+const MAX_CELL_REPLACE_CHARS = 8
 
-/** The first part of a cell replacement the engine takes at once, never cutting a surrogate pair. */
+/** The first part of a cell replacement the engine takes at once, whole code points only. */
 function cellReplaceHead(text) {
-  let end = Math.min(MAX_CELL_REPLACE_UNITS, text.length)
-  if (end > 0 && end < text.length) {
-    const last = text.charCodeAt(end - 1)
-    const next = text.charCodeAt(end)
-    if (last >= 0xd800 && last <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) end -= 1
-  }
-  return end
+  return Array.from(text).slice(0, MAX_CELL_REPLACE_CHARS).join('')
 }
 
 function replaceHit(doc, hit, replacement) {
@@ -923,9 +917,12 @@ function replaceHit(doc, hit, replacement) {
   }
   const last = path[path.length - 1]
   if (path.length === 1 && typeof doc.replaceTextInCellDeferredPagination === 'function') {
-    // one engine call keeps a memo on the replaced text. It takes up to eight units, so a
-    // longer replacement is the head in that call and the rest typed right after it.
+    // one engine call keeps a memo on the replaced text. It takes up to eight characters
+    // (code points), so a longer replacement is the head in that call and the rest typed
+    // right after it; the engine counts its offsets in characters, not UTF-16 units.
     const head = cellReplaceHead(replacement)
+    const headLength = Array.from(head).length
+    const total = Array.from(replacement).length
     expectOk(
       doc.replaceTextInCellDeferredPagination(
         hit.sec,
@@ -935,18 +932,18 @@ function replaceHit(doc, hit, replacement) {
         last.cellParaIndex,
         hit.charOffset,
         hit.length,
-        replacement.slice(0, head),
+        head,
       ),
       'replace',
     )
-    if (head < replacement.length) {
+    if (headLength < total) {
       expectOk(
         doc.insertTextInCellByPath(
           hit.sec,
           hit.para,
           json,
-          hit.charOffset + head,
-          replacement.slice(head),
+          hit.charOffset + headLength,
+          replacement.slice(head.length),
         ),
         'insert',
       )
