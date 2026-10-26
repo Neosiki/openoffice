@@ -1195,8 +1195,13 @@ export async function writeWorkbook(
     formulas: formulaCells.length,
     ...(notes.length ? { notes } : {}),
   }
-  if (formulaCells.length === 0) return { ...base, cachedValues: true }
+  // An edit to a cell leaves the cached <v> of every formula that reads it
+  // stale, so a workbook with formulas is refreshed even when no edit wrote one.
+  if (formulaCells.length === 0 && !(await hasFormulaParts(first.buffer))) {
+    return { ...base, cachedValues: true }
+  }
   if (!xlsxSidecarPath()) {
+    if (formulaCells.length === 0) return { ...base, cachedValues: true }
     return {
       ...base,
       cachedValues: false,
@@ -1204,14 +1209,22 @@ export async function writeWorkbook(
     }
   }
   try {
-    const { values, uncached, unparsed } = await evaluateFormulas(outputPath, formulaCells, renames)
+    const { values, uncached, unparsed, leftStale } = await evaluateFormulas(
+      outputPath,
+      formulaCells,
+      renames,
+    )
+    const stale = leftStale ? { notes: [...notes, STALE_NOTE] } : {}
     if (values.length) {
       const second = await save(values)
       await atomicWriteFile(outputPath, second.buffer)
-      if (uncached.length === 0 && unparsed.length === 0) return { ...base, cachedValues: true }
+      if (uncached.length === 0 && unparsed.length === 0) {
+        return { ...base, ...stale, cachedValues: true }
+      }
       const skipped = uncached.length + unparsed.length
       return {
         ...base,
+        ...stale,
         cachedValues: skipped < formulaCells.length,
         ...(uncached.length ? { uncached } : {}),
         ...(unparsed.length ? { unparsed } : {}),
@@ -1227,8 +1240,10 @@ export async function writeWorkbook(
           : {}),
       }
     }
+    if (formulaCells.length === 0) return { ...base, ...stale, cachedValues: true }
     return {
       ...base,
+      ...stale,
       cachedValues: false,
       warning:
         'the engine returned no results for the written formulas; the file recalculates on open',
@@ -1241,6 +1256,22 @@ export async function writeWorkbook(
       warning: `formula results not cached (${message}); the file is complete and recalculates on open`,
     }
   }
+}
+
+const STALE_NOTE = {
+  code: 'dependent_formulas_not_refreshed',
+  message:
+    'the workbook has more formulas than a write refreshes cached results for, so formulas that read the edited cells may show an old result until the file is opened in Excel',
+}
+
+/** Whether any worksheet of the package holds a formula. */
+async function hasFormulaParts(buffer: Buffer): Promise<boolean> {
+  const zip = await JSZip.loadAsync(buffer)
+  for (const name of Object.keys(zip.files)) {
+    if (!/^xl\/worksheets\/[^/]+\.xml$/.test(name)) continue
+    if (/<f[\s>/]/.test(await zip.file(name)!.async('string'))) return true
+  }
+  return false
 }
 
 /**
@@ -1259,9 +1290,13 @@ async function evaluateFormulas(
   path: string,
   formulaCells: readonly CellEdit[],
   renames: Record<string, string>,
-): Promise<{ values: SheetFormulaValues[]; uncached: string[]; unparsed: string[] }> {
-  const bySheet = new Map<string, CellEdit[]>()
-  for (const e of formulaCells) bySheet.set(e.sheetName, [...(bySheet.get(e.sheetName) ?? []), e])
+): Promise<{
+  values: SheetFormulaValues[]
+  uncached: string[]
+  unparsed: string[]
+  /** the untouched formulas were too many (or too scattered) to refresh */
+  leftStale: boolean
+}> {
   // edits carry the file's original sheet names; the written file has the renamed ones
   const wanted = new Set(formulaCells.map((c) => `${c.sheetName} ${c.row} ${c.column}`))
   const originalName = (written: string) =>
@@ -1270,36 +1305,110 @@ async function evaluateFormulas(
     const out: SheetFormulaValues[] = []
     const uncached: string[] = []
     const unparsed: string[] = []
+    // formulas no edit wrote but whose inputs an edit may have changed: their
+    // cached <v> is refreshed too, and kept as it is when the engine cannot tell
+    const { cells: untouched, leftStale } = await untouchedFormulaCells(
+      client,
+      path,
+      wanted,
+      originalName,
+    )
+    const bySheet = new Map<string, { row: number; column: number }[]>()
+    for (const e of [...formulaCells, ...untouched]) {
+      bySheet.set(e.sheetName, [...(bySheet.get(e.sheetName) ?? []), e])
+    }
+    for (const e of untouched) wanted.add(`${e.sheetName} ${e.row} ${e.column}`)
+    const own = new Set(formulaCells.map((c) => `${c.sheetName} ${c.row} ${c.column}`))
     for (const [sheet, cells] of bySheet) {
       const evaluated = await recalcRange(client, path, renames[sheet] ?? sheet, boundingBox(cells))
       const values = evaluated
         .filter((cell) => wanted.has(`${originalName(cell.sheet)} ${cell.row} ${cell.column}`))
-        .map((cell) => {
+        .flatMap((cell): SheetFormulaValues['cells'][number][] => {
+          const mine = own.has(`${originalName(cell.sheet)} ${cell.row} ${cell.column}`)
           // Both leave the cell without a cached value — the file is correct
           // and Excel recomputes on open — but they have different causes and
-          // the caller reports them apart.
+          // the caller reports them apart. A formula the edits did not write
+          // keeps the value it had instead.
           if (cell.formatted === UNKNOWN_FUNCTION_RESULT) {
+            if (!mine) return []
             uncached.push(`${sheet}!${toA1Address(cell.row, cell.column)}`)
-            return { row: cell.row, column: cell.column, value: null }
+            return [{ row: cell.row, column: cell.column, value: null }]
           }
           if (cell.formatted === UNPARSED_RESULT) {
+            if (!mine) return []
             unparsed.push(`${sheet}!${toA1Address(cell.row, cell.column)}`)
-            return { row: cell.row, column: cell.column, value: null }
+            return [{ row: cell.row, column: cell.column, value: null }]
           }
           if (cell.isError) {
-            return { row: cell.row, column: cell.column, value: { error: cell.formatted } }
+            return [{ row: cell.row, column: cell.column, value: { error: cell.formatted } }]
           }
-          return {
-            row: cell.row,
-            column: cell.column,
-            value: (cell.number ?? (cell.formatted === '' ? null : cell.formatted)) as Scalar,
-          }
+          return [
+            {
+              row: cell.row,
+              column: cell.column,
+              value: (cell.number ?? (cell.formatted === '' ? null : cell.formatted)) as Scalar,
+            },
+          ]
         })
       // the refresh is keyed like the edits, by the file's original sheet name
       if (values.length) out.push({ sheetName: sheet, cells: values })
     }
-    return { values: out, uncached, unparsed }
+    return { values: out, uncached, unparsed, leftStale }
   })
+}
+
+/** More formulas than this and the cached values of the untouched ones are left to Excel. */
+const UNTOUCHED_FORMULA_CAP = 100_000
+/** The rectangle the untouched formulas of one sheet may span before they are left to Excel. */
+const UNTOUCHED_BOX_CAP = 1_000_000
+
+/**
+ * Formula cells of the file on disk that `edited` ("sheet row column" keys)
+ * did not write, named by the file's original sheet names. Past the caps it
+ * answers with none: a refresh of part of them would only mix fresh and stale.
+ */
+async function untouchedFormulaCells(
+  client: XlsxSidecarClient,
+  path: string,
+  edited: ReadonlySet<string>,
+  originalName: (written: string) => string,
+): Promise<{ cells: { sheetName: string; row: number; column: number }[]; leftStale: boolean }> {
+  const wb = (await client.open(path, 'en')) as OpenedWorkbook
+  try {
+    const found: { sheetName: string; row: number; column: number }[] = []
+    let leftStale = false
+    for (const meta of wb.sheets) {
+      if (!meta.rowCount || !meta.columnCount) continue
+      const sheetName = originalName(meta.name)
+      const all: { sheetName: string; row: number; column: number }[] = []
+      const bands = recalcBands({
+        startRow: 0,
+        endRow: meta.rowCount - 1,
+        startColumn: 0,
+        endColumn: meta.columnCount - 1,
+      })
+      for (const band of bands) {
+        const read = await readRangeIndexed(client, wb.sessionId, meta.id, band)
+        for (const c of read.cells) {
+          if (!c.formula || edited.has(`${sheetName} ${c.row} ${c.column}`)) continue
+          all.push({ sheetName, row: c.row, column: c.column })
+          if (found.length + all.length > UNTOUCHED_FORMULA_CAP)
+            return { cells: [], leftStale: true }
+        }
+      }
+      if (all.length === 0) continue
+      const box = boundingBox(all)
+      const area = (box.endRow - box.startRow + 1) * (box.endColumn - box.startColumn + 1)
+      if (area > UNTOUCHED_BOX_CAP) {
+        leftStale = true
+        continue
+      }
+      found.push(...all)
+    }
+    return { cells: found, leftStale }
+  } finally {
+    await client.close(wb.sessionId)
+  }
 }
 
 interface Bounds {
