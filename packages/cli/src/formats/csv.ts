@@ -4,6 +4,7 @@ import {
   parseCsv,
   sniffDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { cutIndex } from '../preview'
 
 export interface CsvInfo {
   rows: number
@@ -29,10 +30,8 @@ export async function csvToXlsx(bytes: Uint8Array, sheetName: string): Promise<U
 
 /** Excel sheet name from a file stem: forbidden characters become `_`, edge apostrophes go, 31 chars max. */
 export function sheetNameFromStem(stem: string): string {
-  const name = stem
-    .replace(/[\\/?*[\]:]/g, '_')
-    .replace(/^'+|'+$/g, '')
-    .slice(0, 31)
-    .replace(/'+$/, '')
+  const cleaned = stem.replace(/[\\/?*[\]:]/g, '_').replace(/^'+|'+$/g, '')
+  // 31 UTF-16 units; the cut must not land inside an emoji or it leaves a lone surrogate
+  const name = cleaned.slice(0, cutIndex(cleaned, 0, 31)).replace(/'+$/, '')
   return name || 'Sheet1'
 }
