@@ -30,7 +30,12 @@ import { queueHtmlSeedFor } from '../../../html/src/main/seed-main'
 import { queueMarkdownSeedFor } from '../../../markdown/src/main/seed-main'
 import { queueMindmapSeedFor } from '../../../mindmap/src/main/seed-main'
 import { queueSlidesSeedFor } from '../../../slides/src/main/seed-queue'
-import { createHwpView, hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
+import {
+  createHwpView,
+  hwpIsDirty,
+  hwpMemoModalOpen,
+  requestHwpClose,
+} from '../../../hwp/src/main/hwp-main'
 import {
   createMindmapView,
   mindmapIsDirty,
@@ -1544,6 +1549,21 @@ export class TabManager {
       .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
   }
 
+  /**
+   * hwp tabs the shell must ask before closing: unsaved edits, or an open memo
+   * editor whose text would otherwise be discarded (shell-close and quit guard).
+   */
+  dirtyOrMemoHwpTabs(): Array<{ id: string; webContents: WebContents }> {
+    return this.tabs
+      .filter(
+        (t) =>
+          t.kind === 'hwp' &&
+          t.view &&
+          (hwpIsDirty(t.view.webContents.id) || hwpMemoModalOpen(t.view.webContents.id)),
+      )
+      .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
+  }
+
   /** book tabs with unsaved edits, in the main process or still in the renderer (shell-close guard) */
   dirtyEpubTabs(): Array<{ id: string; webContents: WebContents }> {
     return this.tabs
@@ -1598,7 +1618,9 @@ export class TabManager {
             ? requestMarkdownClose
             : tab.kind === 'html' && htmlIsDirty(tab.view.webContents.id)
               ? requestHtmlClose
-              : tab.kind === 'hwp' && hwpIsDirty(tab.view.webContents.id)
+              : tab.kind === 'hwp' &&
+                  (hwpIsDirty(tab.view.webContents.id) ||
+                    hwpMemoModalOpen(tab.view.webContents.id))
                 ? requestHwpClose
                 : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
                   ? requestSlidesClose
@@ -1647,6 +1669,16 @@ export class TabManager {
     if (id === HOME_ID) return false
     const tab = this.tabs.find((t) => t.id === id)
     if (!tab || this.closingIds.has(id)) return false
+    // a memo editor's text is not in the document yet: a promptless close (an
+    // agent's close, or a launch-recovery replacement) must not drop it
+    if (
+      tab.kind === 'hwp' &&
+      tab.view &&
+      !tab.view.webContents.isDestroyed() &&
+      hwpMemoModalOpen(tab.view.webContents.id)
+    ) {
+      return false
+    }
     this.removeTab(id)
     return true
   }

@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
 import { inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
-import { newTabsOf, writeTabWidths } from '../src/main/tab-widths'
+import { hwpxMemoCountOf, newTabsOf, writeTabWidths } from '../src/main/tab-widths'
 import type { MeasuredTab, TabSpot } from '../src/main/tab-widths'
 
 const require = createRequire(import.meta.url)
@@ -85,6 +85,21 @@ describe('newTabsOf', () => {
   it('finds nothing in a file that is not one', () => {
     expect(newTabsOf(new Uint8Array([1, 2, 3]), 'hwp')).toEqual([])
     expect(newTabsOf(new Uint8Array([1, 2, 3]), 'hwpx')).toEqual([])
+  })
+})
+
+describe('hwpxMemoCountOf', () => {
+  it('counts the memo anchors the engine wrote, and sees them gone after removal', () => {
+    const source = new Uint8Array(readFileSync(join(__dirname, 'fixtures', 'memo-source.hwp')))
+    const doc = new HwpDocument(source)
+    expect(hwpxMemoCountOf(doc.exportHwpx())).toBe(1)
+    const memo = (JSON.parse(doc.getMemoList()) as Array<{ id: number }>)[0]!
+    expect(JSON.parse(doc.removeMemo(memo.id))).toEqual({ ok: true })
+    expect(hwpxMemoCountOf(doc.exportHwpx())).toBe(0)
+  })
+
+  it('cannot count a file that is not a HWPX zip', () => {
+    expect(hwpxMemoCountOf(new Uint8Array([1, 2, 3]))).toBeNull()
   })
 })
 

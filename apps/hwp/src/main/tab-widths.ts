@@ -532,6 +532,25 @@ function writeHwpxTabs(file: Uint8Array, measured: Map<string, TabMeasure>): Uin
 
 // ---- both ----
 
+/** A memo field's opening anchor in HWPX section XML. */
+const HWPX_MEMO_FIELD = /<[^>]*\btype\s*=\s*["']MEMO["'][^>]*>/g
+
+/**
+ * How many memo anchors a HWPX file's section XML holds, or null when the zip or a
+ * section cannot be read. This is the raw count: the engine may not model every one.
+ */
+export function hwpxMemoCountOf(file: Uint8Array): number | null {
+  try {
+    const read = hwpxSections(Buffer.from(file.buffer, file.byteOffset, file.byteLength))
+    if (!read) return null
+    let count = 0
+    for (const section of read.sections) count += section.xml.match(HWPX_MEMO_FIELD)?.length ?? 0
+    return count
+  } catch {
+    return null
+  }
+}
+
 /**
  * The tabs the engine wrote without values, in the order of the file; at most
  * MAX_NEW_TABS. Empty for a file without any, or one that cannot be read here. Never throws.

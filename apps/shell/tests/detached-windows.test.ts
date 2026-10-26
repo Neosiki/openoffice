@@ -118,6 +118,7 @@ vi.mock('../../html/src/main/html-main', () => ({
 
 vi.mock('../../hwp/src/main/hwp-main', () => ({
   hwpIsDirty: vi.fn(() => false),
+  hwpMemoModalOpen: vi.fn(() => false),
   requestHwpClose: vi.fn(() => Promise.resolve(true)),
 }))
 
@@ -448,6 +449,21 @@ describe('close guard', () => {
     expect(detached.closeDetachedWithoutPrompt('detached:8')).toBe(true)
     expect(releaseClosedRenderer).toHaveBeenCalledWith(view.webContents)
     expect(detached.detachedDocumentFor(8)).toBeUndefined()
+  })
+
+  it('refuses a promptless close while a hwp memo editor is open', async () => {
+    const { hwpMemoModalOpen } = await import('../../hwp/src/main/hwp-main')
+    const view = fakeView(9)
+    detached.createDetachedEditorWindow({
+      view: view as never,
+      kind: 'hwp',
+      title: 'memo.hwp',
+      applyMenuFor: () => {},
+    })
+    vi.mocked(hwpMemoModalOpen).mockImplementation((wcId) => wcId === 9)
+    expect(detached.closeDetachedWithoutPrompt('detached:9')).toBe(false)
+    expect(detached.detachedDocumentFor(9)).toMatchObject({ id: 'detached:9', kind: 'hwp' })
+    expect(view.webContents.close).not.toHaveBeenCalled()
   })
 })
 

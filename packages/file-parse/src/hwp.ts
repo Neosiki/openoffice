@@ -242,6 +242,53 @@ function withMissingText(entries: Entry[], flat: string): string[] {
   return out
 }
 
+/** One memo as the engine lists it: where its anchor sits in the body, and the note itself. */
+export interface HwpMemo {
+  id?: number
+  index?: number
+  author?: string
+  date?: string | null
+  text?: string
+  place?: string
+  sectionIndex?: number | null
+  paraIndex?: number | null
+  startCharIdx?: number | null
+  endCharIdx?: number | null
+  path?: Array<{
+    type: string
+    controlIndex?: number
+    cellIndex?: number
+    paraIndex?: number
+  }> | null
+}
+
+/**
+ * The memos of an HWP / HWPX document, as the engine holds them. Records in the bytes
+ * the engine does not model are not listed; a caller checking a save counts those
+ * separately from the raw file.
+ */
+export async function hwpMemosOf(bytes: Uint8Array): Promise<HwpMemo[]> {
+  // HWPX is a zip, and the engine inflates it itself: the gate the other zip formats
+  // pass runs before the engine gets the bytes
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) await assertZipInflatesWithinLimits(bytes)
+  const { HwpDocument } = await loadEngine()
+  let doc: HwpDocument
+  try {
+    // a copy: the engine may keep or change the buffer it is given
+    doc = new HwpDocument(new Uint8Array(bytes))
+  } catch (thrown) {
+    throw engineError(thrown)
+  }
+  try {
+    const listed = JSON.parse(doc.getMemoList()) as unknown
+    return Array.isArray(listed) ? (listed as HwpMemo[]) : []
+  } catch (thrown) {
+    throw engineError(thrown)
+  } finally {
+    doc.free()
+  }
+}
+
 /** The text of an HWP / HWPX document: paragraphs as lines, data tables as " | " rows. */
 export async function hwpToText(bytes: Uint8Array): Promise<string> {
   // HWPX is a zip, and the engine inflates it itself: the gate the other zip formats
