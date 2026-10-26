@@ -420,6 +420,28 @@ describe('genoffice sheet apply --ops: gateway-written features', () => {
     expect(missing.code).toBe(1)
   })
 
+  it('treats sheet names as equal without regard to case, as Excel does', async () => {
+    const dir = tempDir()
+    const out = await book(dir)
+    // book() names its sheet "sales"; "Sales" would open in Excel with a repair prompt
+    for (const ops of [
+      [{ op: 'add_sheet', name: 'Sales' }],
+      [{ op: 'duplicate_sheet', sheet: 'sales', name: 'SALES' }],
+      [
+        { op: 'add_sheet', name: 'Notes' },
+        { op: 'rename_sheet', sheet: 'Notes', name: 'SALES' },
+      ],
+    ]) {
+      const r = await apply(out, ops)
+      expect(r.code).toBe(1)
+      expect(r.json().message).toMatch(/already exists/)
+    }
+    expect((await parts(out)).get('xl/workbook.xml')!.match(/<sheet /g)).toHaveLength(1)
+    // changing only the case of a sheet's own name is still a rename
+    expect((await apply(out, [{ op: 'rename_sheet', sheet: 'sales', name: 'Sales' }])).code).toBe(0)
+    expect((await parts(out)).get('xl/workbook.xml')).toContain('name="Sales"')
+  })
+
   it('refuses editor-only ops with the reason and keeps edit_chart to file charts', async () => {
     const dir = tempDir()
     const out = await book(dir)
