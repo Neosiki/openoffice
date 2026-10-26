@@ -28,7 +28,7 @@ Pravidla: přípona se zachovává automaticky; nepovolené znaky, tečky na kon
 - **⌘S / ctrl+S** uloží aktuální soubor; soubor bez názvu se nejdřív zeptá na umístění a název.
 - **Uložit jako…** zapíše nový soubor a originál ponechá nedotčený; další úpravy se týkají nového souboru.
 - Každé uložení je atomické (dočasný soubor + přejmenování); ukončení uprostřed zápisu soubor nepoškodí.
-- Automatické ukládání se spustí teprve po prvním ručním uložení (viz [Rychlý start](help://getting-started)).
+- Automatické ukládání se řídí přepínačem v každém editoru; nový dokument bez vlastního souboru začne až po prvním uložení (viz [Rychlý start](help://getting-started)).
 
 ## Export do PDF
 

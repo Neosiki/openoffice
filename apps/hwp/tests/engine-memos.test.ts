@@ -1,5 +1,5 @@
 /**
- * The memo API of the vendored rhwp engine (vendor/rhwp-core/patches/0016):
+ * The memo API of the vendored rhwp engine (vendor/rhwp-core/patches/0018):
  * reading Hancom memos, inserting/editing/removing them in a body paragraph,
  * a table cell and a text box, and keeping them across HWP/HWPX saves.
  *
@@ -7,6 +7,7 @@
  * saved by Hancom Hangul: one memo ("수정", author CDC) whose field spans many
  * paragraphs. The other documents are built with the engine itself.
  */
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -253,6 +254,21 @@ function paragraphOfMemoEnd(section: Buffer): number {
     }
   }
   throw new Error('memo end paragraph not found')
+}
+
+/** The level-0 paragraph headers of a section and the record after the last one's own records. */
+function memoTailLayout(section: Buffer): { paragraphs: number; lastNChars: number; tail: string } {
+  const records = recordsOf(section)
+  expect(records).not.toBeNull()
+  const heads = records!.filter((record) => record.tag === 66 && record.level === 0)
+  const last = records!.indexOf(heads[heads.length - 1]!)
+  const firstList = records!.findIndex((record) => record.tag === 93)
+  const between = records!.slice(last + 1, firstList).filter((record) => record.level === 0)
+  return {
+    paragraphs: heads.length,
+    lastNChars: section.readUInt32LE(records![last]!.body),
+    tail: between.length === 0 && firstList > last ? `93@${records![firstList]!.level}` : 'other',
+  }
 }
 
 /** A one-cell table in body paragraph 1. */
@@ -509,9 +525,7 @@ describe('editing memos', () => {
     const controlIndex = (JSON.parse(path) as { controlIndex: number }[])[0]!.controlIndex
     const created = insertAtPath(doc, 0, 0, path, 0, 3, 'box author', 'box memo')
     expect(
-      JSON.parse(
-        doc.replaceTextInCellDeferredPagination(0, 0, controlIndex, 0, 0, 0, 3, 'BOXX'),
-      ),
+      JSON.parse(doc.replaceTextInCellDeferredPagination(0, 0, controlIndex, 0, 0, 0, 3, 'BOXX')),
     ).toMatchObject({ ok: true })
     expect(memos(doc)[0]).toMatchObject({
       id: created.id,
@@ -822,7 +836,11 @@ describe('editing memos', () => {
     expect(numbers.filter((number) => number === 2)).toHaveLength(1)
     const reopened = new HwpDocument(doc.exportHwp())
     expect(memos(reopened)).toHaveLength(2)
-    expect(memos(reopened).map((entry) => entry.index).sort()).toEqual([1, 2])
+    expect(
+      memos(reopened)
+        .map((entry) => entry.index)
+        .sort(),
+    ).toEqual([1, 2])
   })
 
   it('marks a memo with mixed formatting read-only but still removes it', () => {
@@ -884,6 +902,34 @@ describe('editing memos', () => {
   })
 })
 
+describe('pasting a memo that came from HWPX', () => {
+  it('writes the new number into the HWPX parameters too', () => {
+    const doc = open('memo.hwpx')
+    const body = memos(doc).find((memo) => memo.place === 'body')!
+    doc.copySelection(0, body.paraIndex!, body.startCharIdx!, body.paraIndex!, body.endCharIdx!)
+    const end = doc.getParagraphLength(0, body.paraIndex!)
+    const pasted = JSON.parse(doc.pasteInternal(0, body.paraIndex!, end)) as {
+      containsField: boolean
+    }
+    expect(pasted.containsField).toBe(true)
+    const numbers = memos(doc)
+      .map((memo) => memo.index)
+      .sort()
+    expect(numbers).toEqual([1, 2, 3, 4])
+
+    const bytes = doc.exportHwpx()
+    const xml = zipEntry(bytes, 'Contents/section0.xml')
+    expect(xml).toMatch(/<hp:integerParam name="Number">4<\/hp:integerParam>/)
+    expect(xml).toContain('<hp:stringParam name="ID">memo4</hp:stringParam>')
+    expect(xml).toMatch(/<hp:stringParam name="Command">MEMO\/\d+\/4\//)
+    for (const reopened of [new HwpDocument(bytes), new HwpDocument(doc.exportHwp())]) {
+      const list = memos(reopened)
+      expect(list.map((memo) => memo.index).sort()).toEqual([1, 2, 3, 4])
+      expect(new Set(list.map((memo) => memo.id)).size).toBe(4)
+    }
+  })
+})
+
 describe('the engine writes Hancom memo identity', () => {
   it('writes %unk + %%me and a numbered MEMO_LIST in HWP', () => {
     const doc = blank('hello')
@@ -905,9 +951,9 @@ describe('the engine writes Hancom memo identity', () => {
     expect(command).toContain('/tester/\\;;')
 
     // Hancom's opening character is %%me even though the control record is %unk.
-    expect(
-      section.includes(Buffer.from([0x03, 0x00, 0x65, 0x6d, 0x25, 0x25, 0x00, 0x00])),
-    ).toBe(true)
+    expect(section.includes(Buffer.from([0x03, 0x00, 0x65, 0x6d, 0x25, 0x25, 0x00, 0x00]))).toBe(
+      true,
+    )
     // ...and the closing marker is the memo-specific one with the memo number (1).
     expect(
       section.includes(
@@ -952,6 +998,207 @@ describe('the engine writes Hancom memo identity', () => {
     const doc = new HwpDocument(original)
     expect(doc.getMemoList()).toBe('[]')
     expect(Buffer.compare(Buffer.from(doc.exportHwp()), Buffer.from(original))).toBe(0)
+  })
+
+  // What the engine without memo support (vendor/rhwp-core patches 0001-0017) wrote
+  // for these documents, unedited and after typing, as HWP and HWPX. A later
+  // engine patch that changes how these documents save updates them on purpose.
+  const before: Record<string, Record<string, string>> = {
+    'format-copy-table.hwp': {
+      hwp: 'd90a4045fa4a1cb72fdb287580721a681ad73753519ff4eaa6b0816485b7a6df',
+      hwpx: 'bb912ac89306d45318a655a4d0e34604f4e4941e3970cdbe17b046a6667569a2',
+      editedHwp: '78e031ac0f9c84936a696deb75b8dbf9e00d2e3c8b3052356d31a99b8ae666ab',
+      editedHwpx: 'b6bd4a8bd41dcc139e884214a5e592082cee339b19e9c5995825c2b62b275dda',
+    },
+    'hancom-page-number-no-dash.hwpx': {
+      hwp: '2280bfbcb5c6c9ef3c3db271fc91cd912fd097e4a260517aa7576fa2bb5d813c',
+      hwpx: '1ff93bc1fd76ef6f64f53a256ff3d7b22fed32da1697c6ed4412bfb1daea1ff1',
+      editedHwp: '9ba31666a1c8c46289b4a2f32ecfa369a7ea47174cee9ecfb6e4092eb72ef41c',
+      editedHwpx: '32a2dc1bb703d11a6d5d8e16ddf4075e6ffb04d5b318b3dde52e96edc72d09d9',
+    },
+  }
+
+  it.each(Object.keys(before))(
+    'saves %s, edited or not, as the engine without memos did',
+    (name) => {
+      const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+      const edited = () => {
+        const doc = open(name)
+        doc.insertText(0, 0, 0, '메모 없음 ')
+        return doc
+      }
+      expect(open(name).getMemoList()).toBe('[]')
+      expect({
+        hwp: sha(open(name).exportHwp()),
+        hwpx: sha(open(name).exportHwpx()),
+        editedHwp: sha(edited().exportHwp()),
+        editedHwpx: sha(edited().exportHwpx()),
+      }).toEqual(before[name])
+    },
+  )
+})
+
+describe('saving a memo document again', () => {
+  const edit = (doc: HwpDocument) => {
+    doc.insertText(0, 0, 0, 'x')
+    doc.deleteText(0, 0, 0, 1)
+  }
+
+  it('keeps the paragraph count and the bytes save after save', () => {
+    for (const [name, count] of [
+      ['memo-source.hwp', 1],
+      ['memo.hwp', 3],
+    ] as const) {
+      let doc = open(name)
+      const paragraphs = doc.getParagraphCount(0)
+      const saves: Buffer[] = []
+      for (let round = 0; round < 3; round += 1) {
+        edit(doc)
+        const bytes = doc.exportHwp()
+        saves.push(Buffer.from(bytes))
+        doc = new HwpDocument(bytes)
+        expect(doc.getParagraphCount(0), `${name} save ${round + 1}`).toBe(paragraphs)
+        expect(memos(doc)).toHaveLength(count)
+      }
+      // once the engine has written the file, writing it again changes nothing
+      expect(Buffer.compare(saves[1]!, saves[2]!), name).toBe(0)
+    }
+  })
+
+  it('puts the memo lists right under the last body paragraph, as Hancom does', () => {
+    // the Hancom sample: the last paragraph holds text and the last-paragraph bit
+    const hancom = memoTailLayout(sectionOf(readFileSync(join(FIXTURES, 'memo-source.hwp'))))
+    expect(hancom.tail).toBe('93@1')
+    expect(hancom.lastNChars >>> 31).toBe(1)
+    const doc = open('memo-source.hwp')
+    edit(doc)
+    const saved = memoTailLayout(sectionOf(doc.exportHwp()))
+    expect(saved).toEqual(hancom)
+  })
+
+  it('keeps a memo of the first section in the last section, through edits of either', () => {
+    const doc = open('master-page-next-section.hwpx')
+    expect(doc.getSectionCount()).toBe(2)
+    insert(doc, 0, 5, 'tester', 'first section memo')
+    const sectionHasMemoList = (bytes: Uint8Array, index: number) => {
+      const section = streamOf(openHwp(bytes)!, SECTION(index))!
+      return recordsOf(section)!.some((record) => record.tag === 93)
+    }
+    let bytes = doc.exportHwp()
+    // the HWP5 format keeps every memo at the end of the last section
+    expect([sectionHasMemoList(bytes, 0), sectionHasMemoList(bytes, 1)]).toEqual([false, true])
+    let reopened = new HwpDocument(bytes)
+    expect(memos(reopened)).toEqual([
+      expect.objectContaining({ sectionIndex: 0, text: 'first section memo' }),
+    ])
+
+    // only the last section changes
+    reopened.insertText(1, 0, 0, 'x')
+    bytes = reopened.exportHwp()
+    reopened = new HwpDocument(bytes)
+    expect(memos(reopened)[0]).toMatchObject({ sectionIndex: 0, text: 'first section memo' })
+
+    // only the first section changes: the memo's new text reaches the last section
+    reopened.setMemoText(memos(reopened)[0]!.id, 'changed')
+    bytes = reopened.exportHwp()
+    expect([sectionHasMemoList(bytes, 0), sectionHasMemoList(bytes, 1)]).toEqual([false, true])
+    reopened = new HwpDocument(bytes)
+    expect(memos(reopened)).toEqual([expect.objectContaining({ sectionIndex: 0, text: 'changed' })])
+    expect([reopened.getParagraphCount(0), reopened.getParagraphCount(1)]).toEqual([1, 1])
+  })
+
+  it('has as many body paragraphs in the HWP fixture as in the HWPX one', () => {
+    expect(open('memo.hwp').getParagraphCount(0)).toBe(open('memo.hwpx').getParagraphCount(0))
+  })
+})
+
+describe('memo requests and text', () => {
+  it('reads every JSON escape of the insert request', () => {
+    const text = 'C:\\dir\\n x "quoted" \u00e9 😀 tab\tend'
+    const author = 'a\\b "c"'
+    const doc = blank('hello world')
+    insert(doc, 0, 5, author, text)
+    expect(memos(doc)[0]).toMatchObject({ author: 'ab "c"', text })
+
+    // escapes JSON.stringify does not write but other writers do, and spacing
+    const other = blank('hello world')
+    other.insertMemo(0, 0, 0, 5, '{ "text" : "\\u00e9\\ud83d\\ude00\\/x", "author" : null }')
+    expect(memos(other)[0]).toMatchObject({ author: '', text: 'é😀/x' })
+
+    const path = JSON.stringify([{ controlIndex: 0, cellIndex: 0, cellParaIndex: 0 }])
+    const { doc: table } = tableDocument()
+    table.insertMemoByPath(0, 1, path, 0, 4, '{"text":"\\\\server\\\\share"}')
+    expect(memos(table)[0]).toMatchObject({ text: '\\server\\share' })
+
+    for (const bad of ['not json', '[]', '{"text":1}']) {
+      expect(errorOf(() => blank('abc').insertMemo(0, 0, 0, 1, bad)).code).toBe(
+        'memo_insert_failed',
+      )
+    }
+  })
+
+  it('keeps memo text to plain lines', () => {
+    const doc = blank('hello')
+    const created = insert(doc, 0, 2, '', 'a\r\nb\rc\u0001d\te')
+    expect(memos(doc)[0]!.text).toBe('a\nb\ncd\te')
+    doc.setMemoText(created.id, 'c\rd')
+    expect(memos(doc)[0]!.text).toBe('c\nd')
+    for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+      expect(memos(new HwpDocument(bytes))[0]!.text).toBe('c\nd')
+    }
+  })
+
+  it('puts text typed at a caret memo after it, without growing the memo', () => {
+    const doc = blank('abcdef')
+    insert(doc, 2, 2, '', 'caret')
+    doc.insertText(0, 0, 2, 'XY')
+    expect(memos(doc)[0]).toMatchObject({ startCharIdx: 2, endCharIdx: 2 })
+    // deleting what was typed leaves the memo
+    doc.deleteText(0, 0, 2, 2)
+    expect(memos(doc)).toEqual([expect.objectContaining({ text: 'caret', startCharIdx: 2 })])
+    for (const bytes of [doc.exportHwp(), doc.exportHwpx()]) {
+      expect(memos(new HwpDocument(bytes))[0]).toMatchObject({ startCharIdx: 2, endCharIdx: 2 })
+    }
+  })
+})
+
+describe('undoing the deletion of a memo anchor', () => {
+  // A typed deletion that touches a memo anchor captures its paragraph first
+  // (apps/hwp/scripts/rhwp-patches.mjs, studio-memo-delete-undo); undo restores it.
+  it('brings the memo back from the captured paragraph', () => {
+    const doc = blank('hello world')
+    const created = insert(doc, 0, 5, 'tester', 'memo body')
+    const fragment = doc.captureDeleteRange(0, 0, 0)
+    for (let left = 5; left > 0; left -= 1) doc.deleteText(0, 0, left - 1, 1)
+    expect(memos(doc)).toEqual([])
+    doc.restoreDeleteFragment(fragment)
+    expect(memos(doc)).toEqual([
+      expect.objectContaining({
+        id: created.id,
+        text: 'memo body',
+        startCharIdx: 0,
+        endCharIdx: 5,
+      }),
+    ])
+    expect(memos(new HwpDocument(doc.exportHwp()))[0]).toMatchObject({ text: 'memo body' })
+  })
+
+  it('needs the capture: putting the text back alone does not bring the memo back', () => {
+    const doc = blank('hello world')
+    insert(doc, 0, 5, 'tester', 'memo body')
+    doc.deleteText(0, 0, 0, 5)
+    doc.insertText(0, 0, 0, 'hello')
+    expect(memos(doc)).toEqual([])
+  })
+
+  it('brings a table-cell memo back from the captured paragraph', () => {
+    const { doc, path } = tableDocument()
+    insertAtPath(doc, 0, 1, path, 0, 4, 'cell author', 'cell memo')
+    const fragment = doc.captureDeleteRange(0, 1, 1)
+    doc.deleteTextInCellByPath(0, 1, path, 0, 4)
+    expect(memos(doc)).toEqual([])
+    doc.restoreDeleteFragment(fragment)
+    expect(memos(doc)[0]).toMatchObject({ text: 'cell memo', place: 'tableCell' })
   })
 })
 
@@ -1018,8 +1265,7 @@ describe('memo errors', () => {
     // This API takes one paragraph; a range past its end is invalid.
     expect(errorOf(() => doc.insertMemo(0, 0, 2, 99, '{}')).code).toBe('memo_invalid_range')
     expect(
-      errorOf(() => doc.insertMemo(0, 0, 6, 6, JSON.stringify({ text: '가'.repeat(100001) })))
-        .code,
+      errorOf(() => doc.insertMemo(0, 0, 6, 6, JSON.stringify({ text: '가'.repeat(100001) }))).code,
     ).toBe('memo_text_too_long')
     expect(
       errorOf(() => doc.insertMemo(0, 0, 6, 6, JSON.stringify({ author: '가'.repeat(65) }))).code,

@@ -9,12 +9,15 @@ export const en = {
   fileSaveAs: 'Save As…',
   fileExportPdf: 'Export as PDF…',
   filePrint: 'Print…',
+  autoSave: 'Auto save',
+  autoSaveTip: 'Saves every 30 seconds and when the window loses focus',
   printPreparing: 'Preparing pages… ({done}/{total})',
   printSending: 'Sending the pages…',
   pdfFailed: 'The document could not be exported as PDF.',
   printFailed: 'The document could not be printed.',
   saveVerifyFailed:
     'Nothing was saved: the copy about to be written did not read back the same as the document on screen. Try Save As to write a new file.',
+  saveVerifyHint: 'The original is unchanged. In Save As, choose HWPX, or use Export as PDF.',
   saveProtected:
     'Not saved: this document is password-protected, and saving it here would write it without the password.',
   backupKept: 'Saved. The previous version was kept as {name}.',
@@ -113,6 +116,7 @@ export const en = {
   aiToolTables: 'Checked tables · {count}',
   aiToolReadTable: 'Read table {table}',
   aiToolFillCells: 'Table {table} · filled {count} cell(s)',
+  aiToolCheckBoxes: 'Table {table} · ticked {count} box(es)',
   aiTableName: 'Table {table}',
   aiTableRowsAdded: '{count} row(s) added',
   aiTableColsAdded: '{count} column(s) added',
@@ -146,7 +150,8 @@ export const en = {
   memoUnknownAuthor: 'Unknown',
   memoReadOnly: 'Read-only',
   memoReadOnlyFormatted: 'This memo mixes formatting, so its text cannot be changed here.',
-  memoReadOnlyObject: 'This memo holds a table, picture or other object, so its text cannot be changed here.',
+  memoReadOnlyObject:
+    'This memo holds a table, picture or other object, so its text cannot be changed here.',
   memoReadOnlyPlace: 'Memos in headers, footers or notes cannot be changed here.',
   memoReadOnlyProtected: 'Memos in a password-protected document cannot be changed here.',
   memoEdit: 'Edit',
@@ -173,10 +178,13 @@ export const en = {
   memoSaveBlocked: 'Save or cancel the memo you are writing first.',
   memoRemoved: 'Memos deleted: {count}. Press Ctrl+Z to undo.',
   memoNotCopied: 'The memo was not copied.',
-  memoLockedElsewhere: 'A memo is being written in another tab. Wait until it is saved or canceled.',
-  memoContended: 'A memo window was opened in another tab too. Save or cancel in one of them first.',
+  memoLockedElsewhere:
+    'A memo is being written in another tab. Wait until it is saved or canceled.',
+  memoContended:
+    'A memo window was opened in another tab too. Save or cancel in one of them first.',
   memoUnsupportedBuild: 'This build has no memo support.',
-  memoHwpxLost: 'Memos not carried into the HWPX file: {count}. Save as HWP or check the file in Hancom Hangul.',
+  memoHwpxLost:
+    'Memos not carried into the HWPX file: {count}. Save as HWP or check the file in Hancom Hangul.',
   aiToolMemos: 'Checked memos: {count}',
   aiMemoContext: 'Memos: {count}',
   aiMemoApprovalTitle: 'This edit deletes memos: {count}. Continue?',

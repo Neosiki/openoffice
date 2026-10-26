@@ -1,6 +1,6 @@
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { Lang } from '@genoffice/i18n'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 export const HWP_CHANNELS = {
@@ -54,6 +54,8 @@ export const HWP_CHANNELS = {
   themeChanged: 'app:theme-changed',
   /** the shell's stored author name (settings, else the PC account); `{ value, fallback }` */
   getAuthorName: 'home:get-author-name',
+  getAutoSaveDefault: 'app:get-auto-save-default',
+  autoSaveDefaultChanged: 'app:auto-save-default-changed',
   getAiPanelPrefs: 'app:get-ai-panel-prefs',
   setAiPanelPrefs: 'app:set-ai-panel-prefs',
   aiPanelPrefsChanged: 'app:ai-panel-prefs-changed',
@@ -355,6 +357,9 @@ export interface HwpApi {
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>
   onThemeChanged(handler: (theme: UiTheme) => void): () => void
+  /** The shell-wide AutoSave default; a per-window override is kept in localStorage */
+  getAutoSaveDefault(): Promise<AutoSaveDefault>
+  onAutoSaveDefaultChanged(handler: (value: AutoSaveDefault) => void): () => void
   /** AI panel side and text size (Settings › General in the shell) */
   getAiPanelPrefs(): Promise<AiPanelPrefs>
   setAiPanelPrefs(patch: Partial<AiPanelPrefs>): Promise<AiPanelPrefs>

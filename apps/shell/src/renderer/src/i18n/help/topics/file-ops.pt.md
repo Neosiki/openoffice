@@ -28,7 +28,7 @@ As regras: a extensão é preservada automaticamente; caracteres proibidos, pont
 - **⌘S / ctrl+S** salva o ficheiro atual; um ficheiro sem título pergunta primeiro pela localização e pelo nome.
 - **Salvar Como…** grava um ficheiro novo e deixa o original intacto; as edições seguintes passam a incidir sobre o ficheiro novo.
 - Cada gravação é atómica (ficheiro temporário + mudança de nome), pelo que sair a meio da escrita não corrompe o ficheiro.
-- O Salvamento automático só entra em vigor depois do primeiro salvamento manual (consulte [Início rápido](help://getting-started)).
+- O salvamento automático segue o interruptor de cada editor; um documento novo sem ficheiro próprio só começa após o primeiro salvamento (consulte [Início rápido](help://getting-started)).
 
 ## Exportar para PDF
 

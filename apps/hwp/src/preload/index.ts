@@ -10,7 +10,7 @@ import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { Lang } from '@genoffice/i18n'
 import type { ProjectApi } from '@genoffice/project-store'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import {
   DROP_OPEN_CHANNEL,
   KNOWN_UNSUPPORTED_DOC_RE,
@@ -122,9 +122,10 @@ const api: HwpApi = {
     return () => ipcRenderer.removeListener(HWP_CHANNELS.memoBlocked, listener)
   },
   getAuthorName: async () => {
-    const raw = (await ipcRenderer.invoke(HWP_CHANNELS.getAuthorName)) as
-      | { value?: unknown; fallback?: unknown }
-      | null
+    const raw = (await ipcRenderer.invoke(HWP_CHANNELS.getAuthorName)) as {
+      value?: unknown
+      fallback?: unknown
+    } | null
     return {
       value: typeof raw?.value === 'string' ? raw.value : '',
       fallback: typeof raw?.fallback === 'string' ? raw.fallback : '',
@@ -190,6 +191,12 @@ const api: HwpApi = {
     const listener = (_e: Electron.IpcRendererEvent, theme: UiTheme) => handler(theme)
     ipcRenderer.on(HWP_CHANNELS.themeChanged, listener)
     return () => ipcRenderer.removeListener(HWP_CHANNELS.themeChanged, listener)
+  },
+  getAutoSaveDefault: () => ipcRenderer.invoke(HWP_CHANNELS.getAutoSaveDefault),
+  onAutoSaveDefaultChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, value: AutoSaveDefault) => handler(value)
+    ipcRenderer.on(HWP_CHANNELS.autoSaveDefaultChanged, listener)
+    return () => ipcRenderer.removeListener(HWP_CHANNELS.autoSaveDefaultChanged, listener)
   },
   getAiPanelPrefs: () => ipcRenderer.invoke(HWP_CHANNELS.getAiPanelPrefs),
   setAiPanelPrefs: (patch) => ipcRenderer.invoke(HWP_CHANNELS.setAiPanelPrefs, patch),

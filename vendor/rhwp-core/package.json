@@ -1,6 +1,6 @@
 {
   "name": "@rhwp/core",
-  "version": "0.8.7-ieum.7",
+  "version": "0.8.7-ieum.9",
   "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the patches in ./patches",
   "private": true,
   "type": "module",
@@ -34,9 +34,11 @@
       "0013-restyle-per-attribute-everywhere.patch",
       "0014-page-number-pos-insert.patch",
       "0015-canvas-metric-requests-without-advances.patch",
-      "0016-memo-support.patch"
+      "0016-single-cell-resize.patch",
+      "0017-header-footer-picture-keeps-text.patch",
+      "0018-memo-support.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "5440c810c5c7419181c231147894929b871d3ff56352f569c5bd84fef22f5d0c"
+    "wasmSha256": "51bc66ce694faa0bb819079a000d50c2596a4e3fc0428976e68faad2aab5a6e7"
   }
 }

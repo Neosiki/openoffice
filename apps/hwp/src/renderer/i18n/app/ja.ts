@@ -9,12 +9,16 @@ export const ja = {
   fileSaveAs: '名前を付けて保存…',
   fileExportPdf: 'PDF として書き出す…',
   filePrint: '印刷…',
+  autoSave: '自動保存',
+  autoSaveTip: '30 秒ごととウィンドウのフォーカスが外れたときに自動保存',
   printPreparing: 'ページを準備しています… ({done}/{total})',
   printSending: 'ページを送っています…',
   pdfFailed: 'PDF として書き出せませんでした。',
   printFailed: '印刷できませんでした。',
   saveVerifyFailed:
     '保存しませんでした。書き込もうとした内容を読み戻すと、画面の文書と一致しませんでした。「名前を付けて保存」で新しいファイルに保存してみてください。',
+  saveVerifyHint:
+    '元のファイルはそのままです。「名前を付けて保存」で HWPX を選ぶか、「PDF に書き出し」を使ってください。',
   saveProtected:
     '保存しませんでした。この文書はパスワードで保護されており、ここで保存するとパスワードなしで書き出されます。',
   backupKept: '保存しました。以前の内容は {name} として残しました。',
@@ -113,6 +117,7 @@ export const ja = {
   aiToolTables: '表を確認 · {count} 個',
   aiToolReadTable: '表 {table} を読み取り',
   aiToolFillCells: '表 {table} · セル {count} 個に入力',
+  aiToolCheckBoxes: '表 {table} · チェックボックス {count} 個を選択',
   aiTableName: '表 {table}',
   aiTableRowsAdded: '{count} 行を追加',
   aiTableColsAdded: '{count} 列を追加',
@@ -146,7 +151,8 @@ export const ja = {
   memoUnknownAuthor: '不明',
   memoReadOnly: '読み取り専用',
   memoReadOnlyFormatted: 'コメント内の書式がそろっていないため、ここでは本文を変更できません。',
-  memoReadOnlyObject: 'コメントに表・画像などのオブジェクトが含まれているため、ここでは本文を変更できません。',
+  memoReadOnlyObject:
+    'コメントに表・画像などのオブジェクトが含まれているため、ここでは本文を変更できません。',
   memoReadOnlyPlace: 'ヘッダー・フッター・脚注のコメントはここでは変更できません。',
   memoReadOnlyProtected: 'パスワードで保護された文書のコメントはここでは変更できません。',
   memoEdit: '編集',
@@ -173,10 +179,13 @@ export const ja = {
   memoSaveBlocked: '先に作成中のコメントを保存するか、キャンセルしてください。',
   memoRemoved: '文字と一緒にコメント {count} 件が削除されました。Ctrl+Z で元に戻せます。',
   memoNotCopied: 'コメントはコピーされませんでした。',
-  memoLockedElsewhere: '別のタブでコメントを作成中です。保存またはキャンセルされるまでお待ちください。',
-  memoContended: '別のタブでもコメント画面を開いています。どちらかで先に保存するか、キャンセルしてください。',
+  memoLockedElsewhere:
+    '別のタブでコメントを作成中です。保存またはキャンセルされるまでお待ちください。',
+  memoContended:
+    '別のタブでもコメント画面を開いています。どちらかで先に保存するか、キャンセルしてください。',
   memoUnsupportedBuild: 'このビルドにはコメント機能がありません。',
-  memoHwpxLost: 'コメント {count} 件を HWPX ファイルに書き込めませんでした。HWP で保存するか、Hancom Hangul で確認してください。',
+  memoHwpxLost:
+    'コメント {count} 件を HWPX ファイルに書き込めませんでした。HWP で保存するか、Hancom Hangul で確認してください。',
   aiToolMemos: 'コメント {count} 件を確認',
   aiMemoContext: 'コメント {count} 件',
   aiMemoApprovalTitle: 'この編集でコメント {count} 件が削除されます。続けますか？',

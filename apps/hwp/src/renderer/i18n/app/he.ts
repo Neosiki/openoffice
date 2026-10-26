@@ -9,12 +9,15 @@ export const he = {
   fileSaveAs: 'שמירה בשם…',
   fileExportPdf: 'ייצוא כ-PDF…',
   filePrint: 'הדפסה…',
+  autoSave: 'שמירה אוטומטית',
+  autoSaveTip: 'שומר כל 30 שניות וכאשר החלון מאבד פוקוס',
   printPreparing: 'מכין עמודים… ({done}/{total})',
   printSending: 'שולח את העמודים…',
   pdfFailed: 'לא ניתן היה לייצא את המסמך כ-PDF.',
   printFailed: 'לא ניתן היה להדפיס את המסמך.',
   saveVerifyFailed:
     'דבר לא נשמר: העותק שעמד להיכתב לא תאם, בקריאה חוזרת, את המסמך שעל המסך. נסו "שמירה בשם" כדי לכתוב קובץ חדש.',
+  saveVerifyHint: 'הקובץ המקורי לא השתנה. ב«שמור בשם», בחר HWPX, או השתמש ב«ייצוא כ-PDF».',
   saveProtected: 'לא נשמר: המסמך מוגן בסיסמה, ושמירה כאן תכתוב אותו ללא הסיסמה.',
   backupKept: 'נשמר. הגרסה הקודמת נשמרה בשם {name}.',
   openedTracked:
@@ -111,6 +114,7 @@ export const he = {
   aiToolTables: 'הטבלאות נבדקו · {count}',
   aiToolReadTable: 'טבלה {table} נקראה',
   aiToolFillCells: 'טבלה {table} · מולאו {count} תאים',
+  aiToolCheckBoxes: 'טבלה {table} · סומנו {count} תיבות',
   aiTableName: 'טבלה {table}',
   aiTableRowsAdded: 'נוספו {count} שורות',
   aiTableColsAdded: 'נוספו {count} עמודות',
@@ -144,7 +148,8 @@ export const he = {
   memoUnknownAuthor: 'לא ידוע',
   memoReadOnly: 'לקריאה בלבד',
   memoReadOnlyFormatted: 'בהערה זו יש עיצובים מעורבים, ולכן לא ניתן לשנות את הטקסט שלה כאן.',
-  memoReadOnlyObject: 'בהערה זו יש טבלה, תמונה או אובייקט אחר, ולכן לא ניתן לשנות את הטקסט שלה כאן.',
+  memoReadOnlyObject:
+    'בהערה זו יש טבלה, תמונה או אובייקט אחר, ולכן לא ניתן לשנות את הטקסט שלה כאן.',
   memoReadOnlyPlace: 'לא ניתן לשנות כאן הערות בכותרת עליונה, בתחתית או בהערות שוליים.',
   memoReadOnlyProtected: 'לא ניתן לשנות כאן הערות במסמך מוגן בסיסמה.',
   memoEdit: 'עריכה',
@@ -174,7 +179,8 @@ export const he = {
   memoLockedElsewhere: 'הערה נכתבת בכרטיסייה אחרת. המתינו עד לשמירה או לביטול.',
   memoContended: 'גם בכרטיסייה אחרת נפתחה חלונית הערה. שמרו או בטלו קודם באחת מהן.',
   memoUnsupportedBuild: 'בגרסה הזו אין תמיכה בהערות.',
-  memoHwpxLost: 'הערות שלא הועברו לקובץ HWPX: {count}. שמרו כ-HWP או בדקו את הקובץ ב-Hancom Hangul.',
+  memoHwpxLost:
+    'הערות שלא הועברו לקובץ HWPX: {count}. שמרו כ-HWP או בדקו את הקובץ ב-Hancom Hangul.',
   aiToolMemos: 'נבדקו הערות: {count}',
   aiMemoContext: 'הערות: {count}',
   aiMemoApprovalTitle: 'העריכה הזו תמחק הערות: {count}. להמשיך?',

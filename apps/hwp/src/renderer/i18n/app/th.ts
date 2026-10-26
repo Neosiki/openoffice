@@ -9,12 +9,15 @@ export const th = {
   fileSaveAs: 'บันทึกเป็น…',
   fileExportPdf: 'ส่งออกเป็น PDF…',
   filePrint: 'พิมพ์…',
+  autoSave: 'บันทึกอัตโนมัติ',
+  autoSaveTip: 'บันทึกทุก 30 วินาทีและเมื่อหน้าต่างไม่ได้โฟกัส',
   printPreparing: 'กำลังเตรียมหน้า… ({done}/{total})',
   printSending: 'กำลังส่งหน้า…',
   pdfFailed: 'ไม่สามารถส่งออกเอกสารเป็น PDF ได้',
   printFailed: 'ไม่สามารถพิมพ์เอกสารได้',
   saveVerifyFailed:
     'ยังไม่ได้บันทึก: สำเนาที่กำลังจะเขียนเมื่ออ่านกลับแล้วไม่ตรงกับเอกสารบนหน้าจอ ลองใช้ "บันทึกเป็น" เพื่อเขียนเป็นไฟล์ใหม่',
+  saveVerifyHint: 'ไฟล์ต้นฉบับยังไม่เปลี่ยนแปลง ในบันทึกเป็น ให้เลือก HWPX หรือใช้ส่งออกเป็น PDF',
   saveProtected:
     'ยังไม่ได้บันทึก: เอกสารนี้มีรหัสผ่านป้องกัน และการบันทึกที่นี่จะเขียนไฟล์โดยไม่มีรหัสผ่าน',
   backupKept: 'บันทึกแล้ว เวอร์ชันก่อนหน้าถูกเก็บไว้เป็น {name}',
@@ -113,6 +116,7 @@ export const th = {
   aiToolTables: 'ตรวจสอบตารางแล้ว · {count} ตาราง',
   aiToolReadTable: 'อ่านตาราง {table} แล้ว',
   aiToolFillCells: 'ตาราง {table} · กรอก {count} เซลล์',
+  aiToolCheckBoxes: 'ตาราง {table} · เลือก {count} ช่อง',
   aiTableName: 'ตาราง {table}',
   aiTableRowsAdded: 'เพิ่ม {count} แถว',
   aiTableColsAdded: 'เพิ่ม {count} คอลัมน์',
@@ -174,9 +178,11 @@ export const th = {
   memoRemoved: 'ลบความคิดเห็นพร้อมข้อความแล้ว: {count} กด Ctrl+Z เพื่อย้อนกลับ',
   memoNotCopied: 'ไม่ได้คัดลอกความคิดเห็น',
   memoLockedElsewhere: 'กำลังเขียนความคิดเห็นในแท็บอื่น โปรดรอจนกว่าจะบันทึกหรือยกเลิก',
-  memoContended: 'มีหน้าต่างความคิดเห็นเปิดในแท็บอื่นด้วย โปรดบันทึกหรือยกเลิกในแท็บใดแท็บหนึ่งก่อน',
+  memoContended:
+    'มีหน้าต่างความคิดเห็นเปิดในแท็บอื่นด้วย โปรดบันทึกหรือยกเลิกในแท็บใดแท็บหนึ่งก่อน',
   memoUnsupportedBuild: 'เวอร์ชันนี้ไม่รองรับความคิดเห็น',
-  memoHwpxLost: 'ความคิดเห็นที่ไม่ได้ถ่ายโอนไปยังไฟล์ HWPX: {count} บันทึกเป็น HWP หรือตรวจสอบไฟล์ใน Hancom Hangul',
+  memoHwpxLost:
+    'ความคิดเห็นที่ไม่ได้ถ่ายโอนไปยังไฟล์ HWPX: {count} บันทึกเป็น HWP หรือตรวจสอบไฟล์ใน Hancom Hangul',
   aiToolMemos: 'ตรวจสอบความคิดเห็นแล้ว: {count}',
   aiMemoContext: 'ความคิดเห็น: {count}',
   aiMemoApprovalTitle: 'การแก้ไขนี้จะลบความคิดเห็น: {count} ดำเนินการต่อหรือไม่',

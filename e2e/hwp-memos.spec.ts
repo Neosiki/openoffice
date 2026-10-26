@@ -211,7 +211,23 @@ test('adds a memo, then holds save and tab close until its editor is closed', as
     )
     await expect.poll(async () => (await stat(file)).mtimeMs).toBe(before)
 
+    // closing asks in main (a hung page must not keep the tab open): Cancel keeps it
+    await launched.app.evaluate(({ dialog: d }) => {
+      const scope = globalThis as { __memoClosePrompts?: number }
+      scope.__memoClosePrompts = 0
+      d.showMessageBox = (async () => {
+        scope.__memoClosePrompts = (scope.__memoClosePrompts ?? 0) + 1
+        return { response: 1, checkboxChecked: false }
+      }) as typeof d.showMessageBox
+    })
     await closeHwpTab(launched.app)
+    await expect
+      .poll(() =>
+        launched.app.evaluate(
+          () => (globalThis as { __memoClosePrompts?: number }).__memoClosePrompts ?? 0,
+        ),
+      )
+      .toBe(1)
     await expect.poll(() => hwpTabOpen(launched.app)).toBe(true)
     await expect(page.locator('.memo-modal')).toBeVisible()
 

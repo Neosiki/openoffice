@@ -38,7 +38,7 @@ A new document opens untitled; the file on disk is only created at the first sav
 ## The save model
 
 - **Manual save**: ⌘S/ctrl+S, or File ▸ Save / Save As. The first save asks for location and name.
-- **Autosave** turns on only after you have saved the file manually at least once — a PDF you only read is never silently rewritten. Autosave fires shortly after content changes.
+- **Autosave** follows each editor’s toggle (and the shell-wide default). A PDF you only read is never silently rewritten, and a new document with no file of its own starts autosaving after its first save.
 - Closing a tab with unsaved changes asks Save / Discard / Cancel first.
 - Every write lands atomically (temp file + rename), so a power cut cannot leave half a file.
 

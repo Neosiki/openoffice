@@ -102,6 +102,8 @@ const dirtyByWc = new Set<number>()
  * checks before a save, close or quit, including a clean tab that would otherwise not ask.
  */
 const memoModalByWc = new Set<number>()
+/** every HWP view this module set up (the memo lock is only taken from one of these) */
+const hwpViews = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 /** Resolvers for menu- and shortcut-triggered saves, settled when the renderer's save ends */
 const saveWaiters = new Map<number, (ok: boolean) => void>()
@@ -214,10 +216,27 @@ export async function requestHwpClose(
   parent?: BrowserWindow | null,
 ): Promise<boolean> {
   if (contents.isDestroyed()) return true
-  // a clean tab can still hold memo text that has not reached the document yet
+  // a clean tab can still hold memo text that has not reached the document yet. Main asks
+  // itself instead of leaving it to the page: a page that hangs with the memo editor open
+  // must not keep its tab, and the app, from closing.
   if (memoModalByWc.has(contents.id)) {
-    contents.send(HWP_CHANNELS.memoBlocked)
-    return false
+    const memoOptions = {
+      type: 'warning' as const,
+      message: tm('closeMemoMsg'),
+      detail: tm('closeMemoDetail'),
+      buttons: [tm('btnDiscardClose'), tm('btnCancel')],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    }
+    const { response } =
+      parent && !parent.isDestroyed()
+        ? await dialog.showMessageBox(parent, memoOptions)
+        : await dialog.showMessageBox(memoOptions)
+    if (response !== 0) return false
+    // the memo text and any unsaved changes are given up: so is their recovery copy
+    if (!contents.isDestroyed() && dirtyByWc.has(contents.id)) hwpRecoveryDontSave(contents)
+    return true
   }
   if (!dirtyByWc.has(contents.id)) return true
   const options = {
@@ -425,8 +444,6 @@ function commitOptionsOf(raw: unknown): {
   auto: boolean
   memos: MemoSnapshot[] | null | undefined
 } {
-  // an older caller passed just the automatic flag
-  if (typeof raw === 'boolean') return { auto: raw, memos: undefined }
   const options = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const memos =
     options.memos === undefined
@@ -450,6 +467,8 @@ function registerHwpIpc(): void {
   // the memo editor is renderer state; main keeps only whether this view has one open, so
   // save, close and quit can wait for it even when the document itself is clean
   ipcMain.on(HWP_CHANNELS.memoModalOpen, (e, open: unknown) => {
+    // only an HWP view may hold the lock: its own teardown is what clears it again
+    if (!hwpViews.has(e.sender.id)) return
     if (open === true) memoModalByWc.add(e.sender.id)
     else memoModalByWc.delete(e.sender.id)
   })
@@ -630,8 +649,8 @@ function registerHwpIpc(): void {
         // (decision 0036). This runs before the backup and the write, so neither
         // happens when the save is declined.
         const recorded = recordedDiskState(wcId, target)
-        // today only tests pass auto: HWP has no autosave yet, so every real
-        // save is manual; a future autosave must send the flag through commit-save
+        // the app's 30-second autosave sends auto: true, so a copy-pair conflict
+        // stands down quietly instead of asking
         if (saveOptions.auto) {
           if (await shouldDeferAutoSave(target, recorded)) {
             return done({ ok: false, error: EXTERNAL_MODIFIED })
@@ -757,7 +776,13 @@ function registerHwpIpc(): void {
  * action for them, which leaves the menu accelerator to do its work.
  */
 function installFileShortcuts(wc: WebContents): void {
+  // a clipboard/delete key the editor did not take is sent on to the page once
+  let resending = false
   wc.on('before-input-event', (event, input) => {
+    if (resending) {
+      resending = false
+      return
+    }
     if (input.type !== 'keyDown' || input.isAutoRepeat) return
     if (input.alt) {
       if (hancomFileKey(wc, input)) event.preventDefault()
@@ -765,6 +790,27 @@ function installFileShortcuts(wc: WebContents): void {
     }
     const mod = process.platform === 'darwin' ? input.meta : input.control
     if (!mod) return
+    if (
+      (input.code === 'KeyE' || input.code === 'KeyC' || input.code === 'KeyX') &&
+      !input.shift &&
+      !input.alt
+    ) {
+      // these never reach the page from the application menu; the editor says whether
+      // it took them (a cell block, a selected table), and otherwise the key goes on
+      event.preventDefault()
+      const key = input.code === 'KeyE' ? 'ctrl-e' : input.code === 'KeyC' ? 'ctrl-c' : 'ctrl-x'
+      void editorTakes(wc, key).then((taken) => {
+        if (taken) return
+        resending = true
+        const modifiers: Array<'control' | 'meta' | 'shift' | 'alt'> = []
+        if (input.control) modifiers.push('control')
+        if (input.meta) modifiers.push('meta')
+        if (input.shift) modifiers.push('shift')
+        wc.sendInputEvent({ type: 'keyDown', keyCode: input.key, modifiers })
+        wc.sendInputEvent({ type: 'keyUp', keyCode: input.key, modifiers })
+      })
+      return
+    }
     if (input.code === 'KeyO' && !input.shift) {
       if (!runtime.openFileDialog) return
       event.preventDefault()
@@ -835,9 +881,9 @@ export function hancomFileKey(
  * (studio-plugin/hancom-keys.mjs, MAIN_PROCESS_KEYS), and lets it run the table command if so.
  * False when the frame cannot say: the key then does what it does in the app.
  */
-async function editorTakes(
+export async function editorTakes(
   wc: WebContents,
-  key: 'ctrl-shift-s' | 'ctrl-shift-h',
+  key: 'ctrl-shift-s' | 'ctrl-shift-h' | 'ctrl-tab' | 'ctrl-e' | 'ctrl-c' | 'ctrl-x',
 ): Promise<boolean> {
   if (wc.isDestroyed()) return false
   const frame = wc.mainFrame?.framesInSubtree.find((f) => /\/studio\//.test(f.url))
@@ -858,6 +904,7 @@ function grantAndTrack(
   options: HwpViewOptions = {},
 ): void {
   const wcId = wc.id
+  hwpViews.add(wcId)
   // first: its close settles the recovery copy while the view's state is still here
   trackHwpRecovery(wc)
   if (openPath && existsSync(openPath)) {
@@ -888,6 +935,7 @@ function grantAndTrack(
     untitledCopyByWc.delete(wcId)
     dirtyByWc.delete(wcId)
     memoModalByWc.delete(wcId)
+    hwpViews.delete(wcId)
     pendingSaveByWc.delete(wcId)
     writtenByWc.delete(wcId)
     tailsByWc.delete(wcId)
@@ -901,6 +949,10 @@ function grantAndTrack(
   })
   // a dead renderer cannot close its memo editor; do not keep save, close and quit blocked
   wc.on('render-process-gone', () => memoModalByWc.delete(wcId))
+  // nor can a page that reloads: the new page starts without one
+  wc.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) memoModalByWc.delete(wcId)
+  })
 }
 
 export interface HwpViewOptions {

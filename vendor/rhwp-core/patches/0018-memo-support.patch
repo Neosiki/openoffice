@@ -95,12 +95,18 @@ index 5d8475153..1ace6fcbd 100755
          let imported_bin = pool.imported();
          pool.restore(&mut self.document);
 diff --git a/src/document_core/commands/text_editing.rs b/src/document_core/commands/text_editing.rs
-index 9f6f809d7..6f343201f 100644
+index 9f6f809d7..c554a9c7c 100644
 --- a/src/document_core/commands/text_editing.rs
 +++ b/src/document_core/commands/text_editing.rs
-@@ -1244,8 +1244,16 @@ impl DocumentCore {
+@@ -1243,9 +1243,22 @@ impl DocumentCore {
+         );
          self.document.sections[section_idx].raw_stream = None;
  
++        let replaced_memos = crate::document_core::queries::memo_query::memo_anchors_within(
++            &self.document.sections[section_idx].paragraphs[para_idx],
++            char_offset,
++            delete_count,
++        );
          let deleted_count = if delete_count > 0 {
 -            self.document.sections[section_idx].paragraphs[para_idx]
 -                .delete_text_at(char_offset, delete_count)
@@ -117,7 +123,20 @@ index 9f6f809d7..6f343201f 100644
          } else {
              0
          };
-@@ -1588,6 +1596,30 @@ impl DocumentCore {
+@@ -1270,6 +1283,12 @@ impl DocumentCore {
+             );
+             let para = &mut self.document.sections[section_idx].paragraphs[para_idx];
+             para.insert_text_at(char_offset, text);
++            crate::document_core::queries::memo_query::regrow_memo_anchors(
++                para,
++                &replaced_memos,
++                char_offset,
++                new_chars_count,
++            );
+             keep_inactive_field_start_outside(para, &before_insertions, new_chars_count);
+             keep_inactive_field_end_outside(para, &outside_insertions, new_chars_count);
+             if has_clickhere_field_range(para) {
+@@ -1588,6 +1607,30 @@ impl DocumentCore {
          para_idx: usize,
          char_offset: usize,
          count: usize,
@@ -148,7 +167,7 @@ index 9f6f809d7..6f343201f 100644
      ) -> Result<String, HwpError> {
          // 인덱스 범위 검증
          if section_idx >= self.document.sections.len() {
-@@ -1608,7 +1640,15 @@ impl DocumentCore {
+@@ -1608,7 +1651,15 @@ impl DocumentCore {
  
          // 텍스트 삭제
          let apply_delete = |para: &mut Paragraph| {
@@ -165,9 +184,15 @@ index 9f6f809d7..6f343201f 100644
          };
          let picture_band_applied =
              self.apply_body_edit_through_picture_band(section_idx, para_idx, &apply_delete)?;
-@@ -1898,7 +1938,15 @@ impl DocumentCore {
+@@ -1897,8 +1948,21 @@ impl DocumentCore {
+             );
          let units_fp_before =
              crate::renderer::layout::LayoutEngine::cell_paragraph_units_fingerprint(cell_para);
++        let replaced_memos = crate::document_core::queries::memo_query::memo_anchors_within(
++            cell_para,
++            char_offset,
++            delete_count,
++        );
          let deleted_count = if delete_count > 0 {
 -            cell_para.delete_text_at(char_offset, delete_count)
 +            if text.is_empty() {
@@ -182,7 +207,20 @@ index 9f6f809d7..6f343201f 100644
          } else {
              0
          };
-@@ -2258,7 +2306,11 @@ impl DocumentCore {
+@@ -1920,6 +1984,12 @@ impl DocumentCore {
+         );
+         if new_chars_count > 0 {
+             cell_para.insert_text_at(char_offset, text);
++            crate::document_core::queries::memo_query::regrow_memo_anchors(
++                cell_para,
++                &replaced_memos,
++                char_offset,
++                new_chars_count,
++            );
+             keep_inactive_field_start_outside(cell_para, &before_insertions, new_chars_count);
+             keep_inactive_field_end_outside(cell_para, &outside_insertions, new_chars_count);
+             if has_clickhere_field_range(cell_para) {
+@@ -2258,7 +2328,11 @@ impl DocumentCore {
              );
          let units_fp_before =
              crate::renderer::layout::LayoutEngine::cell_paragraph_units_fingerprint(cell_para);
@@ -195,7 +233,7 @@ index 9f6f809d7..6f343201f 100644
  
          // 부모 컨트롤 dirty 마킹 (표 또는 글상자)
          self.mark_cell_control_dirty(section_idx, parent_para_idx, control_idx);
-@@ -3320,7 +3372,11 @@ impl DocumentCore {
+@@ -3320,7 +3394,11 @@ impl DocumentCore {
                  if count > 0 {
                      let cell_para =
                          self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, start_para)?;
@@ -208,7 +246,7 @@ index 9f6f809d7..6f343201f 100644
                      self.reflow_cell_paragraph(section_idx, ppi, ci, cei, start_para);
                  }
              } else {
-@@ -3329,7 +3385,9 @@ impl DocumentCore {
+@@ -3329,7 +3407,9 @@ impl DocumentCore {
                  if end_offset > 0 {
                      let cell_para =
                          self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, end_para)?;
@@ -219,7 +257,7 @@ index 9f6f809d7..6f343201f 100644
                  }
                  // 2) 중간 문단 역순 제거 — 셀 내 문단은 cell.paragraphs에서 직접 제거
                  for mid_para in (start_para + 1..end_para).rev() {
-@@ -3344,7 +3402,11 @@ impl DocumentCore {
+@@ -3344,7 +3424,11 @@ impl DocumentCore {
                          self.get_cell_paragraph_mut(section_idx, ppi, ci, cei, start_para)?;
                      let para_len = cell_para.text.chars().count();
                      if start_offset < para_len {
@@ -232,7 +270,7 @@ index 9f6f809d7..6f343201f 100644
                      }
                  }
                  // 4) 첫-마지막 문단 병합 (마지막 문단이 이제 start_para+1에 위치)
-@@ -3376,8 +3438,12 @@ impl DocumentCore {
+@@ -3376,8 +3460,12 @@ impl DocumentCore {
                  // 같은 문단 내 삭제
                  let count = end_offset - start_offset;
                  if count > 0 {
@@ -247,7 +285,7 @@ index 9f6f809d7..6f343201f 100644
                      // [Task #2299] 리셋 판별용 — reflow 이전 저장 흐름 end 캡처.
                      let stored_end_for_reset = crate::renderer::composer::paragraph_flow_end(
                          &self.document.sections[section_idx].paragraphs[start_para],
-@@ -3399,8 +3465,10 @@ impl DocumentCore {
+@@ -3399,8 +3487,10 @@ impl DocumentCore {
              } else {
                  // 1) 마지막 문단 앞부분 삭제
                  if end_offset > 0 {
@@ -260,7 +298,7 @@ index 9f6f809d7..6f343201f 100644
                  }
                  // 2) 중간 문단 역순 제거 (composed도 동기)
                  for mid_para in (start_para + 1..end_para).rev() {
-@@ -3417,8 +3485,12 @@ impl DocumentCore {
+@@ -3417,8 +3507,12 @@ impl DocumentCore {
                          .chars()
                          .count();
                      if start_offset < para_len {
@@ -275,7 +313,7 @@ index 9f6f809d7..6f343201f 100644
                      }
                  }
                  // 4) 첫-마지막 문단 병합 (마지막 문단이 이제 start_para+1에 위치)
-@@ -5908,7 +5980,11 @@ impl DocumentCore {
+@@ -5908,7 +6002,11 @@ impl DocumentCore {
          }
  
          let cell_para = self.get_cell_paragraph_mut_by_path(section_idx, parent_para_idx, path)?;
@@ -288,7 +326,7 @@ index 9f6f809d7..6f343201f 100644
  
          // [#2755] 깊이 ≥ 2 중첩 셀도 flat `delete_text_in_cell_native` 처럼 최내곽 셀 폭으로
          // 재래핑하고 vpos 를 재계산한다(깊이 1 은 위 위임 가드가 flat 경로로 처리).
-@@ -5962,14 +6038,20 @@ impl DocumentCore {
+@@ -5962,14 +6060,20 @@ impl DocumentCore {
                  let count = end_offset.saturating_sub(start_offset);
                  if count > 0 {
                      if let Some(p) = paras.get_mut(start_para) {
@@ -311,7 +349,7 @@ index 9f6f809d7..6f343201f 100644
                      }
                  }
                  // 2) 중간 문단 역순 제거
-@@ -5982,7 +6064,11 @@ impl DocumentCore {
+@@ -5982,7 +6086,11 @@ impl DocumentCore {
                  if let Some(p) = paras.get_mut(start_para) {
                      let para_len = p.text.chars().count();
                      if start_offset < para_len {
@@ -348,10 +386,10 @@ index e76e10cff..96c5486c7 100644
          || para.text.contains('\u{fffc}')
 diff --git a/src/document_core/queries/memo_query.rs b/src/document_core/queries/memo_query.rs
 new file mode 100644
-index 000000000..7cd73e4b9
+index 000000000..5c3cadb50
 --- /dev/null
 +++ b/src/document_core/queries/memo_query.rs
-@@ -0,0 +1,2097 @@
+@@ -0,0 +1,2526 @@
 +//! Memo (HWP `MEMO/` field) reading and editing.
 +//!
 +//! A memo is a field control whose command starts with `MEMO/` and whose body
@@ -593,6 +631,34 @@ index 000000000..7cd73e4b9
 +    memo_command(shape, number, field.field_id, &memo_author(field))
 +}
 +
++/// A memo from HWPX carries its number again in its parameters (`Number`,
++/// `ID` = `memo<Number>`, `Command`), and the HWPX writer prefers those to the
++/// command. Bring them in line with a new number and command, and drop the raw
++/// parameter XML so the writer renders the updated tree.
++fn sync_memo_parameters(field: &mut Field, number: u32) {
++    let command = field.command.clone();
++    for item in &mut field.parameters.items {
++        match item {
++            Parameter::Integer {
++                name: Some(name),
++                value,
++            } if name == "Number" => *value = i64::from(number),
++            Parameter::String {
++                name: Some(name),
++                value,
++                ..
++            } => match name.as_str() {
++                "Number" => *value = number.to_string(),
++                "ID" => *value = format!("memo{number}"),
++                "Command" => value.clone_from(&command),
++                _ => {}
++            },
++            _ => {}
++        }
++    }
++    field.raw_parameters_xml = None;
++}
++
 +/// Give every memo in a detached copy a fresh document-wide number. Used after
 +/// clipboard identities are remapped; the body travels with the field.
 +pub(crate) fn renumber_memos(paragraphs: &mut [Paragraph], mut next: u32) -> u32 {
@@ -606,6 +672,7 @@ index 000000000..7cd73e4b9
 +                        *next = (*next).max(1);
 +                        field.memo_index = *next;
 +                        field.command = rewritten_memo_command(field, *next);
++                        sync_memo_parameters(field, *next);
 +                        numbers.insert(field.field_id, *next);
 +                        *next = next.saturating_add(1).max(1);
 +                        walk(&mut field.memo_paragraphs, next, numbers);
@@ -972,9 +1039,52 @@ index 000000000..7cd73e4b9
 +    if new_text.is_empty() {
 +        (delete_text_at_keeping_memos(para, char_offset, count), 0)
 +    } else {
++        let replaced = memo_anchors_within(para, char_offset, count);
 +        let deleted = para.delete_text_at(char_offset, count);
 +        let inserted = para.insert_text_at(char_offset, new_text);
++        regrow_memo_anchors(para, &replaced, char_offset, new_text.chars().count());
 +        (deleted, inserted)
++    }
++}
++
++/// The memos whose whole non-empty anchor lies in the `count` characters at
++/// `offset`, by control index. Deleting those characters collapses each to a
++/// point at `offset`.
++pub(crate) fn memo_anchors_within(para: &Paragraph, offset: usize, count: usize) -> Vec<usize> {
++    para.field_ranges
++        .iter()
++        .filter(|range| {
++            range.start_char_idx < range.end_char_idx
++                && offset <= range.start_char_idx
++                && range.end_char_idx <= offset + count
++                && matches!(
++                    para.controls.get(range.control_idx),
++                    Some(Control::Field(field)) if is_memo_field(field)
++                )
++        })
++        .map(|range| range.control_idx)
++        .collect()
++}
++
++/// After a replacement: the anchors [`memo_anchors_within`] found, now points at
++/// `offset`, take the inserted text. A memo that was a point before the
++/// replacement stays one (text typed at a caret memo goes after it).
++pub(crate) fn regrow_memo_anchors(
++    para: &mut Paragraph,
++    replaced: &[usize],
++    offset: usize,
++    inserted: usize,
++) {
++    if replaced.is_empty() || inserted == 0 {
++        return;
++    }
++    for range in &mut para.field_ranges {
++        if replaced.contains(&range.control_idx)
++            && range.start_char_idx == offset
++            && range.end_char_idx == offset
++        {
++            range.end_char_idx = offset + inserted;
++        }
 +    }
 +}
 +
@@ -1551,6 +1661,7 @@ index 000000000..7cd73e4b9
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let author = sanitize_author(author)?;
++        let text = &normalize_memo_text(text);
 +        check_text_size(text)?;
 +        let (number, field_id) = self.next_memo_identity()?;
 +
@@ -1634,6 +1745,7 @@ index 000000000..7cd73e4b9
 +            return Err(MemoError::read_only("protected"));
 +        }
 +        let author = sanitize_author(author)?;
++        let text = &normalize_memo_text(text);
 +        check_text_size(text)?;
 +        let (number, field_id) = self.next_memo_identity()?;
 +        let shape_ref = self
@@ -1680,6 +1792,7 @@ index 000000000..7cd73e4b9
 +    /// Replace a memo's body paragraphs. Paragraph/character shapes are kept
 +    /// from the first body paragraph; lines split on `\n`.
 +    pub fn set_memo_text(&mut self, id: u32, text: &str) -> Result<String, MemoError> {
++        let text = &normalize_memo_text(text);
 +        check_text_size(text)?;
 +        let hit = self.memo_hit(id)?;
 +        if self.document_protected() {
@@ -1929,6 +2042,43 @@ index 000000000..7cd73e4b9
 +        return Err(MemoError::invalid_author());
 +    }
 +    Ok(out)
++}
++
++/// Memo text is plain lines: `\r\n` and `\r` become `\n`, and the other C0
++/// control characters except tab are dropped. A raw `\r` or control character
++/// would otherwise be written into the memo paragraph and cut it on reopening.
++pub(crate) fn normalize_memo_text(text: &str) -> String {
++    let mut out = String::with_capacity(text.len());
++    let mut chars = text.chars().peekable();
++    while let Some(ch) = chars.next() {
++        match ch {
++            '\r' => {
++                if chars.peek() == Some(&'\n') {
++                    chars.next();
++                }
++                out.push('\n');
++            }
++            '\n' | '\t' => out.push(ch),
++            '\u{0}'..='\u{1f}' => {}
++            _ => out.push(ch),
++        }
++    }
++    out
++}
++
++/// The `{author, text}` argument of `insertMemo`/`insertMemoByPath`. A missing
++/// or `null` member is empty; anything that is not a JSON object with string
++/// members is refused.
++pub(crate) fn memo_request(json: &str) -> Result<(String, String), MemoError> {
++    let invalid = || MemoError::insert_failed("메모 요청을 읽을 수 없음");
++    let value: serde_json::Value = serde_json::from_str(json).map_err(|_| invalid())?;
++    let object = value.as_object().ok_or_else(invalid)?;
++    let member = |key: &str| match object.get(key) {
++        None | Some(serde_json::Value::Null) => Ok(String::new()),
++        Some(serde_json::Value::String(value)) => Ok(value.clone()),
++        Some(_) => Err(invalid()),
++    };
++    Ok((member("author")?, member("text")?))
 +}
 +
 +fn check_text_size(text: &str) -> Result<(), MemoError> {
@@ -2448,6 +2598,323 @@ index 000000000..7cd73e4b9
 +        core.remove_memo(id).unwrap();
 +        assert!(core.get_memo_list_json() == "[]");
 +    }
++
++    fn core_with_text(text: &str) -> DocumentCore {
++        let mut core = DocumentCore::new_empty();
++        core.create_blank_document_native().unwrap();
++        core.insert_text_native(0, 0, 0, text).unwrap();
++        core
++    }
++
++    fn memo_texts(core: &DocumentCore) -> Vec<String> {
++        core.memo_hits()
++            .iter()
++            .map(|hit| memo_text(&hit.field))
++            .collect()
++    }
++
++    /// A Hancom-shaped memo tail: the lists follow the real last paragraph,
++    /// which keeps the last-paragraph bit. No extra paragraph appears.
++    #[test]
++    fn hwp_save_adds_no_paragraph_for_the_memo_tail() {
++        let mut core = core_with_text("anchor text");
++        core.insert_memo_at(0, 0, 0, 6, "tester", "body").unwrap();
++        let mut bytes = core.export_hwp_with_adapter_snapshot().unwrap();
++        for _ in 0..3 {
++            let mut reopened = DocumentCore::from_bytes(&bytes).unwrap();
++            assert_eq!(reopened.document.sections[0].paragraphs.len(), 1);
++            assert_eq!(memo_texts(&reopened), ["body"]);
++            // an edit makes the next save write the section from the model
++            reopened.insert_text_native(0, 0, 11, "!").unwrap();
++            reopened.delete_text_native(0, 0, 11, 1).unwrap();
++            bytes = reopened.export_hwp_with_adapter_snapshot().unwrap();
++        }
++        let section = DocumentCore::from_bytes(&bytes).unwrap().document.sections[0]
++            .raw_stream
++            .clone()
++            .unwrap();
++        let records = crate::parser::record::Record::read_all(&section).unwrap();
++        let memo_list = records
++            .iter()
++            .position(|record| record.tag_id == tags::HWPTAG_MEMO_LIST)
++            .unwrap();
++        let last_para = records
++            .iter()
++            .rposition(|record| record.tag_id == tags::HWPTAG_PARA_HEADER && record.level == 0)
++            .unwrap();
++        assert!(last_para < memo_list);
++        let n_chars = u32::from_le_bytes(records[last_para].data[0..4].try_into().unwrap());
++        assert_ne!(
++            n_chars & 0x8000_0000,
++            0,
++            "the real last paragraph keeps the last bit"
++        );
++        assert!(
++            records[last_para + 1].tag_id == tags::HWPTAG_PARA_TEXT,
++            "and it is the anchor paragraph, not an empty one"
++        );
++    }
++
++    fn two_section_document() -> crate::model::document::Document {
++        let mut core = core_with_text("first section");
++        let mut second = core.document.sections[0].clone();
++        second.raw_stream = None;
++        second.raw_provenance = None;
++        core.insert_memo_at(0, 0, 0, 5, "tester", "first body")
++            .unwrap();
++        let mut doc = core.document.clone();
++        doc.sections.push(second);
++        doc.doc_properties.section_count = 2;
++        doc
++    }
++
++    fn memo_bodies(doc: &crate::model::document::Document) -> Vec<(usize, String)> {
++        let mut out = Vec::new();
++        for (index, section) in doc.sections.iter().enumerate() {
++            for para in &section.paragraphs {
++                for ctrl in &para.controls {
++                    if let Control::Field(field) = ctrl {
++                        if is_memo_field(field) {
++                            out.push((index, memo_text(field)));
++                        }
++                    }
++                }
++            }
++        }
++        out
++    }
++
++    /// The HWP5 format keeps every memo list at the end of the last section. A
++    /// memo of an earlier section is written there, read back from there, and
++    /// kept when either section alone is edited.
++    #[test]
++    fn memo_lists_live_at_the_end_of_the_last_section() {
++        let doc = two_section_document();
++        let bytes = crate::serializer::serialize_hwp(&doc).unwrap();
++        let parsed = crate::parser::parse_document(&bytes).unwrap();
++        assert_eq!(memo_bodies(&parsed), [(0, "first body".to_string())]);
++        let has_list = |section: &crate::model::document::Section| {
++            crate::parser::body_text::section_stream_has_memo_list(
++                section.raw_stream.as_deref().unwrap(),
++            )
++        };
++        assert!(!has_list(&parsed.sections[0]));
++        assert!(has_list(&parsed.sections[1]));
++        assert_eq!(parsed.sections[1].paragraphs.len(), 1);
++
++        // Unedited: both streams are reused as they are.
++        let resaved =
++            crate::parser::parse_document(&crate::serializer::serialize_hwp(&parsed).unwrap())
++                .unwrap();
++        for (again, before) in resaved.sections.iter().zip(&parsed.sections) {
++            assert_eq!(again.raw_stream, before.raw_stream);
++        }
++
++        // Only the last section changes.
++        let mut last_edited = parsed.clone();
++        last_edited.sections[1].paragraphs[0].insert_text_at(0, "x");
++        last_edited.sections[1].raw_stream = None;
++        let reopened =
++            crate::parser::parse_document(&crate::serializer::serialize_hwp(&last_edited).unwrap())
++                .unwrap();
++        assert_eq!(memo_bodies(&reopened), [(0, "first body".to_string())]);
++
++        // Only the first section changes: the reused last stream would carry a
++        // stale tail, so it is written again with the current one.
++        let mut first_edited = parsed.clone();
++        for ctrl in &mut first_edited.sections[0].paragraphs[0].controls {
++            if let Control::Field(field) = ctrl {
++                if is_memo_field(field) {
++                    field.memo_paragraphs[0] = Paragraph::new_empty_like(&field.memo_paragraphs[0]);
++                    field.memo_paragraphs[0].insert_text_at(0, "new body");
++                    field.memo_paragraphs[0].has_para_text = true;
++                }
++            }
++        }
++        first_edited.sections[0].raw_stream = None;
++        let reopened = crate::parser::parse_document(
++            &crate::serializer::serialize_hwp(&first_edited).unwrap(),
++        )
++        .unwrap();
++        assert_eq!(memo_bodies(&reopened), [(0, "new body".to_string())]);
++        assert!(!has_list(&reopened.sections[0]));
++    }
++
++    /// Files written one memo tail per section (earlier builds) still read.
++    #[test]
++    fn a_memo_list_in_its_own_section_still_pairs() {
++        let doc = two_section_document();
++        let section0 = crate::serializer::body_text::serialize_section(&doc.sections[0]);
++        assert!(crate::parser::body_text::section_stream_has_memo_list(
++            &section0
++        ));
++        let (section, leftovers) =
++            crate::parser::body_text::parse_body_text_section_with_memo_leftovers(&section0)
++                .unwrap();
++        assert!(leftovers.is_empty());
++        let mut sections = vec![section];
++        crate::parser::body_text::attach_memo_leftovers(&mut sections, leftovers);
++        let mut parsed = doc.clone();
++        parsed.sections[0] = sections.remove(0);
++        assert_eq!(memo_bodies(&parsed)[0].1, "first body");
++    }
++
++    fn hwpx_memo_field() -> Field {
++        let mut field = memo_field(7, 3, &["body"]);
++        field.command = memo_command(65535, 3, 7, "author");
++        field.parameters.items = vec![
++            Parameter::Integer {
++                name: Some("Prop".into()),
++                value: 0,
++            },
++            Parameter::String {
++                name: Some("Command".into()),
++                value: field.command.clone(),
++                preserve_space: false,
++            },
++            Parameter::String {
++                name: Some("ID".into()),
++                value: "memo3".into(),
++                preserve_space: false,
++            },
++            Parameter::Integer {
++                name: Some("Number".into()),
++                value: 3,
++            },
++            Parameter::String {
++                name: Some("Author".into()),
++                value: "author".into(),
++                preserve_space: false,
++            },
++        ];
++        field.raw_parameters_xml = Some("<hp:parameters cnt=\"5\"/>".into());
++        field
++    }
++
++    /// A pasted memo from HWPX gets its new number in the parameters the HWPX
++    /// writer uses, not only in the command.
++    #[test]
++    fn renumbering_updates_hwpx_parameters() {
++        let mut para = para_with_text("anchor");
++        insert_memo_field_in_para(&mut para, 0, 2, hwpx_memo_field()).unwrap();
++        let mut paragraphs = vec![para];
++        renumber_memos(&mut paragraphs, 4);
++        let Some(Control::Field(field)) = paragraphs[0].controls.first() else {
++            panic!("memo field");
++        };
++        assert_eq!(field.memo_index, 4);
++        assert!(field.command.starts_with("MEMO/65535/4/7/"));
++        assert!(field.raw_parameters_xml.is_none());
++        let value = |key: &str| {
++            field.parameters.items.iter().find_map(|item| match item {
++                Parameter::Integer {
++                    name: Some(name),
++                    value,
++                } if name == key => Some(value.to_string()),
++                Parameter::String {
++                    name: Some(name),
++                    value,
++                    ..
++                } if name == key => Some(value.clone()),
++                _ => None,
++            })
++        };
++        assert_eq!(value("Number").as_deref(), Some("4"));
++        assert_eq!(value("ID").as_deref(), Some("memo4"));
++        assert_eq!(value("Command").as_deref(), Some(field.command.as_str()));
++        assert_eq!(value("Author").as_deref(), Some("author"));
++    }
++
++    #[test]
++    fn memo_request_reads_json_escapes() {
++        let author = "a\"b\\c";
++        let text = "C:\\dir\\n x \"q\" é 😀\n\ttab \u{1}";
++        let json = serde_json::json!({ "author": author, "text": text }).to_string();
++        assert_eq!(
++            memo_request(&json).unwrap(),
++            (author.to_string(), text.to_string())
++        );
++        // escapes JSON.stringify writes, and spacing other writers use
++        let escaped = r#"{ "text" : "\u00e9\ud83d\ude00\/\\\b", "author": null }"#;
++        assert_eq!(
++            memo_request(escaped).unwrap(),
++            (String::new(), "é😀/\\\u{8}".to_string())
++        );
++        assert_eq!(memo_request("{}").unwrap(), (String::new(), String::new()));
++        for bad in ["not json", "[]", r#"{"text":1}"#, r#"{"author":"a"#] {
++            assert_eq!(
++                memo_request(bad).unwrap_err().code,
++                MemoErrorCode::InsertFailed
++            );
++        }
++    }
++
++    #[test]
++    fn memo_text_is_normalized_to_plain_lines() {
++        assert_eq!(normalize_memo_text("a\r\nb\rc\nd"), "a\nb\nc\nd");
++        assert_eq!(
++            normalize_memo_text("x\u{0}y\u{1}z\u{1f}\tw\u{7f}"),
++            "xyz\tw\u{7f}"
++        );
++        let mut core = core_with_text("hello");
++        core.insert_memo_at(0, 0, 0, 2, "", "c\rd\u{1}e\r\nf")
++            .unwrap();
++        assert_eq!(memo_texts(&core), ["c\nde\nf"]);
++        let id = core.memo_hits()[0].id;
++        core.set_memo_text(id, "g\rh").unwrap();
++        assert_eq!(memo_texts(&core), ["g\nh"]);
++        let reopened =
++            DocumentCore::from_bytes(&core.export_hwp_with_adapter_snapshot().unwrap()).unwrap();
++        assert_eq!(memo_texts(&reopened), ["g\nh"]);
++    }
++
++    /// Text typed where a caret memo sits goes after the memo point; it does not
++    /// become the memo's anchor, so deleting it keeps the memo.
++    #[test]
++    fn typing_at_a_caret_memo_does_not_extend_it() {
++        let mut core = core_with_text("abcdef");
++        core.insert_memo_at(0, 0, 2, 2, "", "caret").unwrap();
++        core.insert_text_native(0, 0, 2, "XY").unwrap();
++        assert_eq!(core.memo_hits()[0].range, Some((2, 2)));
++        core.delete_text_native(0, 0, 2, 2).unwrap();
++        assert_eq!(memo_texts(&core), ["caret"]);
++        assert_eq!(core.memo_hits()[0].range, Some((2, 2)));
++        // a ranged memo still grows when typed into
++        core.insert_memo_at(0, 0, 3, 5, "", "ranged").unwrap();
++        core.insert_text_native(0, 0, 4, "Z").unwrap();
++        assert_eq!(core.memo_hits()[1].range, Some((3, 6)));
++        let reopened =
++            DocumentCore::from_bytes(&core.export_hwp_with_adapter_snapshot().unwrap()).unwrap();
++        let ranges: Vec<_> = reopened.memo_hits().iter().map(|hit| hit.range).collect();
++        assert_eq!(ranges, [Some((2, 2)), Some((3, 6))]);
++    }
++
++    /// Replacing a whole anchor keeps the memo over the new text; a caret memo
++    /// stays a point through replacements around it.
++    #[test]
++    fn replacing_a_whole_anchor_moves_the_memo_onto_the_new_text() {
++        let mut core = core_with_text("hello world");
++        core.insert_memo_at(0, 0, 0, 5, "", "ranged").unwrap();
++        core.insert_memo_at(0, 0, 6, 6, "", "caret").unwrap();
++        core.replace_text_native(0, 0, 0, 5, "HELLO!").unwrap();
++        let ranges: Vec<_> = core.memo_hits().iter().map(|hit| hit.range).collect();
++        assert_eq!(ranges, [Some((0, 6)), Some((7, 7))]);
++        core.replace_body_text_local_native(0, 0, 0, 6, "hi")
++            .unwrap();
++        let ranges: Vec<_> = core.memo_hits().iter().map(|hit| hit.range).collect();
++        assert_eq!(ranges, [Some((0, 2)), Some((3, 3))]);
++
++        let mut para = para_with_text("abcdef");
++        insert_memo_field_in_para(&mut para, 2, 2, memo_field(1, 1, &["caret"])).unwrap();
++        replace_text_at_keeping_memos(&mut para, 2, 1, "XY");
++        assert_eq!(
++            (
++                para.field_ranges[0].start_char_idx,
++                para.field_ranges[0].end_char_idx
++            ),
++            (2, 2)
++        );
++    }
 +}
 diff --git a/src/document_core/queries/mod.rs b/src/document_core/queries/mod.rs
 index 3a1f8c122..848dfec23 100644
@@ -2462,10 +2929,58 @@ index 3a1f8c122..848dfec23 100644
  // [#3283] `grep` 이 같은 매칭 규칙(find_matches)을 쓰도록 크레이트 내부 공개.
  /// [프롬프트 주입 방패] 문서 본문을 nonce 격벽으로 감싸 LLM 에 안전하게 넘긴다 — 읽기 전용.
 diff --git a/src/document_core/queries/search_query.rs b/src/document_core/queries/search_query.rs
-index df458646c..393b101df 100644
+index df458646c..b497ab2bb 100644
 --- a/src/document_core/queries/search_query.rs
 +++ b/src/document_core/queries/search_query.rs
-@@ -478,9 +478,13 @@ impl DocumentCore {
+@@ -467,6 +467,47 @@ impl DocumentCore {
+         Ok(format!("[{}]", json_parts.join(",")))
+     }
+ 
++    /// Replace body text with non-empty text: a memo whose whole anchor is
++    /// replaced keeps its field, and its anchor becomes the new text.
++    fn replace_body_text_keeping_memos(
++        &mut self,
++        sec: usize,
++        para: usize,
++        char_offset: usize,
++        length: usize,
++        new_text: &str,
++    ) -> Result<(), HwpError> {
++        let replaced = self
++            .document
++            .sections
++            .get(sec)
++            .and_then(|section| section.paragraphs.get(para))
++            .map(|p| {
++                crate::document_core::queries::memo_query::memo_anchors_within(
++                    p,
++                    char_offset,
++                    length,
++                )
++            })
++            .unwrap_or_default();
++        self.delete_text_native_preserving_memos(sec, para, char_offset, length)?;
++        self.insert_text_native(sec, para, char_offset, new_text)?;
++        if let Some(p) = self
++            .document
++            .sections
++            .get_mut(sec)
++            .and_then(|section| section.paragraphs.get_mut(para))
++        {
++            crate::document_core::queries::memo_query::regrow_memo_anchors(
++                p,
++                &replaced,
++                char_offset,
++                new_text.chars().count(),
++            );
++        }
++        Ok(())
++    }
++
+     /// 텍스트 치환 (단일)
+     ///
+     /// 검색 결과 위치의 텍스트를 new_text로 교체한다.
+@@ -478,9 +519,12 @@ impl DocumentCore {
          length: usize,
          new_text: &str,
      ) -> Result<String, HwpError> {
@@ -2476,13 +2991,12 @@ index df458646c..393b101df 100644
 +            self.delete_text_native(sec, para, char_offset, length)?;
 +        } else {
 +            // Replacing an anchor with text keeps the memo; deleting it does not.
-+            self.delete_text_native_preserving_memos(sec, para, char_offset, length)?;
-+            self.insert_text_native(sec, para, char_offset, new_text)?;
++            self.replace_body_text_keeping_memos(sec, para, char_offset, length, new_text)?;
 +        }
          let new_len = new_text.chars().count();
          Ok(format!(
              "{{\"ok\":true,\"charOffset\":{},\"newLength\":{}}}",
-@@ -509,8 +513,17 @@ impl DocumentCore {
+@@ -509,8 +553,17 @@ impl DocumentCore {
          };
  
          let new_len = new_text.chars().count();
@@ -2491,18 +3005,18 @@ index df458646c..393b101df 100644
 +        if new_text.is_empty() {
 +            self.delete_text_native(hit.sec, hit.para, hit.char_offset, hit.length)?;
 +        } else {
-+            self.delete_text_native_preserving_memos(
++            self.replace_body_text_keeping_memos(
 +                hit.sec,
 +                hit.para,
 +                hit.char_offset,
 +                hit.length,
++                new_text,
 +            )?;
-+            self.insert_text_native(hit.sec, hit.para, hit.char_offset, new_text)?;
 +        }
  
          Ok(format!(
              "{{\"ok\":true,\"sec\":{},\"para\":{},\"charOffset\":{},\"newLength\":{}}}",
-@@ -600,8 +613,12 @@ impl DocumentCore {
+@@ -600,8 +653,12 @@ impl DocumentCore {
                      };
                      replace_char_range(&mut equation.script, hit.char_offset, hit.length, new_text);
                  } else {
@@ -2517,7 +3031,7 @@ index df458646c..393b101df 100644
                      affected_cell_paragraphs.push((hit.sec, cell.parent_para, cell.path.clone()));
                  }
                  count += 1;
-@@ -646,8 +663,12 @@ impl DocumentCore {
+@@ -646,8 +703,12 @@ impl DocumentCore {
                      .paragraphs
                      .get_mut(hit.para)
                      .ok_or_else(|| HwpError::RenderError("문단 범위 초과".into()))?;
@@ -2533,7 +3047,7 @@ index df458646c..393b101df 100644
                  count += 1;
                  affected_sections.push(hit.sec);
 diff --git a/src/model/paragraph.rs b/src/model/paragraph.rs
-index 823dba631..8f23b070c 100644
+index 823dba631..606bd9ec9 100644
 --- a/src/model/paragraph.rs
 +++ b/src/model/paragraph.rs
 @@ -624,6 +624,10 @@ pub struct OrphanFieldEnd {
@@ -2547,11 +3061,57 @@ index 823dba631..8f23b070c 100644
  }
  
  impl Paragraph {
+@@ -1282,6 +1286,13 @@ impl Paragraph {
+         for fr in &mut self.field_ranges {
+             let is_hyperlink = matches!(self.controls.get(fr.control_idx),
+                 Some(Control::Field(field)) if field.field_type == FieldType::Hyperlink);
++            // A memo on a caret position (zero-length anchor) marks a point: text
++            // typed there goes after it, where the insertion already lands in the
++            // raw stream, instead of becoming the memo's anchor.
++            let is_point_memo = fr.start_char_idx == fr.end_char_idx
++                && matches!(self.controls.get(fr.control_idx),
++                    Some(Control::Field(field))
++                        if field.field_type == FieldType::Memo || field.command.starts_with("MEMO/"));
+             if fr.start_char_idx > char_offset
+                 || (is_hyperlink
+                     && fr.start_char_idx == char_offset
+@@ -1289,7 +1300,9 @@ impl Paragraph {
+             {
+                 fr.start_char_idx += inserted_len;
+             }
+-            if fr.end_char_idx > char_offset || (fr.end_char_idx == char_offset && !is_hyperlink) {
++            if fr.end_char_idx > char_offset
++                || (fr.end_char_idx == char_offset && !is_hyperlink && !is_point_memo)
++            {
+                 fr.end_char_idx += inserted_len;
+             }
+         }
 diff --git a/src/parser/body_text.rs b/src/parser/body_text.rs
-index 036e8bf54..05460aabb 100644
+index 036e8bf54..973a0d80a 100644
 --- a/src/parser/body_text.rs
 +++ b/src/parser/body_text.rs
-@@ -111,42 +111,197 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
+@@ -76,6 +76,20 @@ impl std::error::Error for BodyTextError {}
+ ///
+ /// data: 압축 해제된(배포용은 복호화+해제된) 레코드 바이트 스트림
+ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
++    parse_body_text_section_with_memo_leftovers(data).map(|(section, _)| section)
++}
++
++/// A memo body from a section's tail that found no memo field in that section:
++/// `(memo number, body paragraphs)`.
++pub type MemoLeftover = (u32, Vec<Paragraph>);
++
++/// [`parse_body_text_section`], also returning the memo bodies that found no
++/// field in this section. The HWP5 format keeps every memo list at the end of
++/// the document's last section, so a memo anchored in an earlier section gets
++/// its body from there ([`attach_memo_leftovers`]).
++pub fn parse_body_text_section_with_memo_leftovers(
++    data: &[u8],
++) -> Result<(Section, Vec<MemoLeftover>), BodyTextError> {
+     let records = Record::read_all(data).map_err(|e| BodyTextError::RecordError(e.to_string()))?;
+     drawing_text_structure::validate(&records)?;
+ 
+@@ -111,42 +125,244 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
  
      link_orphan_field_ends(&mut section.paragraphs);
  
@@ -2563,6 +3123,7 @@ index 036e8bf54..05460aabb 100644
 +    // HWP5는 메모를 `MEMO_LIST`(level 1) + `LIST_HEADER`(level 1) + 메모 문단으로,
 +    // 확장 바탕쪽을 `LIST_HEADER`(level 1) + 바탕쪽 문단으로 쓴다. 둘을 갈라 읽어야
 +    // 메모의 LIST_HEADER를 바탕쪽으로 오해하지 않는다.
++    let mut leftovers = Vec::new();
      {
          let all_records = Record::read_all(data).unwrap_or_default();
 -        let last_para0_idx = all_records
@@ -2578,7 +3139,11 @@ index 036e8bf54..05460aabb 100644
 +        let (memo_lists, master_records) = tail_lists(&all_records);
 +        for (number, paragraphs) in memo_lists {
 +            let mut body = Some(paragraphs);
-+            let _ = assign_memo_paragraphs(&mut section.paragraphs, number, &mut body);
++            if !assign_memo_paragraphs(&mut section.paragraphs, number, &mut body) {
++                if let Some(body) = body {
++                    leftovers.push((number, body));
++                }
++            }
 +        }
 +        if !master_records.is_empty() {
 +            let ext_mps = parse_master_pages_from_raw(&master_records, 0);
@@ -2586,7 +3151,49 @@ index 036e8bf54..05460aabb 100644
 +        }
 +    }
 +
-+    Ok(section)
++    Ok((section, leftovers))
++}
++
++/// Whether a section record stream holds a memo list (`HWPTAG_MEMO_LIST`).
++/// Walks the record headers only.
++pub fn section_stream_has_memo_list(data: &[u8]) -> bool {
++    let mut at = 0usize;
++    while at + 4 <= data.len() {
++        let header = u32::from_le_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]]);
++        at += 4;
++        let tag = header & 0x3ff;
++        let mut size = (header >> 20) as usize;
++        if size == 0xfff {
++            if at + 4 > data.len() {
++                return false;
++            }
++            size =
++                u32::from_le_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]]) as usize;
++            at += 4;
++        }
++        if tag == u32::from(tags::HWPTAG_MEMO_LIST) {
++            return true;
++        }
++        at = at.saturating_add(size);
++    }
++    false
++}
++
++/// Give the memo bodies that found no field in their own section to a memo
++/// field with the same number in any section, in document order. A body whose
++/// number no field claims is dropped, as before.
++pub fn attach_memo_leftovers(
++    sections: &mut [crate::model::document::Section],
++    leftovers: Vec<MemoLeftover>,
++) {
++    for (number, paragraphs) in leftovers {
++        let mut body = Some(paragraphs);
++        for section in sections.iter_mut() {
++            if assign_memo_paragraphs(&mut section.paragraphs, number, &mut body) {
++                break;
++            }
++        }
++    }
 +}
 +
 +/// The record lists after the last body paragraph: `(memo number, body paragraphs)`
@@ -2650,8 +3257,7 @@ index 036e8bf54..05460aabb 100644
 -                    section.section_def.master_pages.extend(ext_mps);
 -                    break;
 +                    index += 1;
-                 }
--                scan += 1;
++                }
 +                memos.push((number, parse_paragraph_list(&records[start..index])));
 +            }
 +        } else if head.tag_id == tags::HWPTAG_LIST_HEADER {
@@ -2663,7 +3269,7 @@ index 036e8bf54..05460aabb 100644
 +                        || records[index].tag_id == tags::HWPTAG_LIST_HEADER))
 +            {
 +                index += 1;
-             }
++            }
 +            for record in &records[start..index] {
 +                masters.push(RawRecord {
 +                    tag_id: record.tag_id,
@@ -2673,12 +3279,11 @@ index 036e8bf54..05460aabb 100644
 +            }
 +        } else {
 +            index += 1;
-         }
-     }
++        }
++    }
 +    (memos, masters)
 +}
- 
--    Ok(section)
++
 +/// Attach one memo body to the first matching memo field that has none.
 +fn assign_memo_paragraphs(
 +    paragraphs: &mut [Paragraph],
@@ -2729,14 +3334,16 @@ index 036e8bf54..05460aabb 100644
 +                    if assign_memo_paragraphs(&mut note.paragraphs, number, body) {
 +                        return true;
 +                    }
-+                }
+                 }
+-                scan += 1;
 +                _ => {}
-+            }
-+        }
-+    }
+             }
+         }
+     }
 +    false
 +}
-+
+ 
+-    Ok(section)
 +pub(crate) fn field_is_memo(field: &crate::model::control::Field) -> bool {
 +    field.field_type == crate::model::control::FieldType::Memo || field.command.starts_with("MEMO/")
 +}
@@ -2777,7 +3384,7 @@ index 036e8bf54..05460aabb 100644
  }
  
  /// 다단락 필드의 종료 마커에 짝 `fieldBegin` 의 id 를 채운다.
-@@ -158,8 +313,8 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
+@@ -158,8 +374,8 @@ pub fn parse_body_text_section(data: &[u8]) -> Result<Section, BodyTextError> {
  /// 매달린 참조(`beginIDRef="0"`)를 그대로 내보내면 **한글이 파일을 열지 못한다**
  /// (01752 실측). 짝을 못 찾은 종료 마커는 8유닛 슬롯만 지키고 id 는 0 으로 남긴다.
  fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
@@ -2788,7 +3395,7 @@ index 036e8bf54..05460aabb 100644
      link_orphan_field_ends_with(paragraphs, &mut open_fields);
  }
  
-@@ -168,17 +323,28 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
+@@ -168,17 +384,28 @@ fn link_orphan_field_ends(paragraphs: &mut [Paragraph]) {
  /// **짝을 이미 채운 종료 마커에서도 스택을 pop 한다.** HWP5 종료 마커에는 짝 id 가 없어
  /// 순서만이 짝이므로, 이미 이은 마커를 건너뛰면 그 짝이 스택에 남아 뒤에 오는 마커가
  /// **엉뚱한 필드를 닫는다**. 채우기만 조건부로 한다.
@@ -2819,7 +3426,7 @@ index 036e8bf54..05460aabb 100644
          }
  
          // 이 문단에서 열리고 여기서 닫히지 않은 필드를 쌓는다.
-@@ -188,7 +354,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+@@ -188,7 +415,19 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
              };
              let closed_here = para.field_ranges.iter().any(|fr| fr.control_idx == i);
              if !closed_here && field.field_id != 0 {
@@ -2840,7 +3447,7 @@ index 036e8bf54..05460aabb 100644
              }
          }
      }
-@@ -209,7 +387,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
+@@ -209,7 +448,7 @@ fn link_orphan_field_ends_with(paragraphs: &mut [Paragraph], open_fields: &mut V
  /// 진짜로 짝이 없는 종료 마커는 여전히 `begin_id_ref == 0` 으로 남아 `#5252` 가드가
  /// 그대로 버린다 — 07276·02899 의 본문 폐기 방지는 유지된다.
  pub fn link_orphan_field_ends_across_sections(sections: &mut [crate::model::document::Section]) {
@@ -2849,7 +3456,7 @@ index 036e8bf54..05460aabb 100644
      for section in sections.iter_mut() {
          link_orphan_field_ends_with(&mut section.paragraphs, &mut open_fields);
      }
-@@ -552,6 +730,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
+@@ -552,6 +791,7 @@ fn parse_para_text(data: &[u8]) -> ParaTextParts {
                          begin_id_ref: 0,
                          field_id: 0,
                          begin_ctrl_id: 0,
@@ -3004,11 +3611,186 @@ index c5eca3cc4..2fa1a447b 100644
                      });
                  }
              }
+diff --git a/src/parser/mod.rs b/src/parser/mod.rs
+index e4467db3e..bbbd91034 100644
+--- a/src/parser/mod.rs
++++ b/src/parser/mod.rs
+@@ -823,6 +823,7 @@ fn parse_sections_strict(
+     decompression_budget: &mut Hwp5DocumentOpenDecompressionBudget,
+ ) -> Result<Vec<crate::model::document::Section>, ParseError> {
+     let mut sections = Vec::new();
++    let mut memo_leftovers = Vec::new();
+ 
+     for i in 0..section_count {
+         let section_output_limit = decompression_budget.stream_limit();
+@@ -871,8 +872,9 @@ fn parse_sections_strict(
+             .consume(section_data.len())
+             .map_err(ParseError::CfbError)?;
+ 
+-        match body_text::parse_body_text_section(&section_data) {
+-            Ok(mut section) => {
++        match body_text::parse_body_text_section_with_memo_leftovers(&section_data) {
++            Ok((mut section, leftovers)) => {
++                memo_leftovers.extend(leftovers);
+                 // 원본 BodyText 스트림 보존 (라운드트립용)
+                 section.raw_stream = Some(section_data);
+                 sections.push(section);
+@@ -891,6 +893,9 @@ fn parse_sections_strict(
+     // [#6868 잔여] 구역 경계를 넘는 누름틀의 종료 마커를 잇는다 — 구역 하나를 파싱하는
+     // 동안에는 앞 구역에서 열린 필드를 볼 수 없다.
+     body_text::link_orphan_field_ends_across_sections(&mut sections);
++    // A memo anchored in an earlier section keeps its body at the end of the
++    // last section (HWP5 format); pair what each section could not.
++    body_text::attach_memo_leftovers(&mut sections, memo_leftovers);
+ 
+     Ok(sections)
+ }
+@@ -946,6 +951,7 @@ fn parse_hwp_with_lenient(
+     // BodyText 섹션별 파싱
+     let section_count = lenient.section_count();
+     let mut sections = Vec::new();
++    let mut memo_leftovers = Vec::new();
+ 
+     for i in 0..section_count {
+         let section_output_limit = decompression_budget.stream_limit();
+@@ -990,8 +996,9 @@ fn parse_hwp_with_lenient(
+             .consume(section_data.len())
+             .map_err(ParseError::CfbError)?;
+ 
+-        match body_text::parse_body_text_section(&section_data) {
+-            Ok(mut section) => {
++        match body_text::parse_body_text_section_with_memo_leftovers(&section_data) {
++            Ok((mut section, leftovers)) => {
++                memo_leftovers.extend(leftovers);
+                 section.raw_stream = Some(section_data);
+                 sections.push(section);
+             }
+@@ -1007,6 +1014,7 @@ fn parse_hwp_with_lenient(
+ 
+     // [#6868 잔여] 구역 경계를 넘는 누름틀의 종료 마커 — strict 경로와 같다.
+     body_text::link_orphan_field_ends_across_sections(&mut sections);
++    body_text::attach_memo_leftovers(&mut sections, memo_leftovers);
+ 
+     // BinData 로드 시도
+     let bin_data_content = load_bin_data_content_lenient(
 diff --git a/src/serializer/body_text.rs b/src/serializer/body_text.rs
-index 0e94a0864..9a5759b70 100644
+index 0e94a0864..b479e467c 100644
 --- a/src/serializer/body_text.rs
 +++ b/src/serializer/body_text.rs
-@@ -168,18 +168,63 @@ fn serialize_master_page_tail(section: &Section, records: &mut Vec<Record>) {
+@@ -24,23 +24,70 @@ use crate::parser::tags;
+ 
+ /// Section을 레코드 바이너리 스트림으로 직렬화
+ pub fn serialize_section(section: &Section) -> Vec<u8> {
+-    serialize_section_inner(section, None)
++    serialize_section_inner(section, None, MemoTail::Own)
+ }
+ 
+-/// FileHeader에 실제 기록할 버전으로 새 문단 헤더를 완성한다.
+-/// version은 FileHeader[32..36]의 little-endian UINT32다.
+-pub(crate) fn serialize_section_for_version(section: &Section, version: u32) -> Vec<u8> {
+-    serialize_section_inner(section, Some(version))
++/// One memo body list of the HWP5 memo tail: `(memo number, body paragraphs)`.
++pub(crate) type MemoList = (u32, Vec<Paragraph>);
++
++/// Which memo lists a section stream ends with.
++enum MemoTail<'a> {
++    /// The memos anchored in this section (a lone section stream).
++    Own,
++    /// The given lists. In a document every list goes to the end of the last
++    /// section (HWP5 format) and the other sections get none. `regenerate`
++    /// writes the section from the model even when its original stream could
++    /// be reused, because that stream's memo tail is out of date.
++    Lists {
++        lists: &'a [MemoList],
++        regenerate: bool,
++    },
+ }
+ 
+-fn serialize_section_inner(section: &Section, version: Option<u32>) -> Vec<u8> {
++/// A section stream of a whole document, with new paragraph headers completed
++/// for the version written to FileHeader[32..36] (little-endian UINT32): it ends with `memo_lists` (the
++/// document's memos for the last section, nothing for the others). See
++/// [`MemoTail::Lists`] for `regenerate`.
++pub(crate) fn serialize_section_in_document(
++    section: &Section,
++    version: u32,
++    memo_lists: &[MemoList],
++    regenerate: bool,
++) -> Vec<u8> {
++    serialize_section_inner(
++        section,
++        Some(version),
++        MemoTail::Lists {
++            lists: memo_lists,
++            regenerate,
++        },
++    )
++}
++
++/// Every memo body of a document in document order, keyed by memo number.
++pub(crate) fn collect_document_memo_lists(sections: &[Section]) -> Vec<MemoList> {
++    sections.iter().flat_map(collect_memo_lists).collect()
++}
++
++fn serialize_section_inner(
++    section: &Section,
++    version: Option<u32>,
++    memo_tail: MemoTail,
++) -> Vec<u8> {
+     // 원본 스트림이 있으면 그대로 반환 (완벽한 라운드트립).
+     //
+     // [#4488] 다만 공개 모델 직접 변경은 raw_stream 을 무효화하지 않으므로,
+     // 파싱(+로드 픽스업) 시점에 봉인한 (모델, raw) 다이제스트 쌍과 현재 상태가
+     // 둘 다 일치할 때만 통과한다 — 불일치·raw 교체는 아래 모델 writer 로
+     // 재생성한다. 봉인 계약은 model::raw_provenance 참조.
+-    if section.raw_provenance_permits_reuse() {
++    let regenerate = matches!(
++        memo_tail,
++        MemoTail::Lists {
++            regenerate: true,
++            ..
++        }
++    );
++    if !regenerate && section.raw_provenance_permits_reuse() {
+         if let Some(ref raw) = section.raw_stream {
+             return raw.clone();
+         }
+@@ -51,8 +98,10 @@ fn serialize_section_inner(section: &Section, version: Option<u32>) -> Vec<u8> {
+     super::control::reset_form_order_counter();
+ 
+     let mut records = Vec::new();
+-    let memo_lists = collect_memo_lists(section);
+-    let has_memo_tail = !memo_lists.is_empty();
++    let memo_lists: std::borrow::Cow<'_, [MemoList]> = match memo_tail {
++        MemoTail::Own => std::borrow::Cow::Owned(collect_memo_lists(section)),
++        MemoTail::Lists { lists, .. } => std::borrow::Cow::Borrowed(lists),
++    };
+     let para_count = section.paragraphs.len();
+     // [Issue #1915] IR 계약 폴백: 첫 문단에 Control::SectionDef 가 없는 IR(HWP3 파서
+     // 산출물, 외부 생성 IR)은 secd/PAGE_DEF 계열 레코드가 통째로 누락되어 재로드 시
+@@ -118,7 +167,9 @@ fn serialize_section_inner(section: &Section, version: Option<u32>) -> Vec<u8> {
+         }
+     });
+     for (i, para) in section.paragraphs.iter().enumerate() {
+-        let is_last = i == para_count - 1 && !has_memo_tail;
++        // Hancom keeps the last-paragraph bit on the real last paragraph and puts
++        // the memo lists right under it; there is no extra paragraph.
++        let is_last = i == para_count - 1;
+         let para_ref = if i == 0 {
+             first_para_with_secd.as_ref().unwrap_or(para)
+         } else {
+@@ -126,9 +177,7 @@ fn serialize_section_inner(section: &Section, version: Option<u32>) -> Vec<u8> {
+         };
+         serialize_paragraph_with_msb(para_ref, 0, is_last, &mut records);
+     }
+-    if has_memo_tail {
+-        serialize_memo_tail(section, &memo_lists, &mut records);
+-    }
++    serialize_memo_tail(&memo_lists, &mut records);
+     serialize_master_page_tail(section, &mut records);
+     // 변경추적 병합 문단 여부(UINT16)는 5.0.3.2부터 존재한다. 재귀로 생성한
+     // 머리말·꼬리말·셀 문단도 같은 출력 버전을 따른다. 보존된 24바이트 이상의
+@@ -168,66 +217,71 @@ fn serialize_master_page_tail(section: &Section, records: &mut Vec<Record>) {
  }
  
  fn collect_memo_lists(section: &Section) -> Vec<(u32, Vec<Paragraph>)> {
@@ -3058,7 +3840,16 @@ index 0e94a0864..9a5759b70 100644
              }
          }
      }
-+
+-    memo_lists
+-}
+ 
+-fn serialize_memo_tail(
+-    section: &Section,
+-    memo_lists: &[(u32, Vec<Paragraph>)],
+-    records: &mut Vec<Record>,
+-) {
+-    if memo_lists.is_empty() {
+-        return;
 +    fn collect_shape_memos(
 +        shape: &crate::model::shape::ShapeObject,
 +        lists: &mut Vec<(u32, Vec<Paragraph>)>,
@@ -3073,14 +3864,57 @@ index 0e94a0864..9a5759b70 100644
 +                collect_shape_memos(child, lists);
 +            }
 +        }
-+    }
-+
+     }
+ 
+-    // HWP5 spec: 메모 관련 정보는 마지막 구역 끝에 문단 리스트 형태로 저장된다.
+-    // 한컴 저장본은 마지막 본문 문단의 조판 속성을 복제한 빈 root 문단 아래에
+-    // MEMO_LIST, LIST_HEADER, 메모 본문 문단을 순서대로 둔다.
+-    let last_para = section.paragraphs.last();
+-    let mut root = Paragraph {
+-        char_count: 1,
+-        para_shape_id: last_para.map_or(0, |p| p.para_shape_id),
+-        style_id: last_para.map_or(0, |p| p.style_id),
+-        char_shapes: last_para
+-            .and_then(|p| p.char_shapes.first().cloned())
+-            .map(|mut cs| {
+-                cs.start_pos = 0;
+-                vec![cs]
+-            })
+-            .unwrap_or_else(|| {
+-                vec![CharShapeRef {
+-                    start_pos: 0,
+-                    char_shape_id: 0,
+-                }]
+-            }),
+-        line_segs: last_para
+-            .map(|p| p.serializable_line_segs().to_vec())
+-            .filter(|segs| !segs.is_empty())
+-            .unwrap_or_else(|| Paragraph::new_empty().line_segs),
+-        raw_header_extra: vec![0; 12],
+-        ..Default::default()
+-    };
+-    for seg in &mut root.line_segs {
+-        seg.vertical_pos = seg
+-            .vertical_pos
+-            .saturating_add(seg.line_height)
+-            .saturating_add(seg.line_spacing);
+-    }
+-    root.has_para_text = false;
+-    serialize_paragraph_with_msb(&root, 0, true, records);
 +    let mut memo_lists = Vec::new();
 +    collect(&section.paragraphs, &mut memo_lists);
-     memo_lists
- }
++    memo_lists
++}
  
-@@ -815,7 +860,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
++fn serialize_memo_tail(memo_lists: &[MemoList], records: &mut Vec<Record>) {
++    // HWP5 spec: 메모 관련 정보는 마지막 구역 끝에 문단 리스트 형태로 저장된다.
++    // 한컴 저장본(memo_field_hwp5.hwp, aift.hwp)은 마지막 본문 문단 바로 아래에
++    // MEMO_LIST, LIST_HEADER, 메모 본문 문단을 순서대로 둔다. 빈 문단을 하나 더
++    // 두면 다시 열 때 그 문단이 본문 문단이 되어 저장할 때마다 문단이 는다.
+     for (memo_index, paragraphs) in memo_lists {
+         records.push(Record {
+             tag_id: tags::HWPTAG_MEMO_LIST,
+@@ -815,7 +869,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
              .iter()
              .filter(|o| o.char_idx == i && o.begin_ctrl_id != 0)
          {
@@ -3095,7 +3929,7 @@ index 0e94a0864..9a5759b70 100644
              prev_end += 8;
          }
  
-@@ -1068,7 +1119,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
+@@ -1068,7 +1128,13 @@ fn serialize_para_text(para: &Paragraph) -> ParaTextResult {
          .iter()
          .filter(|o| o.char_idx >= text_chars.len() && o.begin_ctrl_id != 0)
      {
@@ -3110,7 +3944,7 @@ index 0e94a0864..9a5759b70 100644
          prev_end += 8;
      }
  
-@@ -1479,6 +1536,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
+@@ -1479,6 +1545,11 @@ fn control_char_code_and_id(ctrl: &Control) -> (u16, u32) {
          // 통째로 버린다(0자·1쪽). `CTRL_CHAR_OVERLAP` 상수는 이름과 달리 'tdut'(덧말)이다.
          Control::Ruby(_) => (0x0017, tags::CTRL_CHAR_OVERLAP),
          Control::CharOverlap(_) => (0x0017, tags::CTRL_TCPS),
@@ -3122,6 +3956,132 @@ index 0e94a0864..9a5759b70 100644
          Control::Field(f) => (0x0003, f.ctrl_id),
          Control::Equation(_) => (0x000B, tags::CTRL_EQUATION),
          Control::Form(_) => (0x000B, tags::CTRL_FORM),
+@@ -2190,38 +2261,22 @@ mod tests {
+             "조판 전용 보강 줄은 레코드에서 제외된다"
+         );
+ 
+-        memo_root_copies_only_source_line_segments();
++        memo_tail_adds_no_body_paragraph();
+     }
+ 
+-    fn memo_root_copies_only_source_line_segments() {
+-        let mut last = Paragraph::new_empty();
+-        last.line_segs = vec![
+-            LineSeg {
+-                text_start: 0,
+-                line_height: 500,
+-                ..Default::default()
+-            },
+-            LineSeg {
+-                text_start: 1,
+-                line_height: 500,
+-                ..Default::default()
+-            },
+-        ];
+-        last.layout_only_fill_lines = 1;
+-        let section = Section {
+-            paragraphs: vec![last],
+-            ..Default::default()
+-        };
++    fn memo_tail_adds_no_body_paragraph() {
+         let memo_lists = vec![(1, vec![Paragraph::new_empty()])];
+         let mut records = Vec::new();
+ 
+-        serialize_memo_tail(&section, &memo_lists, &mut records);
++        serialize_memo_tail(&memo_lists, &mut records);
+ 
+-        let root_lines = records
+-            .iter()
+-            .find(|record| record.tag_id == tags::HWPTAG_PARA_LINE_SEG)
+-            .expect("memo root line record");
+-        assert_eq!(root_lines.data.len(), 36, "one source LineSeg only");
++        assert_eq!(records[0].tag_id, tags::HWPTAG_MEMO_LIST);
++        assert!(
++            records
++                .iter()
++                .all(|record| record.level >= 1 && record.tag_id != tags::HWPTAG_PARA_LINE_SEG),
++            "the memo tail holds only level-1 lists, without line records"
++        );
+     }
+ 
+     /// PARA_RANGE_TAG 라운드트립
+diff --git a/src/serializer/cfb_writer.rs b/src/serializer/cfb_writer.rs
+index 721a6ce47..a5fb29575 100644
+--- a/src/serializer/cfb_writer.rs
++++ b/src/serializer/cfb_writer.rs
+@@ -15,7 +15,7 @@ use crate::model::bin_data::{BinData, BinDataType, MAX_BIN_DATA_BYTES};
+ use crate::model::document::{Document, Preview};
+ use crate::password_crypto::{encrypt_hwp5_stream, HWP5_ENCRYPT_VERSION};
+ 
+-use super::body_text::serialize_section_for_version;
++use super::body_text::{collect_document_memo_lists, serialize_section_in_document};
+ use super::content_loss::{
+     ContentLoss, ContentLossReason, ContentLossReport, SerializedDocument, SerializedFormat,
+ };
+@@ -124,7 +124,34 @@ fn serialize_hwp_inner(
+     let split_multi_sec_pr = doc.layout_profile().hwpx_stored_layout();
+     let mut section_bytes_list = Vec::new();
+     let mut form_id_allocator = None;
+-    for section in &doc.sections {
++    // HWP5 keeps every memo body at the end of the last section, whichever
++    // section anchors the memo. A reused last section stream carries the memo
++    // tail of the file it came from; when another section of a memo document
++    // is written from the model, that tail may be out of date, so the last
++    // section is written from the model too. Documents without memos are
++    // untouched.
++    let memo_lists = collect_document_memo_lists(&doc.sections);
++    let last_section = doc.sections.len().saturating_sub(1);
++    let regenerate_last = doc.sections.len() > 1
++        && (!memo_lists.is_empty()
++            || doc.sections[last_section]
++                .raw_stream
++                .as_deref()
++                .is_some_and(crate::parser::body_text::section_stream_has_memo_list))
++        && doc.sections[last_section].raw_provenance_permits_reuse()
++        && doc.sections[..last_section]
++            .iter()
++            .any(|section| !section.raw_provenance_permits_reuse());
++    for (section_index, section) in doc.sections.iter().enumerate() {
++        let is_last_section = section_index == last_section;
++        let tail_for = |is_last_stream: bool| -> &[super::body_text::MemoList] {
++            if is_last_section && is_last_stream {
++                &memo_lists
++            } else {
++                &[]
++            }
++        };
++        let regenerate = is_last_section && regenerate_last;
+         let split_starts: Vec<usize> =
+             if !split_multi_sec_pr || section.raw_provenance_permits_reuse() {
+                 Vec::new()
+@@ -145,7 +172,12 @@ fn serialize_hwp_inner(
+         if split_starts.is_empty() {
+             let prepared =
+                 super::form_identity::prepare_section(section, doc, &mut form_id_allocator)?;
+-            section_bytes_list.push(serialize_section_for_version(&prepared, output_version));
++            section_bytes_list.push(serialize_section_in_document(
++                &prepared,
++                output_version,
++                tail_for(true),
++                regenerate,
++            ));
+             continue;
+         }
+         let mut starts = Vec::with_capacity(split_starts.len() + 1);
+@@ -174,7 +206,12 @@ fn serialize_hwp_inner(
+             };
+             let prepared =
+                 super::form_identity::prepare_section(&sub, doc, &mut form_id_allocator)?;
+-            section_bytes_list.push(serialize_section_for_version(&prepared, output_version));
++            section_bytes_list.push(serialize_section_in_document(
++                &prepared,
++                output_version,
++                tail_for(k + 1 == starts.len()),
++                false,
++            ));
+         }
+     }
+ 
 diff --git a/src/serializer/hwpx/section.rs b/src/serializer/hwpx/section.rs
 index c62fb5376..420e00f39 100644
 --- a/src/serializer/hwpx/section.rs
@@ -3201,10 +4161,10 @@ index c62fb5376..420e00f39 100644
  
          let runs = runs_of(&para);
 diff --git a/src/wasm_api.rs b/src/wasm_api.rs
-index c5e15c48b..5545da0bd 100644
+index c1d1bbd78..ae794ace6 100644
 --- a/src/wasm_api.rs
 +++ b/src/wasm_api.rs
-@@ -5403,6 +5403,90 @@ impl HwpDocument {
+@@ -5431,6 +5431,91 @@ impl HwpDocument {
          .map_err(|e| e.into())
      }
  
@@ -3233,14 +4193,15 @@ index c5e15c48b..5545da0bd 100644
 +        end_char_idx: u32,
 +        json: &str,
 +    ) -> Result<String, JsValue> {
-+        use crate::document_core::helpers::json_str;
++        use crate::document_core::queries::memo_query::memo_request;
++        let (author, text) = memo_request(json).map_err(|e| JsValue::from_str(&e.to_json()))?;
 +        self.insert_memo_at(
 +            section_idx as usize,
 +            para_idx as usize,
 +            start_char_idx as usize,
 +            end_char_idx as usize,
-+            &json_str(json, "author").unwrap_or_default(),
-+            &json_str(json, "text").unwrap_or_default(),
++            &author,
++            &text,
 +        )
 +        .map_err(|e| JsValue::from_str(&e.to_json()))
 +    }
@@ -3258,11 +4219,11 @@ index c5e15c48b..5545da0bd 100644
 +        end_char_idx: u32,
 +        json: &str,
 +    ) -> Result<String, JsValue> {
-+        use crate::document_core::helpers::json_str;
-+        use crate::document_core::queries::memo_query::{MemoError, MemoErrorCode};
++        use crate::document_core::queries::memo_query::{memo_request, MemoError, MemoErrorCode};
 +        let path = crate::document_core::DocumentCore::parse_cell_path(path_json).map_err(|e| {
 +            JsValue::from_str(&MemoError::new(MemoErrorCode::InvalidRange, e.to_string()).to_json())
 +        })?;
++        let (author, text) = memo_request(json).map_err(|e| JsValue::from_str(&e.to_json()))?;
 +        self.core
 +            .insert_memo_by_path(
 +                section_idx as usize,
@@ -3270,8 +4231,8 @@ index c5e15c48b..5545da0bd 100644
 +                &path,
 +                start_char_idx as usize,
 +                end_char_idx as usize,
-+                &json_str(json, "author").unwrap_or_default(),
-+                &json_str(json, "text").unwrap_or_default(),
++                &author,
++                &text,
 +            )
 +            .map_err(|e| JsValue::from_str(&e.to_json()))
 +    }

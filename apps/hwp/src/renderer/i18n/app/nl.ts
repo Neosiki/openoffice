@@ -9,12 +9,16 @@ export const nl = {
   fileSaveAs: 'Opslaan als…',
   fileExportPdf: 'Exporteren als PDF…',
   filePrint: 'Afdrukken…',
+  autoSave: 'Automatisch opslaan',
+  autoSaveTip: 'Slaat elke 30 seconden op en wanneer het venster de focus verliest',
   printPreparing: "Pagina's voorbereiden… ({done}/{total})",
   printSending: "Pagina's verzenden…",
   pdfFailed: 'Het document kon niet als PDF worden geëxporteerd.',
   printFailed: 'Het document kon niet worden afgedrukt.',
   saveVerifyFailed:
     'Er is niets opgeslagen: de kopie die zou worden weggeschreven kwam bij het teruglezen niet overeen met het document op het scherm. Probeer "Opslaan als" om een nieuw bestand te schrijven.',
+  saveVerifyHint:
+    'Het origineel is ongewijzigd. Kies in Opslaan als voor HWPX of gebruik Exporteren als PDF.',
   saveProtected:
     'Niet opgeslagen: dit document is met een wachtwoord beveiligd, en hier opslaan zou het zonder wachtwoord wegschrijven.',
   backupKept: 'Opgeslagen. De vorige versie is bewaard als {name}.',
@@ -113,6 +117,7 @@ export const nl = {
   aiToolTables: 'Tabellen bekeken · {count}',
   aiToolReadTable: 'Tabel {table} gelezen',
   aiToolFillCells: 'Tabel {table} · {count} cel(len) ingevuld',
+  aiToolCheckBoxes: 'Tabel {table} · {count} vakje(s) aangevinkt',
   aiTableName: 'Tabel {table}',
   aiTableRowsAdded: '{count} rij(en) toegevoegd',
   aiTableColsAdded: '{count} kolom(men) toegevoegd',
@@ -146,10 +151,14 @@ export const nl = {
   memoPage: 'blz. {page}',
   memoUnknownAuthor: 'Onbekend',
   memoReadOnly: 'Alleen-lezen',
-  memoReadOnlyFormatted: 'Deze opmerking mengt opmaak, dus de tekst kan hier niet worden gewijzigd.',
-  memoReadOnlyObject: 'Deze opmerking bevat een tabel, afbeelding of ander object, dus de tekst kan hier niet worden gewijzigd.',
-  memoReadOnlyPlace: 'Opmerkingen in kopteksten, voetteksten of noten kunnen hier niet worden gewijzigd.',
-  memoReadOnlyProtected: 'Opmerkingen in een met wachtwoord beveiligd document kunnen hier niet worden gewijzigd.',
+  memoReadOnlyFormatted:
+    'Deze opmerking mengt opmaak, dus de tekst kan hier niet worden gewijzigd.',
+  memoReadOnlyObject:
+    'Deze opmerking bevat een tabel, afbeelding of ander object, dus de tekst kan hier niet worden gewijzigd.',
+  memoReadOnlyPlace:
+    'Opmerkingen in kopteksten, voetteksten of noten kunnen hier niet worden gewijzigd.',
+  memoReadOnlyProtected:
+    'Opmerkingen in een met wachtwoord beveiligd document kunnen hier niet worden gewijzigd.',
   memoEdit: 'Bewerken',
   memoDelete: 'Verwijderen',
   memoNewTitle: 'Opmerking toevoegen',
@@ -161,11 +170,14 @@ export const nl = {
   memoCaretLabel: 'De opmerking wordt op de cursorpositie toegevoegd.',
   memoSaveHint: 'Ctrl+Enter om op te slaan',
   memoCancel: 'Annuleren',
-  memoErrNone: 'Er is geen plek om een opmerking toe te voegen. Selecteer tekst of plaats de cursor.',
+  memoErrNone:
+    'Er is geen plek om een opmerking toe te voegen. Selecteer tekst of plaats de cursor.',
   memoErrMultiParagraph: 'Een opmerking kan alleen binnen één alinea worden toegevoegd.',
-  memoErrUnsupported: 'In kopteksten, voetteksten of noten kunnen geen opmerkingen worden toegevoegd.',
+  memoErrUnsupported:
+    'In kopteksten, voetteksten of noten kunnen geen opmerkingen worden toegevoegd.',
   memoErrOverlap: 'Dit bereik heeft al een opmerking.',
-  memoErrProtected: 'Aan een met wachtwoord beveiligd document kunnen geen opmerkingen worden toegevoegd.',
+  memoErrProtected:
+    'Aan een met wachtwoord beveiligd document kunnen geen opmerkingen worden toegevoegd.',
   memoErrEmpty: 'Schrijf iets in de opmerking.',
   memoErrSave: 'De opmerking kon niet worden opgeslagen.',
   memoErrDelete: 'De opmerking kon niet worden verwijderd.',
@@ -174,10 +186,13 @@ export const nl = {
   memoSaveBlocked: 'Sla de opmerking die u schrijft eerst op of annuleer die.',
   memoRemoved: 'Opmerkingen met de tekst verwijderd: {count}. Druk op Ctrl+Z om ongedaan te maken.',
   memoNotCopied: 'De opmerking is niet gekopieerd.',
-  memoLockedElsewhere: 'In een ander tabblad wordt een opmerking geschreven. Wacht tot die is opgeslagen of geannuleerd.',
-  memoContended: 'In een ander tabblad is ook een opmerkingenvenster geopend. Sla eerst op of annuleer in een van beide.',
+  memoLockedElsewhere:
+    'In een ander tabblad wordt een opmerking geschreven. Wacht tot die is opgeslagen of geannuleerd.',
+  memoContended:
+    'In een ander tabblad is ook een opmerkingenvenster geopend. Sla eerst op of annuleer in een van beide.',
   memoUnsupportedBuild: 'Deze versie ondersteunt geen opmerkingen.',
-  memoHwpxLost: 'Niet naar het HWPX-bestand overgebrachte opmerkingen: {count}. Sla op als HWP of controleer het bestand in Hancom Hangul.',
+  memoHwpxLost:
+    'Niet naar het HWPX-bestand overgebrachte opmerkingen: {count}. Sla op als HWP of controleer het bestand in Hancom Hangul.',
   aiToolMemos: 'Opmerkingen gecontroleerd: {count}',
   aiMemoContext: 'Opmerkingen: {count}',
   aiMemoApprovalTitle: 'Deze bewerking verwijdert {count} opmerking(en). Doorgaan?',

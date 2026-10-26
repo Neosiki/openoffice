@@ -9,12 +9,15 @@ export const zhTW = {
   fileSaveAs: '另存新檔…',
   fileExportPdf: '匯出為 PDF…',
   filePrint: '列印…',
+  autoSave: '自動儲存',
+  autoSaveTip: '每 30 秒及視窗失焦時自動儲存',
   printPreparing: '正在準備列印頁面… ({done}/{total})',
   printSending: '正在傳送頁面…',
   pdfFailed: '無法匯出為 PDF。',
   printFailed: '無法列印。',
   saveVerifyFailed:
     '未儲存：即將寫入的內容讀回後與畫面上的文件不一致。請嘗試「另存新檔」儲存為新檔案。',
+  saveVerifyHint: '原檔案未變動。請在「另存新檔」中選擇 HWPX，或使用「匯出為 PDF」。',
   saveProtected: '未儲存：此文件有密碼保護，在這裡儲存會寫出不含密碼的檔案。',
   backupKept: '已儲存。先前的版本保留為 {name}。',
   openedTracked:
@@ -110,6 +113,7 @@ export const zhTW = {
   aiToolTables: '已檢視表格 · {count} 個',
   aiToolReadTable: '已讀取表格 {table}',
   aiToolFillCells: '表格 {table} · 已填寫 {count} 個儲存格',
+  aiToolCheckBoxes: '表格 {table} · 已勾選 {count} 個選框',
   aiTableName: '表格 {table}',
   aiTableRowsAdded: '新增 {count} 列',
   aiTableColsAdded: '新增 {count} 欄',

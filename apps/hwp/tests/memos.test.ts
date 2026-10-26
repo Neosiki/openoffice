@@ -55,16 +55,16 @@ beforeEach(() => {
 describe('lostMemoCountOf', () => {
   it('reports a listed memo the written file does not have', async () => {
     models([])
-    expect(
-      await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] }),
-    ).toBe(1)
+    expect(await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] })).toBe(
+      1,
+    )
   })
 
   it('reports nothing when every listed memo came through', async () => {
     models([listed('확인')])
-    expect(
-      await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] }),
-    ).toBe(0)
+    expect(await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] })).toBe(
+      0,
+    )
   })
 
   it('matches memos as a multiset, not by position, and counts each once', async () => {
@@ -76,6 +76,13 @@ describe('lostMemoCountOf', () => {
         memos: [snapshot('하나'), snapshot('둘'), snapshot('하나')],
       }),
     ).toBe(1)
+  })
+
+  it('does not read either file with the engine when neither the editor nor the file had memos', async () => {
+    rawCount.mockReturnValueOnce(0)
+    expect(await lostMemoCountOf({ saved: SAVED, original: ORIGINAL, memos: [] })).toBe(0)
+    expect(memoList).not.toHaveBeenCalled()
+    expect(rawCount).toHaveBeenCalledOnce()
   })
 
   it('does not report a memo the user removed on purpose', async () => {
@@ -110,9 +117,9 @@ describe('lostMemoCountOf', () => {
 
   it('checks raw anchors only against an HWPX original, not a new file', async () => {
     models([listed('확인')])
-    expect(
-      await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] }),
-    ).toBe(0)
+    expect(await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] })).toBe(
+      0,
+    )
     expect(rawCount).not.toHaveBeenCalled()
     expect(memoList).toHaveBeenCalledTimes(1)
   })
@@ -125,16 +132,16 @@ describe('lostMemoCountOf', () => {
 
   it('reports nothing when the written file cannot be read back', async () => {
     memoList.mockRejectedValueOnce(new Error('broken zip'))
-    expect(
-      await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] }),
-    ).toBe(0)
+    expect(await lostMemoCountOf({ saved: SAVED, original: null, memos: [snapshot('확인')] })).toBe(
+      0,
+    )
     expect(rawCount).not.toHaveBeenCalled()
   })
 
   it('reports nothing when the opened file cannot be read', async () => {
     memoList.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('broken zip'))
     expect(await lostMemoCountOf({ saved: SAVED, original: ORIGINAL, memos: null })).toBe(0)
-    expect(rawCount).not.toHaveBeenCalled()
+    expect(rawCount).toHaveBeenCalledOnce()
   })
 
   it('keeps the model result when the saved raw count cannot be read', async () => {

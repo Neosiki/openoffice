@@ -35,14 +35,17 @@
  *   cell, and the three paths call it: the inner table goes, the outer stays.
  *
  * studio-hancom-shortcuts, studio-hancom-labels, studio-hancom-commands,
- * studio-hancom-chords
+ * studio-hancom-equal-cells, studio-hancom-chords
  *   A Hangul tab takes Hancom Hangul's keys (decision 0060). The table of them and
  *   the commands rhwp lacks live in studio-plugin/hancom-keys.mjs; these patches
  *   only hook it in. The studio's shortcut table is adapted in place, its command
  *   registry shows the new keys next to the menu items, the new commands are
- *   registered (with the studio parts they build on) and put into the menus, and
- *   its key handler hands the Ctrl+N/K/Q/M/G sequences and the keys that depend on
- *   the caret (the easy table formulas) to the module, on the IME path too.
+ *   registered (with the studio parts they build on) and put into the menus, its
+ *   two stub "equal cell size" commands hand over to the app's own equalizer, and
+ *   its key handler hands the Ctrl+N/K/Q/M/G sequences, the keys that depend on
+ *   the caret (the easy table formulas, Ctrl+Enter/Ctrl+Backspace in a cell, H/W
+ *   in a cell block) and the table-object keys (P/T/L/C/Ctrl+E) to the module, on
+ *   the IME path too.
  *
  * studio-hancom-page-number
  *   The bridge gains the two engine calls of vendor/rhwp-core patch 0014, setting and
@@ -57,10 +60,27 @@
  *   one apply, and a copied format that lasts until it is overwritten — and make
  *   the editor's "has copied format" answer come from that module.
  *
+ * studio-single-cell-resize
+ *   The bridge gains the one-cell resize call of vendor/rhwp-core patch 0016, which
+ *   moves one cell's right or bottom boundary and its next cell's opposite boundary
+ *   (Hangul's Shift+arrow). The engine keeps the resulting irregular grid as spans.
+ *
+ * studio-merged-row-below
+ *   "Insert row below" in a merged cell takes the cell's last row, so the new row lands
+ *   below the merge instead of growing it. A caret in a plain cell inside another merge
+ *   keeps that cell's row, because Hangul grows the merge there.
+ *
  * studio-memo-command, studio-memo-label-ko, studio-memo-label-en
  *   The studio's Insert > Comment item is a stub. It becomes the app's memo: with a
  *   document open outside form mode it sends `ieum:memo-insert` to the window the app
  *   listens on, and the menu names it 메모 (Memo) in the studio's two languages.
+ *
+ * studio-memo-anchors, studio-memo-delete-undo
+ *   The engine drops a memo when Backspace or Delete removes the last character of its
+ *   anchor (vendor/rhwp-core patch 0018, decision 0072). The studio's undo of a typed
+ *   deletion only puts the text back, so the memo stayed gone. The bridge gains a call
+ *   for the memo anchors, and a deletion that touches one captures its paragraph first,
+ *   as the studio already does for a link, so undo restores the paragraph with the memo.
  *
  * studio-font-memo-state, studio-font-memo-use
  *   The studio replaces the Canvas2D `font` setter so that every font string
@@ -261,9 +281,11 @@ const PATCHES = {
         replace:
           "import { initI18n, t } from '@/i18n/index.ts';\n" +
           "import { getLocale } from '@/i18n/core.ts';\n" +
-          "import { InsertTextCommand } from '@/engine/command';\n" +
+          "import { InsertTextCommand, InsertTabCommand } from '@/engine/command';\n" +
           "import { ModalDialog } from '@/ui/dialog';\n" +
           "import { FindDialog, navigateToSearchHit } from '@/ui/find-dialog';\n" +
+          "import { CellBorderBgDialog } from '@/ui/cell-border-bg-dialog';\n" +
+          "import { showToast } from '@/ui/toast';\n" +
           `import { hancomCommands, installHancomMainKeys, installHancomMenuItems } from '${HANCOM_KEYS_MODULE}';`,
       },
       // the new commands, with the studio parts they build on, and their menu items
@@ -272,7 +294,8 @@ const PATCHES = {
         replace:
           'registry.registerAll(toolCommands);\n' +
           'registry.registerAll(hancomCommands(getLocale(), {\n' +
-          '  InsertTextCommand, ModalDialog, FindDialog, navigateToSearchHit,\n' +
+          '  InsertTextCommand, InsertTabCommand, ModalDialog, FindDialog, navigateToSearchHit,\n' +
+          '  CellBorderBgDialog, showToast,\n' +
           '}));\n' +
           'installHancomMenuItems(document, getLocale());\n' +
           '// the keys the main process takes first and hands back for the table (decision 0060)\n' +
@@ -407,6 +430,148 @@ const PATCHES = {
       },
     ],
   },
+  'studio-single-cell-resize': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
+    // the engine call of vendor/rhwp-core patch 0016, ahead of a neighbour the bridge has once
+    find: '  moveTableOffset(sec: number, parentPara: number, controlIdx: number, deltaH: number, deltaV: number): { ok: boolean; ppi: number; ci: number } {',
+    replace: [
+      '  /** One cell boundary (Hangul Shift+arrow): the target and its next cell move oppositely. */',
+      '  resizeTableCell(',
+      '    sec: number, parentPara: number, controlIdx: number,',
+      '    row: number, col: number, vertical: boolean, forward: boolean,',
+      '  ): { ok: boolean; moved?: boolean; reason?: string } {',
+      "    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');",
+      '    return JSON.parse((this.doc as any).resizeTableCell(sec, parentPara, controlIdx, row, col, vertical, forward));',
+      '  }',
+      '',
+      '  moveTableOffset(sec: number, parentPara: number, controlIdx: number, deltaH: number, deltaV: number): { ok: boolean; ppi: number; ci: number } {',
+    ].join('\n'),
+  },
+  // Hangul puts a row below a merged cell after the merge's last row, not through its
+  // first row. The engine's insertTableRow extends a merge it crosses; using the last
+  // row makes the new row sit below it. A caret in a plain cell inside another merge
+  // still uses that cell's row, as Hangul does.
+  'studio-merged-row-below': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]table\.ts$/,
+    edits: [
+      {
+        find: "import { t } from '../../i18n/index.ts';",
+        replace:
+          "import { t } from '../../i18n/index.ts';\n" +
+          `import { insertRowBelow } from '${HANCOM_KEYS_MODULE}';`,
+      },
+      {
+        find: [
+          "          case 'row-below':",
+          '            wasm.insertTableRow(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, cellInfo.row, true);',
+          '            break;',
+        ].join('\n'),
+        replace: [
+          "          case 'row-below': {",
+          '            const afterRow = cellInfo.row + Math.max(1, cellInfo.rowSpan || 1) - 1 + i;',
+          '            wasm.insertTableRow(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, afterRow, true);',
+          '            if ((cellInfo.colSpan || 1) > 1) {',
+          '              wasm.mergeTableCells(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, afterRow + 1, cellInfo.col, afterRow + 1, cellInfo.col + Math.max(1, cellInfo.colSpan || 1) - 1);',
+          '            }',
+          '            break;',
+          '          }',
+        ].join('\n'),
+      },
+      {
+        find: [
+          "    id: 'table:insert-row-below',",
+          "    label: t('command.table.insertRowBelow.registryLabel'),",
+          '    canExecute: inTable,',
+          '    execute(services) {',
+          '      const ih = services.getInputHandler();',
+          '      if (!ih) return;',
+          '      const pos = ih.getCursorPosition();',
+          '      if (pos.parentParaIndex === undefined || pos.controlIndex === undefined || pos.cellIndex === undefined) return;',
+          '      const cellInfo = services.wasm.getCellInfo(pos.sectionIndex, pos.parentParaIndex, pos.controlIndex, pos.cellIndex);',
+          '      safeTableOp(() => ih.executeOperation({',
+          "        kind: 'snapshot',",
+          "        operationType: 'insertTableRow',",
+          '        operation: (wasm) => {',
+          '          wasm.insertTableRow(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, cellInfo.row, true);',
+          '          return pos;',
+          '        },',
+          "      }), '줄 추가');",
+          '    },',
+          '  },',
+        ].join('\n'),
+        replace: [
+          "    id: 'table:insert-row-below',",
+          "    label: t('command.table.insertRowBelow.registryLabel'),",
+          '    canExecute: inTable,',
+          '    execute(services) {',
+          '      insertRowBelow(services);',
+          '    },',
+          '  },',
+        ].join('\n'),
+      },
+    ],
+  },
+  'studio-hancom-equal-cells': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]table\.ts$/,
+    edits: [
+      {
+        find: "import { t } from '../../i18n/index.ts';",
+        replace:
+          "import { t } from '../../i18n/index.ts';\n" +
+          "import { getLocale } from '@/i18n/core.ts';\n" +
+          `import { equalizeTableCells } from '${HANCOM_KEYS_MODULE}';`,
+      },
+      {
+        // the stub commands were disabled because a per-row/column boundary cannot be
+        // stored; equalizing the rows/columns of the selection can, through deltas
+        find: [
+          '// HWP/HWPX cannot persist independent per-row or per-column geometry. Keep',
+          '// commands that require that representation unavailable at command routing.',
+          'const localTableGeometryCanPersist = () => false;',
+          '',
+        ].join('\n'),
+        replace: '',
+      },
+      {
+        find: [
+          '  {',
+          "    id: 'table:cell-height-equal',",
+          "    label: t('command.table.cellHeightEqual.label'),",
+          "    shortcutLabel: 'H',",
+          '    canExecute: localTableGeometryCanPersist,',
+          '    execute() {},',
+          '  },',
+          '  {',
+          "    id: 'table:cell-width-equal',",
+          "    label: t('command.table.cellWidthEqual.label'),",
+          "    shortcutLabel: 'W',",
+          '    canExecute: localTableGeometryCanPersist,',
+          '    execute() {},',
+          '  },',
+        ].join('\n'),
+        replace: [
+          '  {',
+          "    id: 'table:cell-height-equal',",
+          "    label: t('command.table.cellHeightEqual.label'),",
+          "    shortcutLabel: 'H',",
+          '    canExecute: inTableOrCellSelection,',
+          '    execute(services) {',
+          "      equalizeTableCells(services, 'height', getLocale() === 'ko');",
+          '    },',
+          '  },',
+          '  {',
+          "    id: 'table:cell-width-equal',",
+          "    label: t('command.table.cellWidthEqual.label'),",
+          "    shortcutLabel: 'W',",
+          '    canExecute: inTableOrCellSelection,',
+          '    execute(services) {',
+          "      equalizeTableCells(services, 'width', getLocale() === 'ko');",
+          '    },',
+          '  },',
+        ].join('\n'),
+      },
+    ],
+  },
   'studio-hancom-chords': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler-keyboard\.ts$/,
     edits: [
@@ -414,13 +579,23 @@ const PATCHES = {
         find: "import { matchShortcut, defaultShortcuts } from '@/command/shortcut-map';",
         replace:
           "import { matchShortcut, defaultShortcuts } from '@/command/shortcut-map';\n" +
-          `import { hancomChordKey, hancomChordStart, hancomContextKey, hancomCtrlKey } from '${HANCOM_KEYS_MODULE}';`,
+          `import { hancomCellBlockKey, hancomCellKey, hancomChordKey, hancomChordStart, hancomContextKey, hancomCtrlKey, hancomTableObjectKey } from '${HANCOM_KEYS_MODULE}';`,
       },
       // the second key, first of all (the studio's own Ctrl+K/M/G flags are never set again)
       {
         find: '  this._cellBlockLetterImeGuard?.reset();',
         replace:
           '  this._cellBlockLetterImeGuard?.reset();\n  if (hancomChordKey(this, e)) return;',
+      },
+      // a table-object key, and H/W in a cell block, before the studio closes the selection
+      // on an unhandled letter and lets it into the document
+      {
+        find: '  if (this.connectorDrawingMode) {',
+        replace:
+          '  if (hancomTableObjectKey(this, e)) return;\n' +
+          '  if (hancomCellBlockKey(this, e)) return;\n' +
+          '  if (hancomCellKey(this, e)) return;\n' +
+          '  if (this.connectorDrawingMode) {',
       },
       // the first key, or a key that depends on the caret, while the IME composes, where the
       // studio took Ctrl+M alone
@@ -479,6 +654,69 @@ const PATCHES = {
     find: '  "command.insert.comment.label": "Comments",',
     replace: '  "command.insert.comment.label": "Memo",',
   },
+  'studio-memo-anchors': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
+    // the memo list of vendor/rhwp-core patch 0018, ahead of a neighbour the bridge has once
+    find: '  getHyperlinkContext(target: HyperlinkTarget): HyperlinkContext {',
+    replace: [
+      '  /** The memo anchors of the document; none from an engine without memos. */',
+      '  getMemoAnchors(): {',
+      '    sectionIndex: number;',
+      '    paraIndex: number | null;',
+      '    startCharIdx: number | null;',
+      '    endCharIdx: number | null;',
+      '    path: { controlIndex: number; cellIndex?: number; paraIndex: number }[] | null;',
+      '  }[] {',
+      '    const doc = this.doc as any;',
+      "    if (!doc || typeof doc.getMemoList !== 'function') return [];",
+      '    return JSON.parse(doc.getMemoList());',
+      '  }',
+      '',
+      '  getHyperlinkContext(target: HyperlinkTarget): HyperlinkContext {',
+    ].join('\n'),
+  },
+  'studio-memo-delete-undo': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]command\.ts$/,
+    edits: [
+      // whether a deletion touches a memo's anchor, next to the command that asks
+      {
+        find: 'export class DeleteTextCommand implements EditCommand {',
+        replace: [
+          "/** Whether deleting `count` characters at `offset` in `target` touches a memo's anchor. */",
+          'export function memoAnchorOverlaps(',
+          '  wasm: WasmBridge,',
+          '  target: ReturnType<typeof hyperlinkTarget>,',
+          '  offset: number,',
+          '  count: number,',
+          '): boolean {',
+          '  const path = JSON.stringify(target.cellPath);',
+          '  return wasm.getMemoAnchors().some(memo =>',
+          '    memo.sectionIndex === target.section',
+          '    && memo.paraIndex === target.para',
+          '    && JSON.stringify((memo.path ?? []).map(entry =>',
+          '      [entry.controlIndex, entry.cellIndex ?? 0, entry.paraIndex])) === path',
+          '    && memo.startCharIdx !== null && memo.endCharIdx !== null',
+          '    && memo.startCharIdx < memo.endCharIdx',
+          '    && offset < memo.endCharIdx && memo.startCharIdx < offset + count);',
+          '}',
+          '',
+          'export class DeleteTextCommand implements EditCommand {',
+        ].join('\n'),
+      },
+      // the engine drops a memo whose whole anchor goes; capture the paragraph as for a link
+      {
+        find: [
+          '      if (context.links.some(link => this.position.charOffset < link.end',
+          '        && link.start < this.position.charOffset + this.count)) {',
+        ].join('\n'),
+        replace: [
+          '      if (context.links.some(link => this.position.charOffset < link.end',
+          '        && link.start < this.position.charOffset + this.count)',
+          '        || memoAnchorOverlaps(wasm, target, this.position.charOffset, this.count)) {',
+        ].join('\n'),
+      },
+    ],
+  },
   'studio-font-memo-state': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
     find: 'let canvasFontSubstitutionInstalled = false;',
@@ -522,14 +760,19 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-hancom-shortcuts',
   'studio-hancom-labels',
   'studio-hancom-commands',
+  'studio-hancom-equal-cells',
   'studio-hancom-chords',
   'studio-hancom-page-number',
   'studio-format-copy-safety',
   'studio-format-copy',
   'studio-format-copy-state',
+  'studio-single-cell-resize',
+  'studio-merged-row-below',
   'studio-memo-command',
   'studio-memo-label-ko',
   'studio-memo-label-en',
+  'studio-memo-anchors',
+  'studio-memo-delete-undo',
   'studio-font-memo-state',
   'studio-font-memo-use',
 ])
@@ -627,11 +870,23 @@ export const hancomHooks = [
       'getSelection(): { anchor: DocumentPosition; focus: DocumentPosition } | null',
       'isInHeaderFooter(): boolean',
       'isInFootnote(): boolean',
+      'isInTextBox(): boolean',
       'isInPictureObjectSelection(): boolean',
       'isInTableObjectSelection(): boolean',
       'getPosition(): DocumentPosition',
       'isInCellSelectionMode(): boolean',
+      'getCellTableContext()',
       'getSelectedCellRange(): { startRow: number; startCol: number; endRow: number; endCol: number } | null',
+      'enterCellSelectionMode(',
+      'advanceCellSelectionPhase(',
+      'getCellSelectionPhase(',
+      'getCellSelectionFocus(',
+      'setCellSelectionAnchor(',
+      'setCellSelectionFocus(',
+      'exitCellSelectionMode(',
+      'moveToCellByIndex(',
+      'moveTo(pos: DocumentPosition): void',
+      'clearSelection(): void',
     ],
   },
   {
@@ -639,9 +894,13 @@ export const hancomHooks = [
     needles: [
       'private dispatcher: CommandDispatcher | null',
       'private _cellBlockLetterImeGuard = new CellBlockLetterImeGuard()',
+      'private wasm: WasmBridge',
+      'private caret: CaretRenderer',
       'private deleteSelection(',
       'applyStyle(styleId: number): void',
       'executeOperation(desc: OperationDescriptor): void',
+      'updateCellSelection(',
+      'clearSelectedCellBlock(',
       'isFormMode(): boolean',
       'hasCopiedFormat(): boolean { return this.formatCopyState !== null; }',
       'getCharProperties(): CharProperties',
@@ -663,7 +922,13 @@ export const hancomHooks = [
       'evaluateTableFormula(sec: number, parentPara: number, controlIdx: number,',
       'getCellParagraphCount(sec: number, parentPara: number, controlIdx: number, cellIdx: number)',
       'getCellParagraphLength(sec: number, parentPara: number, controlIdx: number, cellIdx: number, cellParaIdx: number)',
+      'getTextInCell(sec: number, parentPara: number, controlIdx: number,',
+      'getParagraphCount(sec: number): number {',
+      'getParagraphLength(sec: number, para: number): number {',
+      'setTableProperties(sec: number, parentPara: number, controlIdx: number, props: Partial<TableProperties>)',
+      'changeShapeZOrder(',
       'getCellInfo(sec: number, parentPara: number, controlIdx: number, cellIdx: number): CellInfo',
+      'getTableCellBboxes(sec: number,',
       'searchText(query: string, fromSec: number, fromPara: number, fromChar: number, forward: boolean',
       'getCharPropertiesAt(sec: number, para: number, charOffset: number)',
       'getCellCharPropertiesAtByPath(sec: number, parentPara: number, pathJson: string, charOffset: number)',
@@ -719,6 +984,11 @@ export const hancomHooks = [
       'export class ApplyCharFormatCommand',
       'export class ApplyParaFormatCommand',
     ],
+  },
+  // the table-object L/C keys open the studio's own border/background dialog on its tab
+  {
+    file: 'src/ui/cell-border-bg-dialog.ts',
+    needles: ['export class CellBorderBgDialog', 'private switchTab(idx: number)'],
   },
   // the studio parts the studio-format-copy patches hand to the app's module
   {

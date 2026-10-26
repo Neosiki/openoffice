@@ -9,12 +9,16 @@ export const pl = {
   fileSaveAs: 'Zapisz jako…',
   fileExportPdf: 'Eksportuj jako PDF…',
   filePrint: 'Drukuj…',
+  autoSave: 'Autozapis',
+  autoSaveTip: 'Zapisuje co 30 sekund oraz gdy okno traci fokus',
   printPreparing: 'Przygotowywanie stron… ({done}/{total})',
   printSending: 'Wysyłanie stron…',
   pdfFailed: 'Nie udało się wyeksportować dokumentu do PDF.',
   printFailed: 'Nie udało się wydrukować dokumentu.',
   saveVerifyFailed:
     'Niczego nie zapisano: kopia przygotowana do zapisu po ponownym odczytaniu różniła się od dokumentu na ekranie. Spróbuj „Zapisz jako”, aby zapisać nowy plik.',
+  saveVerifyHint:
+    'Oryginał jest niezmieniony. W oknie Zapisz jako wybierz HWPX lub użyj Eksportuj jako PDF.',
   saveProtected:
     'Nie zapisano: ten dokument jest chroniony hasłem, a zapisanie go tutaj zapisałoby go bez hasła.',
   backupKept: 'Zapisano. Poprzednia wersja została zachowana jako {name}.',
@@ -113,6 +117,7 @@ export const pl = {
   aiToolTables: 'Sprawdzono tabele · {count}',
   aiToolReadTable: 'Odczytano tabelę {table}',
   aiToolFillCells: 'Tabela {table} · wypełniono komórek: {count}',
+  aiToolCheckBoxes: 'Tabela {table} · zaznaczono pól: {count}',
   aiTableName: 'Tabela {table}',
   aiTableRowsAdded: 'Dodano wierszy: {count}',
   aiTableColsAdded: 'Dodano kolumn: {count}',
@@ -146,8 +151,10 @@ export const pl = {
   memoPage: 's. {page}',
   memoUnknownAuthor: 'Nieznany',
   memoReadOnly: 'Tylko do odczytu',
-  memoReadOnlyFormatted: 'Ten komentarz ma mieszane formatowanie, więc nie można tu zmienić jego tekstu.',
-  memoReadOnlyObject: 'Ten komentarz zawiera tabelę, obraz lub inny obiekt, więc nie można tu zmienić jego tekstu.',
+  memoReadOnlyFormatted:
+    'Ten komentarz ma mieszane formatowanie, więc nie można tu zmienić jego tekstu.',
+  memoReadOnlyObject:
+    'Ten komentarz zawiera tabelę, obraz lub inny obiekt, więc nie można tu zmienić jego tekstu.',
   memoReadOnlyPlace: 'Komentarzy w nagłówkach, stopkach i przypisach nie można tu zmieniać.',
   memoReadOnlyProtected: 'Komentarzy w dokumencie chronionym hasłem nie można tu zmieniać.',
   memoEdit: 'Edytuj',
@@ -174,10 +181,13 @@ export const pl = {
   memoSaveBlocked: 'Najpierw zapisz lub anuluj komentarz, który piszesz.',
   memoRemoved: 'Usunięto komentarze wraz z tekstem: {count}. Naciśnij Ctrl+Z, aby cofnąć.',
   memoNotCopied: 'Komentarz nie został skopiowany.',
-  memoLockedElsewhere: 'W innej karcie trwa pisanie komentarza. Poczekaj, aż zostanie zapisany lub anulowany.',
-  memoContended: 'W innej karcie również otwarto okno komentarza. Najpierw zapisz lub anuluj w jednym z nich.',
+  memoLockedElsewhere:
+    'W innej karcie trwa pisanie komentarza. Poczekaj, aż zostanie zapisany lub anulowany.',
+  memoContended:
+    'W innej karcie również otwarto okno komentarza. Najpierw zapisz lub anuluj w jednym z nich.',
   memoUnsupportedBuild: 'Ta wersja nie obsługuje komentarzy.',
-  memoHwpxLost: 'Komentarze nieprzeniesione do pliku HWPX: {count}. Zapisz jako HWP lub sprawdź plik w Hancom Hangul.',
+  memoHwpxLost:
+    'Komentarze nieprzeniesione do pliku HWPX: {count}. Zapisz jako HWP lub sprawdź plik w Hancom Hangul.',
   aiToolMemos: 'Sprawdzono komentarze: {count}',
   aiMemoContext: 'Komentarze: {count}',
   aiMemoApprovalTitle: 'Ta zmiana usuwa komentarze: {count}. Kontynuować?',

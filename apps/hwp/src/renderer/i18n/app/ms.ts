@@ -9,12 +9,16 @@ export const ms = {
   fileSaveAs: 'Simpan Sebagai…',
   fileExportPdf: 'Eksport sebagai PDF…',
   filePrint: 'Cetak…',
+  autoSave: 'Simpan automatik',
+  autoSaveTip: 'Menyimpan setiap 30 saat dan apabila tetingkap hilang fokus',
   printPreparing: 'Menyediakan halaman… ({done}/{total})',
   printSending: 'Menghantar halaman…',
   pdfFailed: 'Dokumen tidak dapat dieksport sebagai PDF.',
   printFailed: 'Dokumen tidak dapat dicetak.',
   saveVerifyFailed:
     'Tiada apa-apa disimpan: salinan yang akan ditulis, apabila dibaca semula, tidak sama dengan dokumen pada skrin. Cuba "Simpan Sebagai" untuk menulis fail baharu.',
+  saveVerifyHint:
+    'Fail asal tidak berubah. Dalam Simpan sebagai, pilih HWPX atau gunakan Eksport sebagai PDF.',
   saveProtected:
     'Tidak disimpan: dokumen ini dilindungi kata laluan, dan menyimpannya di sini akan menulisnya tanpa kata laluan.',
   backupKept: 'Disimpan. Versi sebelumnya disimpan sebagai {name}.',
@@ -113,6 +117,7 @@ export const ms = {
   aiToolTables: 'Jadual disemak · {count}',
   aiToolReadTable: 'Jadual {table} dibaca',
   aiToolFillCells: 'Jadual {table} · {count} sel diisi',
+  aiToolCheckBoxes: 'Jadual {table} · {count} kotak ditanda',
   aiTableName: 'Jadual {table}',
   aiTableRowsAdded: '{count} baris ditambah',
   aiTableColsAdded: '{count} lajur ditambah',
@@ -147,9 +152,11 @@ export const ms = {
   memoUnknownAuthor: 'Tidak diketahui',
   memoReadOnly: 'Baca sahaja',
   memoReadOnlyFormatted: 'Komen ini mencampurkan format, jadi teksnya tidak boleh diubah di sini.',
-  memoReadOnlyObject: 'Komen ini mengandungi jadual, gambar atau objek lain, jadi teksnya tidak boleh diubah di sini.',
+  memoReadOnlyObject:
+    'Komen ini mengandungi jadual, gambar atau objek lain, jadi teksnya tidak boleh diubah di sini.',
   memoReadOnlyPlace: 'Komen dalam pengepala, pengaki atau nota tidak boleh diubah di sini.',
-  memoReadOnlyProtected: 'Komen dalam dokumen yang dilindungi kata laluan tidak boleh diubah di sini.',
+  memoReadOnlyProtected:
+    'Komen dalam dokumen yang dilindungi kata laluan tidak boleh diubah di sini.',
   memoEdit: 'Sunting',
   memoDelete: 'Padam',
   memoNewTitle: 'Tambah komen',
@@ -174,10 +181,13 @@ export const ms = {
   memoSaveBlocked: 'Simpan atau batalkan komen yang sedang ditulis dahulu.',
   memoRemoved: 'Komen dipadam bersama teks: {count}. Tekan Ctrl+Z untuk buat asal.',
   memoNotCopied: 'Komen tidak disalin.',
-  memoLockedElsewhere: 'Komen sedang ditulis dalam tab lain. Tunggu sehingga disimpan atau dibatalkan.',
-  memoContended: 'Tetingkap komen juga dibuka dalam tab lain. Simpan atau batalkan dalam salah satu dahulu.',
+  memoLockedElsewhere:
+    'Komen sedang ditulis dalam tab lain. Tunggu sehingga disimpan atau dibatalkan.',
+  memoContended:
+    'Tetingkap komen juga dibuka dalam tab lain. Simpan atau batalkan dalam salah satu dahulu.',
   memoUnsupportedBuild: 'Versi ini tidak menyokong komen.',
-  memoHwpxLost: 'Komen tidak dipindahkan ke fail HWPX: {count}. Simpan sebagai HWP atau semak fail dalam Hancom Hangul.',
+  memoHwpxLost:
+    'Komen tidak dipindahkan ke fail HWPX: {count}. Simpan sebagai HWP atau semak fail dalam Hancom Hangul.',
   aiToolMemos: 'Komen diperiksa: {count}',
   aiMemoContext: 'Komen: {count}',
   aiMemoApprovalTitle: 'Edit ini memadam komen: {count}. Teruskan?',

@@ -1,4 +1,4 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import { contextBridge, ipcRenderer } from 'electron'
 import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
 import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
@@ -249,6 +249,12 @@ const api: PdfApi = {
     const listener = (_e: Electron.IpcRendererEvent, inFlight: boolean) => handler(inFlight)
     ipcRenderer.on(PDF_CHANNELS.saveAsFlow, listener)
     return () => ipcRenderer.removeListener(PDF_CHANNELS.saveAsFlow, listener)
+  },
+  getAutoSaveDefault: () => ipcRenderer.invoke(PDF_CHANNELS.getAutoSaveDefault),
+  onAutoSaveDefaultChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, value: AutoSaveDefault) => handler(value)
+    ipcRenderer.on(PDF_CHANNELS.autoSaveDefaultChanged, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.autoSaveDefaultChanged, listener)
   },
   onPrintRequest: (handler) => {
     const listener = () => handler()

@@ -9,12 +9,15 @@ export const vi = {
   fileSaveAs: 'Lưu dưới dạng…',
   fileExportPdf: 'Xuất dưới dạng PDF…',
   filePrint: 'In…',
+  autoSave: 'Tự động lưu',
+  autoSaveTip: 'Tự động lưu mỗi 30 giây và khi cửa sổ mất tiêu điểm',
   printPreparing: 'Đang chuẩn bị trang… ({done}/{total})',
   printSending: 'Đang gửi các trang…',
   pdfFailed: 'Không thể xuất tài liệu dưới dạng PDF.',
   printFailed: 'Không thể in tài liệu.',
   saveVerifyFailed:
     'Chưa lưu gì: bản sao sắp ghi, khi đọc lại, không khớp với tài liệu trên màn hình. Hãy thử "Lưu thành" để ghi vào tệp mới.',
+  saveVerifyHint: 'Tệp gốc không thay đổi. Trong Lưu thành, chọn HWPX hoặc dùng Xuất thành PDF.',
   saveProtected:
     'Chưa lưu: tài liệu này được bảo vệ bằng mật khẩu, và lưu ở đây sẽ ghi tệp không có mật khẩu.',
   backupKept: 'Đã lưu. Phiên bản trước được giữ lại dưới tên {name}.',
@@ -113,6 +116,7 @@ export const vi = {
   aiToolTables: 'Đã kiểm tra bảng · {count}',
   aiToolReadTable: 'Đã đọc bảng {table}',
   aiToolFillCells: 'Bảng {table} · đã điền {count} ô',
+  aiToolCheckBoxes: 'Bảng {table} · đã đánh dấu {count} ô',
   aiTableName: 'Bảng {table}',
   aiTableRowsAdded: 'Đã thêm {count} hàng',
   aiTableColsAdded: 'Đã thêm {count} cột',
@@ -147,7 +151,8 @@ export const vi = {
   memoUnknownAuthor: 'Không rõ',
   memoReadOnly: 'Chỉ đọc',
   memoReadOnlyFormatted: 'Ghi chú này trộn nhiều định dạng nên không thể sửa nội dung ở đây.',
-  memoReadOnlyObject: 'Ghi chú này có bảng, hình ảnh hoặc đối tượng khác nên không thể sửa nội dung ở đây.',
+  memoReadOnlyObject:
+    'Ghi chú này có bảng, hình ảnh hoặc đối tượng khác nên không thể sửa nội dung ở đây.',
   memoReadOnlyPlace: 'Không thể sửa ghi chú trong đầu trang, chân trang hoặc chú thích ở đây.',
   memoReadOnlyProtected: 'Không thể sửa ghi chú trong tài liệu được bảo vệ bằng mật khẩu ở đây.',
   memoEdit: 'Sửa',
@@ -175,9 +180,11 @@ export const vi = {
   memoRemoved: 'Đã xóa ghi chú cùng văn bản: {count}. Nhấn Ctrl+Z để hoàn tác.',
   memoNotCopied: 'Ghi chú không được sao chép.',
   memoLockedElsewhere: 'Đang viết ghi chú trong tab khác. Hãy đợi đến khi được lưu hoặc hủy.',
-  memoContended: 'Một cửa sổ ghi chú cũng đã mở trong tab khác. Hãy lưu hoặc hủy ở một trong hai trước.',
+  memoContended:
+    'Một cửa sổ ghi chú cũng đã mở trong tab khác. Hãy lưu hoặc hủy ở một trong hai trước.',
   memoUnsupportedBuild: 'Bản dựng này không hỗ trợ ghi chú.',
-  memoHwpxLost: 'Ghi chú không được chuyển vào tệp HWPX: {count}. Hãy lưu dưới dạng HWP hoặc kiểm tra tệp trong Hancom Hangul.',
+  memoHwpxLost:
+    'Ghi chú không được chuyển vào tệp HWPX: {count}. Hãy lưu dưới dạng HWP hoặc kiểm tra tệp trong Hancom Hangul.',
   aiToolMemos: 'Đã kiểm tra ghi chú: {count}',
   aiMemoContext: 'Ghi chú: {count}',
   aiMemoApprovalTitle: 'Chỉnh sửa này sẽ xóa ghi chú: {count}. Tiếp tục?',

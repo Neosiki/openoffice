@@ -28,7 +28,7 @@ Regels: de extensie blijft automatisch behouden; ongeldige tekens, afsluitende p
 - **⌘S / ctrl+S** slaat het huidige bestand op; een naamloos bestand vraagt eerst om locatie en naam.
 - **Opslaan als…** schrijft een nieuw bestand en laat het origineel ongemoeid; latere bewerkingen gaan naar het nieuwe bestand.
 - Elk opslaan is atomair (tijdelijk bestand + hernoemen); tussentijds afsluiten kan het bestand niet beschadigen.
-- Automatisch opslaan komt pas op gang na de eerste handmatige keer opslaan (zie [Snel starten](help://getting-started)).
+- Automatisch opslaan volgt de schakelaar van elke editor; een nieuw document zonder eigen bestand begint pas na de eerste keer opslaan (zie [Snel starten](help://getting-started)).
 
 ## Exporteren naar pdf
 

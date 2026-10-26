@@ -8,12 +8,15 @@ export const zh = {
   fileSaveAs: '另存为…',
   fileExportPdf: '导出为 PDF…',
   filePrint: '打印…',
+  autoSave: '自动保存',
+  autoSaveTip: '每 30 秒及窗口失焦时自动保存',
   printPreparing: '正在准备打印页面… ({done}/{total})',
   printSending: '正在发送页面…',
   pdfFailed: '无法导出为 PDF。',
   printFailed: '无法打印。',
   saveVerifyFailed:
     '未保存：即将写入的内容读回后与屏幕上的文档不一致。请尝试“另存为”保存到新文件。',
+  saveVerifyHint: '原文件未改动。请在“另存为”中选择 HWPX，或使用“导出为 PDF”。',
   saveProtected: '未保存：此文档有密码保护，在这里保存会写出不带密码的文件。',
   backupKept: '已保存。之前的版本保留为 {name}。',
   openedTracked:
@@ -109,6 +112,7 @@ export const zh = {
   aiToolTables: '已查看表格 · {count} 个',
   aiToolReadTable: '已读取表格 {table}',
   aiToolFillCells: '表格 {table} · 已填写 {count} 个单元格',
+  aiToolCheckBoxes: '表格 {table} · 已勾选 {count} 个选框',
   aiTableName: '表格 {table}',
   aiTableRowsAdded: '添加 {count} 行',
   aiTableColsAdded: '添加 {count} 列',

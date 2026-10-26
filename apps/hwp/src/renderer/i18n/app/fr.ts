@@ -9,12 +9,16 @@ export const fr = {
   fileSaveAs: 'Enregistrer sous…',
   fileExportPdf: 'Exporter en PDF…',
   filePrint: 'Imprimer…',
+  autoSave: 'Enregistrement auto',
+  autoSaveTip: 'Enregistre toutes les 30 s et quand la fenêtre perd le focus',
   printPreparing: 'Préparation des pages… ({done}/{total})',
   printSending: 'Envoi des pages…',
   pdfFailed: "Le document n'a pas pu être exporté en PDF.",
   printFailed: "Le document n'a pas pu être imprimé.",
   saveVerifyFailed:
     'Rien n’a été enregistré : la copie à écrire ne correspondait pas, à la relecture, au document affiché. Essayez « Enregistrer sous » pour écrire un nouveau fichier.',
+  saveVerifyHint:
+    "Le fichier d'origine est intact. Dans Enregistrer sous, choisissez HWPX, ou utilisez Exporter au format PDF.",
   saveProtected:
     'Non enregistré : ce document est protégé par mot de passe, et l’enregistrer ici l’écrirait sans mot de passe.',
   backupKept: 'Enregistré. La version précédente a été conservée sous le nom {name}.',
@@ -115,6 +119,7 @@ export const fr = {
   aiToolTables: 'Tableaux vérifiés · {count}',
   aiToolReadTable: 'Tableau {table} lu',
   aiToolFillCells: 'Tableau {table} · {count} cellule(s) remplie(s)',
+  aiToolCheckBoxes: 'Tableau {table} · {count} case(s) cochée(s)',
   aiTableName: 'Tableau {table}',
   aiTableRowsAdded: '{count} ligne(s) ajoutée(s)',
   aiTableColsAdded: '{count} colonne(s) ajoutée(s)',
@@ -148,10 +153,14 @@ export const fr = {
   memoPage: 'p. {page}',
   memoUnknownAuthor: 'Inconnu',
   memoReadOnly: 'Lecture seule',
-  memoReadOnlyFormatted: 'Ce commentaire mélange des mises en forme : son texte ne peut pas être modifié ici.',
-  memoReadOnlyObject: 'Ce commentaire contient un tableau, une image ou un autre objet : son texte ne peut pas être modifié ici.',
-  memoReadOnlyPlace: 'Les commentaires des en-têtes, pieds de page ou notes ne peuvent pas être modifiés ici.',
-  memoReadOnlyProtected: 'Les commentaires d’un document protégé par mot de passe ne peuvent pas être modifiés ici.',
+  memoReadOnlyFormatted:
+    'Ce commentaire mélange des mises en forme : son texte ne peut pas être modifié ici.',
+  memoReadOnlyObject:
+    'Ce commentaire contient un tableau, une image ou un autre objet : son texte ne peut pas être modifié ici.',
+  memoReadOnlyPlace:
+    'Les commentaires des en-têtes, pieds de page ou notes ne peuvent pas être modifiés ici.',
+  memoReadOnlyProtected:
+    'Les commentaires d’un document protégé par mot de passe ne peuvent pas être modifiés ici.',
   memoEdit: 'Modifier',
   memoDelete: 'Supprimer',
   memoNewTitle: 'Ajouter un commentaire',
@@ -163,9 +172,11 @@ export const fr = {
   memoCaretLabel: 'Le commentaire sera ajouté à la position du curseur.',
   memoSaveHint: 'Ctrl+Entrée pour enregistrer',
   memoCancel: 'Annuler',
-  memoErrNone: 'Il n’y a aucun endroit où ajouter un commentaire. Sélectionnez du texte ou placez le curseur.',
+  memoErrNone:
+    'Il n’y a aucun endroit où ajouter un commentaire. Sélectionnez du texte ou placez le curseur.',
   memoErrMultiParagraph: 'Un commentaire ne peut être ajouté que dans un seul paragraphe.',
-  memoErrUnsupported: 'Impossible d’ajouter un commentaire dans un en-tête, un pied de page ou une note.',
+  memoErrUnsupported:
+    'Impossible d’ajouter un commentaire dans un en-tête, un pied de page ou une note.',
   memoErrOverlap: 'Un commentaire couvre déjà cette plage.',
   memoErrProtected: 'Impossible d’ajouter un commentaire à un document protégé par mot de passe.',
   memoErrEmpty: 'Écrivez le texte du commentaire.',
@@ -176,10 +187,13 @@ export const fr = {
   memoSaveBlocked: 'Enregistrez ou annulez d’abord le commentaire en cours de rédaction.',
   memoRemoved: 'Commentaires supprimés avec le texte : {count}. Appuyez sur Ctrl+Z pour annuler.',
   memoNotCopied: 'Le commentaire n’a pas été copié.',
-  memoLockedElsewhere: 'Un commentaire est en cours de rédaction dans un autre onglet. Attendez son enregistrement ou son annulation.',
-  memoContended: 'Une fenêtre de commentaire est aussi ouverte dans un autre onglet. Enregistrez ou annulez d’abord dans l’une des deux.',
+  memoLockedElsewhere:
+    'Un commentaire est en cours de rédaction dans un autre onglet. Attendez son enregistrement ou son annulation.',
+  memoContended:
+    'Une fenêtre de commentaire est aussi ouverte dans un autre onglet. Enregistrez ou annulez d’abord dans l’une des deux.',
   memoUnsupportedBuild: 'Cette version ne prend pas en charge les commentaires.',
-  memoHwpxLost: 'Commentaires non transférés dans le fichier HWPX : {count}. Enregistrez au format HWP ou vérifiez le fichier dans Hancom Hangul.',
+  memoHwpxLost:
+    'Commentaires non transférés dans le fichier HWPX : {count}. Enregistrez au format HWP ou vérifiez le fichier dans Hancom Hangul.',
   aiToolMemos: 'Commentaires vérifiés : {count}',
   aiMemoContext: 'Commentaires : {count}',
   aiMemoApprovalTitle: 'Cette modification supprime {count} commentaire(s). Continuer ?',

@@ -9,12 +9,16 @@ export const pt = {
   fileSaveAs: 'Salvar Como…',
   fileExportPdf: 'Exportar como PDF…',
   filePrint: 'Imprimir…',
+  autoSave: 'Salvamento automático',
+  autoSaveTip: 'Salva a cada 30 segundos e quando a janela perde o foco',
   printPreparing: 'Preparando páginas… ({done}/{total})',
   printSending: 'Enviando as páginas…',
   pdfFailed: 'Não foi possível exportar o documento como PDF.',
   printFailed: 'Não foi possível imprimir o documento.',
   saveVerifyFailed:
     'Nada foi salvo: a cópia que seria gravada, ao ser relida, não correspondia ao documento na tela. Tente "Salvar como" para gravar um novo arquivo.',
+  saveVerifyHint:
+    'O original não foi alterado. Em Salvar como, escolha HWPX ou use Exportar como PDF.',
   saveProtected:
     'Não salvo: este documento é protegido por senha, e salvá-lo aqui o gravaria sem a senha.',
   backupKept: 'Salvo. A versão anterior foi mantida como {name}.',
@@ -115,6 +119,7 @@ export const pt = {
   aiToolTables: 'Tabelas verificadas · {count}',
   aiToolReadTable: 'Tabela {table} lida',
   aiToolFillCells: 'Tabela {table} · {count} célula(s) preenchida(s)',
+  aiToolCheckBoxes: 'Tabela {table} · {count} caixa(s) marcada(s)',
   aiTableName: 'Tabela {table}',
   aiTableRowsAdded: '{count} linha(s) adicionada(s)',
   aiTableColsAdded: '{count} coluna(s) adicionada(s)',
@@ -148,10 +153,13 @@ export const pt = {
   memoPage: 'pág. {page}',
   memoUnknownAuthor: 'Desconhecido',
   memoReadOnly: 'Somente leitura',
-  memoReadOnlyFormatted: 'Este comentário mistura formatações, então o texto não pode ser alterado aqui.',
-  memoReadOnlyObject: 'Este comentário contém uma tabela, imagem ou outro objeto, então o texto não pode ser alterado aqui.',
+  memoReadOnlyFormatted:
+    'Este comentário mistura formatações, então o texto não pode ser alterado aqui.',
+  memoReadOnlyObject:
+    'Este comentário contém uma tabela, imagem ou outro objeto, então o texto não pode ser alterado aqui.',
   memoReadOnlyPlace: 'Comentários em cabeçalhos, rodapés ou notas não podem ser alterados aqui.',
-  memoReadOnlyProtected: 'Comentários em um documento protegido por senha não podem ser alterados aqui.',
+  memoReadOnlyProtected:
+    'Comentários em um documento protegido por senha não podem ser alterados aqui.',
   memoEdit: 'Editar',
   memoDelete: 'Excluir',
   memoNewTitle: 'Adicionar comentário',
@@ -176,10 +184,13 @@ export const pt = {
   memoSaveBlocked: 'Salve ou cancele primeiro o comentário que está escrevendo.',
   memoRemoved: 'Comentários excluídos com o texto: {count}. Pressione Ctrl+Z para desfazer.',
   memoNotCopied: 'O comentário não foi copiado.',
-  memoLockedElsewhere: 'Um comentário está sendo escrito em outra aba. Aguarde até que seja salvo ou cancelado.',
-  memoContended: 'Uma janela de comentário também foi aberta em outra aba. Salve ou cancele primeiro em uma delas.',
+  memoLockedElsewhere:
+    'Um comentário está sendo escrito em outra aba. Aguarde até que seja salvo ou cancelado.',
+  memoContended:
+    'Uma janela de comentário também foi aberta em outra aba. Salve ou cancele primeiro em uma delas.',
   memoUnsupportedBuild: 'Esta versão não tem suporte a comentários.',
-  memoHwpxLost: 'Comentários não transferidos para o arquivo HWPX: {count}. Salve como HWP ou verifique o arquivo no Hancom Hangul.',
+  memoHwpxLost:
+    'Comentários não transferidos para o arquivo HWPX: {count}. Salve como HWP ou verifique o arquivo no Hancom Hangul.',
   aiToolMemos: 'Comentários verificados: {count}',
   aiMemoContext: 'Comentários: {count}',
   aiMemoApprovalTitle: 'Esta edição exclui {count} comentário(s). Continuar?',

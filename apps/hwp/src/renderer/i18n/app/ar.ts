@@ -9,12 +9,15 @@ export const ar = {
   fileSaveAs: 'حفظ باسم…',
   fileExportPdf: 'تصدير بتنسيق PDF…',
   filePrint: 'طباعة…',
+  autoSave: 'حفظ تلقائي',
+  autoSaveTip: 'يحفظ كل 30 ثانية وعند فقدان النافذة للتركيز',
   printPreparing: 'جارٍ تجهيز الصفحات… ({done}/{total})',
   printSending: 'جارٍ إرسال الصفحات…',
   pdfFailed: 'تعذّر تصدير المستند بتنسيق PDF.',
   printFailed: 'تعذّرت طباعة المستند.',
   saveVerifyFailed:
     'لم يُحفظ شيء: النسخة التي كانت ستُكتب لم تطابق عند إعادة قراءتها المستند المعروض على الشاشة. جرّب «حفظ باسم» للكتابة في ملف جديد.',
+  saveVerifyHint: 'الملف الأصلي لم يتغير. في «حفظ باسم»، اختر HWPX، أو استخدم «تصدير بصيغة PDF».',
   saveProtected: 'لم يُحفظ: هذا المستند محمي بكلمة مرور، وحفظه هنا سيكتبه بدون كلمة المرور.',
   backupKept: 'تم الحفظ. تم الاحتفاظ بالنسخة السابقة باسم {name}.',
   openedTracked:
@@ -112,6 +115,7 @@ export const ar = {
   aiToolTables: 'تم فحص الجداول · {count}',
   aiToolReadTable: 'تمت قراءة الجدول {table}',
   aiToolFillCells: 'الجدول {table} · تم ملء {count} خلية',
+  aiToolCheckBoxes: 'الجدول {table} · تم تحديد {count} مربع اختيار',
   aiTableName: 'الجدول {table}',
   aiTableRowsAdded: 'تمت إضافة {count} صف',
   aiTableColsAdded: 'تمت إضافة {count} عمود',
@@ -175,7 +179,8 @@ export const ar = {
   memoLockedElsewhere: 'يجري كتابة تعليق في علامة تبويب أخرى. انتظر حتى يُحفظ أو يُلغى.',
   memoContended: 'فُتحت نافذة تعليق في علامة تبويب أخرى أيضًا. احفظ أو ألغِ في إحداهما أولًا.',
   memoUnsupportedBuild: 'هذه النسخة لا تدعم التعليقات.',
-  memoHwpxLost: 'تعليقات لم تُنقل إلى ملف HWPX: {count}. احفظ بصيغة HWP أو تحقق من الملف في Hancom Hangul.',
+  memoHwpxLost:
+    'تعليقات لم تُنقل إلى ملف HWPX: {count}. احفظ بصيغة HWP أو تحقق من الملف في Hancom Hangul.',
   aiToolMemos: 'تم فحص التعليقات: {count}',
   aiMemoContext: 'التعليقات: {count}',
   aiMemoApprovalTitle: 'سيحذف هذا التعديل تعليقات: {count}. هل تريد المتابعة؟',

@@ -9,12 +9,16 @@ export const cs = {
   fileSaveAs: 'Uložit jako…',
   fileExportPdf: 'Exportovat jako PDF…',
   filePrint: 'Tisk…',
+  autoSave: 'Automatické ukládání',
+  autoSaveTip: 'Ukládá každých 30 sekund a při ztrátě fokusu okna',
   printPreparing: 'Příprava stránek… ({done}/{total})',
   printSending: 'Odesílání stránek…',
   pdfFailed: 'Dokument se nepodařilo exportovat do PDF.',
   printFailed: 'Dokument se nepodařilo vytisknout.',
   saveVerifyFailed:
     'Nic se neuložilo: kopie připravená k zápisu se po zpětném načtení neshodovala s dokumentem na obrazovce. Zkuste „Uložit jako“ a zapište nový soubor.',
+  saveVerifyHint:
+    'Původní soubor je beze změny. V dialogu Uložit jako zvolte HWPX nebo použijte Exportovat jako PDF.',
   saveProtected:
     'Neuloženo: tento dokument je chráněn heslem a uložením zde by se zapsal bez hesla.',
   backupKept: 'Uloženo. Předchozí verze byla zachována jako {name}.',
@@ -114,6 +118,7 @@ export const cs = {
   aiToolTables: 'Tabulky zkontrolovány · {count}',
   aiToolReadTable: 'Tabulka {table} přečtena',
   aiToolFillCells: 'Tabulka {table} · vyplněno buněk: {count}',
+  aiToolCheckBoxes: 'Tabulka {table} · zaškrtnuto polí: {count}',
   aiTableName: 'Tabulka {table}',
   aiTableRowsAdded: 'Přidáno řádků: {count}',
   aiTableColsAdded: 'Přidáno sloupců: {count}',
@@ -148,7 +153,8 @@ export const cs = {
   memoUnknownAuthor: 'Neznámý',
   memoReadOnly: 'Jen pro čtení',
   memoReadOnlyFormatted: 'Tento komentář kombinuje formátování, proto zde jeho text nelze změnit.',
-  memoReadOnlyObject: 'Tento komentář obsahuje tabulku, obrázek nebo jiný objekt, proto zde jeho text nelze změnit.',
+  memoReadOnlyObject:
+    'Tento komentář obsahuje tabulku, obrázek nebo jiný objekt, proto zde jeho text nelze změnit.',
   memoReadOnlyPlace: 'Komentáře v záhlavích, zápatích a poznámkách zde nelze měnit.',
   memoReadOnlyProtected: 'Komentáře v dokumentu chráněném heslem zde nelze měnit.',
   memoEdit: 'Upravit',
@@ -176,9 +182,11 @@ export const cs = {
   memoRemoved: 'Komentáře smazané s textem: {count}. Stiskněte Ctrl+Z pro vrácení.',
   memoNotCopied: 'Komentář nebyl zkopírován.',
   memoLockedElsewhere: 'V jiné kartě se píše komentář. Počkejte, až bude uložen nebo zrušen.',
-  memoContended: 'V jiné kartě se také otevřelo okno komentáře. Nejprve v jednom z nich uložte nebo zrušte.',
+  memoContended:
+    'V jiné kartě se také otevřelo okno komentáře. Nejprve v jednom z nich uložte nebo zrušte.',
   memoUnsupportedBuild: 'Tato verze komentáře nepodporuje.',
-  memoHwpxLost: 'Komentáře nepřevedené do souboru HWPX: {count}. Uložte jako HWP nebo soubor zkontrolujte v Hancom Hangul.',
+  memoHwpxLost:
+    'Komentáře nepřevedené do souboru HWPX: {count}. Uložte jako HWP nebo soubor zkontrolujte v Hancom Hangul.',
   aiToolMemos: 'Zkontrolované komentáře: {count}',
   aiMemoContext: 'Komentáře: {count}',
   aiMemoApprovalTitle: 'Tato úprava smaže komentáře: {count}. Pokračovat?',

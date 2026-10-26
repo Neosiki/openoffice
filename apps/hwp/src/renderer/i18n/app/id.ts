@@ -9,12 +9,16 @@ export const id = {
   fileSaveAs: 'Simpan Sebagai…',
   fileExportPdf: 'Ekspor sebagai PDF…',
   filePrint: 'Cetak…',
+  autoSave: 'Simpan otomatis',
+  autoSaveTip: 'Menyimpan setiap 30 detik dan saat jendela kehilangan fokus',
   printPreparing: 'Menyiapkan halaman… ({done}/{total})',
   printSending: 'Mengirim halaman…',
   pdfFailed: 'Dokumen tidak dapat diekspor sebagai PDF.',
   printFailed: 'Dokumen tidak dapat dicetak.',
   saveVerifyFailed:
     'Tidak ada yang disimpan: salinan yang akan ditulis, saat dibaca kembali, tidak sama dengan dokumen di layar. Coba "Simpan Sebagai" untuk menulis file baru.',
+  saveVerifyHint:
+    'File asli tidak berubah. Di Simpan sebagai, pilih HWPX atau gunakan Ekspor sebagai PDF.',
   saveProtected:
     'Tidak disimpan: dokumen ini dilindungi kata sandi, dan menyimpannya di sini akan menulisnya tanpa kata sandi.',
   backupKept: 'Tersimpan. Versi sebelumnya disimpan sebagai {name}.',
@@ -113,6 +117,7 @@ export const id = {
   aiToolTables: 'Tabel diperiksa · {count}',
   aiToolReadTable: 'Tabel {table} dibaca',
   aiToolFillCells: 'Tabel {table} · {count} sel diisi',
+  aiToolCheckBoxes: 'Tabel {table} · {count} kotak dicentang',
   aiTableName: 'Tabel {table}',
   aiTableRowsAdded: '{count} baris ditambahkan',
   aiTableColsAdded: '{count} kolom ditambahkan',
@@ -147,9 +152,11 @@ export const id = {
   memoUnknownAuthor: 'Tidak dikenal',
   memoReadOnly: 'Hanya baca',
   memoReadOnlyFormatted: 'Komentar ini mencampur format, jadi teksnya tidak dapat diubah di sini.',
-  memoReadOnlyObject: 'Komentar ini berisi tabel, gambar, atau objek lain, jadi teksnya tidak dapat diubah di sini.',
+  memoReadOnlyObject:
+    'Komentar ini berisi tabel, gambar, atau objek lain, jadi teksnya tidak dapat diubah di sini.',
   memoReadOnlyPlace: 'Komentar di header, footer, atau catatan tidak dapat diubah di sini.',
-  memoReadOnlyProtected: 'Komentar pada dokumen yang dilindungi kata sandi tidak dapat diubah di sini.',
+  memoReadOnlyProtected:
+    'Komentar pada dokumen yang dilindungi kata sandi tidak dapat diubah di sini.',
   memoEdit: 'Sunting',
   memoDelete: 'Hapus',
   memoNewTitle: 'Tambahkan komentar',
@@ -174,10 +181,13 @@ export const id = {
   memoSaveBlocked: 'Simpan atau batalkan komentar yang sedang ditulis terlebih dahulu.',
   memoRemoved: 'Komentar terhapus bersama teks: {count}. Tekan Ctrl+Z untuk membatalkan.',
   memoNotCopied: 'Komentar tidak disalin.',
-  memoLockedElsewhere: 'Komentar sedang ditulis di tab lain. Tunggu hingga disimpan atau dibatalkan.',
-  memoContended: 'Jendela komentar juga dibuka di tab lain. Simpan atau batalkan di salah satunya terlebih dahulu.',
+  memoLockedElsewhere:
+    'Komentar sedang ditulis di tab lain. Tunggu hingga disimpan atau dibatalkan.',
+  memoContended:
+    'Jendela komentar juga dibuka di tab lain. Simpan atau batalkan di salah satunya terlebih dahulu.',
   memoUnsupportedBuild: 'Versi ini tidak mendukung komentar.',
-  memoHwpxLost: 'Komentar tidak terbawa ke berkas HWPX: {count}. Simpan sebagai HWP atau periksa berkas di Hancom Hangul.',
+  memoHwpxLost:
+    'Komentar tidak terbawa ke berkas HWPX: {count}. Simpan sebagai HWP atau periksa berkas di Hancom Hangul.',
   aiToolMemos: 'Komentar diperiksa: {count}',
   aiMemoContext: 'Komentar: {count}',
   aiMemoApprovalTitle: 'Edit ini menghapus komentar: {count}. Lanjutkan?',

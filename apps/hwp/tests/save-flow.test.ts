@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runSave, type SaveEditorPort } from '../src/renderer/save-flow'
-import type {
-  BeginSaveResult,
-  CommitSaveResult,
-  MemoSnapshot,
-  TabSpot,
-} from '../src/shared/ipc'
+import type { BeginSaveResult, CommitSaveResult, MemoSnapshot, TabSpot } from '../src/shared/ipc'
 
 const HWP = Uint8Array.from([1, 2, 3])
 const HWPX = Uint8Array.from([4, 5, 6])
@@ -73,8 +68,15 @@ describe('runSave', () => {
     expect(host.commitSave).toHaveBeenCalledWith(
       HWPX,
       [{ ...SPOTS[0], width: 4000, type: 0, fill: 0 }],
-      { memos: [] },
+      { auto: false, memos: [] },
     )
+  })
+
+  it('marks an automatic save so a copy-pair conflict stands down quietly', async () => {
+    const ed = editor()
+    const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' })
+    await runSave(ed, host, 'save', true)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], { auto: true })
   })
 
   it('treats the copy-pair deferral as a cancel, not a failure', async () => {
@@ -102,7 +104,7 @@ describe('runSave', () => {
     const host = api({ ok: true, path: 'C:/d/a.hwp', format: 'hwp' }, undefined, SPOTS)
     const outcome = await runSave(ed, host, 'save')
     expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
-    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], undefined)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], { auto: false })
   })
 
   it('does not ask the editor when no tab lacks a width', async () => {
@@ -149,7 +151,7 @@ describe('runSave', () => {
     const outcome = await runSave(ed, host, 'save')
     expect(outcome).toEqual({ kind: 'saved', path: 'C:/d/a.hwp' })
     expect(ed.exportHwpVerify).toHaveBeenCalledOnce()
-    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], undefined)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], { auto: false })
     expect(ed.notifySaved).toHaveBeenCalledWith('a.hwp')
     expect(host.abortSave).not.toHaveBeenCalled()
   })
@@ -178,7 +180,7 @@ describe('runSave', () => {
     await runSave(ed, host, 'save')
     expect(ed.setMemoLock).not.toHaveBeenCalled()
     expect(ed.listMemos).not.toHaveBeenCalled()
-    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], undefined)
+    expect(host.commitSave).toHaveBeenCalledWith(HWP, [], { auto: false })
   })
 
   it('lists HWPX memos under the lock and releases it before measuring tabs', async () => {
@@ -188,12 +190,10 @@ describe('runSave', () => {
     expect(ed.setMemoLock).toHaveBeenNthCalledWith(1, true)
     expect(ed.setMemoLock).toHaveBeenNthCalledWith(2, false)
     expect(ed.listMemos).toHaveBeenCalledOnce()
-    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { memos: MEMOS })
+    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { auto: false, memos: MEMOS })
     // the document is unlocked before the host works on the bytes
     const lock = vi.mocked(ed.setMemoLock)
-    expect(lock.mock.invocationCallOrder[1]).toBeLessThan(
-      host.newTabs.mock.invocationCallOrder[0],
-    )
+    expect(lock.mock.invocationCallOrder[1]).toBeLessThan(host.newTabs.mock.invocationCallOrder[0])
   })
 
   it('saves HWPX without a trusted memo list when the lock cannot be taken', async () => {
@@ -209,7 +209,7 @@ describe('runSave', () => {
     expect(await runSave(ed, host, 'save')).toEqual({ kind: 'saved', path: 'C:/d/a.hwpx' })
     expect(ed.listMemos).not.toHaveBeenCalled()
     expect(ed.exportHwpx).toHaveBeenCalledOnce()
-    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { memos: null })
+    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { auto: false, memos: null })
   })
 
   it('saves HWPX without a memo list when the editor cannot list them', async () => {
@@ -224,7 +224,7 @@ describe('runSave', () => {
     )
     expect(await runSave(ed, host, 'save')).toEqual({ kind: 'saved', path: 'C:/d/a.hwpx' })
     expect(ed.setMemoLock).toHaveBeenNthCalledWith(2, false)
-    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { memos: null })
+    expect(host.commitSave).toHaveBeenCalledWith(HWPX, [], { auto: false, memos: null })
   })
 
   it('releases the memo lock when the HWPX export throws', async () => {

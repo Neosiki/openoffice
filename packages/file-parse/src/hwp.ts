@@ -146,10 +146,17 @@ interface Memo {
 /**
  * The document's memos as a `### Comments` block, in the document order the engine
  * already sorts them in. A document without memos gets no block, so its text is
- * exactly what it was before memos were read.
+ * exactly what it was before memos were read. Memos that cannot be listed are left out
+ * rather than failing the read of a body that could be read.
  */
 function commentLines(doc: HwpDocument): string[] {
-  const memos = JSON.parse(doc.getMemoList()) as Memo[]
+  let memos: Memo[]
+  try {
+    const listed = JSON.parse(doc.getMemoList()) as unknown
+    memos = Array.isArray(listed) ? (listed as Memo[]) : []
+  } catch {
+    return []
+  }
   if (memos.length === 0) return []
   const lines = ['### Comments']
   for (const memo of memos) {

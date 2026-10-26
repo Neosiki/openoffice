@@ -14,12 +14,7 @@ function identityOf(memo: {
   text?: string | null
   place?: string | null
 }): string {
-  return JSON.stringify([
-    memo.author ?? '',
-    memo.date ?? '',
-    memo.text ?? '',
-    memo.place ?? '',
-  ])
+  return JSON.stringify([memo.author ?? '', memo.date ?? '', memo.text ?? '', memo.place ?? ''])
 }
 
 /** How many of `wanted` have no counterpart in `saved`, counting each memo once. */
@@ -61,11 +56,14 @@ export interface MemoLossInput {
 export async function lostMemoCountOf(input: MemoLossInput): Promise<number> {
   if ((input.memos?.length ?? 0) === 0 && !input.original) return 0
   try {
+    const originalRaw = input.original ? hwpxMemoCountOf(input.original) : null
+    // the usual document: the editor listed none and the opened file held none, so there is
+    // nothing to lose and no reason to read either file with the engine
+    if (input.memos?.length === 0 && originalRaw === 0) return 0
     const savedModel = await hwpMemosOf(input.saved)
     const modelLost = input.memos ? missingFrom(input.memos, savedModel) : 0
     if (!input.original) return modelLost
     const originalModel = await hwpMemosOf(input.original)
-    const originalRaw = hwpxMemoCountOf(input.original)
     const savedRaw = hwpxMemoCountOf(input.saved)
     if (originalRaw === null || savedRaw === null) return modelLost
     // records the engine does not model: compare how many the opened file had that the

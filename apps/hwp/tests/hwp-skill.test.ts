@@ -95,6 +95,7 @@ function setup(
       ],
     })),
     fillCells: vi.fn(async () => ({ ok: true as const, table: 1, count: 2, place: PLACE })),
+    checkBoxes: vi.fn(async () => ({ ok: true as const, table: 1, count: 1, place: PLACE })),
     addTableLines: vi.fn(async () => ({
       ok: true as const,
       table: 1,
@@ -1261,6 +1262,94 @@ describe('tables that are already in the document', () => {
   })
 })
 
+describe('ticking choice boxes', () => {
+  it('ticks the named cells in one call and reports one change', async () => {
+    const { call, changes, bridge } = setup()
+    const cells = [
+      { row: 1, col: 2, choice: '창업기업' },
+      { row: 1, col: 3 },
+    ]
+    const result = await call('check_boxes', { table: 1, cells })
+    expect(bridge.checkBoxes).toHaveBeenCalledWith(1, cells)
+    expect(result.mutated).toBe(true)
+    expect(result.summary).toBe('aiToolCheckBoxes:{"table":1,"count":1}')
+    expect(changes).toEqual([
+      {
+        kind: 'cells',
+        from: 'aiTableName:{"table":1}',
+        to: '☑',
+        count: 1,
+        place: PLACE,
+      },
+    ])
+  })
+
+  it("renders a box that is the paragraph's bullet on the cell line", async () => {
+    const { call } = setup({
+      readTable: vi.fn(async () => ({
+        ok: true as const,
+        table: 1,
+        rows: 1,
+        cols: 2,
+        cells: [
+          { row: 1, col: 1, text: '창업기업', box: '□' },
+          { row: 1, col: 2, text: '□ 예비창업자' },
+        ],
+      })),
+    })
+    const result = await call('read_table', { table: 1 })
+    expect(result.output.split('\n')).toEqual([
+      'Table 1: 1 row(s) × 2 column(s). Cells as row.col:',
+      '1.1 [tick box □]: 창업기업',
+      '1.2: □ 예비창업자',
+    ])
+  })
+
+  it('asks for the words when a cell has several boxes, and changes nothing', async () => {
+    const { call, changes } = setup({
+      checkBoxes: async () => ({
+        ok: false,
+        reason: 'ambiguous_box',
+        cells: [{ row: 1, col: 2, choices: ['남', '여'] }],
+        rows: 1,
+        cols: 2,
+      }),
+    })
+    const result = await call('check_boxes', { table: 1, cells: [{ row: 1, col: 2 }] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('1.2: 남 / 여')
+    expect(result.output).toContain('choice')
+    expect(changes).toEqual([])
+  })
+
+  it('says when there is no box to tick', async () => {
+    const { call, changes } = setup({
+      checkBoxes: async () => ({
+        ok: false,
+        reason: 'no_box',
+        cells: [{ row: 1, col: 2 }],
+        rows: 1,
+        cols: 2,
+      }),
+    })
+    const result = await call('check_boxes', { table: 1, cells: [{ row: 1, col: 2 }] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('no tick box')
+    expect(changes).toEqual([])
+  })
+
+  it('never sends cells it cannot read to the editor', async () => {
+    const { call, bridge } = setup()
+    expect((await call('check_boxes', { table: 1, cells: [] })).isError).toBe(true)
+    expect((await call('check_boxes', { table: 1, cells: [{ row: 1 }] })).isError).toBe(true)
+    expect((await call('check_boxes', { cells: [{ row: 1, col: 1 }] })).isError).toBe(true)
+    expect(
+      (await call('check_boxes', { table: 1, cells: [{ row: 1, col: 1, choice: 5 }] })).isError,
+    ).toBe(true)
+    expect(bridge.checkBoxes).not.toHaveBeenCalled()
+  })
+})
+
 describe('the part the user selected', () => {
   it('is put in front of the model with one line per selected paragraph', async () => {
     const { skill, refreshContext, setSelection } = setup()
@@ -1755,7 +1844,7 @@ describe('memo anchor removal', () => {
     expect(callsWhenAsked).toBe(1)
     expect(replaceText).toHaveBeenNthCalledWith(1, '본문', '내용', null)
     expect(replaceText).toHaveBeenNthCalledWith(2, '본문', '내용', null, {
-      allowMemoRemoval: true,
+      approvedMemoIds: [1],
     })
     expect(result.isError).toBeUndefined()
     expect(result.mutated).toBe(true)
@@ -1776,6 +1865,22 @@ describe('memo anchor removal', () => {
     expect(changes).toHaveLength(0)
   })
 
+  it('changes nothing when the retried change would take a memo the user was not shown', async () => {
+    const replaceText = vi
+      .fn()
+      .mockResolvedValueOnce(memoRefusal())
+      .mockResolvedValueOnce(memoRefusal({ memos: [{ ...memoRefusal().memos[0]!, id: 7 }] }))
+    const confirmMemoRemoval = vi.fn(async () => true)
+    const { call, changes } = setup({ replaceText }, confirmMemoRemoval)
+    const result = await call('replace_text', { find: '본문', replace: '내용' })
+    expect(confirmMemoRemoval).toHaveBeenCalledTimes(1)
+    expect(replaceText).toHaveBeenNthCalledWith(2, '본문', '내용', null, { approvedMemoIds: [1] })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('did not approve')
+    expect(result.mutated).toBeUndefined()
+    expect(changes).toHaveLength(0)
+  })
+
   it('asks again on the next call instead of remembering the approval', async () => {
     const replaceText = vi
       .fn()
@@ -1791,11 +1896,11 @@ describe('memo anchor removal', () => {
     // both first attempts go without the allowance; only the retried call carries it
     expect(replaceText).toHaveBeenNthCalledWith(1, '본문', '내용', null)
     expect(replaceText).toHaveBeenNthCalledWith(2, '본문', '내용', null, {
-      allowMemoRemoval: true,
+      approvedMemoIds: [1],
     })
     expect(replaceText).toHaveBeenNthCalledWith(3, '본문', '내용', null)
     expect(replaceText).toHaveBeenNthCalledWith(4, '본문', '내용', null, {
-      allowMemoRemoval: true,
+      approvedMemoIds: [1],
     })
   })
 
@@ -1814,7 +1919,7 @@ describe('memo anchor removal', () => {
     )
     const result = await call('fill_cells', { table: 1, cells })
     expect(fillCells).toHaveBeenNthCalledWith(1, 1, cells, false)
-    expect(fillCells).toHaveBeenNthCalledWith(2, 1, cells, false, { allowMemoRemoval: true })
+    expect(fillCells).toHaveBeenNthCalledWith(2, 1, cells, false, { approvedMemoIds: [1] })
     expect(result.mutated).toBe(true)
   })
 })
@@ -1846,6 +1951,7 @@ describe('the skill as the model sees it', () => {
       'list_tables',
       'read_table',
       'fill_cells',
+      'check_boxes',
       'add_to_table',
       'remove_from_table',
       'delete_table',
