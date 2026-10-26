@@ -333,20 +333,25 @@ export function describeDocument(
 }
 
 /**
- * A block's plain text. A table's textContent runs every cell together, so "1" | "200" and
- * "12" | "00" both read "1200"; cells are joined with " | " and rows with a line break,
- * the layout `hwp read` already uses.
+ * A block's plain text. textContent drops line breaks (`w:br`), gluing the lines of a
+ * paragraph together, and runs every table cell together, so "1" | "200" and "12" | "00"
+ * both read "1200". A break becomes a line break (a space inside a cell); cells are joined
+ * with " | " and rows with a line break, the layout `hwp read` already uses.
  */
-function blockText(node: OpenDocument['editor']['state']['doc']): string {
-  if (node.type.name !== 'docTable') return node.textContent
+function blockText(node: PmNode): string {
+  const breakAs = (sep: string) => (leaf: PmNode) => (leaf.type.name === 'hardBreak' ? sep : '')
+  if (node.type.name !== 'docTable')
+    return node.textBetween(0, node.content.size, '', breakAs('\n'))
   const rows: string[] = []
   node.forEach((row) => {
     const cells: string[] = []
-    row.forEach((cell) => cells.push(cell.textBetween(0, cell.content.size, ' ', ' ')))
+    row.forEach((cell) => cells.push(cell.textBetween(0, cell.content.size, ' ', breakAs(' '))))
     rows.push(cells.join(' | '))
   })
   return rows.join('\n')
 }
+
+type PmNode = OpenDocument['editor']['state']['doc']
 
 /** table styles defined in styles.xml (setTableStyle accepts the id or the name) */
 export function listTableStyles(doc: OpenDocument): Array<{ id: string; name: string }> {

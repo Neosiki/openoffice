@@ -19,4 +19,27 @@ describe('ieumoffice docs read: table text', () => {
     // before: "품목수량금액커피1200라떼1200" — both rows read as 1200
     expect(table.text).toBe('품목 | 수량 | 금액\n커피 | 1 | 200\n라떼 | 12 | 00')
   })
+
+  it('keeps the lines of a paragraph apart', async () => {
+    const dir = tempDir()
+    const docx = join(dir, 'lines.docx')
+    const md = join(dir, 'lines.md')
+    writeFileSync(md, '첫 줄\n')
+    expect((await run(['create', '--type', 'docx', '--from', md, '--out', docx])).code).toBe(0)
+    const ops = join(dir, 'ops.json')
+    writeFileSync(
+      ops,
+      JSON.stringify([
+        {
+          op: 'replace_blocks',
+          startBlockIndex: 0,
+          endBlockIndex: 0,
+          html: '<p>테스트 문서<br>10월 매출 100</p>',
+        },
+      ]),
+    )
+    expect((await run(['docs', 'apply', docx, '--ops', ops, '--json'])).code).toBe(0)
+    const r = await run(['docs', 'read', docx, '--json'])
+    expect(r.json().detail.items[0].text).toBe('테스트 문서\n10월 매출 100')
+  })
 })
