@@ -33,6 +33,7 @@
 - `MemoPanel.tsx`가 AI 창과 같은 오른쪽 dock의 `메모` 모드에 목록을 그린다. 문서 순서, 작성자·쪽·날짜(파일이 담고 있을 때만)·미리보기, 읽기 전용 이유를 보여 준다. 카드를 고르면 앵커로 이동하고 앵커를 표시한다.
 - `메모 넣기` 또는 편집기의 `Insert > Memo`가 평문 모달을 연다. 저장하면 곧바로 문서에 반영하고, 별도 적용 단계를 두지 않는다. `Esc`는 취소, `Ctrl+Enter`는 저장이다.
 - 모달이 열리면 그 탭의 편집기 입력을 잠그고, `BroadcastChannel`과 main의 `memoModalByWc`로 다른 한글 탭도 잠근다. 저장·닫기·종료 요청은 `memoSaveBlocked`를 보여 주고 거절한다. 렌더러가 죽거나 탭이 닫히면 main이 잠금을 푼다.
+- 엔진 빌드에 메모 API가 없으면 `listMemos`가 `supported: false`를 돌려주고, 패널은 화면을 접은 뒤 `이 빌드에는 메모 기능이 없습니다.`를 한 번 알린다.
 - 저장은 `save-flow.ts`가 편집기를 잠근 채 메모 목록을 읽고, 내보낸 바이트와 함께 `commitSave`로 넘긴다. `.hwpx`는 저장한 바이트를 다시 읽어 모델 메모와 원시 메모 기록 수를 견주고, 실제로 빠진 수가 있을 때만 `memoHwpxLost`를 보여 준다. 저장 자체는 실패시키지 않는다.
 - AI는 `listMemos`로 읽고, 앵커를 지우는 편집은 `allowMemoRemoval` 없이 `ask`로 거절한다. 사람이 승인하면 같은 호출을 한 번 더 실행하며, 승인 상태는 다음 요청으로 이어지지 않는다.
 - `packages/file-parse`의 `hwpToText`는 메모가 있으면 `### Comments` 블록을 붙이고, `hwpMemosOf`는 저장 검증용 구조를 돌려준다.

@@ -193,11 +193,13 @@ export function memoMutationErrorKey(
 
 /** An author as the file takes it: no separators or control characters, 64 units, never empty. */
 function cleanAuthor(raw: string): string {
-  return raw
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f/\\;]/g, '')
-    .trim()
-    .slice(0, MAX_MEMO_AUTHOR)
+  return (
+    raw
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f\u007f/\\;]/g, '')
+      .trim()
+      .slice(0, MAX_MEMO_AUTHOR)
+  )
 }
 
 /** The author a new memo takes: the setting, then the PC account, then the product name. */
@@ -341,6 +343,13 @@ export function MemoPanel({
   const [memos, setMemos] = useState<AgentMemo[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  /** this engine build has no memo API: keep the screen closed and say why once */
+  const [unsupported, setUnsupported] = useState(false)
+  const unsupportedNotifiedRef = useRef(false)
+  const onNoticeRef = useRef(onNotice)
+  const onCollapseRef = useRef(onCollapse)
+  onNoticeRef.current = onNotice
+  onCollapseRef.current = onCollapse
   const [editor, setEditor] = useState<MemoEditor | null>(null)
   const [busy, setBusy] = useState(false)
   const [opening, setOpening] = useState(false)
@@ -369,6 +378,21 @@ export function MemoPanel({
     try {
       const listed = await bridge.listMemos()
       if (!aliveRef.current) return []
+      if (listed.supported === false) {
+        setUnsupported(true)
+        setMemos([])
+        setLoadFailed(false)
+        // An older engine cannot answer any memo call. Tell the user and fold
+        // the dock instead of showing an empty, unusable memo screen.
+        if (!unsupportedNotifiedRef.current) {
+          unsupportedNotifiedRef.current = true
+          onNoticeRef.current({ key: 'memoUnsupportedBuild', tone: 'error' })
+        }
+        onCollapseRef.current()
+        return []
+      }
+      unsupportedNotifiedRef.current = false
+      setUnsupported(false)
       const sorted = sortMemos(listed.memos)
       setMemos(sorted)
       setLoadFailed(false)
@@ -549,6 +573,10 @@ export function MemoPanel({
 
   const beginInsert = useCallback(async () => {
     if (opening || busy || editor) return
+    if (unsupported) {
+      onNotice({ key: 'memoUnsupportedBuild', tone: 'error' })
+      return
+    }
     if (foreignOnly) {
       onNotice({ key: 'memoLockedElsewhere' })
       return
@@ -577,7 +605,7 @@ export function MemoPanel({
     } finally {
       setOpening(false)
     }
-  }, [opening, busy, editor, foreignOnly, bridge, onNotice, openEditor])
+  }, [opening, busy, editor, unsupported, foreignOnly, bridge, onNotice, openEditor])
 
   // the editor's Insert > Memo menu asks for the same dialog as the panel's button
   useEffect(() => {
@@ -785,7 +813,9 @@ export function MemoPanel({
           </div>
           {editor.mode === 'insert' && (
             <div className="memo-selection">
-              {editor.caret ? t('memoCaretLabel') : t('memoSelectionLabel', { text: editor.selectionText })}
+              {editor.caret
+                ? t('memoCaretLabel')
+                : t('memoSelectionLabel', { text: editor.selectionText })}
             </div>
           )}
           <label className="memo-field">
@@ -858,6 +888,11 @@ export function MemoPanel({
         </button>
       </div>
 
+      {unsupported && (
+        <div className="memo-panel-warning" role="status">
+          {t('memoUnsupportedBuild')}
+        </div>
+      )}
       {foreignOnly && (
         <div className="memo-panel-warning" role="status">
           {t('memoLockedElsewhere')}
@@ -868,7 +903,7 @@ export function MemoPanel({
         <button
           type="button"
           className="memo-button memo-add-button"
-          disabled={opening || busy || foreignOnly}
+          disabled={unsupported || opening || busy || foreignOnly}
           onClick={() => void beginInsert()}
         >
           <span aria-hidden>+</span> {t('memoAdd')}
@@ -876,12 +911,12 @@ export function MemoPanel({
       </div>
 
       <div className="memo-list">
-        {loadFailed && (
+        {!unsupported && loadFailed && (
           <div className="memo-list-error" role="alert">
             {t('memoErrLoad')}
           </div>
         )}
-        {memos.length === 0 && !loadFailed ? (
+        {unsupported ? null : memos.length === 0 && !loadFailed ? (
           <div className="memo-empty">
             <p>{t('memoEmpty')}</p>
           </div>

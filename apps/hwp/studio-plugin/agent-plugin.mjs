@@ -5432,6 +5432,14 @@ export const agentPlugin = {
        */
       listMemos: guarded(() => {
         listedMemos = null
+        // An older engine has no memo API. Say so instead of pretending the
+        // document has no memos: the panel then keeps its screen closed.
+        let supported = true
+        try {
+          supported = host.read((doc) => typeof doc.getMemoList === 'function') !== false
+        } catch {
+          // no document yet: let the list read answer
+        }
         try {
           host.automation.execute(MEMO_LIST_COMMAND)
         } catch {
@@ -5439,7 +5447,7 @@ export const agentPlugin = {
         }
         const memos = listedMemos ?? host.read(memoListOf)
         memoKnown = memos.map(memoSummaryOf)
-        return { count: memos.length, memos }
+        return { count: memos.length, memos, supported }
       }),
 
       /**

@@ -572,6 +572,8 @@ export interface AgentMemo {
 export interface AgentMemoList {
   count: number
   memos: AgentMemo[]
+  /** false when this engine build has no memo API; the panel stays closed then */
+  supported?: boolean
 }
 
 export type AgentMemoSelectionResult =

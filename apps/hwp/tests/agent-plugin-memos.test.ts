@@ -708,7 +708,7 @@ describe('the lock a memo modal holds', () => {
     expect(fire('keydown').defaultPrevented).toBe(true)
     commands.get('ext:ieum-memo-unlock')!(null)
     expect(fire('keydown').defaultPrevented).toBe(false)
-    expect(plugin.listMemos()).toEqual({ count: 0, memos: [] })
+    expect(plugin.listMemos()).toEqual({ count: 0, memos: [], supported: true })
 
     commands.get('ext:ieum-memo-insert')!(null, {
       anchor: {

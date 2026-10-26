@@ -41,10 +41,7 @@ import {
   withLocalMemoLock,
   type MemoLockState,
 } from '../src/renderer/MemoPanel'
-import {
-  MEMO_NOT_COPIED_EVENT,
-  MEMO_REMOVED_EVENT,
-} from '../studio-plugin/agent-plugin.mjs'
+import { MEMO_NOT_COPIED_EVENT, MEMO_REMOVED_EVENT } from '../studio-plugin/agent-plugin.mjs'
 
 const memo = (overrides: Partial<AgentMemo> = {}): AgentMemo => ({
   id: 1,
@@ -188,9 +185,7 @@ describe('refusals from the plugin', () => {
     expect(memoMutationErrorKey('save', 'memo_read_only', 'formatted')).toBe(
       'memoReadOnlyFormatted',
     )
-    expect(memoMutationErrorKey('save', 'memo_read_only', 'object')).toBe(
-      'memoReadOnlyObject',
-    )
+    expect(memoMutationErrorKey('save', 'memo_read_only', 'object')).toBe('memoReadOnlyObject')
     expect(memoMutationErrorKey('save', 'memo_read_only', 'unsupported_place')).toBe(
       'memoReadOnlyPlace',
     )
@@ -426,10 +421,7 @@ function panelApi(): { api: HwpApi; setMemoModalOpen: ReturnType<typeof vi.fn> }
   }
 }
 
-function panelBridge(
-  memos: AgentMemo[],
-  overrides: Record<string, unknown> = {},
-): AgentBridge {
+function panelBridge(memos: AgentMemo[], overrides: Record<string, unknown> = {}): AgentBridge {
   const calls = {
     listMemos: vi.fn(async () => ({ count: memos.length, memos })),
     showMemoAnchors: vi.fn(async (shown: boolean) => ({ ok: true as const, shown })),
@@ -452,10 +444,12 @@ async function mountPanel(
 ): Promise<{
   onModalOpenChange: ReturnType<typeof vi.fn>
   onNotice: ReturnType<typeof vi.fn>
+  onCollapse: ReturnType<typeof vi.fn>
   setMemoModalOpen: ReturnType<typeof vi.fn>
 }> {
   const onModalOpenChange = vi.fn()
   const onNotice = vi.fn()
+  const onCollapse = vi.fn()
   const { api, setMemoModalOpen } = panelApi()
   Object.assign(window, { hwpApi: api })
   root = createRoot(container)
@@ -467,7 +461,7 @@ async function mountPanel(
           open,
           bridge,
           insertTick,
-          onCollapse: () => undefined,
+          onCollapse,
           onModalOpenChange,
           onNotice,
         }),
@@ -475,7 +469,7 @@ async function mountPanel(
     )
   })
   await settle()
-  return { onModalOpenChange, onNotice, setMemoModalOpen }
+  return { onModalOpenChange, onNotice, onCollapse, setMemoModalOpen }
 }
 
 describe('the memo panel screen', () => {
@@ -484,6 +478,22 @@ describe('the memo panel screen', () => {
     await mountPanel(bridge)
     expect(container.querySelector('.memo-empty')?.textContent).toContain('No memos.')
     expect(bridge.showMemoAnchors).toHaveBeenCalledWith(true)
+  })
+
+  it('keeps the screen closed when this engine build has no memo API', async () => {
+    const bridge = panelBridge([], {
+      listMemos: vi.fn(async () => ({ count: 0, memos: [], supported: false })),
+    })
+    const { onCollapse, onNotice } = await mountPanel(bridge)
+    expect(onNotice).toHaveBeenCalledWith({
+      key: 'memoUnsupportedBuild',
+      tone: 'error',
+    })
+    expect(onCollapse).toHaveBeenCalled()
+    expect(container.querySelector<HTMLButtonElement>('.memo-add-button')?.disabled).toBe(true)
+    expect(container.querySelector('.memo-panel-warning')?.textContent).toContain(
+      'This build has no memo support.',
+    )
   })
 
   it('draws a read-only card with its reason and only the delete action enabled', async () => {
