@@ -1,10 +1,24 @@
 import { flagBool, flagString, type ParsedArgs } from './args'
 import { CliError, EXIT } from './result'
 
+/**
+ * Where a cut at `end` (a UTF-16 index) can actually fall: never between the two halves of a
+ * surrogate pair (an emoji, a rare Hanja), which would leave a lone surrogate in the output.
+ * Backs off one unit, or steps over the pair when the window is a single unit wide.
+ */
+export function cutIndex(text: string, start: number, end: number): number {
+  if (end <= 0 || end >= text.length) return end
+  const high = text.charCodeAt(end - 1)
+  const low = text.charCodeAt(end)
+  if (high < 0xd800 || high > 0xdbff || low < 0xdc00 || low > 0xdfff) return end
+  return end - 1 > start ? end - 1 : end + 1
+}
+
 /** Clip to `max` characters; the marker names how much is missing so a reader can decide whether to fetch it. */
 export function clipText(text: string, max: number): { text: string; truncated: boolean } {
   if (text.length <= max) return { text, truncated: false }
-  return { text: `${text.slice(0, max)}…(+${text.length - max} chars)`, truncated: true }
+  const end = cutIndex(text, 0, max)
+  return { text: `${text.slice(0, end)}…(+${text.length - end} chars)`, truncated: true }
 }
 
 /** `--full` lifts the cap, `--max-chars n` moves it. */
