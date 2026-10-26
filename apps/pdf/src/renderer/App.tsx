@@ -1178,6 +1178,8 @@ export default function App() {
   const [autoSave, setAutoSave] = useAutoSavePref('pdfapp.autoSave', window.pdfApi)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchMatchCase, setSearchMatchCase] = useState(false)
+  const [searchWholeWord, setSearchWholeWord] = useState(false)
   const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([])
   const [searchCur, setSearchCur] = useState(0)
   const [printing, setPrinting] = useState(false)
@@ -2843,7 +2845,9 @@ export default function App() {
       void getSearchIndex()?.then((idx) => {
         if (cancelled) return
         const query = searchQuery.trim()
-        setSearchMatches(searchInIndex(idx, query))
+        setSearchMatches(
+          searchInIndex(idx, query, { matchCase: searchMatchCase, wholeWord: searchWholeWord }),
+        )
         setSearchCur(0)
         // pages whose positioned text has no hit may still have it in their AI reading
         void getAiReadTexts().then((texts) => {
@@ -2855,7 +2859,7 @@ export default function App() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchOpen, searchQuery, getSearchIndex, getAiReadTexts])
+  }, [searchOpen, searchQuery, searchMatchCase, searchWholeWord, getSearchIndex, getAiReadTexts])
 
   /** Pages with unsaved deletion are excluded from match navigation */
   const activeMatches = useMemo(
@@ -11282,6 +11286,24 @@ export default function App() {
                     else if (e.key === 'Escape') closeSearch()
                   }}
                 />
+                <button
+                  className={`rb-icon pdf-search-opt${searchMatchCase ? ' is-active' : ''}`}
+                  data-tip={t('searchMatchCase')}
+                  aria-label={t('searchMatchCase')}
+                  aria-pressed={searchMatchCase}
+                  onClick={() => setSearchMatchCase((v) => !v)}
+                >
+                  Aa
+                </button>
+                <button
+                  className={`rb-icon pdf-search-opt${searchWholeWord ? ' is-active' : ''}`}
+                  data-tip={t('searchWholeWord')}
+                  aria-label={t('searchWholeWord')}
+                  aria-pressed={searchWholeWord}
+                  onClick={() => setSearchWholeWord((v) => !v)}
+                >
+                  W
+                </button>
                 <span className="pdf-search-count">
                   {searchQuery.trim()
                     ? activeMatches.length > 0
