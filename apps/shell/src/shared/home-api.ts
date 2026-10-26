@@ -313,6 +313,9 @@ export interface HomeApi {
   getUpdateChannel(): Promise<UpdateChannel>
   /** switch + persist the update channel; triggers an immediate update check */
   setUpdateChannel(channel: UpdateChannel): Promise<void>
+  /** whether the launch and periodic background update checks run (default on) */
+  getAutoUpdateCheck(): Promise<boolean>
+  setAutoUpdateCheck(on: boolean): Promise<void>
   /** a tab asked for the settings modal (composer model chip → AI Model section) */
   onOpenSettings(handler: (target: { section: string }) => void): () => void
   /** app version (from package.json / electron app.getVersion) */
@@ -547,6 +550,8 @@ export const HOME_CHANNELS = {
   setLanguage: 'home:set-language',
   getUpdateChannel: 'home:get-update-channel',
   setUpdateChannel: 'home:set-update-channel',
+  getAutoUpdateCheck: 'home:get-auto-update-check',
+  setAutoUpdateCheck: 'home:set-auto-update-check',
   openSettings: 'home:open-settings',
   getAppVersion: 'home:get-app-version',
   onboardingSeen: 'home:onboarding-seen',
