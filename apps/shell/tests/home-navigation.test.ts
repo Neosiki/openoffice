@@ -61,7 +61,6 @@ beforeEach(async () => {
     onAccountLogin: () => () => {},
     kbList: async () => [],
     aiGetSettings: async () => defaultAiSettings(),
-    aiGskStatus: async () => ({ loggedIn: false }),
     onAiSettingsChanged: () => () => {},
   }
   // this fork's home reads more of the bridge than the upstream one; answer the rest blank
