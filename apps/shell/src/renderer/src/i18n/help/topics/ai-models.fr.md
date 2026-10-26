@@ -17,7 +17,7 @@ Tout ce qui demande une clé se trouve sous **Avancé**, en bas de la même page
 Pour ceux qui préfèrent payer directement un fournisseur, ou faire tourner leur propre modèle.
 
 - Choisissez un **Fournisseur**, saisissez sa **Clé API** (et une **Base URL** lorsque le fournisseur en demande une), choisissez un **Modèle**, puis appuyez sur **Enregistrer**. La liste comprend les serveurs compatibles OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud et d’autres.
-- Ici, la liste **Fournisseur** décide seulement des champs qui s’affichent. Elle ne change pas l’IA utilisée ; c’est toujours **IA à utiliser** qui en décide.
+- Ici, la liste **Fournisseur** décide seulement des champs qui s’affichent. Elle ne change pas l’IA utilisée ; c’est toujours **IA à utiliser** qui en décide. Si un fournisseur enregistré n’est pas l’IA utilisée, **Utiliser cette IA** apparaît en haut ; un clic le choisit comme **IA à utiliser**.
 - Les conversations avec un fournisseur à clé utilisent votre propre clé, et ce fournisseur vous les facture.
 - Les clés sont stockées dans le fichier de paramètres de l'application sur cet ordinateur et envoyées uniquement dans les en-têtes de requête.
 - **Tester la connexion** : vérifie que le point de terminaison est joignable et que le modèle est visible avant d’enregistrer.

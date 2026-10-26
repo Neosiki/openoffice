@@ -17,7 +17,7 @@ Wszystko, co wymaga klucza, znajduje się w części **Zaawansowane** na dole te
 Dla osób, które wolą płacić dostawcy bezpośrednio albo uruchamiają własny model.
 
 - Wybierz pozycję w polu **Dostawca**, wpisz **Klucz API** (oraz **Base URL**, jeśli dostawca go wymaga), wybierz **Model** i naciśnij **Zapisz**. Lista obejmuje serwery zgodne z OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud i inne.
-- Lista **Dostawca** decyduje tutaj tylko o tym, czyje pola są widoczne na ekranie. Nie zmienia tego, które AI jest używane; o tym zawsze decyduje **Używane AI**.
+- Lista **Dostawca** decyduje tutaj tylko o tym, czyje pola są widoczne na ekranie. Nie zmienia tego, które AI jest używane; o tym zawsze decyduje **Używane AI**. Jeśli zapisany dostawca nie jest używanym AI, u góry pojawia się **Użyj tego AI**; kliknięcie wybiera go w polu **Używane AI**.
 - Rozmowy przez dostawcę z kluczem korzystają z twojego własnego klucza, a opłaty za nie nalicza ten dostawca.
 - Klucze są przechowywane w pliku ustawień aplikacji na tym komputerze i wysyłane wyłącznie w nagłówkach żądań.
 - **Testuj połączenie**: sprawdza osiągalność punktu końcowego i widoczność modelu przed zapisaniem.

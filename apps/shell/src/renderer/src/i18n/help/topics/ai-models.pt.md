@@ -17,7 +17,7 @@ Tudo o que requer uma chave fica em **Avançado**, ao fundo da mesma página. Fi
 Para quem prefere pagar diretamente a um fornecedor, ou executar um modelo próprio.
 
 - Escolha um **Provedor**, introduza a respetiva **Chave de API** (e uma **Base URL** quando o fornecedor a exigir), escolha um **Modelo** e clique em **Salvar**. A lista abrange servidores compatíveis com OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud e outros.
-- Aqui, a lista **Provedor** só decide de quem são os campos que aparecem no ecrã. Não altera a IA que está em uso; isso é sempre **IA em uso**.
+- Aqui, a lista **Provedor** só decide de quem são os campos que aparecem no ecrã. Não altera a IA que está em uso; isso é sempre **IA em uso**. Se um provedor guardado não for a IA em uso, aparece em cima **Usar esta IA**; ao carregar, esse provedor passa a ser a **IA em uso**.
 - As conversas com um fornecedor com chave usam a sua própria chave, e é esse fornecedor que lhas cobra.
 - As chaves ficam guardadas no ficheiro de definições da aplicação nesta máquina e são enviadas apenas nos cabeçalhos dos pedidos.
 - **Testar conexão**: confirma que o endpoint está acessível e que o modelo está visível, antes de guardar.
