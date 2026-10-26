@@ -20,6 +20,10 @@ export const HWP_CHANNELS = {
   dirtyChanged: 'hwp:dirty-changed',
   closeSaveRequest: 'hwp:close-save-request',
   closeSaveResult: 'hwp:close-save-result',
+  /** renderer → main: the memo editor opened or closed in this tab (T7 holds back save/close) */
+  memoModalOpen: 'hwp:memo-modal-open',
+  /** invoke → boolean: whether a memo editor is open anywhere (a new tab locks itself) */
+  memoModalState: 'hwp:memo-modal-state',
   readBytesRequest: 'hwp:read-bytes-request',
   readBytesResult: 'hwp:read-bytes-result',
   /** invoke → RecoveryBeginResult: a recovery copy is about to be exported */
@@ -46,6 +50,8 @@ export const HWP_CHANNELS = {
   languageChanged: 'app:language-changed',
   getTheme: 'app:get-theme',
   themeChanged: 'app:theme-changed',
+  /** the shell's stored author name (settings, else the PC account); `{ value, fallback }` */
+  getAuthorName: 'home:get-author-name',
   getAiPanelPrefs: 'app:get-ai-panel-prefs',
   setAiPanelPrefs: 'app:set-ai-panel-prefs',
   aiPanelPrefsChanged: 'app:ai-panel-prefs-changed',
@@ -257,6 +263,12 @@ export interface HwpApi {
   printPages(job: PrintJob): Promise<PrintResult>
   onCloseSaveRequest(handler: () => void): () => void
   sendCloseSaveResult(ok: boolean): void
+  /** the memo editor opened or closed in this tab: main holds back save, close and quit */
+  setMemoModalOpen(open: boolean): void
+  /** whether a memo editor is open in any tab (a tab opened meanwhile locks itself) */
+  getMemoModalOpen(): Promise<boolean>
+  /** the author a new memo takes: the settings name, else the PC account */
+  getAuthorName(): Promise<{ value: string; fallback: string }>
   /** the main process wants the document as it is now, unsaved edits included */
   onReadBytesRequest(handler: () => void): () => void
   sendReadBytesResult(result: ReadBytesResult): void
