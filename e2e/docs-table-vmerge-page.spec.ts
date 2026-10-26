@@ -138,7 +138,10 @@ test.describe('a vertically merged table crossing pages', () => {
             ],
           },
         ]
-        for (let i = 1; i <= 30; i++) {
+        // 56 rows (eight full groups): this fork's table lays the description
+        // cells out lower than upstream's, and 30 rows filled barely two pages
+        // on the Linux CI fonts, short of the page turns the bug needs
+        for (let i = 1; i <= 56; i++) {
           const desc =
             i % 3 === 0
               ? [
