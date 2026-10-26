@@ -113,7 +113,8 @@ ranges, available ids, sheet names, usage lines) come back as fields in
 `ieumoffice merge <template> --data <values> --out <file>` fills `{{key}}`
 placeholders in a `.docx`, `.pptx` or `.xlsx` template from a JSON object
 (a file, inline JSON or `-` for stdin). Nested objects flatten to dotted keys
-(`{{a.b}}`); arrays are not expanded and come back in `detail.ignored_keys`;
+(`{{a.b}}`); keys may be in any script (`{{이름}}`), made of letters, digits, `_`, `.` and `-`;
+arrays are not expanded and come back in `detail.ignored_keys`;
 whitespace inside the braces is tolerated. The fill runs on the engines' own
 find/replace paths: `findReplace` in the docs editor (a table block with a placeholder that has a
 value goes through `replace_blocks` on its restricted HTML, since `findReplace`

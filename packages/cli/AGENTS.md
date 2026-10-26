@@ -43,7 +43,7 @@
 - 구독 프로그램을 띄울 수 있는 프로세스는 끝날 때 그것을 끝낸다(`endSubscriptionChildrenWith`: `exit`와 `SIGHUP`·`SIGINT`·`SIGTERM`). 실제 요청을 실행하는 경우에는 강제 종료에 대비해 `dataDir`에 자식 기록도 남긴다. 앱의 다음 시작이 그 기록으로 정리한다.
 - 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량 허용은 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
 - 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다. `read-url`(`read_url`)도 기존 `ErrorReason`만 다시 쓴다(`missing_argument`, `invalid_argument`, `unsupported`, `resource_limit`, `app_unavailable`). 이유는 `detail.reason`(`blocked`, `no_text`), `detail.errorCode`(`network`, `timeout`, `http_error`, `auth`)와 `detail.status`·`detail.max_bytes`로 알린다.
-- 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다.
+- 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다. rename이 잠금으로 끝내 막혀 제자리 덮어쓰기까지 실패하면 임시 파일을 지우지 않고, 오류(`conversion_failed`)의 `message`와 `detail.rescue_path`에 그 경로를 적는다.
 - 비밀 값은 감사 기록에 남기지 않는다. 기록은 실패해도 명령을 실패시키지 않는다.
 
 ## 이 모듈의 방식
