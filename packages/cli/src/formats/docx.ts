@@ -601,7 +601,10 @@ export async function applyDocOps(
         Object.assign(doc.side, before.side)
         doc.mods.tools.markDocSeen(doc.editor)
         failed = rejected(`not applied: ${broke}`, 'op_rejected')
-      } else results.push({ index, op: name, output: outcome.output! })
+      } else {
+        if (before) guard!.accept(before.print, doc.editor.state.doc)
+        results.push({ index, op: name, output: outcome.output! })
+      }
     }
     if (failed && mode === 'stop_on_error') {
       return { results, failures, skipped: ops.length - index - 1 }
