@@ -28,7 +28,7 @@ import type { OpenedPptx } from '@genoffice/pptx-engine'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT, type CommandResult } from '../result'
 
-const PLACEHOLDER = /\{\{\s*([\w.-]+)\s*\}\}/g
+const PLACEHOLDER = /\{\{\s*([\p{L}\p{N}\p{M}_.-]+)\s*\}\}/gu
 const FORMATS = ['docx', 'pptx', 'xlsx'] as const
 type Format = (typeof FORMATS)[number]
 
