@@ -869,6 +869,7 @@ export async function planCellEditsToXlsx(
     ...tabColorStates.map((state) => state.sheetName),
     ...pageSetupStates.map((state) => state.sheetName),
     ...protectedRangeStates.map((state) => state.sheetName),
+    ...formulaValues.map((sheet) => sheet.sheetName),
   ])
   const worksheetXmls = new Map<string, string>()
   const worksheetPaths = new Map<string, string>()
