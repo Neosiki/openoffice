@@ -97,6 +97,53 @@ describe('genoffice merge', () => {
     expect(texts[4]).toContain('{{absent}}')
   })
 
+  it('fills placeholders named in Korean, in body text, tables and workbook cells', async () => {
+    const dir = tempDir()
+    const md = join(dir, 'korean.md')
+    writeFileSync(
+      md,
+      '{{이름}}님 안녕하세요. 합계 {{ 금액 }}원, 기한 {{납부.기한}}.\n\n| 항목 | 값 |\n| --- | --- |\n| {{품목2}} | {{없는값}} |\n',
+    )
+    const template = join(dir, 'korean.docx')
+    expect((await run(['create', '--type', 'docx', '--from', md, '--out', template])).code).toBe(0)
+    const out = join(dir, 'filled.docx')
+    const data = dataFile(dir, {
+      이름: '홍길동',
+      금액: '12,000',
+      납부: { 기한: '10월 31일' },
+      품목2: '라떼',
+    })
+    const r = await run(['merge', template, '--data', data, '--out', out, '--json'])
+    expect(r.code).toBe(0)
+    expect(r.json().detail.used_keys).toEqual(['이름', '금액', '납부.기한', '품목2'])
+    expect(r.json().detail.unresolved_placeholders).toEqual([
+      expect.objectContaining({ placeholder: '{{없는값}}', key: '없는값', reason: 'no_key' }),
+    ])
+    const xml = await documentXml(out)
+    expect(xml).toContain('홍길동님 안녕하세요. 합계 12,000원, 기한 10월 31일.')
+    expect(xml).toContain('라떼')
+    expect(xml).not.toContain('{{이름}}')
+
+    if (!sidecar) return
+    const table = join(dir, 'korean.json')
+    writeFileSync(
+      table,
+      JSON.stringify([
+        ['고객', '{{이름}}'],
+        ['합계', '{{금액}}'],
+      ]),
+    )
+    const sheet = join(dir, 'korean.xlsx')
+    expect((await run(['create', '--type', 'xlsx', '--from', table, '--out', sheet])).code).toBe(0)
+    const book = join(dir, 'filled.xlsx')
+    expect((await run(['merge', sheet, '--data', data, '--out', book, '--json'])).code).toBe(0)
+    const rows = (await run(['sheet', 'read', book, '--json'])).json().detail.rows
+    expect(rows).toEqual([
+      ['고객', '홍길동'],
+      ['합계', '12,000'],
+    ])
+  })
+
   it('refuses to write with --strict, takes inline data and flattens nested objects', async () => {
     const dir = tempDir()
     const template = await templateDocx(dir)
