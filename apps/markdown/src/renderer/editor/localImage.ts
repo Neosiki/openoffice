@@ -50,6 +50,16 @@ export function resolveImageSrc(src: string, baseDir: string | null = imageBaseD
   return toAssetUrl(`${baseDir.replace(/\\/g, '/').replace(/\/$/, '')}/${src}`)
 }
 
+// A lone `%` (a file named `100%.png`) makes decodeURIComponent throw; such a
+// path is kept as it is.
+function decodePath(path: string): string {
+  try {
+    return decodeURIComponent(path)
+  } catch {
+    return path
+  }
+}
+
 /**
  * Reverse of {@link resolveImageSrc}: map a display URL (md-asset://) back to
  * the authored path so DOM-parsed content (copy/paste inside the editor) never
