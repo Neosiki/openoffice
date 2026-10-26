@@ -36,7 +36,7 @@ import {
   docMentionActions,
   type AiComposerDocs,
 } from '@genoffice/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type {
   DragEvent as ReactDragEvent,
   PointerEvent as ReactPointerEvent,
@@ -60,7 +60,7 @@ import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
-import type { AgentPlace } from '../../../studio-plugin/agent-plugin.mjs'
+import type { AgentMemoRemovalRefusal, AgentPlace } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './agent-bridge'
 import { blockedRunOf, type AiBlockedRun } from './ai-connection'
 import { AttachmentList, MAX_IMAGES_PER_MESSAGE, PASTE_MIME_EXT } from './attachments'
@@ -74,6 +74,7 @@ import {
   type SelectionScope,
 } from './selection-scope'
 import { createHwpSkill, type HwpChange } from './hwp-skill'
+import { MemoApprovalGate, memoApprovalPreview } from './memo-approval'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
 
@@ -178,6 +179,11 @@ export function AiPanel({
   const [reverting, setReverting] = useState(false)
   /** the editor shows marks over what the last run changed */
   const [marksShown, setMarksShown] = useState(false)
+  /** the memos an edit would remove, while the user decides whether to go on */
+  const [memoApproval, setMemoApproval] = useState<AgentMemoRemovalRefusal | null>(null)
+  const memoGateRef = useRef<MemoApprovalGate | null>(null)
+  if (!memoGateRef.current) memoGateRef.current = new MemoApprovalGate()
+  const memoApprovalTitleId = useId()
   const filePathRef = useRef(filePath)
   /** where this document's conversation is kept, once the shell said */
   const chatIdsRef = useRef<{ projectId: string; chatId: string } | null>(null)
@@ -586,6 +592,7 @@ export function AiPanel({
         // the view follows the work: a change far down the document would go unseen
         if (change.place) void bridgeRef.current.reveal(change.place).catch(() => {})
       },
+      confirmMemoRemoval: (refusal) => memoGateRef.current!.ask(refusal),
     })
 
   // The loop is built once; every mutable value goes through a ref getter
@@ -703,9 +710,13 @@ export function AiPanel({
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+      // a question still on screen cannot be answered after the panel is gone
+      memoGateRef.current?.cancel()
       loopRef.current?.cancel()
     }
   }, [])
+
+  useEffect(() => memoGateRef.current!.subscribe(setMemoApproval), [])
 
   useEffect(() => {
     if (stickToBottomRef.current) {
@@ -840,6 +851,8 @@ export function AiPanel({
   }
 
   const stop = (): void => {
+    // a run waiting on the memo question stops now: the call is answered "keep"
+    memoGateRef.current?.cancel()
     msgQueue.hold()
     loopRef.current?.cancel()
   }
@@ -1373,6 +1386,66 @@ export function AiPanel({
           onStop={stop}
         />
       </div>
+
+      {memoApproval && (
+        <div className="memo-modal-backdrop ai-memo-approval-backdrop">
+          <div
+            className="memo-modal ai-memo-approval"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={memoApprovalTitleId}
+            dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+          >
+            <div className="memo-modal-head">
+              <span id={memoApprovalTitleId} className="memo-modal-title">
+                {t('aiMemoApprovalTitle', { count: memoApproval.count })}
+              </span>
+            </div>
+            <div className="memo-modal-body">
+              <ul className="ai-memo-approval-list">
+                {memoApproval.memos.map((memo) => (
+                  <li key={memo.id} className="ai-memo-approval-item">
+                    <div className="ai-memo-approval-meta">
+                      <span className="ai-memo-approval-author">
+                        {memo.author.trim() || t('memoUnknownAuthor')}
+                      </span>
+                      {memo.page > 0 && (
+                        <span className="ai-memo-approval-page">
+                          {t('memoPage', { page: memo.page })}
+                        </span>
+                      )}
+                    </div>
+                    {memoApprovalPreview(memo) && (
+                      <div className="ai-memo-approval-preview" dir="auto">
+                        {memoApprovalPreview(memo)}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="memo-modal-foot">
+              <div className="memo-modal-actions">
+                <button
+                  type="button"
+                  className="memo-button"
+                  autoFocus
+                  onClick={() => memoGateRef.current?.answer(false)}
+                >
+                  {t('aiMemoApprovalKeep')}
+                </button>
+                <button
+                  type="button"
+                  className="memo-button memo-button-primary"
+                  onClick={() => memoGateRef.current?.answer(true)}
+                >
+                  {t('aiMemoApprovalRemove')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

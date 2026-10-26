@@ -1759,3 +1759,55 @@
   min-height: 30px;
   padding: 5px 14px;
 }
+
+/* the memo-removal question of the AI panel covers the panel, not the window */
+.ai-memo-approval-backdrop {
+  position: absolute;
+  z-index: 40;
+  padding: 12px;
+}
+
+.ai-memo-approval-backdrop::before {
+  opacity: 0.9;
+}
+
+.ai-memo-approval {
+  width: min(420px, 100%);
+  max-height: calc(100% - 24px);
+}
+
+.ai-memo-approval-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-memo-approval-item {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-6);
+  background: var(--color-bg-page);
+}
+
+.ai-memo-approval-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+}
+
+.ai-memo-approval-author {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.ai-memo-approval-preview {
+  margin-top: 2px;
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
