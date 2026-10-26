@@ -119,6 +119,7 @@ E2E는 production 빌드에서 `window.rhwpStudio.automation`과 `window.rhwpStu
 - 표 칸 안에 표 만들기.
 - 표 안의 표에 행/열 넣기·지우기.
 - 표 안의 표 합치기/나누기.
+- 이 작업의 핸드오프·세부 순서·새 세션 프롬프트는 `docs/plans/hwp-nested-tables.md`에 있다.
 - 필요하면 rhwp `@rhwp/core` WASM과 studio API를 함께 고친다. `vendor/rhwp-core` 패치 절차와 `tools/build-rhwp-core.mjs`를 따른다.
 - 이 작업은 저장 결과와 조판을 바꿀 수 있으므로 한컴 2024 저장 왕복 검증이 필수다.
 
