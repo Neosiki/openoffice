@@ -5,7 +5,6 @@ import type { Params } from '@genoffice/i18n'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
-  presentationKeyOf,
   skillTemplateText,
   templateDocumentOf,
   useAutoSavePref,
@@ -25,6 +24,7 @@ import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
 import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
 import { openDocumentsDroppedOn } from './editor-drop'
+import { hwpPresentationKeyOf } from './presentation-keys'
 import { gatherPrintJob } from './print-flow'
 import {
   RECOVERY_TICK_MS,
@@ -131,7 +131,7 @@ export default function App() {
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
-  /** F5: the document alone in fullscreen, with the editor's own chrome hidden */
+  /** Ctrl/Shift+F5: the document alone in fullscreen, with the editor's own chrome hidden */
   const [presenting, setPresenting] = useState(false)
   const presentingRef = useRef(false)
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
@@ -672,8 +672,9 @@ export default function App() {
     [],
   )
 
-  // F5: the document alone in fullscreen; the editor's menu/toolbar/status bar hide
-  // with its own chrome API and come back exactly as they were when the show ends.
+  // Ctrl/Shift+F5: the document alone in fullscreen; bare F5 stays with Hancom's
+  // table-cell selection. The editor's menu/toolbar/status bar hide with its own
+  // chrome API and come back exactly as they were when the show ends.
   useEffect(() => {
     const enter = async (): Promise<void> => {
       const editor = editorRef.current
@@ -703,7 +704,7 @@ export default function App() {
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     }
     const onKey = (event: KeyboardEvent): void => {
-      const action = presentationKeyOf(event, presentingRef.current)
+      const action = hwpPresentationKeyOf(event, presentingRef.current)
       if (!action) return
       event.preventDefault()
       if (action === 'exit') {

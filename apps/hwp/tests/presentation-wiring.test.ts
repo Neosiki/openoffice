@@ -1,18 +1,34 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { hwpPresentationKeyOf } from '../src/renderer/presentation-keys'
 
 /**
- * F5 wiring for the HWP presenter. The key classification is in
- * `@genoffice/ui`; this pins the editor side: fullscreen, the rhwp chrome API,
- * and the dock the show hides.
+ * HWP reserves bare F5 for Hancom's table-cell selection. Modified F5 keys
+ * still enter the presenter, which uses fullscreen and the rhwp chrome API.
  */
 describe('HWP presentation wiring', () => {
   const app = readFileSync(resolve(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
   const styles = readFileSync(resolve(process.cwd(), 'src/renderer/styles.css'), 'utf8')
+  const key = (overrides = {}) => ({
+    key: 'F5',
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...overrides,
+  })
 
-  it('uses the shared F5 classifier and the editor chrome API', () => {
-    expect(app).toContain('presentationKeyOf')
+  it('leaves bare F5 to table-cell selection and presents with Ctrl/Shift+F5', () => {
+    expect(hwpPresentationKeyOf(key(), false)).toBeNull()
+    expect(hwpPresentationKeyOf(key({ ctrlKey: true }), false)).toBe('present-windowed')
+    expect(hwpPresentationKeyOf(key({ metaKey: true }), false)).toBe('present-windowed')
+    expect(hwpPresentationKeyOf(key({ shiftKey: true }), false)).toBe('present-windowed')
+    expect(hwpPresentationKeyOf(key(), true)).toBe('exit')
+  })
+
+  it('uses the editor chrome API and fullscreen for the presenter', () => {
+    expect(app).toContain('hwpPresentationKeyOf')
     expect(app).toContain('editor.chrome.get()')
     expect(app).toContain('menu: false, toolbar: false, statusbar: false')
     expect(app).toContain('requestFullscreen')
