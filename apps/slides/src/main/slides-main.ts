@@ -153,7 +153,7 @@ import {
 import { DEFAULT_PICTURE_DPI, pictureFrame } from './picture-frame'
 import { refineComplexWidths, shapedMetricsReady } from './shaped-metrics'
 import { cfbKind, isCfbHeader } from './cfb-sniff'
-import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
+import { atomicWriteFile, atomicWriteVia } from '@genoffice/electron-utils/atomic-write'
 import {
   decryptOfficeFile,
   encryptOoxml,
@@ -1134,7 +1134,10 @@ function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
  */
 async function writeDeckFile(session: Session, filePath: string): Promise<void> {
   if (session.password === undefined) {
-    await savePptxToFile(session.opened, filePath)
+    // savePptxToFile truncates the path it streams into, so the deck goes out
+    // through a sibling temp renamed over `filePath` once the stream finished:
+    // a save that dies mid-way leaves the previous deck on disk (genoffice#2123)
+    await atomicWriteVia(filePath, (tmp) => savePptxToFile(session.opened, tmp))
     return
   }
   await atomicWriteFile(filePath, deckFileBytes(session, await savePptx(session.opened)))
