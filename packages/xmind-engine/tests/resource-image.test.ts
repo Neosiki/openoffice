@@ -11,8 +11,6 @@ import { copyOf, inSource, inView, openSheets } from './reconcile-helpers'
  * save (and is listed in the manifest).
  */
 
-const sample = (): XmindSheet => sampleSheets()[0] as XmindSheet
-
 describe('a picture set from the state', () => {
   it('writes an archive entry onto the topic and reports it in the view', async () => {
     const bytes = await buildMapFile({
