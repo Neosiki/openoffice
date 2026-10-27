@@ -13,6 +13,7 @@ import type {
   AiSubscriptionProviderId,
   SubscriptionConnectHelpPath,
   AiSubscriptionState,
+  SubscriptionLoginMode,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import type { SubscriptionApi } from '../../shared/subscription-api'
@@ -40,7 +41,8 @@ export interface SubscriptionConnection {
   readonly update: (provider: AiSubscriptionProviderId) => void
   /** end a sign-in the app started */
   readonly cancelLogin: (provider: AiSubscriptionProviderId) => void
-  readonly login: (provider: AiSubscriptionProviderId) => void
+  /** `window`: the CLI's own window, where a code the browser shows is pasted */
+  readonly login: (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) => void
   /**
    * Sign in with another account: the program's own sign-in, started again
    * while it is signed in. It changes the account for the whole PC, so the
@@ -143,10 +145,13 @@ export function useSubscriptionConnection(): SubscriptionConnection {
       kind: 'install' | 'login' | 'update',
       provider: AiSubscriptionProviderId,
       sameState = false,
+      mode?: SubscriptionLoginMode,
     ) => {
       setBusy(true)
       setFailed((current) => ({ ...current, [provider]: undefined }))
-      void attempt((api) => api[kind](provider))
+      void attempt((api) =>
+        kind === 'login' && mode ? api.login(provider, mode) : api[kind](provider),
+      )
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
@@ -174,7 +179,8 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     [launch],
   )
   const login = useCallback(
-    (provider: AiSubscriptionProviderId) => launch('login', provider),
+    (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) =>
+      launch('login', provider, false, mode),
     [launch],
   )
   const update = useCallback(

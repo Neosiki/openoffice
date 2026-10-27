@@ -23,6 +23,8 @@ export const es = {
   actionInstall: 'Instalar',
   actionLogin: 'Iniciar sesión',
   actionLoginWindow: '¿No se abrió el navegador?',
+  actionLoginWithCode: '¿El navegador muestra un código?',
+  actionLoginBrowser: 'Iniciar sesión en el navegador',
   actionRecheck: 'Comprobar de nuevo',
   actionAcceptMetered: 'Usar de todos modos',
   actionInstallHelp: 'Guía oficial de instalación',
@@ -122,6 +124,8 @@ export const es = {
   signingInStalledNote:
     'Si no se abrió ninguna página de inicio de sesión en el navegador, abre la ventana de inicio de sesión con el botón de abajo. Si todavía estás iniciando sesión en el navegador, mejor termina allí: el botón detiene ese inicio de sesión y empieza de nuevo.',
   actionLoginWindowOpen: 'Abrir la ventana de inicio de sesión',
+  loginUnfinishedNote:
+    'El inicio de sesión no terminó. Si el navegador muestra un código, hay que pegarlo en la ventana de inicio de sesión: ábrela y vuelve a iniciar sesión allí. Un código mostrado antes ya no sirve.',
   loginWindowTitle: 'Inicio de sesión en {provider}',
   loginWindowIntro:
     'Esta es la ventana de inicio de sesión del programa {provider}. El texto en inglés que aparece debajo es del programa {provider}.',

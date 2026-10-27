@@ -20,6 +20,8 @@ export const zh = {
   actionInstall: '安装',
   actionLogin: '登录',
   actionLoginWindow: '浏览器没有打开？',
+  actionLoginWithCode: '浏览器显示了代码？',
+  actionLoginBrowser: '改在浏览器中登录',
   actionRecheck: '重新检查',
   actionAcceptMetered: '仍然使用',
   actionInstallHelp: '官方安装说明',
@@ -100,6 +102,8 @@ export const zh = {
   signingInStalledNote:
     '如果浏览器中没有打开登录页面，请用下面的按钮打开登录窗口。如果你还在浏览器中登录，请不要按，先在浏览器中完成。按下按钮会停止当前的登录并重新开始。',
   actionLoginWindowOpen: '打开登录窗口',
+  loginUnfinishedNote:
+    '登录没有完成。如果浏览器显示了代码，需要把代码粘贴到登录窗口中：请打开窗口，并在那里重新登录。之前显示的代码已失效。',
   loginWindowTitle: '{provider} 登录',
   loginWindowIntro: '这是 {provider} 程序的登录窗口。下面的英文内容是 {provider} 程序显示的说明。',
   loginWindowStepBrowser:

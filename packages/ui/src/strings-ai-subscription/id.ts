@@ -22,6 +22,8 @@ export const id = {
   actionInstall: 'Pasang',
   actionLogin: 'Masuk',
   actionLoginWindow: 'Browser tidak terbuka?',
+  actionLoginWithCode: 'Browser menampilkan kode?',
+  actionLoginBrowser: 'Masuk lewat browser',
   actionRecheck: 'Periksa lagi',
   actionAcceptMetered: 'Tetap gunakan',
   actionInstallHelp: 'Panduan pemasangan resmi',
@@ -116,6 +118,8 @@ export const id = {
   signingInStalledNote:
     'Jika halaman masuk tidak terbuka di browser Anda, buka jendela masuk dengan tombol di bawah. Jika Anda masih sedang masuk di browser, selesaikan saja di sana: tombol ini menghentikan proses masuk itu dan memulai lagi dari awal.',
   actionLoginWindowOpen: 'Buka jendela masuk',
+  loginUnfinishedNote:
+    'Proses masuk belum selesai. Jika browser menampilkan kode, kode itu harus ditempel di jendela masuk: buka jendelanya dan masuk lagi di sana. Kode yang muncul sebelumnya sudah tidak berlaku.',
   loginWindowTitle: 'Masuk ke {provider}',
   loginWindowIntro:
     'Ini jendela masuk program {provider}. Teks berbahasa Inggris di bawah berasal dari program {provider}.',

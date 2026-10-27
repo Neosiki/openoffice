@@ -23,6 +23,8 @@ export const pl = {
   actionInstall: 'Zainstaluj',
   actionLogin: 'Zaloguj się',
   actionLoginWindow: 'Przeglądarka się nie otworzyła?',
+  actionLoginWithCode: 'Przeglądarka pokazuje kod?',
+  actionLoginBrowser: 'Zaloguj się w przeglądarce',
   actionRecheck: 'Sprawdź ponownie',
   actionAcceptMetered: 'Użyj mimo to',
   actionInstallHelp: 'Oficjalna instrukcja instalacji',
@@ -121,6 +123,8 @@ export const pl = {
   signingInStalledNote:
     'Jeśli strona logowania nie otworzyła się w przeglądarce, otwórz okno logowania przyciskiem poniżej. Jeśli wciąż logujesz się w przeglądarce, nie naciskaj go, tylko dokończ logowanie tam: przycisk przerywa to logowanie i zaczyna od nowa.',
   actionLoginWindowOpen: 'Otwórz okno logowania',
+  loginUnfinishedNote:
+    'Logowanie nie zostało ukończone. Jeśli przeglądarka pokazuje kod, trzeba go wkleić w oknie logowania: otwórz okno i zaloguj się tam ponownie. Wcześniej pokazany kod nie jest już ważny.',
   loginWindowTitle: 'Logowanie do {provider}',
   loginWindowIntro:
     'To jest okno logowania programu {provider}. Tekst po angielsku poniżej wyświetla program {provider}.',

@@ -36,6 +36,8 @@ No segundo passo dos ecrãs de boas-vindas no primeiro arranque, e no painel de 
 
 A conexão é verificada quando a aplicação arranca, quando abre as Configurações e quando regressa à janela depois de iniciar uma instalação ou um início de sessão.
 
+Se o cartão indicar que um início de sessão não terminou, escolha **Abrir a janela de login**. Um código mostrado pelo navegador tem de ser colado nessa janela; um código mostrado antes já não funciona.
+
 ## Sem assinatura: IA gratuita
 
 Não tem assinatura do Claude nem do ChatGPT? Em Configurações ▸ IA, **Usar de graça** conecta uma IA gratuita em vez disso. Escolher **Nenhuma ainda** no segundo passo dos ecrãs de boas-vindas mostra os mesmos cartões, e escolhê-la no painel de IA quando não há nada conectado oferece **Conectar uma IA gratuita**.

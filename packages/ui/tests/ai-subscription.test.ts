@@ -92,13 +92,35 @@ describe('aiSubscriptionCardView', () => {
     })
   })
 
-  it('signed-out: login button', () => {
+  it('signed-out: login button, and the way to the window for a code', () => {
     const view = aiSubscriptionCardView(status('claude-code', 'signed-out'))
     expect(view.statusKey).toBe('cardSignedOut')
     // what pressing it does comes first, whose page it opens after
     expect(view.noteKeys).toEqual(['loginHowNote', 'loginNote'])
+    expect(view.actions).toEqual(['login', 'login-code'])
+    expect(view.links).toEqual(['login-code'])
+  })
+
+  it('signed-out after a login that ended without one: the window first, the browser behind it', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'signed-out', { loginUnfinished: true }),
+    )
+    expect(view.statusKey).toBe('cardSignedOut')
+    expect(view.noteKeys).toEqual(['loginUnfinishedNote', 'loginNote'])
+    expect(view.actions).toEqual(['login-code', 'login-browser'])
+    // the window is the step here, so it is a button, not a link
+    expect(view.links).toEqual(['login-browser'])
+  })
+
+  it('a login that ended without one says nothing about a window where there is none', () => {
+    const view = aiSubscriptionCardView(
+      status('claude-code', 'signed-out', { loginUnfinished: true }),
+      {
+        terminalWindows: false,
+      },
+    )
     expect(view.actions).toEqual(['login'])
-    expect(view.links).toEqual([])
+    expect(view.noteKeys).toEqual(['loginHowNote', 'loginNote'])
   })
 
   it('ready: connected, with the plan name when the CLI gave one', () => {
@@ -196,6 +218,7 @@ describe('aiSubscriptionCardView', () => {
       ).toEqual(['switch-account', 'logout'])
       expect(aiSubscriptionCardView(status('codex', 'signed-out'), options).actions).toEqual([
         'login',
+        'login-code',
       ])
     })
   })
@@ -354,7 +377,7 @@ describe('aiSubscriptionCardView', () => {
     // nothing under way: nothing to call off
     expect(
       aiSubscriptionCardView(status('codex', 'signed-out'), { cancelLogin: true }).actions,
-    ).toEqual(['login'])
+    ).toEqual(['login', 'login-code'])
   })
 
   it('a program below the floor gets an update button first, where the host can run it', () => {
@@ -411,8 +434,14 @@ describe('aiSubscriptionCardView', () => {
       expect(view.actions).toEqual([])
     })
 
+    it('signed-out: the sign-in alone, with no way to a window that does not exist', () => {
+      const view = aiSubscriptionCardView(status('codex', 'signed-out'), noWindows)
+      expect(view.actions).toEqual(['login'])
+      expect(view.links).toEqual([])
+    })
+
     it('the other states read the same as on Windows', () => {
-      for (const state of ['signed-out', 'ready', 'metered', 'error', 'checking'] as const) {
+      for (const state of ['ready', 'metered', 'error', 'checking'] as const) {
         expect(aiSubscriptionCardView(status('codex', state), noWindows)).toEqual(
           aiSubscriptionCardView(status('codex', state)),
         )
