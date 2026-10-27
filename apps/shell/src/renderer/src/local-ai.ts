@@ -268,7 +268,9 @@ function normalizedModels(raw: readonly string[] | undefined): string[] | undefi
  * and the selected provider are left alone: a new server is never activated,
  * unlike `upsertCustomEndpoint`. The only exception is the first server in a
  * file that never had one, where the resolver mirrors it as the active
- * candidate without changing `provider`.
+ * candidate without changing `provider`; when `provider` is already `custom`
+ * the selection stays explicitly empty instead, since a mirrored server would
+ * then be the one chat uses.
  *
  * The current endpoints are resolved first so a server from a pre-list
  * `providers.custom` slot is kept rather than overwritten by this save.
@@ -301,7 +303,16 @@ export function saveLocalDraft(settings: AiSettings, draft: LocalEndpointDraft):
   const customEndpoints = existing
     ? endpoints.map((entry) => (entry.id === existing.id ? endpoint : entry))
     : [...endpoints, endpoint]
-  return resolveCustomEndpoints({ ...base, customEndpoints })
+  // "custom" is the AI in use but no server is left (the Advanced pane removed
+  // the last one): the resolver would make this first server active and chat
+  // would start using it. Keep the selection explicitly empty instead, so the
+  // user picks the new server the way they pick any other.
+  const noServerInUse = !existing && endpoints.length === 0 && base.provider === 'custom'
+  return resolveCustomEndpoints({
+    ...base,
+    customEndpoints,
+    ...(noServerInUse ? { customEndpoint: '' } : {}),
+  })
 }
 
 /**

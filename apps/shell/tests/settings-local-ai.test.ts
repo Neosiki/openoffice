@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { defaultAiSettings } from '@genoffice/ai-provider'
-import { isKeyProviderConfigured, resolveCustomEndpoints } from '@genoffice/ai-provider/browser'
+import {
+  isKeyProviderConfigured,
+  removeCustomEndpoint,
+  resolveCustomEndpoints,
+  selectAiProvider,
+} from '@genoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
   AiLocalModelProfile,
@@ -391,6 +396,25 @@ describe('saveLocalDraft', () => {
     expect(after.provider).toBe('auto')
     expect(after.customEndpoint).toBe(added.id)
     expect(after.providers.custom.baseUrl).toBe(added.baseUrl)
+  })
+
+  it('does not start using a new server when "custom" is chosen with no server left', () => {
+    // the Advanced pane removed the last server: `provider` stays custom, the
+    // list and the active id are gone, and chat reads "not configured"
+    const removed = removeCustomEndpoint(
+      settingsWith({ provider: 'custom', customEndpoints: [plain], customEndpoint: 'plain' }),
+      'plain',
+    )
+    expect(removed.customEndpoints ?? []).toHaveLength(0)
+    expect(removed.provider).toBe('custom')
+
+    const after = saveLocalDraft(removed, { ...newLocalDraft('ollama'), model: 'qwen3:8b' })
+
+    expect(after.provider).toBe('custom')
+    expect(after.customEndpoint).toBe('')
+    expect(after.providers.custom).toEqual({ apiKey: '', model: '', baseUrl: '' })
+    expect(selectAiProvider(after, {}).connected).toBe(false)
+    expect(localEndpoints(after)).toHaveLength(1)
   })
 
   it('keeps a server from a pre-list custom slot', () => {
