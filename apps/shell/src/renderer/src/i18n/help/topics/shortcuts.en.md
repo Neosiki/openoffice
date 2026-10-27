@@ -24,7 +24,7 @@ Every editor has its own key bindings, and only a few of them work everywhere. T
 
 ## Presentation mode
 
-- **Start**: F5 in Word, PDF, Mindmap, HTML and Markdown. In a spreadsheet use Ctrl+F5 (from A1) or Shift+F5 (from the current cell).
+- **Start**: F5 in Word, PDF, Mindmap, HTML and Markdown. In a spreadsheet use Ctrl+F5 (from A1) or Shift+F5 (from the current cell). In an HWP document use Ctrl+F5 (F5 selects table cells there).
 - **Other entry points**: in Word, Ctrl+F5 and Shift+F5 open the reading view without fullscreen; in PDF they start from the current page; in HTML they present inside the tab.
 - **End**: Esc or F5. F11 is the window's own fullscreen and does not change the document view.
 

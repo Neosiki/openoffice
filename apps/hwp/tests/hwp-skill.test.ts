@@ -4,6 +4,7 @@ import type { AgentMemo, AgentMemoRemovalRefusal } from '../studio-plugin/agent-
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import {
   CONTEXT_MAX_CHARS,
+  IMAGE_GEN_OFF_NOTE,
   READ_PAGE_CHARS,
   createHwpSkill,
   type HwpChange,
@@ -63,6 +64,8 @@ function setup(
   confirmMemoRemoval: (refusal: AgentMemoRemovalRefusal) => Promise<boolean> = vi.fn(
     async () => false,
   ),
+  imageGenAvailable?: () => boolean,
+  attachmentPath?: (name: string) => string | null,
 ) {
   const bridge: AgentBridge = {
     foreignChanges: vi.fn(async () => 0),
@@ -79,6 +82,7 @@ function setup(
       inTable: false,
     })),
     insertTable: vi.fn(async () => ({ ok: true as const, rows: 2, cols: 3, inTable: false })),
+    insertPicture: vi.fn(async () => ({ ok: true as const, inTable: false, place: PLACE })),
     formatText: vi.fn(async () => ({ ok: true as const, count: 1 })),
     formatParagraph: vi.fn(async () => ({ ok: true as const, inTable: false })),
     listTables: vi.fn(async () => ({ count: 0, partial: false, tables: [] })),
@@ -233,6 +237,8 @@ function setup(
     label: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
     onChange: (change) => changes.push(change),
     confirmMemoRemoval,
+    ...(imageGenAvailable ? { imageGenAvailable } : {}),
+    ...(attachmentPath ? { attachmentPath } : {}),
   })
   const call = (name: string, input: Record<string, unknown> = {}) =>
     skill.executeTool({ id: '1', name, input } satisfies AgentToolCall)
@@ -1937,6 +1943,9 @@ describe('the skill as the model sees it', () => {
       'insert_paragraphs',
       'delete_paragraph',
       'insert_table',
+      'image_search',
+      'insert_image',
+      'generate_image',
       'format_text',
       'format_paragraph',
       'replace_selection',
@@ -1969,5 +1978,124 @@ describe('the skill as the model sees it', () => {
 
   it('names the product, not the upstream project', () => {
     expect(setup().skill.systemPrompt).not.toContain('GenOffice')
+  })
+})
+
+describe('pictures', () => {
+  const PNG = btoa(String.fromCharCode(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))
+
+  /** The preload bridge the panel calls: only the picture calls are needed here. */
+  function api(overrides: Partial<Record<string, unknown>> = {}) {
+    const hwpApi = {
+      imageSearch: vi.fn(async () => ({ images: [], method: 'duckduckgo' })),
+      generateImage: vi.fn(async () => ({ url: 'file:///store/a.png' })),
+      fetchImage: vi.fn(async () => ({ base64: PNG, mime: 'image/png' })),
+      readAttachmentImage: vi.fn(async () => ({ ok: true, base64: PNG, mime: 'image/png' })),
+      ...overrides,
+    }
+    // this file runs without a DOM: the skill only reaches the preload bridge through `window`
+    ;(globalThis as unknown as { window: { hwpApi: unknown } }).window = { hwpApi }
+    return hwpApi
+  }
+
+  afterEach(() => {
+    delete (globalThis as unknown as { window?: unknown }).window
+  })
+
+  it('offers generate_image only while the main process reports an image route', () => {
+    const off = setup({}, undefined, () => false).skill
+    expect(off.tools.map((tool) => tool.name)).not.toContain('generate_image')
+    expect(off.tools.map((tool) => tool.name)).toContain('image_search')
+    expect(off.tools.map((tool) => tool.name)).toContain('insert_image')
+    expect(off.systemPrompt).toContain(IMAGE_GEN_OFF_NOTE)
+
+    const on = setup({}, undefined, () => true).skill
+    expect(on.tools.map((tool) => tool.name)).toContain('generate_image')
+    expect(on.systemPrompt).not.toContain(IMAGE_GEN_OFF_NOTE)
+  })
+
+  it('downloads a search result and inserts it as a PNG, one change step', async () => {
+    const hwpApi = api()
+    const { bridge, call, changes } = setup()
+    const result = await call('insert_image', {
+      where: 'after',
+      anchor: '본문',
+      url: 'https://example.com/a.png',
+      width_pt: 300,
+    })
+    expect(result.isError).toBeUndefined()
+    expect(hwpApi.fetchImage).toHaveBeenCalledWith('https://example.com/a.png')
+    expect(bridge.insertPicture).toHaveBeenCalledWith(
+      '본문',
+      null,
+      'after',
+      PNG,
+      300,
+      800,
+      600,
+      'png',
+      undefined,
+    )
+    expect(changes.at(-1)).toMatchObject({ kind: 'image', count: 1 })
+  })
+
+  it('generates and inserts, and reports the generator error instead', async () => {
+    const hwpApi = api()
+    const { bridge, call } = setup()
+    await call('generate_image', { where: 'end', prompt: 'a red kite' })
+    expect(hwpApi.generateImage).toHaveBeenCalledWith({ prompt: 'a red kite' })
+    expect(bridge.insertPicture).toHaveBeenCalled()
+
+    hwpApi.generateImage.mockResolvedValue({ error: 'signed out' })
+    const failed = await call('generate_image', { where: 'end', prompt: 'x' })
+    expect(failed.isError).toBe(true)
+    expect(failed.output).toContain('signed out')
+  })
+
+  it('refuses bytes that are not the picture the extension names', async () => {
+    api({ fetchImage: async () => ({ base64: btoa('not a png'), mime: 'image/png' }) })
+    const { bridge, call } = setup()
+    const result = await call('insert_image', { where: 'end', url: 'https://example.com/a.png' })
+    expect(result.isError).toBe(true)
+    expect(bridge.insertPicture).not.toHaveBeenCalled()
+  })
+
+  it('inserts an image file attached to the chat, by the name the panel showed', async () => {
+    const hwpApi = api()
+    const { bridge, call, changes } = setup({}, undefined, undefined, (name) =>
+      name === 'probe.png' ? 'C:/tmp/probe.png' : null,
+    )
+    const result = await call('insert_image', {
+      where: 'after',
+      anchor: '본문',
+      attachment: 'probe.png',
+      width_pt: 120,
+    })
+    expect(result.isError).toBeUndefined()
+    expect(hwpApi.readAttachmentImage).toHaveBeenCalledWith('C:/tmp/probe.png')
+    expect(bridge.insertPicture).toHaveBeenCalledWith(
+      '본문',
+      null,
+      'after',
+      PNG,
+      120,
+      800,
+      600,
+      'png',
+      undefined,
+    )
+    expect(changes.at(-1)).toMatchObject({ kind: 'image', to: 'probe.png', count: 1 })
+  })
+
+  it('refuses an attachment name the chat does not have, and names what was attached', async () => {
+    api()
+    const { bridge, call } = setup({}, undefined, undefined, () => null)
+    const result = await call('insert_image', {
+      where: 'end',
+      attachment: 'probe.png',
+    })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('there is no file named "probe.png"')
+    expect(bridge.insertPicture).not.toHaveBeenCalled()
   })
 })

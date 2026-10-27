@@ -73,6 +73,7 @@ const SPARSE_PATTERNS = [
 const CACHE = join(APP, 'node_modules', '.cache', 'rhwp-studio', TAG)
 const OUT = join(APP, 'public', 'studio')
 const AGENT_PLUGIN = join(APP, 'studio-plugin', 'agent-plugin.mjs')
+const DIALOG_THEME = join(APP, 'studio-plugin', 'dialog-theme.mjs')
 const HANCOM_KEYS = join(APP, 'studio-plugin', 'hancom-keys.mjs')
 const FORMAT_COPY = join(APP, 'studio-plugin', 'format-copy.mjs')
 const STAMP = join(OUT, '.stamp')
@@ -91,6 +92,7 @@ function stampValue() {
   }
   // the app's own plugin and the Hangul keys are compiled into the studio
   hash.update(readFileSync(AGENT_PLUGIN))
+  hash.update(readFileSync(DIALOG_THEME))
   hash.update(readFileSync(HANCOM_KEYS))
   hash.update(readFileSync(FORMAT_COPY))
   // and so is the engine: a rebuilt WASM must reach the studio

@@ -13,6 +13,7 @@ import {
   AiScopeQuote,
   type AiScopeQuoteData,
   AiSubscriptionUsageLine,
+  AiToolsUnsupportedNotice,
   AiTypingIndicator,
   Markdown,
   aiPanelWidthAtPointer,
@@ -53,6 +54,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -474,6 +476,29 @@ export function AiPanel({
   }, [panelWidth])
 
   const settingsRef = useRef<AiSettings | null>(null)
+  /** whether generate_image can run, as the main process answers (refreshed on mount and window focus) */
+  const imageGenAvailableRef = useRef(false)
+  useEffect(() => {
+    let alive = true
+    const refresh = () => {
+      // tests render the panel without a full preload bridge: a missing call must not take it down
+      Promise.resolve()
+        .then(() => window.hwpApi.aiToolCapabilities())
+        .then((capabilities) => {
+          if (alive)
+            imageGenAvailableRef.current = capabilities?.imageGeneration?.available === true
+        })
+        .catch(() => {
+          if (alive) imageGenAvailableRef.current = false
+        })
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    return () => {
+      alive = false
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
   /** the settings as last read, for what the panel shows and gates (settingsRef stays the run's own copy) */
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
   /** connection of the two subscription providers, and the actions of their connect cards */
@@ -593,6 +618,11 @@ export function AiPanel({
         if (change.place) void bridgeRef.current.reveal(change.place).catch(() => {})
       },
       confirmMemoRemoval: (refusal) => memoGateRef.current!.ask(refusal),
+      imageGenAvailable: () => imageGenAvailableRef.current,
+      // the model names an attachment; only files the panel shows can be found
+      attachmentPath: (name) =>
+        availableAttachmentsRef.current().find((attachment) => attachment.name === name)?.path ??
+        null,
     })
 
   // The loop is built once; every mutable value goes through a ref getter
@@ -600,6 +630,9 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('hwp+files', '', () => loopRef.current?.messages ?? [], [
         skillRef.current.skill,
         createFilesSkill(() => availableAttachmentsRef.current()),
@@ -1276,6 +1309,9 @@ export function AiPanel({
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
         )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
+        )}
       </div>
 
       <div className="ai-composer">
@@ -1514,11 +1550,11 @@ function RunChangesCard({
 
 /** One change as a line: what went (struck through), what came, marked the same in every language. */
 function ChangeLine({ item }: { item: HwpChange }): ReactElement {
-  if (item.kind === 'insert' || item.kind === 'table') {
+  if (item.kind === 'insert' || item.kind === 'table' || item.kind === 'image') {
     return (
       <>
         <span className="ai-change-mark" aria-hidden>
-          {item.kind === 'table' ? '+ ▦' : '+'}
+          {item.kind === 'table' ? '+ ▦' : item.kind === 'image' ? '+ ▧' : '+'}
         </span>
         <ins className="ai-change-to">{item.to}</ins>
       </>

@@ -25,6 +25,8 @@ export const it = {
   actionInstall: 'Installa',
   actionLogin: 'Accedi',
   actionLoginWindow: 'Il browser non si è aperto?',
+  actionLoginWithCode: 'Il browser mostra un codice?',
+  actionLoginBrowser: 'Accedi nel browser',
   actionRecheck: 'Verifica di nuovo',
   actionAcceptMetered: 'Usa comunque',
   actionInstallHelp: 'Guida ufficiale all’installazione',
@@ -123,6 +125,8 @@ export const it = {
   signingInStalledNote:
     'Se nel browser non si è aperta nessuna pagina di accesso, apri la finestra di accesso con il pulsante qui sotto. Se stai ancora effettuando l’accesso nel browser, completalo lì: il pulsante interrompe quell’accesso e ricomincia da capo.',
   actionLoginWindowOpen: 'Apri la finestra di accesso',
+  loginUnfinishedNote:
+    "L'accesso non è terminato. Se il browser mostra un codice, va incollato nella finestra di accesso: aprila e accedi di nuovo lì. Un codice mostrato prima non è più valido.",
   loginWindowTitle: 'Accesso a {provider}',
   loginWindowIntro:
     'Questa è la finestra di accesso del programma {provider}. Il testo in inglese qui sotto viene dal programma {provider}.',

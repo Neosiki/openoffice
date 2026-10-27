@@ -24,7 +24,7 @@
 
 ## 簡報模式
 
-- **開始**：在 Word、PDF、心智圖、HTML 與 Markdown 中按 F5。在試算表中按 Ctrl+F5（從 A1 開始）或 Shift+F5（從目前儲存格開始）。
+- **開始**：在 Word、PDF、心智圖、HTML 與 Markdown 中按 F5。在試算表中按 Ctrl+F5（從 A1 開始）或 Shift+F5（從目前儲存格開始）。在 HWP 文件中按 Ctrl+F5（F5 在那裡用來選取表格儲存格）。
 - **其他入口**：Word 中 Ctrl+F5、Shift+F5 進入無全螢幕的閱讀檢視；PDF 中從目前頁面開始；HTML 中在分頁內簡報。
 - **結束**：Esc 或 F5。F11 是視窗本身的全螢幕，不會改變文件檢視。
 

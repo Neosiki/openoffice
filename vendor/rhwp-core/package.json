@@ -1,6 +1,6 @@
 {
   "name": "@rhwp/core",
-  "version": "0.8.7-ieum.11",
+  "version": "0.8.7-ieum.12",
   "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the patches in ./patches",
   "private": true,
   "type": "module",
@@ -37,9 +37,10 @@
       "0016-single-cell-resize.patch",
       "0017-header-footer-picture-keeps-text.patch",
       "0018-memo-support.patch",
-      "0019-textbox-storage-bit.patch"
+      "0019-textbox-storage-bit.patch",
+      "0020-topbottom-float-anchor-flow.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "668b4ef9a8837b2f4f2323cd573db256ce619e85e19cdd261361f1665b1e77d4"
+    "wasmSha256": "a00d6e8d37cc622bf3666db79e2fdf31230798655a1caae0c7d72e82955b298c"
   }
 }

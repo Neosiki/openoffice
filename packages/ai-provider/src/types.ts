@@ -102,6 +102,15 @@ export interface AiSubscriptionStatus {
   programPath?: string | undefined
   /** a login the app started is under way; absent otherwise */
   signingIn?: AiSubscriptionSigningIn | undefined
+  /**
+   * A login the app started has ended without signing the CLI in: it exited,
+   * or ran past the limit for a browser sign-in nobody finished. `signed-out`
+   * only, in memory only. The card uses it to offer the CLI's window (where a
+   * code the browser handed back can be pasted) instead of repeating the same
+   * browser sign-in. Gone when a login starts, is cancelled, or a check finds
+   * a sign-in.
+   */
+  loginUnfinished?: boolean | undefined
 }
 
 export type AiSubscriptionStatuses = Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>
@@ -130,6 +139,32 @@ export interface AiProviderConfig {
   cliPath?: string | undefined
 }
 
+/** Where one value of a local model profile came from */
+export type AiLocalValueSource = 'server' | 'user' | 'test'
+
+/**
+ * What the user, a local server or a connection test reported about one model
+ * of a local endpoint. Every field is optional: absent means unknown, which is
+ * never the same as `false`.
+ */
+export interface AiLocalModelProfile {
+  /** context tokens the model can be given (1..10,000,000) */
+  contextLength?: number | undefined
+  /** the server's advertised ceiling when it differs from the running context; display only */
+  maxContextLength?: number | undefined
+  /** tool calling, when known */
+  tools?: boolean | undefined
+  /** image input, when known */
+  vision?: boolean | undefined
+  contextSource?: AiLocalValueSource | undefined
+  toolsSource?: AiLocalValueSource | undefined
+  visionSource?: AiLocalValueSource | undefined
+  /** epoch milliseconds of the last check */
+  checkedAt?: number | undefined
+  /** license, model card address and other notes (trimmed, max 500 characters) */
+  notes?: string | undefined
+}
+
 /** One user-hosted OpenAI-compatible server; the active one is mirrored into `providers.custom` */
 export interface AiCustomEndpoint {
   id: string
@@ -139,6 +174,12 @@ export interface AiCustomEndpoint {
   model: string
   /** ids the server advertised on the last `/models` probe, so the composer chip can list them offline */
   models?: string[] | undefined
+  /** only servers added by the local AI card; a server saved before this field existed has none */
+  kind?: 'local' | undefined
+  /** per-model profiles, by model id (at most 2,000 entries, keys at most 256 characters) */
+  modelProfiles?: Record<string, AiLocalModelProfile> | undefined
+  /** first-response limit in milliseconds (60,000..600,000); absent means the 300,000 default */
+  timeoutMs?: number | undefined
 }
 
 /** Live picker data returned by Codex app-server's model/list method. */

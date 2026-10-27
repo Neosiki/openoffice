@@ -81,6 +81,8 @@ export const ru = {
   aiToolInsert: 'Добавлено абзацев: {count}',
   aiToolDelete: 'Абзац удалён · {text}',
   aiToolTable: 'Таблица добавлена · {rows} × {cols}',
+  aiToolImageSearchDone: 'Поиск изображений «{query}» ({count} изображений)',
+  aiToolInsertImage: 'Изображение вставлено {what}',
   aiToolFormat: 'Формат изменён · {text}',
   aiFmtBold: 'Полужирный',
   aiFmtItalic: 'Курсив',

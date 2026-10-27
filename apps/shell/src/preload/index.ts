@@ -10,7 +10,13 @@ import {
   freeAiQuotaOf,
   getProviderAdapter,
 } from '@genoffice/ai-provider/browser'
-import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
+import type {
+  AiLocalDiscoveryResult,
+  AiLocalInspectionResult,
+  AiLocalTestResult,
+  AiSettings,
+  CodexModelCatalog,
+} from '@genoffice/ai-provider/browser'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
@@ -566,6 +572,18 @@ const homeApi: HomeApi = {
   async getCustomModels(baseUrl, apiKey) {
     return (await ipcRenderer.invoke('ai:custom-models', { baseUrl, apiKey })) as CodexModelCatalog
   },
+  async getLocalModels(input) {
+    return (await ipcRenderer.invoke('ai:local-models', input)) as AiLocalDiscoveryResult
+  },
+  async inspectLocalModel(input) {
+    return (await ipcRenderer.invoke('ai:local-inspect', input)) as AiLocalInspectionResult
+  },
+  async testLocalModel(input) {
+    return (await ipcRenderer.invoke('ai:local-test', input)) as AiLocalTestResult
+  },
+  async cancelLocalTest(testId) {
+    return (await ipcRenderer.invoke('ai:local-test-cancel', { testId })) === true
+  },
   async testAiSettings(settings) {
     const result: unknown = await ipcRenderer.invoke('ai:chat', {
       settings,
@@ -704,9 +722,12 @@ const subscriptionApi: SubscriptionApi = {
       ),
     )
   },
-  async login(provider) {
+  async login(provider, mode) {
     return subscriptionLaunchResultOf(
-      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.login,
+        mode ? { provider, mode } : { provider },
+      ),
     )
   },
   async logout(provider) {

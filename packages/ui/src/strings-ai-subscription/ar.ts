@@ -22,6 +22,8 @@ export const ar = {
   actionInstall: 'تثبيت',
   actionLogin: 'تسجيل الدخول',
   actionLoginWindow: 'لم يُفتح المتصفح؟',
+  actionLoginWithCode: 'هل عرض المتصفح رمزًا؟',
+  actionLoginBrowser: 'تسجيل الدخول في المتصفح',
   actionRecheck: 'التحقق مرة أخرى',
   actionAcceptMetered: 'استخدام على أي حال',
   actionInstallHelp: 'دليل التثبيت الرسمي',
@@ -112,6 +114,8 @@ export const ar = {
   signingInStalledNote:
     'إذا لم تُفتح صفحة تسجيل الدخول في المتصفح، فافتح نافذة تسجيل الدخول بالزر أدناه. أما إذا كنت لا تزال تسجّل الدخول في المتصفح، فلا تضغط الزر وأكمل هناك: فالضغط عليه يوقف تسجيل الدخول الجاري ويبدأ من جديد.',
   actionLoginWindowOpen: 'فتح نافذة تسجيل الدخول',
+  loginUnfinishedNote:
+    'لم يكتمل تسجيل الدخول. إذا عرض المتصفح رمزًا، فيجب لصقه في نافذة تسجيل الدخول: افتح النافذة وسجّل الدخول هناك مرة أخرى. الرمز الذي ظهر سابقًا لم يعد صالحًا.',
   loginWindowTitle: 'تسجيل الدخول إلى {provider}',
   loginWindowIntro:
     'هذه نافذة تسجيل الدخول الخاصة ببرنامج {provider}. النص الإنجليزي أدناه يعرضه برنامج {provider}.',

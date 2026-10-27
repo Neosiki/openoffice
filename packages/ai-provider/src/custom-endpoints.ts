@@ -3,6 +3,7 @@
 // active entry is copied into that slot on every change: nothing downstream
 // learns about endpoints, and a settings file from before the list existed
 // still works because its single slot becomes the first entry.
+import { localEndpointFieldsOf } from './local-profile'
 import type { AiCustomEndpoint, AiProviderConfig, AiSettings } from './types'
 
 const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -43,6 +44,8 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
       apiKey: str(e.apiKey),
       model: str(e.model),
       ...(models && models.length > 0 ? { models } : {}),
+      // local-only fields survive a read/write round trip; malformed ones are dropped
+      ...localEndpointFieldsOf(e),
     })
   }
   return out
@@ -51,7 +54,10 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
 /**
  * The endpoint list and the `custom` slot made consistent. A file with a slot
  * but no list gets a one-entry list; a stale active id falls to the first
- * entry; the active entry is copied into the slot. Pure: returns a new object.
+ * entry; the active entry is copied into the slot. An explicit empty
+ * `customEndpoint` means "no active server": the list stays, but the slot is
+ * cleared so the deleted server is not called and no first entry takes over.
+ * Pure: returns a new object.
  */
 export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
   let endpoints = normalizeEndpoints(settings.customEndpoints)
@@ -69,11 +75,28 @@ export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
   }
   if (endpoints.length === 0) {
     const { customEndpoints: _list, customEndpoint: _active, ...rest } = settings
-    return rest
+    // an explicit "no active server" survives an empty list; a file that never
+    // carried the field is left without it, as before
+    return settings.customEndpoint === '' ? { ...rest, customEndpoint: '' } : rest
   }
-  const active =
-    endpoints.find((e) => e.id === str(settings.customEndpoint)) ??
-    (endpoints[0] as AiCustomEndpoint)
+  const storedActive = settings.customEndpoint
+  const noActiveServer = typeof storedActive === 'string' && storedActive.trim() === ''
+  const active = noActiveServer
+    ? undefined
+    : (endpoints.find((e) => e.id === str(storedActive)) ?? (endpoints[0] as AiCustomEndpoint))
+  if (!active) {
+    return {
+      ...settings,
+      customEndpoints: endpoints,
+      customEndpoint: '',
+      providers: {
+        ...settings.providers,
+        // clear the mirror: isKeyProviderConfigured must read false, so a
+        // server the user removed is not called through the old slot
+        custom: { apiKey: '', model: '', baseUrl: '' },
+      },
+    }
+  }
   return {
     ...settings,
     customEndpoints: endpoints,
@@ -111,13 +134,36 @@ export function upsertCustomEndpoint(
   })
 }
 
-export function removeCustomEndpoint(settings: AiSettings, id: string): AiSettings {
-  const customEndpoints = (settings.customEndpoints ?? []).filter((e) => e.id !== id)
+export interface RemoveCustomEndpointOptions {
+  /**
+   * What happens when the removed entry was the active one: `true` (default)
+   * activates the next entry, `false` leaves the selection explicitly empty so
+   * no other server is used without the user choosing it.
+   */
+  fallback?: boolean | undefined
+}
+
+export function removeCustomEndpoint(
+  settings: AiSettings,
+  id: string,
+  options?: RemoveCustomEndpointOptions,
+): AiSettings {
+  const fallback = options?.fallback ?? true
+  const list = settings.customEndpoints ?? []
+  const storedActive = settings.customEndpoint
+  const explicitEmpty = typeof storedActive === 'string' && storedActive.trim() === ''
+  // the resolver's own rule: no explicit empty id means the first entry is in use
+  const activeId = explicitEmpty
+    ? ''
+    : (list.find((e) => e.id === str(storedActive))?.id ?? list[0]?.id ?? '')
+  const removedActive = activeId === id
+  const customEndpoints = list.filter((e) => e.id !== id)
   // the slot mirrored the removed entry; cleared first or it would be re-seeded as a new entry
   const blank: AiProviderConfig = { apiKey: '', model: '', baseUrl: '' }
   return resolveCustomEndpoints({
     ...settings,
     customEndpoints,
+    ...(!fallback && removedActive ? { customEndpoint: '' } : {}),
     providers: { ...settings.providers, custom: blank },
   })
 }

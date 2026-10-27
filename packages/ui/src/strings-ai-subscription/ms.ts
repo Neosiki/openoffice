@@ -24,6 +24,8 @@ export const ms = {
   actionInstall: 'Pasang',
   actionLogin: 'Log masuk',
   actionLoginWindow: 'Pelayar tidak dibuka?',
+  actionLoginWithCode: 'Pelayar menunjukkan kod?',
+  actionLoginBrowser: 'Log masuk melalui pelayar',
   actionRecheck: 'Semak semula',
   actionAcceptMetered: 'Guna juga',
   actionInstallHelp: 'Panduan pemasangan rasmi',
@@ -121,6 +123,8 @@ export const ms = {
   signingInStalledNote:
     'Jika tiada halaman log masuk dibuka dalam pelayar anda, buka tetingkap log masuk dengan butang di bawah. Jika anda masih sedang log masuk dalam pelayar, selesaikan di sana sahaja: butang ini menghentikan log masuk itu dan bermula semula dari awal.',
   actionLoginWindowOpen: 'Buka tetingkap log masuk',
+  loginUnfinishedNote:
+    'Log masuk tidak selesai. Jika pelayar menunjukkan kod, kod itu perlu ditampal di tetingkap log masuk: buka tetingkap itu dan log masuk semula di sana. Kod yang dipaparkan sebelum ini tidak lagi berfungsi.',
   loginWindowTitle: 'Log masuk {provider}',
   loginWindowIntro:
     'Ini tetingkap log masuk program {provider}. Teks bahasa Inggeris di bawah datang daripada program {provider}.',

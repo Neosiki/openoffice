@@ -1,5 +1,6 @@
 export * from './types'
 export * from './entry-names'
+export * from './resource-entry'
 export * from './ids'
 export * from './content'
 export * from './structure-check'

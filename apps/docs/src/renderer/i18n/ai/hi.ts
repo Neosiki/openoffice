@@ -128,6 +128,7 @@ export const hi = {
   aiSumAnalyzeMediaDone: 'मीडिया का विश्लेषण किया गया',
   aiSumInsertImage: 'चित्र सम्मिलित करें',
   aiSumInsertWebImage: 'वेब चित्र सम्मिलित किया गया',
+  aiSumInsertAttachedImage: 'संलग्न छवि डाली गई',
   aiSumGenerateImage: 'चित्र बनाएँ',
   aiSumInsertedGenImage: 'AI द्वारा बनाया गया चित्र सम्मिलित किया गया',
   aiSumUnknownTool: 'अज्ञात टूल',

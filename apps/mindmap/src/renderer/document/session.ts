@@ -26,6 +26,7 @@ import {
   countPreservedWithTopics,
   deleteSheet,
   isRecord,
+  newXmindId,
   type NewSheetOptions,
   openXmind,
   reconcileSheet,
@@ -140,6 +141,23 @@ export class DocumentSession {
   view(key: string): ViewSheet {
     const { index } = this.#at(key)
     return sheetToView(this.#document.sheets[index]!, index)
+  }
+
+  /**
+   * Adds a picture as a new entry of the map file and returns its name under
+   * `resources/`. The map can draw it at once and the next save writes it.
+   * `ext` is the format the bytes really are, told from their first bytes by
+   * the caller.
+   */
+  addPicture(bytes: Uint8Array, ext: 'png' | 'jpg' | 'gif'): string {
+    const name = `resources/${newXmindId()}.${ext}`
+    this.#document.addEntry(name, bytes)
+    return name
+  }
+
+  /** Takes back an entry added this run that no save has written (an edit that was refused). */
+  removePicture(name: string): void {
+    this.#document.removeAddedEntry(name)
   }
 
   /**

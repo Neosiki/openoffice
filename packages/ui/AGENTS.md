@@ -55,6 +55,7 @@
 - `AiModelPicker`는 `subscriptionStatuses`를 받는다. 넘기지 않으면 어떤 구독도 연결된 것으로 치지 않는다. 선택 변경은 `withAiProviderSelection`으로 쓴다. `showLabel`을 주면 칩 앞에 "모델" 라벨을 보인다(문서 작업 확인 창처럼 작성기 바깥에 놓일 때). 팝오버는 `aiModelPopoverStyle`이 칩 위·아래의 남은 공간을 보고 연다.
 - 아무것도 연결되지 않은 "AI 연결" 안내(`aiConnectPromptView`의 `free`)는 카드 두 개 대신 `AiConnectGuide`를 그린다. 도우미는 어느 AI가 있는지 묻고(`aiConnectGuideView`), 고른 구독 길에 단계(`aiConnectStepsView`)와 그 카드 하나를 보인다. 무료 길의 버튼은 호스트가 준 `onOpenSettings`를 부른다(설정 → AI가 열린다). 첫 실행 안내처럼 무료 카드를 그 자리에 그릴 호스트는 `freeContent`와 `freeConnected`를 준다. 이 패키지는 무료 연결을 직접 실행하지 않는다. 고른 길은 컴포넌트 상태일 뿐 저장하지 않는다.
 - 카드의 업데이트 버튼과 로그인 취소 링크는 호스트가 `onUpdate`·`onCancelLogin`을 줬을 때만 나온다. 업데이트는 터미널 창을 여는 일이라 `terminalWindows`(Windows)일 때만이다. 브라우저 로그인이 `AI_SIGNING_IN_STALLED_MS`를 넘으면 카드가 스스로 로그인 창 링크를 버튼으로 올린다. 링크로 그릴 동작은 `aiSubscriptionCardView`의 `links`가 정한다.
+- **로그인 창은 두 자리에서 열린다.** 로그인 중인 카드의 "로그인 창 열기"와, 로그인하지 않은 카드의 "브라우저에 코드가 나왔나요?" 링크다. 둘 다 `onLogin(provider, 'window')`로 창을 직접 요청한다(다시 부르면 숨긴 로그인을 끝내는 방식에 기대지 않는다). `login-code`는 Windows(`terminalWindows`)에만 나온다. 상태에 `loginUnfinished`가 있으면(앱이 띄운 로그인이 로그인 없이 끝났다) 카드는 "로그인이 끝나지 않았습니다"를 보이고 `login-code`를 첫 버튼으로, `login-browser`("브라우저에서 다시 로그인", `onLogin(provider)`)를 링크로 낸다. 창이 없는 곳에서는 이 상태도 보통의 "로그인 필요" 카드와 같다.
 - 도우미 아래쪽의 "연결하는 방법 화면으로 보기"는 호스트가 `onOpenConnectHelp`를 줬을 때만, 연결된 것이 없을 때만 나온다. 누르면 펼친 길(`claude-code`·`codex`·`free`, 묻는 중이면 `null`)만 호스트에 넘긴다. 주소는 `subscriptionConnectHelpUrl`(`@genoffice/ai-provider/browser`)이 소개 사이트의 `/connect`와 절 이름(`#claude`·`#codex`·`#free`)으로 만든다. 사이트가 한국어뿐이라 다른 언어의 문구에는 "한국어 페이지"를 적는다. 껍데기 앱 안의 편집기는 `home:open-connect-help` 창구로 뒷단이 열고, 워드·엑셀·파워포인트는 설치 안내와 같은 길로 연다.
 - "도움 요청용 정보 복사"(`aiConnectInfoText`)에는 상태의 종류·오류 종류·버전 모양의 값·로그인 중인지·종량 허용 여부와 `navigator`의 플랫폼·사용자 에이전트만 들어간다. 계정, 경로, 오류 원문은 넣지 않는다. 새 값을 넣을 때도 이 원칙을 지킨다.
 - `free-limit`(무료 연결의 오늘 사용량 소진)은 막힌 실행 종류(`AI_BLOCKED_RUN_KINDS`)다. 문장은 `errFreeLimit`·`errFreeLimitReset`이다.
@@ -62,6 +63,11 @@
 - 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.
 - 브랜드 로고는 두 테마에서 공식 색을 유지한다(크롬이 아니라 브랜드 자산). 단색 로고는 `currentColor`를 써서 어두운 테마에서 읽히게 한다.
+
+## 로컬 AI (결정 0067)
+
+- `src/strings-ai-context/<lang>.ts` 21개 언어와 집계 `src/strings-ai-context.ts`가 문맥 확인 문장, 도구 미지원 안내, `context-limit` 오류 문장을 담는다. `zh`가 키 집합을 정한다.
+- `AiToolsUnsupportedNotice`는 `tools: false`가 확인된 모델에서 "글만 제안"을 알린다. 9개 편집기 AI 창과 홈 질문 패널이 쓴다.
 
 ## 테스트
 

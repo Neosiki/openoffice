@@ -73,6 +73,14 @@ export interface AgentLoopOptions<TSnapshot = unknown> {
   formatUserMessage?(instruction: string, context: string): string
   /** appended to the system prompt each turn (e.g. reply-language directive following the UI language) */
   systemSuffix?(): string
+  /**
+   * Whether the selected model can call tools. False sends no tool definitions
+   * and tells the model to answer in text only; a tool call it emits anyway is
+   * ignored (never executed, no result sent back). True or absent keeps the
+   * skill's tools. The app reads its model profile here, so the answer may
+   * change between turns of one run.
+   */
+  toolsAllowed?(): boolean
 }
 
 const COMPACT_MAX_BYTES = 256 * 1024
@@ -351,6 +359,14 @@ const TURN_LIMIT_NOTE =
   '[System] The tool-call turn limit for this request has been reached; no more tools may be called this turn. ' +
   'Answer directly from the information already gathered; if the task is unfinished, briefly state what is done and what remains.'
 
+/**
+ * Appended to the system prompt when the selected model reported that it cannot
+ * call tools. Fixed English: it is a model instruction, like the other system
+ * paragraphs, not UI text. The model must not pretend it changed the document.
+ */
+export const TOOLS_UNAVAILABLE_NOTE =
+  '\n\nTool calling is unavailable for this model. Answer in text only. Do not claim to edit the document or to perform any action; describe what the person could do instead.'
+
 export const TOOL_ABORTED_OUTPUT =
   '(the user stopped the run while this tool was still executing; its result was discarded)'
 
@@ -513,6 +529,8 @@ export class AgentLoop<TSnapshot = unknown> {
   private generation = 0
   /** per-run abort: aborted on cancel(); long tools (e.g. generate_deck) use it to break internal loops */
   private abortController: AbortController | null = null
+  /** one id per run: the context gate asks at most once for a whole tool loop */
+  private runId: string | undefined
 
   constructor(options: AgentLoopOptions<TSnapshot>) {
     this.options = options
@@ -605,6 +623,9 @@ export class AgentLoop<TSnapshot = unknown> {
     this.executedCalls = []
     this.verifyRetryUsed = false
     this.abortController = new AbortController()
+    // a fresh run id per run: a confirmation belongs to one user request, and a
+    // follow-up (even on the same document) must ask again if it is still large
+    this.runId = crypto.randomUUID()
     // buildContext and formatUserMessage are consumer-supplied and run before any
     // turn exists, so a throw here would escape run() with `running` still true:
     // the guard at the top then drops every later message silently, cancel()
@@ -769,6 +790,8 @@ export class AgentLoop<TSnapshot = unknown> {
               { role: 'user', text: 'Compress the conversation above as instructed.' },
             ],
             tools: [],
+            // an internal summary is not the person's request: never gate it
+            skipContextGate: true,
           },
           {
             onDelta: (t) => {
@@ -856,6 +879,7 @@ export class AgentLoop<TSnapshot = unknown> {
     this.cancelled = false
     this.history = []
     this.runUserMsg = null
+    this.runId = undefined
   }
 
   private dropTurnLimitNote(): void {
@@ -951,16 +975,25 @@ export class AgentLoop<TSnapshot = unknown> {
     this.turnUsage = null
     // Some transports emit an extra onDone after cancel — this turn may finalize only once
     let settled = false
+    // A call this model emitted with tools off is delivered but never executed;
+    // the retry guards below must not replay the turn as if nothing arrived.
+    let ignoredToolCall = false
     try {
+      // A model that cannot call tools gets none, plus a paragraph saying so;
+      // true or absent keeps the skill's tools exactly as before.
+      const toolsAllowed = this.options.toolsAllowed?.() !== false
       this.handle = this.options.transport.stream(
         {
           system:
             runtimePreamble() +
             MATERIAL_NOT_INSTRUCTIONS +
             this.options.skill.systemPrompt +
+            (toolsAllowed ? '' : TOOLS_UNAVAILABLE_NOTE) +
             (this.options.systemSuffix?.() ?? ''),
           messages: [...this.history],
-          tools: this.finalizing ? [] : this.options.skill.tools,
+          tools: this.finalizing || !toolsAllowed ? [] : this.options.skill.tools,
+          // one id for every turn of this run, so the context gate asks once
+          ...(this.runId ? { runId: this.runId } : {}),
         },
         {
           onDelta: (text) => {
@@ -991,6 +1024,12 @@ export class AgentLoop<TSnapshot = unknown> {
           },
           onToolCall: (call) => {
             if (generation !== this.generation || settled) return
+            // Tools are off for this model: a call it emits anyway must not run,
+            // and no tool result goes back, so the turn stays a text answer.
+            if (!toolsAllowed) {
+              ignoredToolCall = true
+              return
+            }
             this.toolCalls.push(call)
           },
           onStopReason: (reason) => {
@@ -1019,16 +1058,20 @@ export class AgentLoop<TSnapshot = unknown> {
             // empty stream never emits deltas, but a mislabeled error must not replay
             // a turn whose text/tool calls the UI already saw). A dropped tool-argument
             // stream may have shown text first; that text is simply re-rendered.
+            // An ignored call (tools off) still arrived, so it counts as delivered:
+            // replaying would ask the same model again for nothing.
             const emptyDelay = EMPTY_STREAM_RETRY_DELAYS_MS[retriesUsed]
             const retryEmpty =
               emptyDelay !== undefined &&
               error.includes('(empty stream)') &&
               !this.turnText &&
-              this.toolCalls.length === 0
+              this.toolCalls.length === 0 &&
+              !ignoredToolCall
             const retryDrop =
               retriesUsed < TOOL_ARGS_DROP_RETRIES &&
               error.includes(TOOL_ARGS_DROP_MARK) &&
-              this.toolCalls.length === 0
+              this.toolCalls.length === 0 &&
+              !ignoredToolCall
             const delay = retryEmpty ? emptyDelay : EMPTY_STREAM_RETRY_DELAYS_MS[0]
             if ((retryEmpty || retryDrop) && !this.cancelled) {
               this.retryTimer = setTimeout(() => {

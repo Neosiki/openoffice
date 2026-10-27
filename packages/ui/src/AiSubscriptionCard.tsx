@@ -5,6 +5,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionStatus,
   AiSubscriptionStatuses,
+  SubscriptionLoginMode,
 } from '@genoffice/ai-provider/browser'
 import {
   AI_SIGNING_IN_STALLED_MS,
@@ -33,8 +34,11 @@ const TERMINAL_WINDOWS = !(
 export interface AiSubscriptionCardActions {
   /** run the vendor's official install command in a visible terminal window */
   readonly onInstall: (provider: AiSubscriptionProviderId) => void
-  /** start the CLI's own login; while a browser sign-in runs, open the CLI's window instead */
-  readonly onLogin: (provider: AiSubscriptionProviderId) => void
+  /**
+   * start the CLI's own login; `window` asks for the CLI's own window, where a
+   * code the browser shows is pasted (Windows only)
+   */
+  readonly onLogin: (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) => void
   /** check the connection again */
   readonly onRecheck: (provider: AiSubscriptionProviderId) => void
   /** the user chose "use anyway" on a metered login */
@@ -55,6 +59,8 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   'install-help': 'actionInstallHelp',
   login: 'actionLogin',
   'login-window': 'actionLoginWindow',
+  'login-code': 'actionLoginWithCode',
+  'login-browser': 'actionLoginBrowser',
   'cancel-login': 'actionCancelLogin',
   update: 'actionUpdate',
   'accept-metered': 'actionAcceptMetered',
@@ -122,8 +128,11 @@ export function AiSubscriptionCard({
     install: onInstall,
     'install-help': onOpenInstallHelp,
     login: onLogin,
-    // pressing login again while the browser sign-in runs opens the CLI's window
-    'login-window': onLogin,
+    // both ask for the CLI's window outright, rather than for whatever a press starts:
+    // pressing login again while the browser sign-in runs opens the same window
+    'login-window': (id) => onLogin(id, 'window'),
+    'login-code': (id) => onLogin(id, 'window'),
+    'login-browser': onLogin,
     'cancel-login': (id) => onCancelLogin?.(id),
     update: (id) => onUpdate?.(id),
     'accept-metered': onAcceptMetered,
@@ -208,7 +217,9 @@ export function AiSubscriptionCard({
                 {aiSubscriptionText(
                   lang,
                   // lifted out of the links, the way to the window says what it opens
-                  action === 'login-window' ? 'actionLoginWindowOpen' : ACTION_LABELS[action],
+                  action === 'login-window' || action === 'login-code'
+                    ? 'actionLoginWindowOpen'
+                    : ACTION_LABELS[action],
                 )}
               </button>
             ),

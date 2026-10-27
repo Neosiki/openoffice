@@ -8,6 +8,7 @@ import {
   AiFirstConnectionNotice,
   AiInputTruncatedNotice,
   AiMark,
+  AiToolsUnsupportedNotice,
   AiSubscriptionUsageLine,
   aiSubscriptionText,
   useAiSendGate,
@@ -26,6 +27,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import {
   AiComposer,
   AiQueueStrip,
@@ -552,6 +554,9 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<DocSnapshot>({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('markdown+search', '', () => loopRef.current?.messages ?? [], [
         createMarkdownSkill(
           () => depsRef.current.getEditor(),
@@ -1332,6 +1337,9 @@ export function AiPanel({
         )}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
       </div>
 

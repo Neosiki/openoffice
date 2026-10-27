@@ -238,6 +238,8 @@ describe('a run', () => {
     expect(request.tools.map((tool) => tool.name).sort()).toEqual(
       [
         'edit_map',
+        'image_search',
+        'insert_image',
         'read_attachment',
         'read_map',
         'read_topic',

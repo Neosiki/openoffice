@@ -11,7 +11,7 @@
 import type { ViewLayout } from './layout'
 import { MAX_TOPIC_DEPTH } from './structure-check'
 import { isRecord } from './types'
-import { isShownLink } from './view'
+import { isShownLink, type ViewImage } from './view'
 
 /** Thrown for a state that cannot be applied. It never leaves the package: callers get a result. */
 export class Refusal extends Error {}
@@ -34,6 +34,12 @@ export interface StateTopic {
   labels: string[]
   note: string | null
   link: string | null
+  /**
+   * The picture the state shows. Only an entry under `resources/` is ever
+   * written from this (see `reconcile-tree.ts`); any other reference is kept
+   * here only so that the state and the view compare equal.
+   */
+  image: ViewImage | null
   summaries: StateSummary[]
   children: StateTopic[]
 }
@@ -84,7 +90,7 @@ export function readState(state: unknown): StateSheet {
  */
 function readTopic(topic: unknown, depth: number, seen: Set<string>): StateTopic {
   if (!isRecord(topic)) refuse('a topic of the state is not an object')
-  const { id, title, folded, labels, note, link, summaries, children } = topic
+  const { id, title, folded, labels, note, link, image, summaries, children } = topic
   if (typeof id !== 'string' || id === '') refuse('a topic of the state has no id')
   if (seen.has(id)) refuse(`topic id ${id} is used more than once in the state`)
   seen.add(id)
@@ -97,6 +103,8 @@ function readTopic(topic: unknown, depth: number, seen: Set<string>): StateTopic
   if (link !== null && !isShownLink(link)) {
     refuse(`the link of topic ${id} is empty or a reference into the file`)
   }
+  // a state written before pictures were carried has no key: that is "no picture to set"
+  if (image != null && !isViewImage(image)) refuse(`the picture of topic ${id} is not a reference`)
   if (!Array.isArray(summaries)) refuse(`the summaries of topic ${id} are not a list`)
   if (!Array.isArray(children)) refuse(`the children of topic ${id} are not a list`)
   return {
@@ -106,9 +114,26 @@ function readTopic(topic: unknown, depth: number, seen: Set<string>): StateTopic
     labels: [...labels],
     note,
     link,
+    image: image == null ? null : copyImage(image),
     summaries: summaries.map((summary) => readSummary(summary, id)),
     children: children.map((child) => readTopic(child, depth + 1, seen)),
   }
+}
+
+function isViewImage(value: unknown): value is ViewImage {
+  if (!isRecord(value)) return false
+  const { src, entryName, width, height } = value
+  return (
+    typeof src === 'string' &&
+    src !== '' &&
+    (entryName === null || typeof entryName === 'string') &&
+    (width === null || (typeof width === 'number' && Number.isFinite(width))) &&
+    (height === null || (typeof height === 'number' && Number.isFinite(height)))
+  )
+}
+
+function copyImage(image: ViewImage): ViewImage {
+  return { src: image.src, entryName: image.entryName, width: image.width, height: image.height }
 }
 
 function readSummary(summary: unknown, owner: string): StateSummary {

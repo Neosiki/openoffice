@@ -13553,6 +13553,25 @@ tr > .page-gap-cut {
   font-size: 13px;
 }
 
+/* `.modal label` and `.modal input` are for text fields: without this the
+   output radios became full-width 34px boxes with their names pushed below. */
+.modal-mailmerge .mailmerge-radio {
+  display: inline-flex;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.modal-mailmerge .mailmerge-radio input {
+  display: inline-block;
+  flex: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  outline: revert;
+}
+
 .mailmerge-pattern {
   font-size: 12px;
   color: var(--text-dim);

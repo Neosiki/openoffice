@@ -80,6 +80,8 @@ export const ms = {
   aiToolInsert: 'Perenggan ditambah: {count}',
   aiToolDelete: 'Perenggan dibuang · {text}',
   aiToolTable: 'Jadual ditambah · {rows} × {cols}',
+  aiToolImageSearchDone: 'Carian imej "{query}" ({count} imej)',
+  aiToolInsertImage: 'Imej disisipkan {what}',
   aiToolFormat: 'Format diubah · {text}',
   aiFmtBold: 'Tebal',
   aiFmtItalic: 'Condong',

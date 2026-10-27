@@ -25,6 +25,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 문서 옆에 쓰는 파일의 이름을 바꾸지 않는다. 생성된 초안 옆의 스타일 기록은 같은 이름의 `.styleskill.json`이다. 생성된 쪽의 표식 `cloudpptx:`와 임시 폴더 이름(`genoffice-cloud-pages`, `genoffice-local-pages`)은 "생성된 쪽"을 뜻하는 내부 이름이라 그대로 둔다.
 - shell 안에서도 필요한 슬라이드 전용 AI 채널은 `registerSlidesOnlyAiIpc`에 둔다(`slides:ai-tool-capabilities`, `ai:generate-image`, `ai:analyze-media`, `ai:insert-image-url`, `ai:save-sidecar` 등). `registerAiIpc`에 두면 배포 앱에서 "핸들러 없음" 오류가 난다. 반대로 문서 에디터가 이미 등록하는 공용 채널을 여기서 또 등록하면 예외가 난다.
 - 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`은 `resolveStreamTarget`으로 대상을 정하고, 실행할 수 없는 선택은 원인을 담아 거절한다. 이 규칙은 문서 에디터의 것과 같은 답을 내야 한다.
+- 덱 만들기의 한 번짜리 호출(`AiPanel.tsx`의 `runLlmAttempt`: 스타일, 개요, 쪽, 쪽 다시 만들기)은 패널의 전송부를 거치지 않으므로 `deck-context-gate.ts`로 같은 문맥 80% 확인을 한다(결정 0067). 같은 창(`localContextLimit`)과 같은 대화 상자(`aiContextConfirmText`)를 쓰고, 루프의 중단 신호 하나(한 실행)에 한 번만 묻는다. 거절하면 모델을 부르지 않고 그 실행의 이후 덱 호출도 묻지 않고 거절한다. 이 호출에 중단 신호를 빼먹으면 재시도마다 다시 묻는다.
 - 모델에게 주는 도구는 실제 경로가 있는 것만이다. 렌더러는 메인의 가용성 보고(`slides:ai-tool-capabilities`)가 답하기 전에는 이미지 생성·미디어 분석 도구를 내놓지 않는다(`toolGatesOf`).
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
 - 지금은 글꼴을 내려받는 기능이 없다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다. 디자인 템플릿 글꼴 폴더는 읽기만 한다.

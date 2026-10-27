@@ -139,6 +139,11 @@ same name and writes nothing. The output is written atomically, an existing
 file needs `--force`, and the GUI-open check and `GENOFFICE_ALLOWED_ROOTS`
 apply as for every other write.
 
+Word placeholders inside nested tables are reported as `unreachable_nested`
+with `location.nested: true`, including tables nested more than one level deep.
+The CLI leaves those read-only tables intact; fill them in Word. `--strict`
+refuses the output rather than claiming the nested placeholders are resolved.
+
 ## MCP server
 
 `ieumoffice mcp` serves the same commands as Model Context Protocol tools on

@@ -128,6 +128,7 @@ export const id = {
   aiSumAnalyzeMediaDone: 'Media dianalisis',
   aiSumInsertImage: 'Sisipkan gambar',
   aiSumInsertWebImage: 'Gambar web disisipkan',
+  aiSumInsertAttachedImage: 'Gambar terlampir disisipkan',
   aiSumGenerateImage: 'Hasilkan gambar',
   aiSumInsertedGenImage: 'Gambar buatan AI disisipkan',
   aiSumUnknownTool: 'Alat tidak dikenal',

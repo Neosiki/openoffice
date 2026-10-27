@@ -22,6 +22,8 @@ export const ko = {
   actionInstall: '설치',
   actionLogin: '로그인',
   actionLoginWindow: '브라우저가 열리지 않았나요?',
+  actionLoginWithCode: '브라우저에 코드가 나왔나요?',
+  actionLoginBrowser: '브라우저에서 다시 로그인',
   actionRecheck: '다시 확인',
   actionAcceptMetered: '그래도 사용',
   actionInstallHelp: '공식 설치 안내',
@@ -110,6 +112,8 @@ export const ko = {
   signingInStalledNote:
     '브라우저에 로그인 화면이 열리지 않았다면 아래 버튼으로 로그인 창을 여세요. 브라우저에서 로그인하는 중이라면 누르지 말고 마저 끝내세요. 버튼을 누르면 하던 로그인은 멈추고 처음부터 다시 시작합니다.',
   actionLoginWindowOpen: '로그인 창 열기',
+  loginUnfinishedNote:
+    '로그인이 끝나지 않았습니다. 브라우저에 코드가 나왔다면 코드를 붙여 넣을 창이 필요합니다. 창을 열어 그 안내대로 다시 로그인하세요. 이미 나온 코드는 쓰이지 않습니다.',
   loginWindowTitle: '{provider} 로그인',
   loginWindowIntro:
     '이 창은 {provider} 프로그램의 로그인 창입니다. 아래에 이어지는 영어 글은 {provider} 프로그램이 보여 주는 안내입니다.',

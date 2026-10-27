@@ -22,6 +22,8 @@ export const en = {
   actionInstall: 'Install',
   actionLogin: 'Sign in',
   actionLoginWindow: 'Browser did not open?',
+  actionLoginWithCode: 'Browser showed a code?',
+  actionLoginBrowser: 'Sign in in the browser instead',
   actionRecheck: 'Check again',
   actionAcceptMetered: 'Use anyway',
   actionInstallHelp: 'Official install guide',
@@ -115,6 +117,8 @@ export const en = {
   signingInStalledNote:
     'If no sign-in page opened in your browser, open the sign-in window with the button below. If you are still signing in in the browser, finish there instead: the button stops that sign-in and starts over.',
   actionLoginWindowOpen: 'Open the sign-in window',
+  loginUnfinishedNote:
+    'The sign-in did not finish. If the browser showed a code, it has to be pasted into the sign-in window: open the window and sign in again there. A code shown earlier no longer works.',
   loginWindowTitle: '{provider} sign-in',
   loginWindowIntro:
     'This is the sign-in window of the {provider} program. The English text below comes from the {provider} program.',

@@ -5,7 +5,7 @@
 ## 맡은 범위
 
 - 열기(`open.ts`): zip 안전 검사(`packages/zip-gate`)를 먼저 하고, 결과를 다섯 가지로 낸다. `ok`, `legacy-format`(`content.xml`만 있는 예전 형식), `encrypted`(`manifest.json`의 `file-entries` 가운데 `encryption-data`를 가진 항목이 있음), `unreadable`(JSON이 아니거나 구조 검사 실패, zip이 아님), `rejected`(zip 안전 검사가 거절. zip 자체의 암호화 항목도 여기다). `ok`일 때만 문서(`XmindDocument`)가 생긴다.
-- 원본 나무와 저장(`types.ts`, `document.ts`, `archive.ts`, `content.ts`): `content.json`을 해석한 원본 나무를 통째로 들고, zip 안의 모든 항목을 원본 바이트 그대로 기억한다. 구조 검사(`structure-check.ts`): 최상위가 시트 목록, 시트마다 중심 토픽, 한 시트 안에서 토픽 식별자가 겹치지 않음, 토픽 깊이 256단계까지.
+- 원본 나무와 저장(`types.ts`, `document.ts`, `archive.ts`, `content.ts`): `content.json`을 해석한 원본 나무를 통째로 들고, zip 안의 모든 항목을 원본 바이트 그대로 기억한다. `addEntry`는 `resources/` 아래 새 그림 항목을 받아 다음 저장에 더하고(결정 0075), `readEntry`는 저장 전에도 그 바이트를 읽어 준다. 구조 검사(`structure-check.ts`): 최상위가 시트 목록, 시트마다 중심 토픽, 한 시트 안에서 토픽 식별자가 겹치지 않음, 토픽 깊이 256단계까지.
 - 보기용 자료(`view.ts`): 편집기에 주는 시트별 자료. 제목, 가지 순서, 접힘, 라벨, 일반 글 메모, 웹 링크, 요약, 연결선, 배치, 그림 참조, 표식 식별자, 토픽 자체 스타일 값만 담는다. 부를 때마다 새 사본이다.
 - 맞추기(`reconcile*.ts`, `tree-walk.ts`): 편집기의 결과 상태를 받아 원본 나무를 그 상태로 맞춘다. 요약·경계의 순번 다시 적기(`reconcile-ranges.ts`)를 포함한다.
 - 시트 추가·이름 바꾸기·삭제(`sheets.ts`), 새 파일(`create.ts`), 메모(`notes.ts`), 배치 값(`layout.ts`), 새 식별자(`ids.ts`, 소문자 UUID v4), 보존만 하는 요소 세기(`preserved.ts`).
@@ -23,7 +23,7 @@
 ## 항상 지켜야 하는 것
 
 - **모르는 요소를 지우지 않는다.** 원본 나무의 모든 단계에 모르는 키가 그대로 있고, 저장 때 그대로 나간다. 형(`types.ts`)도 닫힌 모양으로 만들지 않는다. 지워지는 것은 사용자가 지운 토픽과 그 아래뿐이다. 보기용 자료에 나올 수 없는 것(떠 있는 토픽, 말풍선, 요약 아래 가지, 경계)은 상태에 없다는 이유로 지우지 않는다.
-- **바뀐 것이 없는 저장은 원본과 바이트까지 같다.** `save`는 표시가 없고 원본 나무를 다시 써낸 글이 처음과 같으면 원본 바이트를 그대로 돌려준다. 바뀌었으면 `content.json`만 다시 쓰고, 다른 항목은 이름·순서·시각·압축 방식까지 그대로 옮긴다. 미리보기 그림은 PNG를 넘겼을 때만 바꾼다. `manifest.json`은 어떤 경우에도 고치지 않는다.
+- **바뀐 것이 없는 저장은 원본과 바이트까지 같다.** `save`는 표시가 없고 원본 나무를 다시 써낸 글이 처음과 같으면 원본 바이트를 그대로 돌려준다. 바뀌었으면 `content.json`만 다시 쓰고, 다른 항목은 이름·순서·시각·압축 방식까지 그대로 옮긴다. 미리보기 그림은 PNG를 넘겼을 때만 바꾼다. `manifest.json`은 새 그림 항목을 더할 때 그 항목을 `file-entries`에 적을 때만 고친다(결정 0075의 유일한 예외).
 - **`ok`로 열리지 않은 파일에서는 문서가 생기지 않는다.** `XmindDocument`는 패키지 밖으로 생성자를 내보내지 않는다. 문서는 `openXmind`와 새 파일 함수에서만 나온다. 저장할 바이트를 만들 수 있는 것은 문서뿐이다.
 - **맞추기는 결과만 본다.** 화면의 동작을 하나하나 번역하지 않는다. 짝은 토픽 식별자로 짓고, 편집기가 고치는 값 가운데 실제로 달라진 것만 적는다. 옮긴 토픽은 원본 덩어리째(모르는 키 포함) 옮긴다. 맞추기가 받은 상태는 화면 창에서 왔으므로 믿지 않고 `reconcile-state.ts`에서 검사·복사한 뒤에 쓴다.
 - **요약과 경계는 감싸던 토픽을 따라간다.** 맞추기 전에 순번을 "감싸는 토픽들"로 바꾸고, 맞춘 뒤 그 토픽들의 새 자리로 다시 적는다. 감싸던 첫 토픽이 다른 가지로 옮겨지면 기록도 그쪽으로 함께 간다. 감싸던 토픽이 모두 지워졌을 때만 기록을 지운다. 떨어진 토픽은 첫 토픽부터 이어진 부분까지로 줄인다.
@@ -51,5 +51,5 @@
 
 - 실행: `npm run test -w @genoffice/xmind-engine`, `npm run typecheck -w @genoffice/xmind-engine`. Windows에서 전부 통과한다.
 - 시험 파일은 `tests/helpers.ts`가 손으로 그때그때 만든다. 다른 프로그램이 만든 파일·나무·테마·그림은 저장소에 없다.
-- 바꾸면 반드시 테스트하는 것: 열기의 다섯 결과(`tests/open.test.ts`), 바뀐 것 없는 저장의 바이트 일치와 제목 하나만 고친 저장에서 `content.json`만 다른 것(`tests/save.test.ts`), 모르는 값이 옮긴 토픽과 함께 가는 것과 지운 토픽 아래만 사라지는 것(`tests/reconcile*.test.ts`), 요약·경계의 순번(`tests/reconcile-ranges.test.ts`, `tests/reconcile-follow.test.ts`), 보존만 하는 요소의 수(`tests/preserved.test.ts`), 개요 글 형식과 왕복(`tests/outline.test.ts`, `tests/outline-parse.test.ts`), 96개 테마를 적고 다시 알아보는 것과 지금 적는 표의 고정(`tests/theme-table.test.ts`), 화면과 Node 양쪽에서 도는지(`tests/browser-safety.test.ts`).
+- 바꾸면 반드시 테스트하는 것: 열기의 다섯 결과(`tests/open.test.ts`), 바뀐 것 없는 저장의 바이트 일치와 제목 하나만 고친 저장에서 `content.json`만 다른 것(`tests/save.test.ts`), 모르는 값이 옮긴 토픽과 함께 가는 것과 지운 토픽 아래만 사라지는 것(`tests/reconcile*.test.ts`), 요약·경계의 순번(`tests/reconcile-ranges.test.ts`, `tests/reconcile-follow.test.ts`), 보존만 하는 요소의 수(`tests/preserved.test.ts`), 개요 글 형식과 왕복(`tests/outline.test.ts`, `tests/outline-parse.test.ts`), 96개 테마를 적고 다시 알아보는 것과 지금 적는 표의 고정(`tests/theme-table.test.ts`), 그림 항목 더하기·되돌리기와 매니페스트·다시 열기, 상태가 가리키는 그림 쓰기와 없는 항목 무시(`tests/resource-image.test.ts`), 화면과 Node 양쪽에서 도는지(`tests/browser-safety.test.ts`).
 - 만든 파일이 원래 프로그램에서 열리는지는 자동 테스트로 확인하지 못한다. 실제 프로그램에 올려 확인한다.

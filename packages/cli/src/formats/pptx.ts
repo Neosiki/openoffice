@@ -29,6 +29,7 @@ import {
   type TxnResult,
 } from '@genoffice/pptx-ops'
 import { refuseChartOp } from './pptx-chart-checks'
+import { refuseOp } from './pptx-op-checks'
 import { CliError, EXIT } from '../result'
 import { clipText } from '../preview'
 import { fromEmu, type ReadUnit } from '../length-units'
@@ -138,10 +139,14 @@ export interface ApplyOptions {
 }
 
 export function applyOps(opened: OpenedPptx, ops: Op[], opts: ApplyOptions): TxnResult {
-  // Chart data the builder would silently drop is refused here, before the op runs
+  // Ops the engine would write into a deck PowerPoint cannot open, and chart
+  // data the builder would silently drop, are refused here before they run.
+  // The slide count is only known for the first op: a later one may follow an
+  // op that adds or removes slides.
   const refused = new Map<number, string>()
   ops.forEach((op, index) => {
-    const reason = refuseChartOp(op)
+    const reason =
+      refuseChartOp(op) ?? refuseOp(op, index === 0 ? opened.deck.slides.length : undefined)
     if (reason) refused.set(index, reason)
   })
   if (refused.size === 0)

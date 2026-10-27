@@ -41,6 +41,7 @@ export const ru = {
   btConfirmChecking: 'Проверка подключения к ИИ…',
   btConfirmProvider: 'Используемый ИИ: {provider}',
   btConfirmSends: 'Текст выбранных глав отправляется этому ИИ.',
+  btRightsNotice: 'Переводите только документы, права на которые у вас есть.',
   btConfirmPaid: '{provider} взимает за это плату',
   btProviderChange:
     'Сохранённый перевод сделан другим ИИ ({stored}). Остальное будет переведено с помощью {next}.',

@@ -131,6 +131,7 @@ export const es = {
   aiSumAnalyzeMediaDone: 'Contenido analizado',
   aiSumInsertImage: 'Insertar imagen',
   aiSumInsertWebImage: 'Imagen web insertada',
+  aiSumInsertAttachedImage: 'Imagen adjunta insertada',
   aiSumGenerateImage: 'Generar imagen',
   aiSumInsertedGenImage: 'Imagen generada por IA insertada',
   aiSumUnknownTool: 'Herramienta desconocida',

@@ -20,6 +20,7 @@ import {
   AiInputTruncatedNotice,
   AiMark,
   AiModelPicker,
+  AiToolsUnsupportedNotice,
   type AiModelPickerBridge,
   AiQueueStrip,
   AI_QUEUE_LABELS,
@@ -59,6 +60,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta, MindmapAiApi } from '../../shared/ipc'
 import { t as tGlobal, useI18n } from '../i18n/locale'
@@ -566,6 +568,29 @@ export function AiPanel({
   }, [panelWidth])
 
   const settingsRef = useRef<AiSettings | null>(null)
+  /** whether generate_image can run, as the main process answers (refreshed on mount and window focus) */
+  const imageGenAvailableRef = useRef(false)
+  useEffect(() => {
+    let alive = true
+    const refresh = () => {
+      // tests render the panel without a full preload bridge: a missing call must not take it down
+      Promise.resolve()
+        .then(() => window.mindmapApi.aiToolCapabilities())
+        .then((capabilities) => {
+          if (alive)
+            imageGenAvailableRef.current = capabilities?.imageGeneration?.available === true
+        })
+        .catch(() => {
+          if (alive) imageGenAvailableRef.current = false
+        })
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    return () => {
+      alive = false
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
   const langRef = useRef(lang)
   langRef.current = lang
   const hostRef = useRef(host)
@@ -655,10 +680,17 @@ export function AiPanel({
   if (!loopRef.current) {
     loopRef.current = new AgentLoop<MapTurn>({
       transport: transportRef.current,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('mindmap+search', '', () => loopRef.current?.messages ?? [], [
         createMindmapSkill({
           host: () => hostRef.current,
           turn: () => turnRef.current,
+          imageGenAvailable: () => imageGenAvailableRef.current,
+          // the model names an attachment; only files the panel shows can be found
+          attachmentPath: (name) =>
+            availableAttachments().find((attachment) => attachment.name === name)?.path ?? null,
         }),
         createSearchSkill(),
         createFilesSkill(availableAttachments),
@@ -1391,6 +1423,9 @@ export function AiPanel({
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
         <AiComposer
           queueStrip={

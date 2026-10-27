@@ -732,6 +732,9 @@ function TranslateConfirm({
           </>
         )}
       </ul>
+      <p className="pdf-translate-note" data-rights>
+        {t('trRightsNotice')}
+      </p>
       {!nothingToSend && change && (
         <p className="pdf-translate-warning" role="alert" data-provider-change>
           {t('trProviderChange', {

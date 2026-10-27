@@ -96,6 +96,7 @@ export {
   DEFAULT_MAX_TURNS,
   MATERIAL_NOT_INSTRUCTIONS,
   TOOL_ABORTED_OUTPUT,
+  TOOLS_UNAVAILABLE_NOTE,
   coerceArgumentFields,
   invalidArgumentFields,
   missingRequiredFields,
@@ -110,9 +111,17 @@ export type {
   ToolExecutedEvent,
 } from './loop'
 export { createIpcTransport, IPC_STREAM_SILENCE_TIMEOUT_MS } from './electron-transport'
+export {
+  CONTEXT_ASSUMED_TOKENS,
+  CONTEXT_WARNING_RATIO,
+  contextWarningFor,
+  estimatePromptTokens,
+} from './context-budget'
+export type { ContextWarning } from './context-budget'
 export { streamText } from './stream-text'
 export type { StreamTextOptions, StreamTextOutcome } from './stream-text'
 export type {
+  IpcContextGate,
   IpcStreamChunk,
   IpcStreamError,
   IpcStreamErrorCause,

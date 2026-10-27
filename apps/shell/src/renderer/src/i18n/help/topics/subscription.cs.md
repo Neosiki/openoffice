@@ -36,6 +36,8 @@ Ve druhém kroku uvítacích obrazovek při prvním spuštění a v panelu AI, k
 
 Připojení se kontroluje při spuštění aplikace, při otevření Nastavení a při návratu do okna poté, co jste spustili instalaci nebo přihlášení.
 
+Pokud karta hlásí, že přihlášení nebylo dokončeno, zvolte **Otevřít přihlašovací okno**. Kód zobrazený prohlížečem je nutné vložit do tohoto okna; dříve zobrazený kód už neplatí.
+
 ## Bez předplatného: AI zdarma
 
 Nemáte předplatné Claude ani ChatGPT? V Nastavení ▸ AI můžete v části **Používat zdarma** připojit místo toho bezplatnou AI. Když ve druhém kroku uvítacích obrazovek zvolíte **Zatím žádnou**, zobrazí se stejné karty, a pokud tuto možnost zvolíte v panelu AI ve chvíli, kdy není nic připojeno, panel nabídne **Připojit bezplatnou AI**.

@@ -13,6 +13,8 @@
  * Everything returned crosses to the app renderer by structured clone.
  */
 
+import { installDialogTheme } from './dialog-theme.mjs'
+
 export const AGENT_PLUGIN_ID = 'ieum-agent'
 
 /** Matches listed back to the caller when a search is ambiguous. */
@@ -1658,6 +1660,39 @@ function checkWhere(where) {
   }
 }
 
+/** The most a picture handed to the plugin may weigh; the panel already keeps pictures smaller. */
+const PICTURE_MAX_BYTES = 10 * 1024 * 1024
+
+/**
+ * The bytes of a picture, told from the bytes themselves: the extension the model or the
+ * panel named must be the format the bytes really are, or insertion would store a file the
+ * document cannot draw. Returns the bytes and the extension to write with.
+ */
+function pictureOf(base64, extension) {
+  const ext = extension === 'png' || extension === 'jpg' || extension === 'gif' ? extension : null
+  if (typeof base64 !== 'string' || base64 === '' || !ext) {
+    throw fail('BAD_ARGUMENT', 'the picture must be base64 PNG, JPEG or GIF bytes')
+  }
+  let bytes
+  try {
+    bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+  } catch {
+    throw fail('BAD_ARGUMENT', 'the picture is not base64')
+  }
+  if (bytes.byteLength === 0 || bytes.byteLength > PICTURE_MAX_BYTES) {
+    throw fail('BAD_ARGUMENT', 'the picture is empty or too large')
+  }
+  const starts = (...signature) => signature.every((byte, index) => bytes[index] === byte)
+  const matches =
+    ext === 'png'
+      ? starts(0x89, 0x50, 0x4e, 0x47)
+      : ext === 'jpg'
+        ? starts(0xff, 0xd8)
+        : starts(0x47, 0x49, 0x46, 0x38)
+  if (!matches) throw fail('BAD_ARGUMENT', `the bytes are not a ${ext.toUpperCase()} picture`)
+  return { bytes, extension: ext }
+}
+
 function checkParagraphs(paragraphs) {
   const valid =
     Array.isArray(paragraphs) &&
@@ -2891,6 +2926,11 @@ export const agentPlugin = {
   },
 
   activate(host) {
+    // The app's dialog skin (studio-plugin/dialog-theme.mjs). It is installed
+    // when the plugin comes up, not when the AI panel opens: a settings dialog
+    // can be opened on a document the panel never touched.
+    installDialogTheme()
+
     // the unsaved state as the editor sets it, in the same task as the edit: the app's close
     // prompt reads its copy of this, and a key typed just before closing must be in it
     host.events.on('document-dirty-changed', (change) => {
@@ -4015,6 +4055,84 @@ export const agentPlugin = {
           ),
         )
       }),
+
+      /**
+       * Add a picture (base64 PNG, JPEG or GIF) in a new paragraph at the anchor, placed the
+       * way insertTable places a table. `widthPt` is the width the picture takes on the page;
+       * the aspect comes from the natural pixel size. The picture is a new object of the
+       * document, so the object-count check permits exactly that one addition and nothing lost.
+       */
+      insertPicture: guarded(
+        (
+          anchor,
+          occurrence,
+          where,
+          base64,
+          widthPt,
+          naturalWidthPx,
+          naturalHeightPx,
+          extension,
+          options,
+        ) => {
+          checkWhere(where)
+          const picture = pictureOf(base64, extension)
+          const naturalW = Math.max(1, Math.round(Number(naturalWidthPx) || 1))
+          const naturalH = Math.max(1, Math.round(Number(naturalHeightPx) || 1))
+          // width is in HWPUNIT (1pt = 200); a tall picture is pulled in so it cannot run
+          // past a page, keeping the aspect the natural pixel size gives it
+          let width = Math.round(Math.min(Math.max(Number(widthPt) || 240, 24), 600) * 200)
+          let height = Math.max(200, Math.round((width * naturalH) / naturalW))
+          const maxHeight = 600 * 200
+          if (height > maxHeight) {
+            height = maxHeight
+            width = Math.max(1, Math.round((height * naturalW) / naturalH))
+          }
+          const refusal = host.read((doc) => {
+            const { box, refusal: why } = locate(doc, anchor, occurrence, where)
+            return box ? null : why
+          })
+          if (refusal) return refusal
+          return keepingObjects((mustKeep) =>
+            change(
+              'insert-picture',
+              (doc) => {
+                const { box, plain } = locate(doc, anchor, occurrence, where)
+                if (!box) throw fail('CHANGED', 'the document changed mid-call')
+                const before = objectsOf(doc)
+                let at = box.index
+                if (where === 'before') box.split(at, 0)
+                else {
+                  openAfter(box, at, plain)
+                  at += 1
+                }
+                const place = box.place(at, 0)
+                expectOk(
+                  doc.insertPictureEx(
+                    JSON.stringify({
+                      sectionIdx: place.sec,
+                      paraIdx: place.para,
+                      charOffset: 0,
+                      ...(place.path ? { cellPath: JSON.stringify(place.path) } : {}),
+                      width,
+                      height,
+                      naturalWidthPx: naturalW,
+                      naturalHeightPx: naturalH,
+                      extension: picture.extension,
+                    }),
+                    picture.bytes,
+                  ),
+                  'insert the picture',
+                )
+                const after = objectsOf(doc)
+                // the new picture is an object of its own; nothing that was there may be gone
+                mustKeep(before, { ...after, controls: Math.min(after.controls, before.controls) })
+                return { ok: true, inTable: box.inTable, place: box.place(at, 0) }
+              },
+              options,
+            ),
+          )
+        },
+      ),
 
       /**
        * Change the character formatting of one occurrence of `find`, or with `all` of every

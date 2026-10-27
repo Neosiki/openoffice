@@ -23,6 +23,8 @@ export const cs = {
   actionInstall: 'Nainstalovat',
   actionLogin: 'Přihlásit se',
   actionLoginWindow: 'Prohlížeč se neotevřel?',
+  actionLoginWithCode: 'Zobrazuje prohlížeč kód?',
+  actionLoginBrowser: 'Přihlásit se v prohlížeči',
   actionRecheck: 'Zkontrolovat znovu',
   actionAcceptMetered: 'Přesto použít',
   actionInstallHelp: 'Oficiální návod k instalaci',
@@ -116,6 +118,8 @@ export const cs = {
   signingInStalledNote:
     'Pokud se v prohlížeči neotevřela přihlašovací stránka, otevřete přihlašovací okno tlačítkem níže. Pokud se v prohlížeči ještě přihlašujete, dokončete přihlášení tam a tlačítko nepoužívejte: zastaví rozpracované přihlášení a začne znovu od začátku.',
   actionLoginWindowOpen: 'Otevřít přihlašovací okno',
+  loginUnfinishedNote:
+    'Přihlášení se nedokončilo. Pokud prohlížeč zobrazuje kód, je nutné jej vložit do přihlašovacího okna: otevřete okno a přihlaste se tam znovu. Dříve zobrazený kód už neplatí.',
   loginWindowTitle: 'Přihlášení k {provider}',
   loginWindowIntro:
     'Toto je přihlašovací okno programu {provider}. Anglický text níže vypisuje program {provider}.',

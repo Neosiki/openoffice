@@ -41,6 +41,7 @@ export const he = {
   btConfirmChecking: 'בודק את החיבור ל-AI…',
   btConfirmProvider: 'ה-AI שבשימוש: {provider}',
   btConfirmSends: 'הטקסט של הפרקים שנבחרו נשלח ל-AI הזה.',
+  btRightsNotice: 'תרגם רק מסמכים שיש לך זכויות עליהם.',
   btConfirmPaid: '{provider} יגבה תשלום על כך',
   btProviderChange: 'התרגום השמור נעשה עם AI אחר ({stored}). השאר יתורגם עם {next}.',
   btProviderUnknown: 'AI אחר',

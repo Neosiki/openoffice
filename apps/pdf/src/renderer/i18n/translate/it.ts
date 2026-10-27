@@ -25,6 +25,7 @@ export const it = {
   trConfirmCalls: 'Chiamate all’IA: {calls} ({blocks} blocchi, inviati a gruppi)',
   trConfirmDone: '{done} blocchi su {total} sono già tradotti e non verranno reinviati',
   trConfirmSends: 'Il testo delle pagine scelte viene inviato a questa IA.',
+  trRightsNotice: 'Traduci solo documenti di cui detieni i diritti.',
   trProviderChange:
     'La traduzione salvata è stata fatta con {stored}. Continuando con {next}, nella stessa traduzione si mescoleranno due IA.',
   trProviderUnknown: 'un’IA sconosciuta',

@@ -5,7 +5,6 @@ import type { Params } from '@genoffice/i18n'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
-  presentationKeyOf,
   skillTemplateText,
   templateDocumentOf,
   useAutoSavePref,
@@ -13,7 +12,6 @@ import {
   type TemplateDocument,
 } from '@genoffice/ui'
 import { HwpAiDock } from './ai/AiDock'
-import type { HwpDockMode } from './ai/AiDock'
 import { createAgentBridge } from './ai/agent-bridge'
 import {
   DIRTY_EVENT,
@@ -24,7 +22,9 @@ import {
 import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
 import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
+import { MemoSide, MemoToggle, memoPanelInitiallyOpen, rememberMemoPanelOpen } from './MemoSide'
 import { openDocumentsDroppedOn } from './editor-drop'
+import { hwpPresentationKeyOf } from './presentation-keys'
 import { gatherPrintJob } from './print-flow'
 import {
   RECOVERY_TICK_MS,
@@ -67,10 +67,8 @@ const DIRTY_POLL_MS = 2000
 const ARRIVAL_POLL_MS = 1000
 /** How long a confirmation stays up; errors stay until dismissed. */
 const INFO_NOTICE_MS = 8000
-/** Where the open / collapsed state of the shared dock is remembered (its old AI-only name kept). */
+/** Where the open / collapsed state of the AI dock is remembered. */
 const AI_OPEN_KEY = 'hwpapp.showAi'
-/** Which panel of the shared dock (AI or memo) is out; the collapsed state is AI_OPEN_KEY. */
-const DOCK_MODE_KEY = 'hwpapp.sidePanel'
 /** A pause after typing before the memo panel is told the document may have changed. */
 const MEMO_TICK_MS = 500
 
@@ -131,16 +129,14 @@ export default function App() {
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
-  /** F5: the document alone in fullscreen, with the editor's own chrome hidden */
+  /** Ctrl+F5: the document alone in fullscreen, with the editor's own chrome hidden */
   const [presenting, setPresenting] = useState(false)
   const presentingRef = useRef(false)
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
-  /** the panel of the shared dock that is out (the AI panel and the memo panel share it) */
-  const [dockMode, setDockMode] = useState<HwpDockMode>(() =>
-    localStorage.getItem(DOCK_MODE_KEY) === 'memo' ? 'memo' : 'ai',
-  )
+  /** the memo column beside the document: out or not, independent of the AI dock */
+  const [memoOpen, setMemoOpen] = useState(memoPanelInitiallyOpen)
   /** a memo editor is open here or in another tab: save, close and quit must wait */
   const [memoBlocked, setMemoBlocked] = useState(false)
   const memoBlockedRef = useRef(false)
@@ -176,8 +172,8 @@ export default function App() {
   }, [aiOpen])
 
   useEffect(() => {
-    localStorage.setItem(DOCK_MODE_KEY, dockMode)
-  }, [dockMode])
+    rememberMemoPanelOpen(memoOpen)
+  }, [memoOpen])
 
   // boot the editor once and load the file queued for this view
   useEffect(() => {
@@ -448,10 +444,9 @@ export default function App() {
         window.hwpApi.requestFileCommand(command)
       }
     }
-    // the editor's Insert > Memo menu (T4): bring the memo panel out and start adding
+    // the editor's Insert > Memo menu (T4): bring the memo column out and start adding
     const onMemoInsert = () => {
-      setDockMode('memo')
-      setAiOpen(true)
+      setMemoOpen(true)
       setMemoInsertTick((tick) => tick + 1)
     }
     frame.addEventListener(FILE_COMMAND_EVENT, onCommand)
@@ -672,8 +667,9 @@ export default function App() {
     [],
   )
 
-  // F5: the document alone in fullscreen; the editor's menu/toolbar/status bar hide
-  // with its own chrome API and come back exactly as they were when the show ends.
+  // Ctrl+F5: the document alone in fullscreen; F5 and Shift+F5 stay with Hancom's
+  // cell blocks. The editor's menu/toolbar/status bar hide with its own chrome API
+  // and come back exactly as they were when the show ends.
   useEffect(() => {
     const enter = async (): Promise<void> => {
       const editor = editorRef.current
@@ -703,13 +699,13 @@ export default function App() {
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     }
     const onKey = (event: KeyboardEvent): void => {
-      const action = presentationKeyOf(event, presentingRef.current)
+      const action = hwpPresentationKeyOf(event, presentingRef.current)
       if (!action) return
       event.preventDefault()
-      if (action === 'exit') {
-        event.stopPropagation()
-        exit()
-      } else void enter()
+      // the editor reads any F5 as a cell block: a key the show takes is not its key
+      event.stopPropagation()
+      if (action === 'exit') exit()
+      else void enter()
     }
     // The document lives inside rhwp's own frame, so keys pressed there never
     // reach this window: listen on both. A cross-origin frame simply gets none.
@@ -782,6 +778,7 @@ export default function App() {
     <div className={`hwp-app${presenting ? ' hwp-presenting' : ''}`} data-phase={phase}>
       {phase === 'ready' && (
         <div className="hwp-topbar">
+          <MemoToggle open={memoOpen} onToggle={() => setMemoOpen((open) => !open)} />
           <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
             <span className="autosave-knob" />
             <span className="autosave-text">{t('autoSave')}</span>
@@ -794,7 +791,8 @@ export default function App() {
         </div>
       )}
       <div className="app-main">
-        {/* the assistant and the memo panel share this dock; both need an open document */}
+        {/* the AI dock, then the memo column beside the document (as the PDF editor's notes);
+            both can be out at once, and both need an open document */}
         {phase === 'ready' && (
           <HwpAiDock
             open={aiOpen}
@@ -802,12 +800,17 @@ export default function App() {
             bridge={agentBridge}
             filePath={filePath}
             templateDocument={templateDocument}
-            mode={dockMode}
-            setMode={setDockMode}
-            onMemoModalOpenChange={setMemoBlocked}
-            onMemoNotice={showMemoNotice}
-            memoChangeTick={docTick}
-            memoInsertTick={memoInsertTick}
+          />
+        )}
+        {phase === 'ready' && (
+          <MemoSide
+            open={memoOpen}
+            bridge={agentBridge}
+            changeTick={docTick}
+            insertTick={memoInsertTick}
+            onCollapse={() => setMemoOpen(false)}
+            onModalOpenChange={setMemoBlocked}
+            onNotice={showMemoNotice}
           />
         )}
         <div className="hwp-stage">

@@ -75,6 +75,8 @@ export const zh = {
   aiToolInsert: '已添加 {count} 个段落',
   aiToolDelete: '已删除段落 · {text}',
   aiToolTable: '已插入表格 · {rows} 行 {cols} 列',
+  aiToolImageSearchDone: '图片搜索“{query}”（{count} 张）',
+  aiToolInsertImage: '已插入图片 {what}',
   aiToolFormat: '已更改格式 · {text}',
   aiFmtBold: '加粗',
   aiFmtItalic: '斜体',

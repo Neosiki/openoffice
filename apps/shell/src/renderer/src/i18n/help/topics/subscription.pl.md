@@ -36,6 +36,8 @@ W drugim kroku ekranów powitalnych przy pierwszym uruchomieniu oraz w panelu AI
 
 Połączenie jest sprawdzane przy uruchomieniu aplikacji, po otwarciu Ustawień oraz po powrocie do okna, gdy wcześniej rozpoczęto instalację lub logowanie.
 
+Jeśli karta informuje, że logowanie nie zostało ukończone, wybierz **Otwórz okno logowania**. Kod pokazany w przeglądarce trzeba wkleić w tym oknie; wcześniej pokazany kod nie jest już ważny.
+
 ## Bez subskrypcji: darmowe AI
 
 Nie masz subskrypcji Claude ani ChatGPT? W Ustawienia ▸ AI opcja **Korzystaj za darmo** pozwala zamiast tego połączyć darmowe AI. Wybranie **Jeszcze z żadnego** w drugim kroku ekranów powitalnych pokazuje te same karty, a wybranie tej odpowiedzi w panelu AI, gdy nic nie jest połączone, daje opcję **Połącz darmowe AI**.

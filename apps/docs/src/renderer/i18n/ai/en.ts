@@ -127,6 +127,7 @@ export const en = {
   aiSumAnalyzeMediaDone: 'Analyzed media',
   aiSumInsertImage: 'Insert image',
   aiSumInsertWebImage: 'Inserted web image',
+  aiSumInsertAttachedImage: 'Inserted the attached image',
   aiSumGenerateImage: 'Generate image',
   aiSumInsertedGenImage: 'Inserted AI-generated image',
   aiSumUnknownTool: 'Unknown tool',

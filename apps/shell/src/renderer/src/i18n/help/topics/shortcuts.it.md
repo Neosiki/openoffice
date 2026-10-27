@@ -24,7 +24,7 @@ Ogni editor ha le proprie combinazioni di tasti, e solo poche funzionano ovunque
 
 ## Modalità presentazione
 
-- **Avvio**: F5 in Word, PDF, Mindmap, HTML e Markdown. In un foglio di calcolo, Ctrl+F5 (da A1) o Shift+F5 (dalla cella attiva).
+- **Avvio**: F5 in Word, PDF, Mindmap, HTML e Markdown. In un foglio di calcolo, Ctrl+F5 (da A1) o Shift+F5 (dalla cella attiva). In un documento HWP, Ctrl+F5 (lì F5 seleziona le celle della tabella).
 - **Altre vie**: in Word, Ctrl+F5 e Shift+F5 aprono la vista di lettura senza schermo intero; in PDF partono dalla pagina corrente; in HTML presentano nella scheda.
 - **Uscita**: Esc o F5. F11 è lo schermo intero della finestra e non cambia la vista del documento.
 

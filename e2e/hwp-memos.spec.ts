@@ -56,9 +56,9 @@ async function hwpPage(app: ElectronApplication): Promise<Page> {
   return page
 }
 
-/** The memo dock is a second mode of the shared dock; collapse the AI panel first. */
+/** The memo panel has its own column beside the document; the top bar's button brings it out. */
 async function openMemoPanel(page: Page): Promise<void> {
-  // A reopened tab keeps the dock's last mode: the memo panel may already be out.
+  // A reopened tab remembers the column: the memo panel may already be out.
   if (
     await page
       .locator('.memo-add-button')
@@ -66,9 +66,7 @@ async function openMemoPanel(page: Page): Promise<void> {
       .catch(() => false)
   )
     return
-  const collapse = page.locator('.ai-panel-collapse')
-  if (await collapse.isVisible().catch(() => false)) await collapse.click()
-  await page.locator('.memo-rail').click()
+  await page.locator('.memo-toggle').click()
   await expect(page.locator('.memo-panel')).not.toHaveAttribute('aria-hidden', 'true')
   await expect(page.locator('.memo-add-button')).toBeVisible()
 }
@@ -243,6 +241,48 @@ test('adds a memo, then holds save and tab close until its editor is closed', as
     await expect(memoCards(reopened).filter({ hasText: '새로 넣은 메모입니다.' })).toHaveCount(1)
   } finally {
     await closeAndSaveVideo(launched, 'hwp-memos-add')
+  }
+})
+
+test('adds a memo on a selection from the right-click menu', async () => {
+  const file = await scratchCopy('memo.hwp')
+  const launched = await launchShell({
+    onboardingSeen: true,
+    lang: 'ko',
+    openFile: file,
+    videoDir: 'hwp-memos-context-menu',
+    recordVideo: false,
+  })
+  try {
+    const page = await hwpPage(launched.app)
+    const frame = page.frameLocator('.hwp-editor-host iframe')
+    const box = (await page.locator('.hwp-editor-host iframe').boundingBox())!
+    // new words below the first line's memo anchor, selected by keyboard
+    const at = { x: box.x + box.width * 0.25, y: box.y + 190 }
+    await page.mouse.click(at.x, at.y)
+    await page.keyboard.press('End')
+    // a paragraph of its own: text typed at the end of the anchor would join that memo
+    await page.keyboard.press('Enter')
+    // plain letters: the test's key events do not compose Hangul syllables
+    await page.keyboard.type(' right')
+    for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowLeft')
+
+    // a right press keeps the selection and opens the editor's menu
+    await page.mouse.click(at.x, at.y, { button: 'right' })
+    const item = frame.locator('.context-menu .md-item[data-cmd="insert:comment"]')
+    await expect(item).toHaveText('메모')
+    await item.click()
+
+    await expect(page.locator('.memo-modal')).toBeVisible()
+    await expect(page.locator('.memo-modal-title')).toHaveText('메모 넣기')
+    // the selected end of the typed word (a key may land before the editor takes it)
+    await expect(page.locator('.memo-selection')).toContainText('igh')
+    await page.locator('.memo-textarea').fill('오른쪽 단추로 넣은 메모')
+    await page.locator('.memo-modal .memo-button-primary').click()
+    await expect(page.locator('.memo-modal')).toHaveCount(0)
+    await expect(memoCards(page).filter({ hasText: '오른쪽 단추로 넣은 메모' })).toHaveCount(1)
+  } finally {
+    await closeAndSaveVideo(launched, 'hwp-memos-context-menu')
   }
 })
 

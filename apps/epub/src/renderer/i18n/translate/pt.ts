@@ -41,6 +41,7 @@ export const pt = {
   btConfirmChecking: 'Verificando a conexão com a IA…',
   btConfirmProvider: 'IA usada: {provider}',
   btConfirmSends: 'O texto dos capítulos escolhidos é enviado para esta IA.',
+  btRightsNotice: 'Traduza apenas documentos sobre os quais tenha direitos.',
   btConfirmPaid: '{provider} vai cobrar por isso',
   btProviderChange:
     'A tradução guardada foi feita com outra IA ({stored}). O restante será traduzido com {next}.',
