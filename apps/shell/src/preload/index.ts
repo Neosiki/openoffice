@@ -581,6 +581,9 @@ const homeApi: HomeApi = {
   async testLocalModel(input) {
     return (await ipcRenderer.invoke('ai:local-test', input)) as AiLocalTestResult
   },
+  async cancelLocalTest(testId) {
+    return (await ipcRenderer.invoke('ai:local-test-cancel', { testId })) === true
+  },
   async testAiSettings(settings) {
     const result: unknown = await ipcRenderer.invoke('ai:chat', {
       settings,

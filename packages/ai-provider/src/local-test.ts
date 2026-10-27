@@ -50,6 +50,17 @@ export interface AiLocalTestResult {
   serverKind?: 'ollama' | 'openai-compatible' | undefined
   /** invalid input: every check is skip and no request was sent */
   inputError?: 'shape' | undefined
+  /**
+   * the caller cancelled the test: the request in flight was aborted, nothing
+   * more was sent, and every check that had not answered yet is skip
+   */
+  cancelled?: true | undefined
+}
+
+/** What a caller in the main process (never the IPC payload) may add to a test. */
+export interface AiLocalTestOptions {
+  /** aborting it ends the request in flight and sends no further check */
+  signal?: AbortSignal | undefined
 }
 
 export interface AiLocalTestInput {
@@ -259,22 +270,20 @@ async function runToolsCheck(
  * tool probes are the app's OpenAI-compatible transports, capped and at
  * temperature 0.
  *
+ * Aborting `options.signal` cancels the test: the request in flight is
+ * aborted, no further check is sent, and the result says `cancelled`.
+ *
  * Never throws and never rejects. Malformed input returns `inputError: 'shape'`
  * with every check skipped.
  */
-export async function testLocalModel(input: AiLocalTestInput): Promise<AiLocalTestResult> {
+export async function testLocalModel(
+  input: AiLocalTestInput,
+  options?: AiLocalTestOptions,
+): Promise<AiLocalTestResult> {
   const resolved = resolveInput(input)
   if (!resolved) return skippedResult()
 
   const startedAt = Date.now()
-  const deadline = startedAt + resolved.timeoutMs
-  const controller = new AbortController()
-  let deadlineHit = false
-  const timer = setTimeout(() => {
-    deadlineHit = true
-    controller.abort()
-  }, resolved.timeoutMs)
-
   const result: AiLocalTestResult = {
     server: { status: 'skip' },
     model: { status: 'skip' },
@@ -283,16 +292,43 @@ export async function testLocalModel(input: AiLocalTestInput): Promise<AiLocalTe
     checkedAt: startedAt,
     elapsedMs: 0,
   }
+  const outer = options?.signal
+  if (outer?.aborted) return { ...result, cancelled: true }
+
+  const deadline = startedAt + resolved.timeoutMs
+  const controller = new AbortController()
+  let deadlineHit = false
+  let cancelled = false
+  const timer = setTimeout(() => {
+    deadlineHit = true
+    controller.abort()
+  }, resolved.timeoutMs)
+  // the card was closed or moved to another server: end the request in flight
+  const onCancel = () => {
+    cancelled = true
+    controller.abort()
+  }
+  outer?.addEventListener('abort', onCancel, { once: true })
+
   const timedOut = () => deadlineHit || deadline - Date.now() <= 0
+  /** a cancelled test keeps the answers it already had; the rest stay skip */
+  const cancelledResult = (): AiLocalTestResult => {
+    result.cancelled = true
+    return result
+  }
 
   try {
     if (timedOut()) {
       result.server = { status: 'fail', code: 'timeout' }
     } else {
-      const listed = await listLocalModels({
-        baseUrl: resolved.baseUrl,
-        ...(resolved.apiKey ? { apiKey: resolved.apiKey } : {}),
-      })
+      const listed = await listLocalModels(
+        {
+          baseUrl: resolved.baseUrl,
+          ...(resolved.apiKey ? { apiKey: resolved.apiKey } : {}),
+        },
+        { signal: controller.signal },
+      )
+      if (cancelled) return cancelledResult()
       if (listed.ok) {
         result.server = { status: 'pass' }
         result.models = listed.models
@@ -315,22 +351,27 @@ export async function testLocalModel(input: AiLocalTestInput): Promise<AiLocalTe
       }
     }
 
-    result.chat = timedOut()
-      ? { status: 'fail', code: 'timeout' }
+    const chat = timedOut()
+      ? ({ status: 'fail', code: 'timeout' } as const)
       : await runChatCheck(resolved, deadline, controller)
+    if (cancelled) return cancelledResult()
+    result.chat = chat
 
-    result.tools = timedOut()
-      ? { status: 'fail', code: 'timeout' }
+    const tools = timedOut()
+      ? ({ status: 'fail', code: 'timeout' } as const)
       : await runToolsCheck(resolved, deadline, controller)
+    if (cancelled) return cancelledResult()
+    result.tools = tools
 
     return result
   } catch {
     // Every expected failure is handled above; this keeps the "never throws"
     // promise even if a future edit grows an unexpected path. Answers already
     // given stay as they are.
-    return result
+    return cancelled ? cancelledResult() : result
   } finally {
     clearTimeout(timer)
+    outer?.removeEventListener('abort', onCancel)
     result.elapsedMs = Math.max(0, Date.now() - startedAt)
   }
 }

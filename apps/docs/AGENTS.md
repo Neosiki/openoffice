@@ -62,7 +62,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 
 ## 로컬 AI (결정 0067)
 
-- `registerAiIpc`가 `ai:local-models`·`ai:local-inspect`·`ai:local-test`를 등록한다. 입력은 `local-ipc.ts` 파서로 검사하고, 실패는 `shape`로 답한다.
+- `registerAiIpc`가 `ai:local-models`·`ai:local-inspect`·`ai:local-test`·`ai:local-test-cancel`을 등록한다. 입력은 `local-ipc.ts` 파서로 검사하고, 실패는 `shape`로 답한다. 연결 테스트는 보낸 창(`event.sender.id`)과 `testId`로 끊을 수 있고, 보낸 창이 닫혀도 끊긴다(`abortOnDestroyed`).
 - `ai:stream`은 활성 `custom`+`kind:'local'`일 때 그 서버의 `timeoutMs`를 `streamForProvider`에 넘기고, 기다리는 동안 `ai-keepalive.ts`의 `ping`을 보낸다. 다른 제공자에는 적용하지 않는다.
 
 ## 테스트

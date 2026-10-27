@@ -419,7 +419,11 @@ export interface HomeApi {
     /** true when the user typed the id instead of picking a listed model */
     typed?: boolean
     timeoutMs?: number
+    /** the handle `cancelLocalTest` aborts this test by (letters, digits, `_`, `-`; up to 128) */
+    testId?: string
   }): Promise<AiLocalTestResult>
+  /** abort the connection test started with this id in the main process; true when one was running */
+  cancelLocalTest(testId: string): Promise<boolean>
   /** one-shot round trip against the given (possibly unsaved) settings — the settings-UI connection test */
   testAiSettings(settings: AiSettings): Promise<AiChatResponse>
   /** image generation / media analysis provider catalog */

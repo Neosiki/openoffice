@@ -34,6 +34,7 @@ let setAiSettings: ReturnType<typeof vi.fn<(settings: AiSettings) => Promise<voi
 let getLocalModels: ReturnType<typeof vi.fn>
 let inspectLocalModel: ReturnType<typeof vi.fn>
 let testLocalModel: ReturnType<typeof vi.fn>
+let cancelLocalTest: ReturnType<typeof vi.fn>
 let unhandled: unknown[]
 const onUnhandled = (reason: unknown) => unhandled.push(reason)
 
@@ -95,6 +96,7 @@ function install(
     checkedAt: Date.now(),
     elapsedMs: 12,
   }))
+  cancelLocalTest = vi.fn(async () => true)
   window.aiOffice = {
     getTheme: async () => 'system',
     getDefaultSaveDir: async () => '',
@@ -118,6 +120,7 @@ function install(
     getLocalModels,
     inspectLocalModel,
     testLocalModel,
+    cancelLocalTest,
     ...handlers,
   } as unknown as HomeApi
   const checking = {
@@ -418,6 +421,122 @@ describe('the local AI card', () => {
     await click(button('Test connection'))
     expect(host.textContent).toContain('The input was not valid')
     expect(host.querySelectorAll('[data-local-test-check][data-state="skip"]')).toHaveLength(4)
+  })
+
+  describe('cancelling the connection test', () => {
+    const passed = {
+      server: { status: 'pass' },
+      model: { status: 'pass' },
+      chat: { status: 'pass' },
+      tools: { status: 'pass' },
+      checkedAt: 1,
+      elapsedMs: 1,
+    }
+
+    /** a test that only answers when the returned function is called */
+    function pendingTest(): () => void {
+      let answer: (value: unknown) => void = () => undefined
+      testLocalModel.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve
+          }),
+      )
+      return () => answer(passed)
+    }
+
+    const cancelButton = () => host.querySelector<HTMLButtonElement>('[data-local-test-cancel]')
+    const sentTestId = (): string => (testLocalModel.mock.calls[0]![0] as { testId: string }).testId
+
+    it('shows Cancel while testing and ends the test in the main process with its id', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+      const answer = pendingTest()
+      await openAi()
+      await openServer()
+      expect(cancelButton()).toBeNull()
+      await click(button('Test connection'))
+
+      // the existing "Cancel" string, no new translation
+      expect(cancelButton()?.textContent).toBe('Cancel')
+      expect(button('Testing…')?.disabled).toBe(true)
+      const testId = sentTestId()
+      expect(testId).toMatch(/^[A-Za-z0-9_-]{1,128}$/)
+
+      await click(cancelButton())
+      expect(cancelLocalTest).toHaveBeenCalledWith(testId)
+      expect(cancelButton()).toBeNull()
+      expect(button('Test connection')?.disabled).toBe(false)
+      expect(host.querySelector('[data-local-server="local-a"]')?.dataset.state).toBe('unknown')
+
+      // a late answer of the cancelled test is dropped
+      answer()
+      await settle()
+      expect(host.querySelector('[data-local-test-check]')).toBeNull()
+      expect(unhandled).toEqual([])
+    })
+
+    it('cancels the test when another server is opened', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A, LOCAL_B], customEndpoint: 'local-a' }))
+      const answer = pendingTest()
+      await openAi()
+      await openServer('local-a')
+      await click(button('Test connection'))
+      const testId = sentTestId()
+
+      await openServer('local-b')
+      expect(cancelLocalTest).toHaveBeenCalledWith(testId)
+      expect(cancelButton()).toBeNull()
+      answer()
+      await settle()
+      expect(host.querySelector('[data-local-test-check]')).toBeNull()
+      expect(host.querySelector('[data-local-server="local-a"]')?.dataset.state).toBe('unknown')
+    })
+
+    it('cancels the test when the address changes', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+      pendingTest()
+      await openAi()
+      await openServer()
+      await click(button('Test connection'))
+      const testId = sentTestId()
+      await type(input('set-local-address'), 'http://127.0.0.1:9999/v1')
+      expect(cancelLocalTest).toHaveBeenCalledWith(testId)
+    })
+
+    it('cancels the test when the form is closed', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+      pendingTest()
+      await openAi()
+      await openServer()
+      await click(button('Test connection'))
+      const testId = sentTestId()
+      const footer = host.querySelector<HTMLElement>('.set-local-actions')!
+      await click(button('Cancel', footer))
+      expect(cancelLocalTest).toHaveBeenCalledWith(testId)
+      expect(host.querySelector('[data-local-form]')).toBeNull()
+    })
+
+    it('cancels the test when the settings screen closes', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+      pendingTest()
+      await openAi()
+      await openServer()
+      await click(button('Test connection'))
+      const testId = sentTestId()
+      act(() => root.render(null))
+      expect(cancelLocalTest).toHaveBeenCalledWith(testId)
+    })
+
+    it('does not cancel a test that already answered', async () => {
+      install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+      await openAi()
+      await openServer()
+      await click(button('Test connection'))
+      expect(host.querySelectorAll('[data-local-test-check]')).toHaveLength(4)
+      await openServer('local-a')
+      act(() => root.render(null))
+      expect(cancelLocalTest).not.toHaveBeenCalled()
+    })
   })
 
   it('saves a server without changing the AI or the active server', async () => {

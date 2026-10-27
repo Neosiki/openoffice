@@ -110,6 +110,7 @@ import {
   localEndpointTimeoutMs,
   normalizeAiSettings,
   testLocalModelForIpc,
+  cancelLocalTestForIpc,
   testMediaProvider,
   type AiMediaProviderConfig,
   type AiMediaProviderId,
@@ -4026,7 +4027,23 @@ export function registerAiIpc(): void {
   // (local-ipc.ts), so a malformed payload answers shape and sends nothing.
   ipcMain.handle('ai:local-models', (_event, input: unknown) => listLocalModelsForIpc(input))
   ipcMain.handle('ai:local-inspect', (_event, input: unknown) => inspectLocalModelForIpc(input))
-  ipcMain.handle('ai:local-test', (_event, input: unknown) => testLocalModelForIpc(input))
+  ipcMain.handle('ai:local-test', async (event, input: unknown) => {
+    // the requests end here, not only in the renderer: on a cancel by test id
+    // (from the same window) and when the window that asked is closed
+    const controller = new AbortController()
+    const unwatchSender = abortOnDestroyed(event.sender, controller)
+    try {
+      return await testLocalModelForIpc(input, {
+        owner: event.sender.id,
+        signal: controller.signal,
+      })
+    } finally {
+      unwatchSender()
+    }
+  })
+  ipcMain.handle('ai:local-test-cancel', (event, input: unknown) =>
+    cancelLocalTestForIpc(input, event.sender.id),
+  )
 
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
     // per-request settings get the same schema check as the persisted ones: a

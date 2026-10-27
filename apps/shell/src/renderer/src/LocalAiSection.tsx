@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { localContextTokensOf, newCustomEndpointId } from '@genoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
@@ -165,6 +165,27 @@ function validationText(code: LocalValidationCode, t: TFunc): string {
   }
 }
 
+/**
+ * Abort a connection test in the main process, so its requests end there too
+ * and not only the card's wait for them. An older preload without the call
+ * leaves the test to run out its own time limit.
+ */
+function cancelTestInMain(testId: string): void {
+  try {
+    const cancel = window.aiOffice?.cancelLocalTest
+    if (typeof cancel !== 'function') return
+    void Promise.resolve(window.aiOffice.cancelLocalTest(testId)).catch(() => undefined)
+  } catch {
+    // nothing to cancel through; the test ends at its time limit
+  }
+}
+
+/** One connection test in flight: its main-process handle and the server it probes. */
+interface LocalTestRun {
+  id: string
+  key: string
+}
+
 const CHECK_LABEL: Record<LocalTestCheck, StringKey> = {
   server: 'setLocalTestServer',
   model: 'setLocalTestModel',
@@ -202,6 +223,19 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
   const [deleteAsked, setDeleteAsked] = useState<string | null>(null)
   const [loadedModel, setLoadedModel] = useState('')
   const [contextMayDiffer, setContextMayDiffer] = useState<Record<string, boolean>>({})
+  /** the connection test in flight; its answer is dropped once this no longer names it */
+  const testRunRef = useRef<LocalTestRun | null>(null)
+
+  // the card closed (settings closed, or another pane): end a running test in
+  // the main process as well
+  useEffect(
+    () => () => {
+      const run = testRunRef.current
+      testRunRef.current = null
+      if (run) cancelTestInMain(run.id)
+    },
+    [],
+  )
 
   const servers = localEndpoints(settings)
   const activeId = settings.provider === 'custom' ? settings.customEndpoint : undefined
@@ -227,7 +261,27 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
     return false
   }
 
+  /**
+   * Stop the running connection test: the main process aborts its request and
+   * sends no further check, and whatever it answers is dropped here.
+   */
+  const cancelTest = () => {
+    const run = testRunRef.current
+    if (!run) return
+    testRunRef.current = null
+    setTesting(false)
+    setProbes((current) => {
+      if (current[run.key] !== 'checking') return current
+      const next = { ...current }
+      delete next[run.key]
+      return next
+    })
+    cancelTestInMain(run.id)
+  }
+
   const resetFormState = () => {
+    // another server, a new one, or the form closing: a test of the old one stops
+    cancelTest()
     setTestResult(null)
     setFormError(null)
     setSaved(false)
@@ -260,6 +314,8 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
 
   /** an address or key edit makes the last answer about this server stale */
   const invalidateProbe = () => {
+    // the address or key now names another server: a test of the old one stops
+    cancelTest()
     setProbes((current) => {
       if (!(draftKey in current)) return current
       const next = { ...current }
@@ -363,7 +419,10 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
     setTesting(true)
     setTestResult(null)
     const key = draftKey
-    setProbes((current) => ({ ...current, [key]: 'checking' }))
+    const run: LocalTestRun = { id: crypto.randomUUID(), key }
+    testRunRef.current = run
+    const stillCurrent = () => testRunRef.current === run
+    setProbes((probesNow) => ({ ...probesNow, [key]: 'checking' }))
     try {
       const result: unknown = await window.aiOffice.testLocalModel({
         baseUrl: address.value,
@@ -371,7 +430,10 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
         model,
         typed: !summaries[model] && !(draft.models ?? []).includes(model),
         timeoutMs: timeout.value,
+        testId: run.id,
       })
+      // cancelled, or the card moved on: this answer belongs to no form any more
+      if (!stillCurrent()) return
       if (!isTestResult(result)) {
         setBridgeError(true)
         setProbes((current) => ({ ...current, [key]: { ok: false, errorCode: 'shape' } }))
@@ -399,10 +461,14 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
         return { ...current, modelProfiles: profiles, ...(models ? { models } : {}) }
       })
     } catch {
+      if (!stillCurrent()) return
       setBridgeError(true)
-      setProbes((current) => ({ ...current, [key]: { ok: false, errorCode: 'unreachable' } }))
+      setProbes((probesNow) => ({ ...probesNow, [key]: { ok: false, errorCode: 'unreachable' } }))
     } finally {
-      setTesting(false)
+      if (stillCurrent()) {
+        testRunRef.current = null
+        setTesting(false)
+      }
     }
   }
 
@@ -513,6 +579,8 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
 
   const remove = async (id: string) => {
     setDeleteAsked(null)
+    // a test of the server being deleted stops with it
+    if (draft?.id === id) cancelTest()
     const next = await onApply((latest) => removeLocalEndpoint(latest, id))
     if (draft?.id === id) setDraft(null)
     if (next) setSaved(false)
@@ -978,6 +1046,16 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
               >
                 {testing ? t('setAiTesting') : t('setLocalTest')}
               </button>
+              {testing && (
+                <button
+                  type="button"
+                  className="set-btn"
+                  data-local-test-cancel=""
+                  onClick={cancelTest}
+                >
+                  {t('cancel')}
+                </button>
+              )}
             </div>
           </div>
           {testResult?.inputError === 'shape' && (

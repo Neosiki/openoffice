@@ -67,6 +67,12 @@ export interface AiLocalDiscoveryRequest {
   apiKey?: string | undefined
 }
 
+/** What a caller in the main process (never the IPC payload) may add to a request. */
+export interface AiLocalRequestOptions {
+  /** aborting it ends the request in flight and sends no further one */
+  signal?: AbortSignal | undefined
+}
+
 export interface AiLocalInspectionRequest extends AiLocalDiscoveryRequest {
   /** the id the server listed */
   model: string
@@ -157,8 +163,13 @@ function requestHeadersOf(apiKey: unknown): Record<string, string> {
  * `unreachable`. Body errors only become `shape` when the body was too large —
  * an abort while reading must still reach the watchdog so it can name a timeout.
  */
-async function requestText(url: string, init: RequestInit): Promise<ProbeTextResult> {
-  const watchdog = createStreamWatchdog(undefined, REQUEST_TIMEOUT_MS)
+async function requestText(
+  url: string,
+  init: RequestInit,
+  signal?: AbortSignal,
+): Promise<ProbeTextResult> {
+  // the caller's signal (a cancelled connection test) ends the request with it
+  const watchdog = createStreamWatchdog(signal, REQUEST_TIMEOUT_MS)
   try {
     return await watchdog.guard(async () => {
       const response = await fetch(url, withUserAgent({ ...init, signal: watchdog.signal }))
@@ -197,8 +208,9 @@ function ollamaModelOf(id: string, entry: Record<string, unknown>): AiLocalModel
 async function probeOllamaTags(
   base: string,
   headers: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<ProbeModelsResult> {
-  const result = await requestText(endpointUrl(ollamaRootOf(base), 'api/tags'), { headers })
+  const result = await requestText(endpointUrl(ollamaRootOf(base), 'api/tags'), { headers }, signal)
   if (!result.ok) return result
   const body = parseJson(result.text)
   if (!isRecord(body) || !Array.isArray(body.models)) return failureOf('shape')
@@ -219,8 +231,9 @@ async function probeOllamaTags(
 async function probeOpenAiModels(
   base: string,
   headers: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<ProbeModelsResult> {
-  const result = await requestText(endpointUrl(base, 'models'), { headers })
+  const result = await requestText(endpointUrl(base, 'models'), { headers }, signal)
   if (!result.ok) return result
   const body = parseJson(result.text)
   if (!isRecord(body) || !Array.isArray(body.data)) return failureOf('shape')
@@ -270,16 +283,20 @@ function mostInformativeFailure(first: AiLocalFailure, second: AiLocalFailure): 
  */
 export async function listLocalModels(
   input: AiLocalDiscoveryRequest,
+  options?: AiLocalRequestOptions,
 ): Promise<AiLocalDiscoveryResult> {
   try {
     const base = normalizedBaseOf(input?.baseUrl)
     if (!base) return failureOf('unreachable')
     const headers = requestHeadersOf(input?.apiKey)
+    const signal = options?.signal
 
-    const ollama = await probeOllamaTags(base, headers)
+    const ollama = await probeOllamaTags(base, headers, signal)
     if (ollama.ok) return { ok: true, server: 'ollama', models: ollama.models }
+    // a cancelled caller wants no second request
+    if (signal?.aborted) return ollama
 
-    const generic = await probeOpenAiModels(base, headers)
+    const generic = await probeOpenAiModels(base, headers, signal)
     if (generic.ok) return { ok: true, server: 'openai-compatible', models: generic.models }
 
     return mostInformativeFailure(ollama, generic)

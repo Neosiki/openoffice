@@ -6,6 +6,10 @@
 // an ordinary answer, not an incident: discovery and inspection report `shape`,
 // the connection test reports every check skipped with `inputError: 'shape'`,
 // and no request is sent either way.
+//
+// A connection test may carry a `testId`; `ai:local-test-cancel` with the same
+// id (from the same window) aborts it in this process, so closing the card or
+// moving to another server ends the requests, not only the wait for them.
 import type {
   AiLocalDiscoveryRequest,
   AiLocalDiscoveryResult,
@@ -33,6 +37,15 @@ export type AiLocalInspectionIpcInput = AiLocalInspectionRequest
 /** A validated connection-test payload, with the budget already resolved. */
 export interface AiLocalTestIpcInput extends AiLocalTestInput {
   timeoutMs: number
+  /** the renderer's handle for cancelling this test; absent means it cannot be cancelled by id */
+  testId?: string
+}
+
+/** A test id: short and plain, so it is only ever a lookup key. */
+const TEST_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
+function testIdOf(raw: unknown): string | undefined {
+  return typeof raw === 'string' && TEST_ID_RE.test(raw) ? raw : undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -125,7 +138,15 @@ export function parseLocalTestInput(raw: unknown): AiLocalTestIpcInput | undefin
   const timeoutMs =
     raw.timeoutMs === undefined ? DEFAULT_LOCAL_TIMEOUT_MS : localTimeoutMsOf(raw.timeoutMs)
   if (timeoutMs === undefined) return undefined
-  return { ...fields, model, ...(raw.typed === true ? { typed: true } : {}), timeoutMs }
+  if (raw.testId !== undefined && testIdOf(raw.testId) === undefined) return undefined
+  const testId = testIdOf(raw.testId)
+  return {
+    ...fields,
+    model,
+    ...(raw.typed === true ? { typed: true } : {}),
+    timeoutMs,
+    ...(testId ? { testId } : {}),
+  }
 }
 
 /** The connection test's answer for a payload it cannot run: nothing was sent. */
@@ -155,9 +176,62 @@ export async function inspectLocalModelForIpc(input: unknown): Promise<AiLocalIn
   return inspectLocalModel(parsed)
 }
 
+/** Who started a test (the sender's id): one window cannot cancel another's test. */
+export type AiLocalTestOwner = string | number
+
+export interface AiLocalTestIpcOptions {
+  /** the sender; tests are cancelled by owner and id together */
+  owner?: AiLocalTestOwner | undefined
+  /** aborted by the main process itself (the window that asked was closed) */
+  signal?: AbortSignal | undefined
+}
+
+/** tests in flight in this process, by owner and test id */
+const runningTests = new Map<string, AbortController>()
+
+function testKeyOf(owner: AiLocalTestOwner | undefined, testId: string): string {
+  return JSON.stringify([owner ?? null, testId])
+}
+
 /** `ai:local-test` behind an `unknown` IPC payload. */
-export async function testLocalModelForIpc(input: unknown): Promise<AiLocalTestResult> {
+export async function testLocalModelForIpc(
+  input: unknown,
+  options?: AiLocalTestIpcOptions,
+): Promise<AiLocalTestResult> {
   const parsed = parseLocalTestInput(input)
   if (!parsed) return skippedTestResult()
-  return testLocalModel(parsed)
+  const { testId, ...test } = parsed
+  const controller = new AbortController()
+  const outer = options?.signal
+  const onOuterAbort = () => controller.abort()
+  if (outer?.aborted) controller.abort()
+  else outer?.addEventListener('abort', onOuterAbort, { once: true })
+  const key = testId ? testKeyOf(options?.owner, testId) : undefined
+  if (key) {
+    // the same id again replaces the earlier test, which then has no handle left
+    runningTests.get(key)?.abort()
+    runningTests.set(key, controller)
+  }
+  try {
+    return await testLocalModel(test, { signal: controller.signal })
+  } finally {
+    outer?.removeEventListener('abort', onOuterAbort)
+    if (key && runningTests.get(key) === controller) runningTests.delete(key)
+  }
+}
+
+/**
+ * `ai:local-test-cancel`: abort the test this owner started with this id.
+ * True when a running test was found; an unknown, finished or malformed id is
+ * false and does nothing.
+ */
+export function cancelLocalTestForIpc(input: unknown, owner?: AiLocalTestOwner): boolean {
+  const testId = testIdOf(isRecord(input) ? input.testId : input)
+  if (!testId) return false
+  const key = testKeyOf(owner, testId)
+  const controller = runningTests.get(key)
+  if (!controller) return false
+  runningTests.delete(key)
+  controller.abort()
+  return true
 }

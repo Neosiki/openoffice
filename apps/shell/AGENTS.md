@@ -119,6 +119,7 @@
 
 ## 로컬 AI (결정 0067)
 
+- 연결 테스트 중에는 "취소" 단추(기존 `cancel` 문구)가 보이고, 카드를 닫거나 다른 서버로 바꾸거나 주소·키를 고치면 같은 장치(`cancelLocalTest(testId)`)로 메인 프로세스의 요청까지 끊는다. 끊긴 테스트의 늦은 답은 버린다.
 - 설정 → AI의 `LocalAiSection`은 `local-ai.ts`의 순수 규칙만 쓴다. 서버 저장·테스트는 활성 AI를 바꾸지 않고, 설정을 열거나 서버를 고르는 것만으로 접속하지 않는다. 모델 목록은 마지막으로 읽은 것을 남긴다.
 - 고급 `Custom` 저장은 `withAdvancedCustomSave`로 최신 파일의 다른 서버와 `kind`·`modelProfiles`·`timeoutMs`를 보존한다.
 - 새 문구는 `strings.ts` 21개 언어에 있고, 카드의 색은 기존 토큰만 쓴다.

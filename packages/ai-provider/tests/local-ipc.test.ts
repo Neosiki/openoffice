@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  cancelLocalTestForIpc,
   inspectLocalModelForIpc,
   listLocalModelsForIpc,
   parseLocalDiscoveryInput,
@@ -192,5 +193,94 @@ describe('IPC handlers', () => {
       models: [{ id: 'qwen3:8b' }],
     })
     expect(fetchMock).toHaveBeenCalled()
+  })
+})
+
+describe('cancelling a connection test by id', () => {
+  const TAGS = 'http://127.0.0.1:11434/api/tags'
+  const CHAT = 'http://127.0.0.1:11434/v1/chat/completions'
+
+  /** a server that lists the model and never answers chat until aborted */
+  function hangingChat(): { chatSignals: AbortSignal[]; started: Promise<void> } {
+    const chatSignals: AbortSignal[] = []
+    let markStarted: () => void = () => undefined
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init: RequestInit) => {
+        if (url === TAGS) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ models: [{ name: 'm' }] }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }),
+          )
+        }
+        if (url === CHAT) {
+          const signal = init.signal as AbortSignal
+          chatSignals.push(signal)
+          markStarted()
+          return new Promise<Response>((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => reject(new DOMException('This operation was aborted', 'AbortError')),
+              { once: true },
+            )
+          })
+        }
+        return Promise.resolve(new Response('{}', { status: 404 }))
+      }),
+    )
+    return { chatSignals, started }
+  }
+
+  it('keeps a valid test id and refuses a malformed one', () => {
+    expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', testId: 'a1-B_2' })).toMatchObject({
+      testId: 'a1-B_2',
+    })
+    for (const testId of ['', 'has space', 'x'.repeat(129), 42, {}]) {
+      expect(parseLocalTestInput({ baseUrl: BASE, model: 'm', testId })).toBeUndefined()
+    }
+  })
+
+  it('aborts the request in this process, not only the wait for it', async () => {
+    const { chatSignals, started } = hangingChat()
+    const running = testLocalModelForIpc(
+      { baseUrl: BASE, model: 'm', timeoutMs: 600_000, testId: 'run-1' },
+      { owner: 7 },
+    )
+    await started
+    expect(cancelLocalTestForIpc({ testId: 'run-1' }, 7)).toBe(true)
+    const result = await running
+    expect(chatSignals[0]!.aborted).toBe(true)
+    expect(result.cancelled).toBe(true)
+    expect(result.tools).toEqual({ status: 'skip' })
+    // finished: the id is no longer known
+    expect(cancelLocalTestForIpc({ testId: 'run-1' }, 7)).toBe(false)
+  })
+
+  it('does not let another window cancel the test, and ends it when the asking window closes', async () => {
+    const { chatSignals, started } = hangingChat()
+    const outer = new AbortController()
+    const running = testLocalModelForIpc(
+      { baseUrl: BASE, model: 'm', timeoutMs: 600_000, testId: 'run-2' },
+      { owner: 1, signal: outer.signal },
+    )
+    await started
+    expect(cancelLocalTestForIpc({ testId: 'run-2' }, 2)).toBe(false)
+    expect(cancelLocalTestForIpc('run-2', 2)).toBe(false)
+    expect(chatSignals[0]!.aborted).toBe(false)
+    outer.abort()
+    const result = await running
+    expect(chatSignals[0]!.aborted).toBe(true)
+    expect(result.cancelled).toBe(true)
+  })
+
+  it('answers false for an unknown or malformed id', () => {
+    expect(cancelLocalTestForIpc({ testId: 'nobody' }, 1)).toBe(false)
+    expect(cancelLocalTestForIpc({ testId: '../x' }, 1)).toBe(false)
+    expect(cancelLocalTestForIpc(undefined, 1)).toBe(false)
   })
 })

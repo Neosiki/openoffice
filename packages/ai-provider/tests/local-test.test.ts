@@ -483,3 +483,91 @@ describe('testLocalModel', () => {
     await pending
   })
 })
+
+describe('testLocalModel cancel', () => {
+  const tags = () => jsonBody({ models: [{ name: MODEL }] })
+
+  it('sends nothing when the signal is already aborted', async () => {
+    const fetchMock = stubFetch(() => tags())
+    const controller = new AbortController()
+    controller.abort()
+    const result = await testLocalModel(
+      { baseUrl: BASE, model: MODEL },
+      { signal: controller.signal },
+    )
+    expect(result.cancelled).toBe(true)
+    expect([result.server, result.model, result.chat, result.tools]).toEqual([
+      { status: 'skip' },
+      { status: 'skip' },
+      { status: 'skip' },
+      { status: 'skip' },
+    ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('aborts the chat request in flight and never sends the tool check', async () => {
+    const controller = new AbortController()
+    const chatSignals: AbortSignal[] = []
+    const fetchMock = stubFetch((url, init) => {
+      if (url === TAGS_URL) return tags()
+      if (url === CHAT_URL) {
+        chatSignals.push(init.signal as AbortSignal)
+        // the card is closed while the model is still thinking
+        queueMicrotask(() => controller.abort())
+        return hangingResponse(init.signal)
+      }
+      return jsonBody({}, 404)
+    })
+    const started = Date.now()
+    const result = await testLocalModel(
+      { baseUrl: BASE, model: MODEL, timeoutMs: 600_000 },
+      { signal: controller.signal },
+    )
+    // ended by the cancel, long before the 10-minute budget
+    expect(Date.now() - started).toBeLessThan(5_000)
+    expect(result.cancelled).toBe(true)
+    expect(result.server).toEqual({ status: 'pass' })
+    expect(result.model).toEqual({ status: 'pass' })
+    expect(result.chat).toEqual({ status: 'skip' })
+    expect(result.tools).toEqual({ status: 'skip' })
+    expect(chatSignals).toHaveLength(1)
+    expect(chatSignals[0]!.aborted).toBe(true)
+    // one chat request only: the tool check was never sent
+    expect(fetchMock.mock.calls.filter(([url]) => url === CHAT_URL)).toHaveLength(1)
+  })
+
+  it('aborts the list probe in flight and sends no chat', async () => {
+    const controller = new AbortController()
+    const listSignals: AbortSignal[] = []
+    const fetchMock = stubFetch((url, init) => {
+      if (url === TAGS_URL || url === MODELS_URL) {
+        listSignals.push(init.signal as AbortSignal)
+        queueMicrotask(() => controller.abort())
+        return hangingResponse(init.signal)
+      }
+      return textChat()
+    })
+    const result = await testLocalModel(
+      { baseUrl: BASE, model: MODEL },
+      { signal: controller.signal },
+    )
+    expect(result.cancelled).toBe(true)
+    expect(result.server).toEqual({ status: 'skip' })
+    expect(listSignals[0]!.aborted).toBe(true)
+    // the second list route is not tried after a cancel, and chat is never sent
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([TAGS_URL])
+  })
+
+  it('reports a finished test as not cancelled', async () => {
+    stubFetch((url) =>
+      url === TAGS_URL ? tags() : url === CHAT_URL ? textChat() : jsonBody({}, 404),
+    )
+    const controller = new AbortController()
+    const result = await testLocalModel(
+      { baseUrl: BASE, model: MODEL },
+      { signal: controller.signal },
+    )
+    expect(result.cancelled).toBeUndefined()
+    expect(result.chat).toEqual({ status: 'pass' })
+  })
+})

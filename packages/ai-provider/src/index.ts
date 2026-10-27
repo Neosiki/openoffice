@@ -162,6 +162,7 @@ export type {
   AiLocalInspectionRequest,
   AiLocalInspectionResult,
   AiLocalModelSummary,
+  AiLocalRequestOptions,
   AiLocalServerKind,
 } from './local-models'
 export { testLocalModel } from './local-test'
@@ -170,9 +171,11 @@ export type {
   AiLocalCheckCode,
   AiLocalCheckStatus,
   AiLocalTestInput,
+  AiLocalTestOptions,
   AiLocalTestResult,
 } from './local-test'
 export {
+  cancelLocalTestForIpc,
   inspectLocalModelForIpc,
   listLocalModelsForIpc,
   parseLocalDiscoveryInput,
@@ -184,6 +187,8 @@ export type {
   AiLocalDiscoveryIpcInput,
   AiLocalInspectionIpcInput,
   AiLocalTestIpcInput,
+  AiLocalTestIpcOptions,
+  AiLocalTestOwner,
 } from './local-ipc'
 export {
   AI_MEDIA_PROVIDERS,
