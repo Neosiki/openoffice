@@ -387,6 +387,52 @@ export const TOOLS: ToolSpec[] = [
     options: ['offset', 'full', 'max-chars'],
   },
   {
+    name: 'hwp_apply',
+    command: 'hwp',
+    verb: 'apply',
+    description:
+      'Edit a Hangul (.hwp / .hwpx) document locally with a batch of ops, the tools the in-app AI uses (op reference: guide hwp, or the ieumoffice://guide/hwp resource). Text is found by what it says; an anchor that occurs more than once is refused with the places listed (pass occurrence). An op that would drop a table, picture, form field or memo is refused. Read ops answer in detail.results; a batch of reads writes nothing. Written back in its own format (out: .hwp or .hwpx picks one); an overwritten file is kept as <name>.bak. Atomic by default. ' +
+      GUI_OPEN,
+    positionals: [{ key: 'file', description: 'path of the .hwp or .hwpx' }],
+    options: [
+      {
+        key: 'ops',
+        kind: OPS_JSON,
+        typed: 'hwp-ops',
+        description: 'JSON array of ops, every entry with "op" and the fields of that op',
+        required: true,
+      },
+      'dry-run',
+      'best-effort',
+      'stop-on-error',
+      'out',
+      'force',
+    ],
+  },
+  {
+    name: 'create_hwp',
+    command: 'create',
+    description:
+      'Create a new Hangul document (.hwp or .hwpx, by the out extension) from the hwp_apply ops run on a blank A4 page: insert_paragraphs with where "end", insert_table, format_text, format_paragraph ...',
+    options: [
+      {
+        key: 'type',
+        choices: ['hwp', 'hwpx'],
+        description: 'hwp or hwpx; must match the out extension',
+        required: true,
+      },
+      {
+        key: 'ops',
+        kind: OPS_JSON,
+
+        description: 'JSON array of ops in the hwp_apply shape, every entry with "op"',
+        required: true,
+      },
+      { key: 'out', description: 'output .hwp or .hwpx path (required)', required: true },
+      'force',
+    ],
+  },
+  {
     name: 'sheet_read',
     command: 'sheet',
     verb: 'read',

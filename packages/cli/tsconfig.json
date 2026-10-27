@@ -35,6 +35,7 @@
     "../pptx-ops/src/raw.d.ts",
     "../../apps/docs/src/renderer/env.d.ts",
     "../../apps/markdown/src/renderer/env.d.ts",
+    "../../apps/hwp/src/renderer/env.d.ts",
     "../../apps/markdown/src/renderer/types/wavedrom.d.ts"
   ]
 }

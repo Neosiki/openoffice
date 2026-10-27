@@ -31,22 +31,23 @@ import type { CommandContext, CommandDef } from '../registry'
 import type { TxnResult } from '@genoffice/pptx-ops'
 import { CliError, EXIT, type CommandResult } from '../result'
 import { txnFailure, txnDetail } from './txn'
+import { hwpOpsOf, hwpOutputFormat, runHwpBatch } from './hwp'
 
 /** Document types that can be built here. */
-const TYPES = ['pptx', 'xlsx', 'docx', 'pdf'] as const
+const TYPES = ['pptx', 'xlsx', 'docx', 'pdf', 'hwp', 'hwpx'] as const
 
 export const createCommand: CommandDef = {
   name: 'create',
   summary: 'Create a new document from structured content.',
   usage:
-    'create --type <pptx|xlsx|docx|pdf> (--ops <file|-> | --spec <file|dir|-> [--outline <file>] | --from <file>) --out <path> [--force]',
+    'create --type <pptx|xlsx|docx|pdf|hwp|hwpx> (--ops <file|-> | --spec <file|dir|-> [--outline <file>] | --from <file>) --out <path> [--force]',
   options: [
     { name: 'type', value: 'type', description: `document type: ${TYPES.join(', ')}` },
     {
       name: 'ops',
       value: 'file',
       description:
-        'pptx: JSON array of ops (or {"ops":[...]}) applied one by one to a blank one-slide deck (later ops can target slides added earlier); "-" reads stdin. See `ieumoffice guide slides`.',
+        'pptx: JSON array of ops (or {"ops":[...]}) applied one by one to a blank one-slide deck (later ops can target slides added earlier); hwp / hwpx: the `hwp apply` ops run on a blank A4 document (see `ieumoffice guide hwp`); "-" reads stdin. See `ieumoffice guide slides`.',
     },
     {
       name: 'spec',
@@ -131,6 +132,7 @@ export const createCommand: CommandDef = {
         detail: { via: 'ieumoffice --headless-export', summary: r.summary },
       }
     }
+    if (type === 'hwp' || type === 'hwpx') return createHwp(type, args, ctx, output)
     if (type === 'docx') {
       const r = await createDocx(args, ctx)
       writeOutput(output, r.bytes)
@@ -188,6 +190,34 @@ export const createCommand: CommandDef = {
       detail,
     }
   },
+}
+
+/** A new Hangul document: the `hwp apply` ops on the engine's blank document, as a new HWP tab starts. */
+async function createHwp(
+  type: 'hwp' | 'hwpx',
+  args: Parameters<CommandDef['run']>[0],
+  ctx: CommandContext,
+  output: string,
+): Promise<CommandResult> {
+  if (hwpOutputFormat(output) !== type) {
+    throw new CliError(
+      EXIT.usage,
+      `--out must end in .${type} for --type ${type}: ${output}`,
+      undefined,
+      {
+        reason: 'invalid_argument',
+      },
+    )
+  }
+  const ops = hwpOpsOf(args, ctx)
+  const { blankHwpForEdit, closeHwpSession } = await import('../formats/hwp-edit')
+  const session = await blankHwpForEdit()
+  try {
+    const result = await runHwpBatch(session, ops, args, { output, format: type })
+    return { ...result, summary: `created ${basename(output)}` }
+  } finally {
+    closeHwpSession(session)
+  }
 }
 
 async function createPptx(

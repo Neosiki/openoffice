@@ -73,7 +73,10 @@ ieumoffice pdf status book.pdf --json                          # what the result
 ieumoffice epub translate novel.epub --to ko --json            # estimate only: detail.estimate { calls, chapters, provider, route, metered } and detail.chapters[] { index, title, read_only }; nothing is sent
 ieumoffice epub translate novel.epub --to ko --chapters 1-5,8 --kind translated,bilingual --out out/novel --partial --restart --yes --allow-paid --force   # out/novel.epub + out/novel.bilingual.epub (default: novel.ko.epub, novel.ko.bilingual.epub beside the source); progress on stderr
 ieumoffice epub status novel.epub --json                       # translations the result store holds for the book, each with its job
-ieumoffice hwp read notice.hwp [--offset 20000] [--full] --json           # text of a Hangul (HWP / HWPX) document, tables as "a | b" rows (first 20000 characters by default); read-only, no app process
+ieumoffice hwp read notice.hwp [--offset 20000] [--full] --json           # text of a Hangul (HWP / HWPX) document, tables as "a | b" rows (first 20000 characters by default); no app process
+ieumoffice hwp apply form.hwp --ops ops.json [--out filled.hwpx] [--dry-run] [--force] --json   # the in-app AI's tools as ops (replace_text, insert_paragraphs, fill_cells, fill_field ...; `guide hwp`); written back in its own format, the replaced file kept as form.hwp.bak
+ieumoffice create --type hwp --ops ops.json --out minutes.hwp             # a new Hangul document: the same ops on a blank A4 page (--type hwpx for .hwpx)
+ieumoffice guide hwp                                                    # the hwp apply ops, built from the in-app AI's tool definitions
 ieumoffice guide docs                                                   # op signatures + restricted-HTML rules (`guide <domain> --json` = the catalog with each op's schema and a fingerprint)
 ieumoffice selection report.docx --json   # what the user has selected in the editor showing the file
 ieumoffice skill list   # coding agents found on this machine and the skill version each has
