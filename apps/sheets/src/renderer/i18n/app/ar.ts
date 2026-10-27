@@ -1155,6 +1155,7 @@ export const ar = {
   appGroupForecast: 'التنبؤ',
   appWhatIfAnalysis: 'تحليل ماذا-إذا',
   appGoalSeek: 'الاستهداف',
+  appDataTable: 'جدول البيانات',
   appWhatIfTitle: 'إيجاد مدخل لقيمة مستهدفة',
   appGoalSeekNeedsFormula: 'يجب أن تحتوي الخلية على صيغة.',
   appGoalSeekByCellNotNumber: 'يجب أن تحتوي الخلية المتغيرة على رقم أو أن تكون فارغة.',
