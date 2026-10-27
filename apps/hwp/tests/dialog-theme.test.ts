@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { JSDOM } from 'jsdom'
@@ -14,6 +14,101 @@ import {
 
 function page(): Document {
   return new JSDOM('<!doctype html><html><head></head><body></body></html>').window.document
+}
+
+/** The rhwp-studio source that scripts/build-studio.mjs caches, if present. */
+function studioSource(): string {
+  // The cache is named after the engine's upstream tag, not its package version.
+  const require = createRequire(import.meta.url)
+  const { tag } = (require('@rhwp/core/package.json') as { rhwp: { tag: string } }).rhwp
+  return join(__dirname, '..', 'node_modules', '.cache', 'rhwp-studio', tag, 'rhwp-studio', 'src')
+}
+
+interface Rule {
+  selector: string
+  props: string[]
+}
+
+/** Top-level style rules; at-rule blocks (@media, @keyframes) are skipped. */
+function styleRules(css: string): Rule[] {
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '')
+  const rules: Rule[] = []
+  let at = 0
+  while (at < text.length) {
+    const open = text.indexOf('{', at)
+    if (open < 0) break
+    const head = text.slice(at, open).trim()
+    let depth = 1
+    let end = open + 1
+    while (end < text.length && depth > 0) {
+      if (text[end] === '{') depth++
+      else if (text[end] === '}') depth--
+      end++
+    }
+    if (!head.startsWith('@')) {
+      const props = text
+        .slice(open + 1, end - 1)
+        .split(';')
+        .map((declaration) => declaration.split(':')[0].trim())
+        .filter(Boolean)
+      for (const selector of selectorList(head)) rules.push({ selector, props })
+    }
+    at = end
+  }
+  return rules
+}
+
+/** Splits a selector list on its top-level commas and expands `:where(a, b)`. */
+function selectorList(head: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < head.length; i++) {
+    if (head[i] === '(') depth++
+    else if (head[i] === ')') depth--
+    else if (head[i] === ',' && depth === 0) {
+      parts.push(head.slice(start, i))
+      start = i + 1
+    }
+  }
+  parts.push(head.slice(start))
+  return parts.flatMap((part) => {
+    const selector = part.trim().replace(/\s+/g, ' ')
+    const list = /:where\(([^()]*,[^()]*)\)/.exec(selector)
+    if (!list) return [selector]
+    return list[1]
+      .split(',')
+      .flatMap((item) => selectorList(selector.replace(list[0], item.trim())))
+  })
+}
+
+/** Classes and pseudo-classes an ancestor of every dialog part carries. */
+const SKELETON = new Set(['.modal-overlay', '.dialog-wrap', '.dialog-body'])
+
+/**
+ * Whether our rule can land on the element their rule styles: the same
+ * pseudo-element, and no ancestor of ours that their selector does not name
+ * (`.find-dialog-buttons .dialog-btn` never reaches the bookmark dialog).
+ */
+function reaches(ours: string, theirs: string): boolean {
+  const pseudoElement = (selector: string) =>
+    lastCompound(selector)
+      .filter((token) => token.startsWith('::'))
+      .join()
+  if (pseudoElement(ours) !== pseudoElement(theirs)) return false
+  const ancestors =
+    ours
+      .split(' ')
+      .slice(0, -1)
+      .join(' ')
+      .match(/\.[\w-]+/g) ?? []
+  return ancestors.every((name) => SKELETON.has(name) || theirs.includes(name))
+}
+
+/** Classes, pseudo-classes and the element name of a selector's last compound. */
+function lastCompound(selector: string): string[] {
+  const last = selector.split(/\s*[>+~]\s*|\s+/).pop() ?? ''
+  return last.match(/[.:]{1,2}[\w-]+(?:\([^)]*\))?|^[a-z]+/g) ?? []
 }
 
 describe('HWP dialog design system', () => {
@@ -131,19 +226,7 @@ describe('HWP dialog design system', () => {
   })
 
   it('still matches the studio class names when the cached source is present', () => {
-    const require = createRequire(import.meta.url)
-    const version = (require('@rhwp/core/package.json') as { version: string }).version
-    const ui = join(
-      __dirname,
-      '..',
-      'node_modules',
-      '.cache',
-      'rhwp-studio',
-      version,
-      'rhwp-studio',
-      'src',
-      'ui',
-    )
+    const ui = join(studioSource(), 'ui')
     const dialog = join(ui, 'dialog.ts')
     if (!existsSync(dialog)) return
 
@@ -188,6 +271,75 @@ describe('HWP dialog design system', () => {
     ]) {
       expect(field).toContain(name)
     }
+  })
+
+  it("does not outweigh rhwp's own per-dialog layout rules", () => {
+    const styles = join(studioSource(), 'styles')
+    if (!existsSync(styles)) return
+
+    // Rules under :root[...] outweigh any rhwp rule; rules under :where(...)
+    // only replace rhwp's base rule. A rhwp rule scoped to one dialog or one
+    // state must keep working unless we restyle that same case ourselves.
+    const strongPrefix = `:root[${DIALOG_THEME_ATTRIBUTE}]`
+    const strong = styleRules(DIALOG_THEME_CSS)
+      .filter((rule) => rule.selector.startsWith(strongPrefix))
+      .map((rule) => ({ ...rule, selector: rule.selector.slice(strongPrefix.length).trim() }))
+
+    // Deliberate: every dialog gets the same capped shell, padding and accent.
+    const allowed = new Set([
+      '.dialog-wrap.recovery-dialog | display,flex-direction,max-height,overflow',
+      '.recovery-dialog > .dialog-title | flex',
+      '.recovery-dialog > .dialog-footer | flex',
+      '.dialog-btn-primary.hml-save-format-primary | background,border-color',
+      '.dialog-btn-primary.hml-save-format-primary:hover | background',
+      '.dialog-wrap.tcp-dialog | display,flex-direction',
+      '.dialog-wrap.tcp-dialog .dialog-body | flex,padding',
+      '.dialog-wrap.tcp-dialog .dialog-footer | flex',
+      '.dialog-wrap.tcp-border-bg-dialog | display,flex-direction',
+      '.dialog-wrap.tcp-border-bg-dialog .dialog-body | flex,padding',
+      '.dialog-wrap.tcp-border-bg-dialog .dialog-footer | flex',
+      '.tcp-border-preview-wrap .tcp-dir-btn | border-radius,background,color',
+      '.tcp-border-preview-wrap .tcp-dir-btn:hover | background,border-color',
+      '.pp-dialog .dialog-body | flex',
+    ])
+
+    const overridden: string[] = []
+    for (const file of readdirSync(styles)) {
+      if (!file.endsWith('.css') || file === 'theme-oldschool.css') continue
+      for (const theirs of styleRules(readFileSync(join(styles, file), 'utf8'))) {
+        const tokens = lastCompound(theirs.selector)
+        const key = tokens.find((token) => token.startsWith('.') && !token.startsWith('..'))
+        const scoped = theirs.selector.includes(' ')
+        if (!key || (!scoped && tokens.length < 2)) continue // a base rule: ours replaces it
+
+        const covered = strong.some((ours) =>
+          scoped
+            ? ours.selector === theirs.selector
+            : tokens.every((token) => lastCompound(ours.selector).includes(token)),
+        )
+        if (covered) continue
+
+        const props = new Set<string>()
+        for (const ours of strong) {
+          if (!lastCompound(ours.selector).includes(key)) continue
+          if (!reaches(ours.selector, theirs.selector)) continue
+          for (const prop of ours.props) if (theirs.props.includes(prop)) props.add(prop)
+        }
+        if (props.size === 0) continue
+        const entry = `${theirs.selector} | ${theirs.props.filter((p) => props.has(p)).join(',')}`
+        if (!allowed.has(entry)) overridden.push(`${file}: ${entry}`)
+      }
+    }
+    expect(overridden).toEqual([])
+  })
+
+  it('does not grey out drop-downs as read-only', () => {
+    // Chromium matches every <select> with :read-only.
+    const readOnly = styleRules(DIALOG_THEME_CSS).filter((rule) =>
+      rule.selector.endsWith(':read-only'),
+    )
+    expect(readOnly.length).toBeGreaterThan(0)
+    expect(readOnly.filter((rule) => rule.selector.includes('select'))).toEqual([])
   })
 
   it('styles the shared skeleton, the memo form and the cell-properties dialog', () => {
