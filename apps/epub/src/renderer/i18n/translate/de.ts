@@ -42,6 +42,7 @@ export const de = {
   btConfirmChecking: 'KI-Verbindung wird geprüft…',
   btConfirmProvider: 'Verwendete KI: {provider}',
   btConfirmSends: 'Der Text der gewählten Kapitel wird an diese KI gesendet.',
+  btRightsNotice: 'Übersetzen Sie nur Dokumente, für die Sie die Rechte haben.',
   btConfirmPaid: '{provider} berechnet dafür Gebühren',
   btProviderChange:
     'Die gespeicherte Übersetzung wurde mit einer anderen KI ({stored}) erstellt. Der Rest wird mit {next} übersetzt.',

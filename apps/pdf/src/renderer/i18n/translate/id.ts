@@ -27,6 +27,7 @@ export const id = {
   trConfirmCalls: 'Panggilan AI: {calls} ({blocks} blok, dikirim per kelompok)',
   trConfirmDone: '{done} dari {total} blok sudah diterjemahkan dan tidak dikirim lagi',
   trConfirmSends: 'Teks halaman yang dipilih dikirim ke AI ini.',
+  trRightsNotice: 'Terjemahkan hanya dokumen yang Anda miliki haknya.',
   trProviderChange:
     'Terjemahan yang tersimpan dibuat dengan {stored}. Melanjutkan dengan {next} akan mencampur dua AI dalam satu terjemahan.',
   trProviderUnknown: 'AI yang tidak dikenal',

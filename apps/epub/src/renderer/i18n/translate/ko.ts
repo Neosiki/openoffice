@@ -41,6 +41,7 @@ export const ko = {
   btConfirmChecking: 'AI 연결을 확인하는 중…',
   btConfirmProvider: '쓰일 AI: {provider}',
   btConfirmSends: '고른 장의 글이 이 AI로 보내집니다.',
+  btRightsNotice: '권리를 가진 문서만 번역하세요.',
   btConfirmPaid: '{provider}에서 요금이 부과됩니다',
   btProviderChange: '보관된 번역은 다른 AI({stored})로 만들었습니다. 나머지는 {next}로 번역합니다.',
   btProviderUnknown: '다른 AI',

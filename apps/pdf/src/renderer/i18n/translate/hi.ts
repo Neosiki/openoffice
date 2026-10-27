@@ -26,6 +26,7 @@ export const hi = {
   trConfirmDone:
     '{total} में से {done} ब्लॉक का अनुवाद पहले ही हो चुका है और वे दोबारा नहीं भेजे जाएँगे',
   trConfirmSends: 'चुने गए पृष्ठों का पाठ इस AI को भेजा जाएगा।',
+  trRightsNotice: 'केवल उन्हीं दस्तावेज़ों का अनुवाद करें जिनके अधिकार आपके पास हैं।',
   trProviderChange:
     'सहेजा गया अनुवाद {stored} से बना था। {next} से जारी रखने पर एक ही अनुवाद में दो AI का काम मिल जाएगा।',
   trProviderUnknown: 'अज्ञात AI',
