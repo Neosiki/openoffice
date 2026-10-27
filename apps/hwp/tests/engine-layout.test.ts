@@ -12,7 +12,12 @@
  * master-page-next-section cases are built on the title-table-then-inline-table
  * reproduction (its body replaced by a few lines) and saved by Hangul 2024: one
  * framed table or rectangle in the header and one in the footer, and a second
- * section that declares no master page.
+ * section that declares no master page. The paper-topbottom-box-stale-ladder
+ * case is built on the same reproduction (its body replaced by a wide
+ * top-and-bottom rectangle, two title lines, an inline table and filler
+ * lines) and saved by Hangul 2024; its stored line positions were then moved
+ * up as if the rectangle were not there, and restarted at the top of a page
+ * where that shorter layout would have ended page 1, as in the reported file.
  */
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -157,6 +162,37 @@ describe('vendored rhwp engine', () => {
     for (let i = 1; i < after.length; i++) {
       expect(after[i].top).toBeGreaterThanOrEqual(after[i - 1].bottom - 0.5)
     }
+  })
+
+  it('starts what follows a paper-anchored top-and-bottom box below it', () => {
+    // The second paragraph anchors a wide rectangle to the paper with
+    // top-and-bottom wrap, but the file stores its line, and every later one,
+    // as if the rectangle were not there; it also restarts the stored
+    // positions where that layout's page 1 would have ended. Hangul 2024 draws
+    // that paragraph and everything after it below the rectangle, the inline
+    // table too, fills page 1 with 32 filler lines and puts the other 18 on
+    // page 2. Only the text lines used to move down: the table kept its stored
+    // place over the title lines and the lines after it followed it back up.
+    // Once they moved, the stale restart opened a third page.
+    const doc = open('paper-topbottom-box-stale-ladder.hwpx')
+    expect(doc.pageCount()).toBe(2)
+    const root = JSON.parse(doc.getPageRenderTree(0)) as Node
+    const body = area(root, 'Body')!.bbox!
+    const box = root.children!.find((c) => c.type === 'Rect' && c.bbox!.w > body.w / 2)!.bbox!
+    const page = boxes(doc, 0)
+      .filter((b) => b.pi > 0)
+      .sort((a, b) => a.top - b.top)
+    expect(page.some((b) => b.type === 'Table' && b.pi === 4)).toBe(true)
+    for (const b of page) {
+      expect(b.top).toBeGreaterThanOrEqual(box.y + box.h - 0.5)
+      expect(b.bottom).toBeLessThanOrEqual(body.y + body.h + 0.5)
+    }
+    for (let i = 1; i < page.length; i++) {
+      expect(page[i].top).toBeGreaterThanOrEqual(page[i - 1].bottom - 0.5)
+    }
+    const second = boxes(doc, 1).filter((b) => b.type === 'TextLine')
+    expect(second).toHaveLength(18)
+    for (const b of second) expect(b.bottom).toBeLessThanOrEqual(body.y + body.h + 0.5)
   })
 
   it('fills a cell zone to the end of the merged cell it ends on', () => {
