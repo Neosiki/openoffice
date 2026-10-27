@@ -6,6 +6,7 @@
 import type {
   AiSubscriptionProviderId,
   SubscriptionLaunchResult,
+  SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
@@ -23,8 +24,11 @@ export interface SubscriptionApi {
   statuses(): Promise<SubscriptionStatusMap>
   /** look again (both providers when none is named) and answer when done */
   recheck(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
-  /** open the program's own sign-in */
-  login(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /** open the program's own sign-in; `window` asks for its window, where a code is pasted */
+  login(
+    provider: AiSubscriptionProviderId,
+    mode?: SubscriptionLoginMode,
+  ): Promise<SubscriptionLaunchResult>
   /** run the vendor's official install command in a visible terminal window */
   install(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** run the official update of a program below the app's floor, in a terminal window */

@@ -95,9 +95,11 @@ function setup(): {
         return () => listeners.delete(listener)
       },
       setSigningIn: (provider, mode) => void log.push(`signingIn:${provider}:${mode ?? 'none'}`),
+      setLoginUnfinished: (provider, unfinished) =>
+        void log.push(`unfinished:${provider}:${unfinished}`),
     },
-    launchLogin: async (provider): Promise<SubscriptionLaunchResult> => {
-      log.push(`login:${provider}`)
+    launchLogin: async (provider, mode): Promise<SubscriptionLaunchResult> => {
+      log.push(`login:${provider}${mode ? `:${mode}` : ''}`)
       return { ok: true }
     },
     launchLogout: async (provider): Promise<SubscriptionLaunchResult> => {
@@ -304,7 +306,17 @@ describe('registerSubscriptionIpc', () => {
     expect(await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.install, { provider: 'codex' })).toEqual({
       ok: true,
     })
-    expect(log).toEqual(['login:claude-code', 'install:codex'])
+    // a window asked for is passed on; `browser` and anything else is the login as always
+    await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider: 'claude-code', mode: 'window' })
+    await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider: 'codex', mode: 'browser' })
+    await ipc.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider: 'codex', mode: 'terminal' })
+    expect(log).toEqual([
+      'login:claude-code',
+      'install:codex',
+      'login:claude-code:window',
+      'login:codex',
+      'login:codex',
+    ])
   })
 
   it('routes update and cancel-login to theirs', async () => {

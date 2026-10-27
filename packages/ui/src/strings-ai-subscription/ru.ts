@@ -23,6 +23,8 @@ export const ru = {
   actionInstall: 'Установить',
   actionLogin: 'Войти',
   actionLoginWindow: 'Браузер не открылся?',
+  actionLoginWithCode: 'Браузер показал код?',
+  actionLoginBrowser: 'Войти в браузере',
   actionRecheck: 'Проверить снова',
   actionAcceptMetered: 'Всё равно использовать',
   actionInstallHelp: 'Официальная инструкция по установке',
@@ -119,6 +121,8 @@ export const ru = {
   signingInStalledNote:
     'Если страница входа в браузере не открылась, откройте окно входа кнопкой ниже. Если вы ещё входите в браузере, не нажимайте её, а завершите вход там: кнопка прервёт этот вход и начнёт всё заново.',
   actionLoginWindowOpen: 'Открыть окно входа',
+  loginUnfinishedNote:
+    'Вход не завершён. Если браузер показал код, его нужно вставить в окно входа: откройте окно и войдите там заново. Код, показанный раньше, больше не действует.',
   loginWindowTitle: 'Вход в {provider}',
   loginWindowIntro:
     'Это окно входа программы {provider}. Текст на английском ниже выводит программа {provider}.',

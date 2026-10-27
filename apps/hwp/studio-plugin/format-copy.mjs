@@ -1489,7 +1489,7 @@ function openCopy(services, studio, ih, described) {
     createBody() {
       const doc = globalThis.document
       const body = doc.createElement('div')
-      body.style.padding = '12px 16px'
+      // The shared dialog skin owns the body padding (studio-plugin/dialog-theme.mjs).
       const heading = (text) => {
         const h = doc.createElement('div')
         h.className = 'dialog-section-title'

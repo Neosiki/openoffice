@@ -628,6 +628,7 @@ describe('the account shown on the Settings card', () => {
           clearMeteredAcceptance: async () => undefined,
           onChange: () => () => undefined,
           setSigningIn: () => undefined,
+          setLoginUnfinished: () => undefined,
         },
         launchLogin: async () => ({ ok: true }),
         launchLogout: async () => ({ ok: true }),

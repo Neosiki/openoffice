@@ -36,6 +36,8 @@ In de tweede stap van de welkomstschermen bij de eerste start, en in het AI-pane
 
 De verbinding wordt gecontroleerd wanneer de app start, wanneer je Instellingen opent en wanneer je naar het venster terugkeert nadat je een installatie of een aanmelding hebt gestart.
 
+Meldt de kaart dat een aanmelding niet is afgerond, kies dan **Aanmeldvenster openen**. Een code die de browser toont, moet in dat venster worden geplakt; een eerder getoonde code werkt niet meer.
+
 ## Zonder abonnement: gratis AI
 
 Geen abonnement op Claude of ChatGPT? Onder Instellingen ▸ AI verbind je met **Gratis gebruiken** in plaats daarvan een gratis AI. Kies je **Nog geen van beide** in de tweede stap van de welkomstschermen, dan zie je dezelfde kaarten, en kies je het in het AI-paneel wanneer er niets is verbonden, dan biedt het **Gratis AI koppelen** aan.

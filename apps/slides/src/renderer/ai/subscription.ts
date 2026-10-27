@@ -16,6 +16,7 @@ import type {
   AiRunErrorKind,
   AiSubscriptionProviderId,
   SubscriptionConnectHelpPath,
+  SubscriptionLoginMode,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import { subscriptionConnectHelpUrl } from '@genoffice/ai-provider/browser'
@@ -156,9 +157,15 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [])
 
   const launch = useCallback(
-    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
+    (
+      kind: 'install' | 'login' | 'update',
+      provider: AiSubscriptionProviderId,
+      mode?: SubscriptionLoginMode,
+    ) => {
       during(
-        attempt((api) => api[kind](provider)).then((result) => {
+        attempt((api) =>
+          kind === 'login' && mode ? api.login(provider, mode) : api[kind](provider),
+        ).then((result) => {
           if (result?.ok) launched.current.set(provider, statusesRef.current[provider].state)
           // the update could not be started here: the vendor's own guide is the way on
           else if (kind === 'update') openHelp(provider)
@@ -173,7 +180,7 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   const actions = useMemo<AiSubscriptionCardActions>(
     () => ({
       onInstall: (provider) => launch('install', provider),
-      onLogin: (provider) => launch('login', provider),
+      onLogin: (provider, mode) => launch('login', provider, mode),
       onRecheck: (provider) => during(check([provider])),
       onAcceptMetered: (provider) =>
         during(

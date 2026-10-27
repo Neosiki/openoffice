@@ -13,6 +13,8 @@
  * Everything returned crosses to the app renderer by structured clone.
  */
 
+import { installDialogTheme } from './dialog-theme.mjs'
+
 export const AGENT_PLUGIN_ID = 'ieum-agent'
 
 /** Matches listed back to the caller when a search is ambiguous. */
@@ -2924,6 +2926,11 @@ export const agentPlugin = {
   },
 
   activate(host) {
+    // The app's dialog skin (studio-plugin/dialog-theme.mjs). It is installed
+    // when the plugin comes up, not when the AI panel opens: a settings dialog
+    // can be opened on a document the panel never touched.
+    installDialogTheme()
+
     // the unsaved state as the editor sets it, in the same task as the edit: the app's close
     // prompt reads its copy of this, and a key typed just before closing must be in it
     host.events.on('document-dirty-changed', (change) => {

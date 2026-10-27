@@ -1,4 +1,4 @@
-# 0075 Codex 구독 이미지 생성은 `codex exec` 한 번으로 넣는다
+# 0076 Codex 구독 이미지 생성은 `codex exec` 한 번으로 넣는다
 
 ## 맥락
 

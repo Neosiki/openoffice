@@ -25,6 +25,8 @@ export const fr = {
   actionInstall: 'Installer',
   actionLogin: 'Se connecter',
   actionLoginWindow: 'Le navigateur ne s’est pas ouvert ?',
+  actionLoginWithCode: 'Le navigateur affiche un code ?',
+  actionLoginBrowser: 'Se connecter dans le navigateur',
   actionRecheck: 'Vérifier à nouveau',
   actionAcceptMetered: 'Utiliser quand même',
   actionInstallHelp: 'Guide d’installation officiel',
@@ -124,6 +126,8 @@ export const fr = {
   signingInStalledNote:
     'Si aucune page de connexion ne s’est ouverte dans votre navigateur, ouvrez la fenêtre de connexion avec le bouton ci-dessous. Si vous êtes encore en train de vous connecter dans le navigateur, terminez plutôt là-bas : le bouton interrompt cette connexion et tout recommence depuis le début.',
   actionLoginWindowOpen: 'Ouvrir la fenêtre de connexion',
+  loginUnfinishedNote:
+    "La connexion n'a pas abouti. Si le navigateur affiche un code, il faut le coller dans la fenêtre de connexion : ouvrez-la et reconnectez-vous à cet endroit. Un code affiché auparavant ne fonctionne plus.",
   loginWindowTitle: 'Connexion à {provider}',
   loginWindowIntro:
     'Ceci est la fenêtre de connexion du programme {provider}. Le texte en anglais ci-dessous provient du programme {provider}.',

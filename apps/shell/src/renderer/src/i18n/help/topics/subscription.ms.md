@@ -36,6 +36,8 @@ Pada langkah kedua skrin alu-aluan semasa pelancaran pertama, dan dalam panel AI
 
 Sambungan disemak apabila aplikasi dimulakan, apabila anda membuka Tetapan, dan apabila anda kembali ke tetingkap selepas memulakan pemasangan atau log masuk.
 
+Jika kad menyatakan log masuk tidak selesai, pilih **Buka tetingkap log masuk**. Kod yang dipaparkan pelayar perlu ditampal di tetingkap itu; kod yang dipaparkan sebelum ini tidak lagi berfungsi.
+
 ## Tanpa langganan: AI percuma
 
 Tiada langganan Claude atau ChatGPT? Di bawah Tetapan ▸ AI, **Guna secara percuma** menyambungkan AI percuma sebagai gantinya. Memilih **Belum ada kedua-duanya** pada langkah kedua skrin alu-aluan memaparkan kad yang sama, dan memilihnya dalam panel AI apabila tiada apa-apa yang disambungkan menawarkan **Sambungkan AI percuma**.

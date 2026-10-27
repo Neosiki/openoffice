@@ -50,6 +50,20 @@ export interface SubscriptionProviderRequest {
   provider: AiSubscriptionProviderId
 }
 
+/**
+ * Where the CLI's own login runs. `browser` (absent): the user signs in on the
+ * vendor's page and the browser hands the sign-in back by itself; the CLI's
+ * window stays hidden. `window`: the CLI's own window is shown, for the case
+ * where the browser shows a code that has to be pasted there. Windows alone
+ * has that window; elsewhere both are the same login.
+ */
+export type SubscriptionLoginMode = 'browser' | 'window'
+
+export interface SubscriptionLoginRequest extends SubscriptionProviderRequest {
+  /** absent: the browser, with the CLI's window hidden */
+  mode?: SubscriptionLoginMode | undefined
+}
+
 export interface SubscriptionMeteredRequest {
   provider: AiSubscriptionProviderId
   accepted: boolean
@@ -89,7 +103,7 @@ export interface SubscriptionIpcContract {
     response: SubscriptionStatusMap
   }
   [SUBSCRIPTION_IPC_CHANNELS.login]: {
-    request: SubscriptionProviderRequest
+    request: SubscriptionLoginRequest
     response: SubscriptionLaunchResult
   }
   [SUBSCRIPTION_IPC_CHANNELS.logout]: {
@@ -387,12 +401,17 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
     delete read.account
     delete read.models
     delete read.signingIn
+    delete read.loginUnfinished
     delete read.programPath
     if (account) read.account = account
     if (models) read.models = models
     if (programPath) read.programPath = programPath
     if (status.signingIn === 'browser' || status.signingIn === 'window') {
       read.signingIn = status.signingIn
+    }
+    // a login that ended without one belongs to signed-out and nowhere else
+    if (read.state === 'signed-out' && status.loginUnfinished === true) {
+      read.loginUnfinished = true
     }
     return read
   }

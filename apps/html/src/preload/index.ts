@@ -37,9 +37,12 @@ const subscription: HtmlSubscriptionApi = {
         providers ? { providers } : undefined,
       ),
     ),
-  login: async (provider) =>
+  login: async (provider, mode) =>
     subscriptionLaunchResultOf(
-      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.login,
+        mode ? { provider, mode } : { provider },
+      ),
     ),
   install: async (provider) =>
     subscriptionLaunchResultOf(

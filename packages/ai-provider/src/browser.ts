@@ -72,6 +72,8 @@ export type {
   SubscriptionIpcContract,
   SubscriptionLaunchFailure,
   SubscriptionLaunchResult,
+  SubscriptionLoginMode,
+  SubscriptionLoginRequest,
   SubscriptionMeteredRequest,
   SubscriptionMeteredResult,
   SubscriptionProviderRequest,

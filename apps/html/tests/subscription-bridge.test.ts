@@ -159,6 +159,7 @@ describe('html preload', () => {
     await api.subscription.recheck()
     await api.subscription.recheck(['codex'])
     await api.subscription.login('claude-code')
+    await api.subscription.login('claude-code', 'window')
     await api.subscription.install('codex')
     await api.subscription.setMeteredAccepted('codex', true)
     await api.subscription.openInstallHelp('claude-code')
@@ -167,6 +168,7 @@ describe('html preload', () => {
       [SUBSCRIPTION_IPC_CHANNELS.recheck, undefined],
       [SUBSCRIPTION_IPC_CHANNELS.recheck, { providers: ['codex'] }],
       [SUBSCRIPTION_IPC_CHANNELS.login, { provider: 'claude-code' }],
+      [SUBSCRIPTION_IPC_CHANNELS.login, { provider: 'claude-code', mode: 'window' }],
       [SUBSCRIPTION_IPC_CHANNELS.install, { provider: 'codex' }],
       [SUBSCRIPTION_IPC_CHANNELS.metered, { provider: 'codex', accepted: true }],
       [SUBSCRIPTION_INSTALL_HELP_CHANNEL, 'claude-code'],

@@ -36,6 +36,8 @@ Im zweiten Schritt der Willkommensbildschirme beim ersten Start und im KI-Bereic
 
 Die Verbindung wird geprüft, wenn die App startet, wenn Sie die Einstellungen öffnen und wenn Sie nach dem Start einer Installation oder Anmeldung zum Fenster zurückkehren.
 
+Meldet die Karte, dass eine Anmeldung nicht abgeschlossen wurde, wählen Sie **Anmeldefenster öffnen**. Einen Code, den der Browser zeigt, müssen Sie in dieses Fenster einfügen; ein zuvor angezeigter Code gilt nicht mehr.
+
 ## Ohne Abonnement: kostenlose KI
 
 Kein Claude- oder ChatGPT-Abonnement? Unter Einstellungen ▸ KI verbindet **Kostenlos nutzen** stattdessen eine kostenlose KI. Wählen Sie im zweiten Schritt der Willkommensbildschirme **Noch keins von beiden**, erscheinen dieselben Karten; wählen Sie es im KI-Bereich, solange nichts verbunden ist, bietet er **Kostenlose KI verbinden** an.
