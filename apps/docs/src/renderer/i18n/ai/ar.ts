@@ -126,6 +126,7 @@ export const ar = {
   aiSumAnalyzeMediaDone: 'تم تحليل الوسائط',
   aiSumInsertImage: 'إدراج صورة',
   aiSumInsertWebImage: 'تم إدراج صورة من الويب',
+  aiSumInsertAttachedImage: 'تم إدراج الصورة المرفقة',
   aiSumGenerateImage: 'إنشاء صورة',
   aiSumInsertedGenImage: 'تم إدراج صورة أنشأها الذكاء الاصطناعي',
   aiSumUnknownTool: 'أداة غير معروفة',

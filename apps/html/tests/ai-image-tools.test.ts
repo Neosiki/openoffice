@@ -91,9 +91,9 @@ afterEach(() => {
 })
 
 describe('image tool schemas', () => {
-  it('declare search_images and generate_image with the sibling-required fields', () => {
+  it('declare image_search and generate_image with the sibling-required fields', () => {
     const byName = new Map(AGENT_TOOLS.map((tl) => [tl.name, tl]))
-    const search = byName.get('search_images')
+    const search = byName.get('image_search')
     const generate = byName.get('generate_image')
     expect(search?.inputSchema).toMatchObject({ required: ['query'] })
     expect(generate?.inputSchema).toMatchObject({ required: ['prompt'] })
@@ -106,7 +106,7 @@ describe('image tool schemas', () => {
   })
 })
 
-describe('search_images', () => {
+describe('image_search', () => {
   it('formats the gallery as a numbered list of urls', async () => {
     bridge.imageSearch.mockResolvedValue({
       images: [
@@ -116,7 +116,7 @@ describe('search_images', () => {
       method: 'serper',
     })
     const core = createHtmlSkillCore(fakeAccess(DOC).access)
-    const r = await core.executeTool(call('search_images', { query: 'poster', maxResults: 2 }))
+    const r = await core.executeTool(call('image_search', { query: 'poster', maxResults: 2 }))
     expect(r.isError).toBeUndefined()
     expect(r.mutated).toBe(false)
     expect(r.output).toBe(
@@ -128,12 +128,12 @@ describe('search_images', () => {
   it('keeps an empty result and a backend failure apart', async () => {
     const core = createHtmlSkillCore(fakeAccess(DOC).access)
     bridge.imageSearch.mockResolvedValue({ images: [], method: 'serper' })
-    const empty = await core.executeTool(call('search_images', { query: 'nothing' }))
+    const empty = await core.executeTool(call('image_search', { query: 'nothing' }))
     expect(empty.output).toBe('(no images)')
     expect(empty.isError).toBeUndefined()
 
     bridge.imageSearch.mockResolvedValue({ images: [], method: 'error', error: 'quota' })
-    const failed = await core.executeTool(call('search_images', { query: 'nothing' }))
+    const failed = await core.executeTool(call('image_search', { query: 'nothing' }))
     expect(failed.isError).toBe(true)
     expect(failed.output).toContain('you may retry')
     expect(failed.output).toContain('quota')
@@ -141,7 +141,7 @@ describe('search_images', () => {
 
   it('refuses an empty query', async () => {
     const core = createHtmlSkillCore(fakeAccess(DOC).access)
-    const r = await core.executeTool(call('search_images', { query: '  ' }))
+    const r = await core.executeTool(call('image_search', { query: '  ' }))
     expect(r.isError).toBe(true)
     expect(r.output).toBe('query must not be empty')
     expect(bridge.imageSearch).not.toHaveBeenCalled()
@@ -235,7 +235,7 @@ describe('generate_image gating', () => {
     const access = fakeAccess(DOC).access
     const off = createHtmlSkill(access, 'PROMPT', () => false)
     expect(off.tools.map((tl) => tl.name)).not.toContain('generate_image')
-    expect(off.tools.map((tl) => tl.name)).toContain('search_images')
+    expect(off.tools.map((tl) => tl.name)).toContain('image_search')
     expect(off.systemPrompt).toContain('generate_image is currently unavailable')
     expect(off.systemPrompt).toBe(`PROMPT${IMAGE_GEN_OFF_NOTE}`)
 

@@ -73,6 +73,10 @@ export type AgentTableResult =
   /** the anchor is inside a table cell, where a table cannot be made */
   | { ok: false; reason: 'in_table'; count: number }
 
+/** A picture put into the document: where it now sits. */
+export type AgentPictureResult =
+  { ok: true; inTable: boolean; place: AgentPlace } | AgentPlaceRefusal
+
 /** Character formatting to change; what is left out stays as it is. */
 export interface AgentTextFormat {
   bold?: boolean
@@ -764,6 +768,19 @@ export interface AgentPluginSurface {
     header?: boolean,
     options?: AgentChangeOptions,
   ): AgentTableResult
+  insertPicture(
+    anchor: string,
+    occurrence: number | null,
+    where: AgentWhere,
+    /** base64 bytes of a PNG, JPEG or GIF; the extension has to be that format */
+    base64: string,
+    /** the width on the page, in points; the height follows the natural pixel size */
+    widthPt: number,
+    naturalWidthPx: number,
+    naturalHeightPx: number,
+    extension: 'png' | 'jpg' | 'gif',
+    options?: AgentChangeOptions,
+  ): AgentPictureResult
   formatText(
     find: string,
     occurrence: number | null,

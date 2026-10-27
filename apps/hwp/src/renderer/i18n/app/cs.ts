@@ -81,6 +81,8 @@ export const cs = {
   aiToolInsert: 'Přidané odstavce: {count}',
   aiToolDelete: 'Odstavec odstraněn · {text}',
   aiToolTable: 'Tabulka přidána · {rows} × {cols}',
+  aiToolImageSearchDone: 'Hledání obrázků „{query}“ ({count} obrázků)',
+  aiToolInsertImage: 'Obrázek vložen {what}',
   aiToolFormat: 'Formát změněn · {text}',
   aiFmtBold: 'Tučné',
   aiFmtItalic: 'Kurzíva',

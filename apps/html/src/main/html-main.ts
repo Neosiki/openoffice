@@ -27,7 +27,6 @@ import {
   configuredDefaultSaveDir,
   confirmOverwriteIfConflicted,
   contextMenuLabels,
-  fetchRemoteImage,
   installContextMenu,
   installNavigationGuard,
   isHeadlessMode,
@@ -44,12 +43,11 @@ import {
   installRendererProtocol,
   registerRecoveryEditor,
   rendererUrl,
-  MAX_REMOTE_IMAGE_BYTES,
-  readBodyCapped,
   printHtmlDocument,
   type PrintDialogOutcome,
   assertFileSaved,
 } from '@genoffice/electron-utils'
+import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
 import { createI18n, getUiLang } from '@genoffice/i18n'
 import {
   sharedSubscriptionStatuses,
@@ -1781,24 +1779,10 @@ function registerHtmlIpc(): void {
   })
 
   // remote pictures (AI-generated or hot-linked) are downloaded here: the frame's fetch is
-  // CORS-bound, and fetchRemoteImage refuses private/link-local targets
-  ipcMain.handle(HTML_CHANNELS.fetchImage, async (_e, url: unknown): Promise<ImageData | null> => {
-    if (typeof url !== 'string' || !/^https?:/i.test(url)) return null
-    try {
-      const resp = await fetchRemoteImage(url)
-      if (!resp?.ok) return null
-      const ct = resp.headers.get('content-type') ?? ''
-      const mime = ct.includes('png')
-        ? 'image/png'
-        : ct.includes('gif')
-          ? 'image/gif'
-          : 'image/jpeg'
-      const bytes = await readBodyCapped(resp, MAX_REMOTE_IMAGE_BYTES)
-      return { base64: Buffer.from(bytes).toString('base64'), mime }
-    } catch {
-      return null
-    }
-  })
+  // CORS-bound, and fetchImageBytes gates both the http(s) download and the generated store
+  ipcMain.handle(HTML_CHANNELS.fetchImage, (_e, url: unknown): Promise<ImageData | null> =>
+    fetchImageBytes(url),
+  )
 
   ipcMain.handle(
     HTML_CHANNELS.exportDocx,

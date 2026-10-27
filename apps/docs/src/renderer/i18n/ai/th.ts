@@ -126,6 +126,7 @@ export const th = {
   aiSumAnalyzeMediaDone: 'วิเคราะห์สื่อแล้ว',
   aiSumInsertImage: 'แทรกรูปภาพ',
   aiSumInsertWebImage: 'แทรกรูปภาพจากเว็บ',
+  aiSumInsertAttachedImage: 'แทรกรูปภาพแนบแล้ว',
   aiSumGenerateImage: 'สร้างรูปภาพ',
   aiSumInsertedGenImage: 'แทรกรูปภาพที่ AI สร้าง',
   aiSumUnknownTool: 'เครื่องมือที่ไม่รู้จัก',

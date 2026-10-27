@@ -121,6 +121,7 @@ export const zhTW = {
   aiSumAnalyzeMediaDone: '已分析媒體',
   aiSumInsertImage: '插入圖片',
   aiSumInsertWebImage: '插入網路圖片',
+  aiSumInsertAttachedImage: '已插入附件圖片',
   aiSumGenerateImage: '生成配圖',
   aiSumInsertedGenImage: '插入 AI 生成的配圖',
   aiSumUnknownTool: '未知工具',

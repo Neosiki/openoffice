@@ -82,6 +82,8 @@ export const it = {
   aiToolInsert: 'Paragrafi aggiunti: {count}',
   aiToolDelete: 'Paragrafo rimosso · {text}',
   aiToolTable: 'Tabella aggiunta · {rows} × {cols}',
+  aiToolImageSearchDone: 'Ricerca immagini "{query}" ({count} immagini)',
+  aiToolInsertImage: 'Immagine inserita {what}',
   aiToolFormat: 'Formattazione modificata · {text}',
   aiFmtBold: 'Grassetto',
   aiFmtItalic: 'Corsivo',

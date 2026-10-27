@@ -80,6 +80,8 @@ export const ja = {
   aiToolInsert: '段落を {count} 個追加',
   aiToolDelete: '段落を削除 · {text}',
   aiToolTable: '表を挿入 · {rows} 行 {cols} 列',
+  aiToolImageSearchDone: '「{query}」の画像検索（{count}件）',
+  aiToolInsertImage: '画像を挿入しました {what}',
   aiToolFormat: '書式を変更 · {text}',
   aiFmtBold: '太字',
   aiFmtItalic: '斜体',

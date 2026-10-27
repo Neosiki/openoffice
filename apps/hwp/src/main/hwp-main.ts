@@ -21,6 +21,7 @@ import type { SaveDiskState } from '@genoffice/electron-utils'
 import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
+import { registerHwpImageIpc } from './ai-image'
 import { atomicWriteFile } from './atomic-write'
 import { badJob, printJobToPdf, printJobToPrinter } from './print-document'
 import { tm } from './dialog-strings'
@@ -461,6 +462,10 @@ function registerHwpIpc(): void {
   if (ipcRegistered) return
   ipcRegistered = true
   registerHwpAttachmentIpc()
+  // the AI panel's pictures: search result or generated file → bytes for the plugin
+  registerHwpImageIpc({
+    filePathOf: (wcId) => savePathByWc.get(wcId) ?? openPathByWc.get(wcId) ?? null,
+  })
   installHwpRecovery(recoveryHost)
   registerHwpRecoveryIpc()
 

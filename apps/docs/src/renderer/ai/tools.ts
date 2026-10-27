@@ -508,14 +508,17 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     name: 'insert_image',
     description:
-      'Download a direct image link (an imageUrl from image_search) and insert it into the document (at the cursor / end of document).',
+      'Insert a picture into the document (at the cursor / end of document). Give either url (a direct image link, usually an imageUrl from image_search) or attachment (the exact name of an image file attached to this chat, e.g. one the user made with another tool).',
     inputSchema: {
       type: 'object',
       properties: {
         url: { type: 'string', description: 'direct image link' },
+        attachment: {
+          type: 'string',
+          description: 'exact name of an image file attached to this chat',
+        },
         maxWidthPx: { type: 'integer', description: 'maximum width (px), default 480' },
       },
-      required: ['url'],
     },
   },
   {
@@ -687,6 +690,16 @@ export interface AiHeaderFooterAccess {
 export interface AiDocExtras {
   styles?: AiStyleAccess
   watermark?: AiWatermarkAccess
+}
+
+/**
+ * Files the person attached to this conversation. The model names one by the exact name
+ * the attachment list shows; only the panel decides which paths exist, so a name the
+ * person did not attach has no path. Used by insert_image to take a picture made by an
+ * outside tool (another CLI, a screenshot, a generator).
+ */
+export interface AiAttachmentAccess {
+  pathOf(name: string): string | null
 }
 
 export interface AiCommentsAccess {
@@ -918,6 +931,7 @@ async function executeAsyncTool(
   editor: Editor,
   call: AgentToolCall,
   signal?: AbortSignal,
+  attachments?: AiAttachmentAccess,
 ): Promise<ToolExecution> {
   switch (call.name) {
     case 'web_search': {
@@ -1010,8 +1024,33 @@ async function executeAsyncTool(
     case 'insert_picture':
       return insertPicture(editor, call, signal)
     case 'insert_image': {
+      const attachment = String(call.input.attachment ?? '').trim()
+      if (attachment) {
+        const path = attachments?.pathOf(attachment) ?? null
+        if (!path) {
+          return fail(
+            t('aiSumInsertImage'),
+            `there is no file named "${attachment}" attached to this chat. Attach the image first (or give a direct image link as url).`,
+          )
+        }
+        const read = await window.desktop.readAttachmentImage(path)
+        if (signal?.aborted)
+          return fail(t('aiSumInsertImage'), 'stopped by the user; the image was not inserted')
+        if (!read.ok || !read.base64)
+          return fail(t('aiSumInsertImage'), read.error ?? 'the attached image could not be read')
+        return insertImageBytes(editor, read.base64, Number(call.input.maxWidthPx) || 480, signal, {
+          failLabel: t('aiSumInsertImage'),
+          doneLabel: t('aiSumInsertAttachedImage'),
+          blockLabel: 'Image (attached)',
+        })
+      }
       const url = String(call.input.url ?? '')
-      if (!/^https?:\/\//.test(url)) return fail(t('aiSumInsertImage'), 'invalid url')
+      if (!/^https?:\/\//.test(url)) {
+        return fail(
+          t('aiSumInsertImage'),
+          'give either url (a direct image link) or attachment (the exact name of an image attached to this chat)',
+        )
+      }
       return insertImageFromUrl(editor, url, Number(call.input.maxWidthPx) || 480, signal, {
         failLabel: t('aiSumInsertImage'),
         doneLabel: t('aiSumInsertWebImage'),
@@ -1205,14 +1244,25 @@ async function insertImageFromUrl(
   if (signal?.aborted)
     return fail(labels.failLabel, 'stopped by the user; the image was not inserted')
   if (!fetched) return fail(labels.failLabel, 'download failed (the image may not be accessible)')
-  const mime = sniffImageMime(fetched.base64)
+  return insertImageBytes(editor, fetched.base64, maxW, signal, labels)
+}
+
+/** The insertion half, shared by a downloaded picture and one attached to the chat. */
+async function insertImageBytes(
+  editor: Editor,
+  base64: string,
+  maxW: number,
+  signal: AbortSignal | undefined,
+  labels: { failLabel: string; doneLabel: string; blockLabel: string },
+): Promise<ToolExecution> {
+  const mime = sniffImageMime(base64)
   if (!mime) {
     return fail(
       labels.failLabel,
       'unsupported image format (only png/jpg/gif can be embedded) — pick a different image',
     )
   }
-  const dataUrl = `data:${mime};base64,${fetched.base64}`
+  const dataUrl = `data:${mime};base64,${base64}`
   try {
     const natural = await imageSizeOf(dataUrl)
     if (signal?.aborted)
@@ -1220,7 +1270,7 @@ async function insertImageFromUrl(
     const scale = Math.min(1, maxW / natural.width)
     const w = Math.round(natural.width * scale)
     const h = Math.round(natural.height * scale)
-    // The download can take long: user edits made meanwhile must keep the
+    // A download can take long: user edits made meanwhile must keep the
     // freshness baseline stale, so only our own insertion may mark the doc
     // seen. Checked right before the write — there is no async gap after.
     const userEditedDuringFetch = editedExternally(editor)
@@ -1236,7 +1286,7 @@ async function insertImageFromUrl(
           imageDataUrl: dataUrl,
           imageWidthPx: w,
           imageHeightPx: h,
-          genImage: { base64: fetched.base64, mime, widthPx: w, heightPx: h },
+          genImage: { base64, mime, widthPx: w, heightPx: h },
         },
       })
       .run()
@@ -1264,6 +1314,7 @@ export function executeTool(
   pageSetup?: AiPageSetupAccess,
   extras?: AiDocExtras,
   notes?: AiNotesAccess,
+  attachments?: AiAttachmentAccess,
 ): ToolExecution | Promise<ToolExecution> {
   // an ODT document: switched-off features are refused, and so are edits the
   // editor guard turned away (protected cells, locked placeholders)
@@ -1283,6 +1334,7 @@ export function executeTool(
     pageSetup,
     extras,
     notes,
+    attachments,
   )
   const settleOdt = (exec: ToolExecution): ToolExecution => {
     const refused = odtGuardRefusalText()
@@ -1304,6 +1356,7 @@ function executeToolUnguarded(
   pageSetup?: AiPageSetupAccess,
   extras?: AiDocExtras,
   notes?: AiNotesAccess,
+  attachments?: AiAttachmentAccess,
 ): ToolExecution | Promise<ToolExecution> {
   const scope = frozen && frozen.doc === editor.state.doc ? frozen.scope : null
   const staleSummary = staleSummaryOf(call)
@@ -1327,7 +1380,7 @@ function executeToolUnguarded(
     call.name === 'analyze_media' ||
     call.name === 'create_document'
   ) {
-    return executeAsyncTool(editor, call, signal)
+    return executeAsyncTool(editor, call, signal, attachments)
   }
   if (call.name === 'write_document')
     return writeDocument(editor, call, numIds, track, signal, writer)

@@ -128,6 +128,7 @@ export const vi = {
   aiSumAnalyzeMediaDone: 'Đã phân tích phương tiện',
   aiSumInsertImage: 'Chèn hình ảnh',
   aiSumInsertWebImage: 'Đã chèn hình ảnh trên web',
+  aiSumInsertAttachedImage: 'Đã chèn hình ảnh đính kèm',
   aiSumGenerateImage: 'Tạo hình ảnh',
   aiSumInsertedGenImage: 'Đã chèn hình ảnh do AI tạo',
   aiSumUnknownTool: 'Công cụ không xác định',

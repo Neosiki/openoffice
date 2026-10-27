@@ -119,6 +119,7 @@ export const zh = {
   aiSumAnalyzeMediaDone: '已分析媒体',
   aiSumInsertImage: '插入图片',
   aiSumInsertWebImage: '插入联网图片',
+  aiSumInsertAttachedImage: '已插入附件图片',
   aiSumGenerateImage: '生成配图',
   aiSumInsertedGenImage: '插入 AI 生成的配图',
   aiSumUnknownTool: '未知工具',

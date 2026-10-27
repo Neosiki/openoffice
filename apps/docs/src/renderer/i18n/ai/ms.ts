@@ -128,6 +128,7 @@ export const ms = {
   aiSumAnalyzeMediaDone: 'Media dianalisis',
   aiSumInsertImage: 'Sisipkan imej',
   aiSumInsertWebImage: 'Imej web disisipkan',
+  aiSumInsertAttachedImage: 'Imej dilampirkan disisipkan',
   aiSumGenerateImage: 'Jana imej',
   aiSumInsertedGenImage: 'Imej janaan AI disisipkan',
   aiSumUnknownTool: 'Alat tidak diketahui',

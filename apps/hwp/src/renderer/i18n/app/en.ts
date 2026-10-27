@@ -79,6 +79,8 @@ export const en = {
   aiToolInsert: 'Added {count} paragraph(s)',
   aiToolDelete: 'Removed a paragraph · {text}',
   aiToolTable: 'Added a table · {rows} × {cols}',
+  aiToolImageSearchDone: 'Image search "{query}" ({count} images)',
+  aiToolInsertImage: 'Inserted the picture {what}',
   aiToolFormat: 'Formatted · {text}',
   aiFmtBold: 'Bold',
   aiFmtItalic: 'Italic',

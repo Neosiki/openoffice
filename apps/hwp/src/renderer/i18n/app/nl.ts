@@ -80,6 +80,8 @@ export const nl = {
   aiToolInsert: 'Alinea’s toegevoegd: {count}',
   aiToolDelete: 'Alinea verwijderd · {text}',
   aiToolTable: 'Tabel toegevoegd · {rows} × {cols}',
+  aiToolImageSearchDone: 'Afbeeldingen zoeken "{query}" ({count} afbeeldingen)',
+  aiToolInsertImage: 'Afbeelding ingevoegd {what}',
   aiToolFormat: 'Opmaak gewijzigd · {text}',
   aiFmtBold: 'Vet',
   aiFmtItalic: 'Cursief',

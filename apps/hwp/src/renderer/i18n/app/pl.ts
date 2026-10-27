@@ -80,6 +80,8 @@ export const pl = {
   aiToolInsert: 'Dodane akapity: {count}',
   aiToolDelete: 'Usunięto akapit · {text}',
   aiToolTable: 'Dodano tabelę · {rows} × {cols}',
+  aiToolImageSearchDone: 'Wyszukiwanie obrazów „{query}” ({count} obrazów)',
+  aiToolInsertImage: 'Wstawiono obraz {what}',
   aiToolFormat: 'Zmieniono formatowanie · {text}',
   aiFmtBold: 'Pogrubienie',
   aiFmtItalic: 'Kursywa',

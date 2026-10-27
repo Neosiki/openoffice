@@ -72,7 +72,7 @@
 - 종량 허용은 불리언만으로는 "그때 그 로그인"인지 알 수 없고, 누가 로그인했는지는 저장하면 안 된다. 그래서 동의한 로그인의 종류만 `subscription-metered.json`에 남긴다. 값은 `METERED_LOGIN_FINGERPRINTS` 상수 중 하나이고 프로그램 출력으로 조립하지 않는다. 종류가 바뀌거나 로그아웃하면 동의가 지워진다. 앱이 직접 로그인·로그아웃을 실행했을 때는 종류가 같아도 지운다. 앱 밖에서 같은 종류의 다른 계정으로 바꾼 경우는 알 수 없어 그대로 남는다.
 - 설정을 읽는 문은 둘이다. 디스크의 파일은 `normalizeAiSettings`(절대 throw하지 않고, 모르는 id는 기본값으로 떨어진다), 렌더러가 보낸 값은 `sanitizeAiSettings`(모르는 제공자 id면 `null`). 설정 파일의 `cliPath`는 spawn으로, `baseUrl`은 API 키와 함께 나가므로 렌더러 값을 검사 없이 쓰지 않는다.
 - 키 제공자를 추가하려면 `AiProviderId`(`src/types.ts`)에 id, `AI_PROVIDERS`에 메타, `AI_PROVIDER_ADAPTERS`에 어댑터를 넣는다. 표가 `Record<AiProviderId, …>`라 하나라도 빠지면 타입 오류다. 이미지 입력을 못 받는 모델 id는 `modelLacksVision`에 함께 넣는다.
-- 진입점을 가려 쓴다. 렌더러와 preload가 값으로 import하는 것은 `/browser`뿐이고, 대표 진입점에서는 타입만 import한다(`contract.ts`가 타입만 import하는 이유다). `/subscription`, `/claude-code-cli`, `/codex-app-server`는 Node 전용이다. `/codex-image`는 비어 있고 `codexImageGenerationAvailable()`은 어느 프로세스에서도 `false`다. 이미지 생성은 지금 키 기반뿐이다.
+- 진입점을 가려 쓴다. 렌더러와 preload가 값으로 import하는 것은 `/browser`뿐이고, 대표 진입점에서는 타입만 import한다(`contract.ts`가 타입만 import하는 이유다). `/subscription`, `/claude-code-cli`, `/codex-app-server`는 Node 전용이다. `/codex-image`는 여전히 비어 있다. Codex CLI 이미지 생성기는 `@genoffice/ai-search`의 `codex-image-cli.ts`에 있고, 앱이 시작할 때 `apps/docs`의 메인이 등록하면서 `codexImageGenerationAvailable()`을 켠다(결정 0075). 등록하지 않은 프로세스에서는 `false`이고 이미지 생성은 키 기반뿐이다.
 
 ## 로컬 AI (결정 0067)
 

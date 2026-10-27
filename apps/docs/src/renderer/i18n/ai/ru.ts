@@ -129,6 +129,7 @@ export const ru = {
   aiSumAnalyzeMediaDone: 'Медиа проанализировано',
   aiSumInsertImage: 'Вставка изображения',
   aiSumInsertWebImage: 'Вставлено изображение из Интернета',
+  aiSumInsertAttachedImage: 'Вставлено прикреплённое изображение',
   aiSumGenerateImage: 'Сгенерировать изображение',
   aiSumInsertedGenImage: 'Вставлено сгенерированное ИИ изображение',
   aiSumUnknownTool: 'Неизвестный инструмент',
