@@ -22,6 +22,8 @@ export const he = {
   actionInstall: 'התקנה',
   actionLogin: 'כניסה',
   actionLoginWindow: 'הדפדפן לא נפתח?',
+  actionLoginWithCode: 'הדפדפן הציג קוד?',
+  actionLoginBrowser: 'התחברות בדפדפן',
   actionRecheck: 'בדיקה חוזרת',
   actionAcceptMetered: 'להשתמש בכל זאת',
   actionInstallHelp: 'מדריך ההתקנה הרשמי',
@@ -110,6 +112,8 @@ export const he = {
   signingInStalledNote:
     'אם דף הכניסה לא נפתח בדפדפן, פתחו את חלון הכניסה בכפתור שלמטה. אם אתם עדיין באמצע הכניסה בדפדפן, אל תלחצו עליו וסיימו שם: הכפתור עוצר את הכניסה הזו ומתחיל מחדש.',
   actionLoginWindowOpen: 'פתיחת חלון הכניסה',
+  loginUnfinishedNote:
+    'ההתחברות לא הושלמה. אם הדפדפן מציג קוד, יש להדביק אותו בחלון ההתחברות: פתחו את החלון והתחברו שם שוב. קוד שהוצג קודם אינו תקף עוד.',
   loginWindowTitle: 'כניסה אל {provider}',
   loginWindowIntro:
     'זהו חלון הכניסה של התוכנה {provider}. הטקסט באנגלית שמופיע למטה מגיע מהתוכנה {provider}.',

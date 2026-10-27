@@ -92,16 +92,42 @@ describe('AiSubscriptionCard', () => {
     expect(actions.onOpenInstallHelp).toHaveBeenCalledExactlyOnceWith('codex')
   })
 
-  it('signed-out: login button', () => {
+  it('signed-out: login button, and the way to the window for a code', () => {
     const actions = render(status('claude-code', 'signed-out'))
     expect(statusText()).toBe(en.cardSignedOut)
     expect(notes()).toEqual([
       'A browser opens when you press it. Sign in with your Anthropic account and press Allow; the connection finishes by itself.',
       "The sign-in page that opens is Anthropic's own.",
     ])
-    expect(actionsShown()).toEqual(['login'])
+    expect(actionsShown()).toEqual(['login', 'login-code'])
+    const link = host.querySelector<HTMLButtonElement>('[data-action="login-code"]')!
+    expect(link.className).toBe('ai-sub-link')
+    expect(link.textContent).toBe(en.actionLoginWithCode)
     click('[data-action="login"]')
-    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+    expect(actions.onLogin).toHaveBeenNthCalledWith(1, 'claude-code')
+    click('[data-action="login-code"]')
+    // the window is asked for outright, not left to whatever a press starts
+    expect(actions.onLogin).toHaveBeenNthCalledWith(2, 'claude-code', 'window')
+  })
+
+  it('signed-out after a login that ended without one: the window is the way on', () => {
+    const actions = render(status('claude-code', 'signed-out', { loginUnfinished: true }))
+    expect(statusText()).toBe(en.cardSignedOut)
+    expect(notes()).toEqual([
+      en.loginUnfinishedNote,
+      "The sign-in page that opens is Anthropic's own.",
+    ])
+    expect(actionsShown()).toEqual(['login-code', 'login-browser'])
+    const primary = host.querySelector<HTMLButtonElement>('[data-action="login-code"]')!
+    expect(primary.className).toBe('ai-sub-btn primary')
+    expect(primary.textContent).toBe(en.actionLoginWindowOpen)
+    const browser = host.querySelector<HTMLButtonElement>('[data-action="login-browser"]')!
+    expect(browser.className).toBe('ai-sub-link')
+    expect(browser.textContent).toBe(en.actionLoginBrowser)
+    click('[data-action="login-code"]')
+    expect(actions.onLogin).toHaveBeenNthCalledWith(1, 'claude-code', 'window')
+    click('[data-action="login-browser"]')
+    expect(actions.onLogin).toHaveBeenNthCalledWith(2, 'claude-code')
   })
 
   it('ready: connected, with the plan name when given', () => {
@@ -274,7 +300,8 @@ describe('AiSubscriptionCard', () => {
     const link = host.querySelector<HTMLButtonElement>('[data-action="login-window"]')!
     expect(link.className).toBe('ai-sub-link')
     click('[data-action="login-window"]')
-    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+    // a window asked for even if the sign-in it replaces has just ended
+    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code', 'window')
   })
 
   it('a browser sign-in that goes on too long offers the window as a button, and says why', () => {
@@ -289,7 +316,7 @@ describe('AiSubscriptionCard', () => {
       expect(button.className).toBe('ai-sub-btn primary')
       expect(button.textContent).toBe(en.actionLoginWindowOpen)
       click('[data-action="login-window"]')
-      expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code')
+      expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('claude-code', 'window')
     } finally {
       vi.useRealTimers()
     }

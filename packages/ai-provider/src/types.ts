@@ -102,6 +102,15 @@ export interface AiSubscriptionStatus {
   programPath?: string | undefined
   /** a login the app started is under way; absent otherwise */
   signingIn?: AiSubscriptionSigningIn | undefined
+  /**
+   * A login the app started has ended without signing the CLI in: it exited,
+   * or ran past the limit for a browser sign-in nobody finished. `signed-out`
+   * only, in memory only. The card uses it to offer the CLI's window (where a
+   * code the browser handed back can be pasted) instead of repeating the same
+   * browser sign-in. Gone when a login starts, is cancelled, or a check finds
+   * a sign-in.
+   */
+  loginUnfinished?: boolean | undefined
 }
 
 export type AiSubscriptionStatuses = Partial<Record<AiSubscriptionProviderId, AiSubscriptionStatus>>

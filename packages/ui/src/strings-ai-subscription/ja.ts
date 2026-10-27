@@ -24,6 +24,8 @@ export const ja = {
   actionInstall: 'インストール',
   actionLogin: 'ログイン',
   actionLoginWindow: 'ブラウザーが開きませんか？',
+  actionLoginWithCode: 'ブラウザにコードが表示されましたか？',
+  actionLoginBrowser: 'ブラウザでやり直す',
   actionRecheck: '再確認',
   actionAcceptMetered: 'それでも使用',
   actionInstallHelp: '公式のインストール手順',
@@ -120,6 +122,8 @@ export const ja = {
   signingInStalledNote:
     'ブラウザーにログイン画面が開かなかった場合は、下のボタンでログインウィンドウを開いてください。ブラウザーでログインしている途中なら、ボタンは押さずにそのまま最後まで進めてください。ボタンを押すと、進めていたログインは止まり、最初からやり直しになります。',
   actionLoginWindowOpen: 'ログインウィンドウを開く',
+  loginUnfinishedNote:
+    'ログインが完了していません。ブラウザにコードが表示された場合は、ログインウィンドウに貼り付ける必要があります。ウィンドウを開き、その案内に沿ってやり直してください。前に表示されたコードは使えません。',
   loginWindowTitle: '{provider} ログイン',
   loginWindowIntro:
     'このウィンドウは {provider} のプログラムのログインウィンドウです。この下に続く英語の文章は、{provider} のプログラムが表示する案内です。',

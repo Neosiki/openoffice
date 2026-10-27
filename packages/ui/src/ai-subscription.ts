@@ -71,6 +71,8 @@ export type AiSubscriptionCardAction =
   | 'install-help'
   | 'login'
   | 'login-window'
+  | 'login-code'
+  | 'login-browser'
   | 'cancel-login'
   | 'update'
   | 'accept-metered'
@@ -175,6 +177,8 @@ export interface AiSubscriptionCardView {
 const LINK_ACTIONS: readonly AiSubscriptionCardAction[] = [
   'install-help',
   'login-window',
+  'login-code',
+  'login-browser',
   'cancel-login',
 ]
 
@@ -199,7 +203,7 @@ export function aiSubscriptionCardView(
 ): AiSubscriptionCardView {
   const terminalWindows = options.terminalWindows !== false
   if (status.signingIn) return signingInCardView(status, terminalWindows, options)
-  const view = connectionCardView(status)
+  const view = connectionCardView(status, terminalWindows)
   if (status.state === 'not-installed' && !terminalWindows) {
     return { ...view, noteKeys: [], actions: ['install-help'], links: ['install-help'] }
   }
@@ -264,12 +268,25 @@ function signingInCardView(
   }
 }
 
-function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
-  const view = connectionCardParts(status)
-  return { ...view, links: linksOf(view.actions) }
+function connectionCardView(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): AiSubscriptionCardView {
+  const view = connectionCardParts(status, terminalWindows)
+  const links = linksOf(view.actions)
+  // a sign-in that ended without one starts in the CLI's window: that is the step
+  // itself, and the one that opens in the browser is the way out of it
+  return {
+    ...view,
+    links:
+      status.loginUnfinished === true ? links.filter((action) => action !== 'login-code') : links,
+  }
 }
 
-function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionCardView, 'links'> {
+function connectionCardParts(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): Omit<AiSubscriptionCardView, 'links'> {
   const base = { provider: status.provider, state: status.state }
   switch (status.state) {
     case 'checking':
@@ -282,14 +299,28 @@ function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionC
         noteKeys: ['installNote', 'installReturnNote'],
         actions: ['install', 'install-help'],
       }
-    case 'signed-out':
+    case 'signed-out': {
+      // the browser hands back a code, not the sign-in, when it cannot reach the
+      // CLI; the CLI's own window is where that code is pasted (Windows alone)
+      const withCode = terminalWindows ? (['login-code'] as const) : []
+      // only where a window can be opened is it the way on; elsewhere the browser is all there is
+      if (status.loginUnfinished === true && terminalWindows) {
+        return {
+          ...base,
+          tone: 'neutral',
+          statusKey: 'cardSignedOut',
+          noteKeys: ['loginUnfinishedNote', 'loginNote'],
+          actions: [...withCode, 'login-browser'],
+        }
+      }
       return {
         ...base,
         tone: 'neutral',
         statusKey: 'cardSignedOut',
         noteKeys: ['loginHowNote', 'loginNote'],
-        actions: ['login'],
+        actions: ['login', ...withCode],
       }
+    }
     case 'ready': {
       const planName = status.planName?.trim() || undefined
       return {

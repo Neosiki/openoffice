@@ -36,6 +36,8 @@ En el segundo paso de las pantallas de bienvenida del primer arranque, y en el p
 
 La conexión se comprueba al arrancar la aplicación, al abrir Configuración y al volver a la ventana después de iniciar una instalación o un inicio de sesión.
 
+Si la tarjeta indica que un inicio de sesión no terminó, elige **Abrir la ventana de inicio de sesión**. Si el navegador muestra un código, hay que pegarlo en esa ventana; un código mostrado antes ya no sirve.
+
 ## Sin suscripción: IA gratuita
 
 ¿No tiene suscripción a Claude ni a ChatGPT? En Configuración ▸ IA, **Usar gratis** conecta en su lugar una IA gratuita. Si elige **Ninguna todavía** en el segundo paso de las pantallas de bienvenida, aparecen las mismas tarjetas, y si la elige en el panel de IA cuando no hay nada conectado, se ofrece **Conectar una IA gratuita**.

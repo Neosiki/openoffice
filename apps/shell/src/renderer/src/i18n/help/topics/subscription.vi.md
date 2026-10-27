@@ -36,6 +36,8 @@ Nếu chương trình chưa được cài đặt hoặc chưa đăng nhập, cá
 
 Kết nối được kiểm tra khi ứng dụng khởi động, khi bạn mở Cài đặt, và khi bạn quay lại cửa sổ sau khi bắt đầu cài đặt hoặc đăng nhập.
 
+Nếu thẻ cho biết quá trình đăng nhập chưa hoàn tất, hãy chọn **Mở cửa sổ đăng nhập**. Mã do trình duyệt hiện phải được dán vào cửa sổ đó; mã hiện trước đó không còn dùng được.
+
 ## Không có gói đăng ký: AI miễn phí
 
 Không có gói đăng ký Claude hay ChatGPT? Trong Cài đặt ▸ AI, mục **Dùng miễn phí** cho phép kết nối một AI miễn phí để thay thế. Chọn **Tôi chưa có cái nào** ở bước thứ hai của màn hình chào mừng sẽ hiện những thẻ này, và chọn nó trong bảng AI khi chưa có gì được kết nối sẽ đưa ra **Kết nối AI miễn phí**.

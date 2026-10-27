@@ -22,6 +22,8 @@ export const zhTW = {
   actionInstall: '安裝',
   actionLogin: '登入',
   actionLoginWindow: '瀏覽器沒有開啟？',
+  actionLoginWithCode: '瀏覽器顯示了代碼？',
+  actionLoginBrowser: '改在瀏覽器中登入',
   actionRecheck: '重新檢查',
   actionAcceptMetered: '仍要使用',
   actionInstallHelp: '官方安裝說明',
@@ -102,6 +104,8 @@ export const zhTW = {
   signingInStalledNote:
     '如果瀏覽器中沒有開啟登入頁面，請用下方的按鈕開啟登入視窗。如果你還在瀏覽器中登入，請不要按，先在瀏覽器中完成。按下按鈕會停止目前的登入並重新開始。',
   actionLoginWindowOpen: '開啟登入視窗',
+  loginUnfinishedNote:
+    '登入沒有完成。如果瀏覽器顯示了代碼，需要把代碼貼到登入視窗中：請開啟視窗，並在那裡重新登入。先前顯示的代碼已失效。',
   loginWindowTitle: '{provider} 登入',
   loginWindowIntro: '這是 {provider} 程式的登入視窗。下方的英文內容是 {provider} 程式顯示的說明。',
   loginWindowStepBrowser:
