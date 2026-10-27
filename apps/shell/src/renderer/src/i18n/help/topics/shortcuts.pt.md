@@ -24,7 +24,7 @@ Cada editor tem as suas próprias combinações de teclas, e apenas algumas func
 
 ## Modo de apresentação
 
-- **Iniciar**: F5 no Word, PDF, Mindmap, HTML e Markdown. Numa folha de cálculo, Ctrl+F5 (desde A1) ou Shift+F5 (a partir da célula ativa).
+- **Iniciar**: F5 no Word, PDF, Mindmap, HTML e Markdown. Numa folha de cálculo, Ctrl+F5 (desde A1) ou Shift+F5 (a partir da célula ativa). Num documento HWP, Ctrl+F5 (aí o F5 seleciona células da tabela).
 - **Outras entradas**: no Word, Ctrl+F5 e Shift+F5 abrem a vista de leitura sem ecrã inteiro; no PDF começam na página atual; no HTML apresentam dentro do separador.
 - **Sair**: Esc ou F5. F11 é o ecrã inteiro da janela e não altera a vista do documento.
 

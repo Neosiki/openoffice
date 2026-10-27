@@ -24,7 +24,7 @@ Każdy edytor ma własne przypisania klawiszy i tylko kilka z nich działa wszę
 
 ## Tryb prezentacji
 
-- **Start**: F5 w Word, PDF, Mindmap, HTML i Markdown. W arkuszu Ctrl+F5 (od A1) lub Shift+F5 (od aktywnej komórki).
+- **Start**: F5 w Word, PDF, Mindmap, HTML i Markdown. W arkuszu Ctrl+F5 (od A1) lub Shift+F5 (od aktywnej komórki). W dokumencie HWP Ctrl+F5 (tam F5 zaznacza komórki tabeli).
 - **Inne wejścia**: w Word Ctrl+F5 i Shift+F5 otwierają widok czytania bez pełnego ekranu; w PDF zaczynają od bieżącej strony; w HTML prezentują w karcie.
 - **Zakończenie**: Esc lub F5. F11 to pełny ekran okna i nie zmienia widoku dokumentu.
 

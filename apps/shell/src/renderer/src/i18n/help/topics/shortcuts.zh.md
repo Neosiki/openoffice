@@ -24,7 +24,7 @@
 
 ## 演示模式
 
-- **开始**：在 Word、PDF、思维导图、HTML 和 Markdown 中按 F5。在电子表格中按 Ctrl+F5（从 A1 开始）或 Shift+F5（从当前单元格开始）。
+- **开始**：在 Word、PDF、思维导图、HTML 和 Markdown 中按 F5。在电子表格中按 Ctrl+F5（从 A1 开始）或 Shift+F5（从当前单元格开始）。在 HWP 文档中按 Ctrl+F5（F5 在那里用于选择表格单元格）。
 - **其他入口**：Word 中 Ctrl+F5、Shift+F5 进入无全屏的阅读视图；PDF 中从当前页开始；HTML 中在标签页内演示。
 - **结束**：Esc 或 F5。F11 是窗口自身的全屏，不改变文档视图。
 

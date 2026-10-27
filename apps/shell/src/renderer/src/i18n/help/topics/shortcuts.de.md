@@ -24,7 +24,7 @@ Jeder Editor hat eigene Tastenbelegungen, und nur wenige davon funktionieren üb
 
 ## Präsentationsmodus
 
-- **Start**: F5 in Word, PDF, Mindmap, HTML und Markdown. In einer Tabelle Ctrl+F5 (ab A1) oder Shift+F5 (ab der aktuellen Zelle).
+- **Start**: F5 in Word, PDF, Mindmap, HTML und Markdown. In einer Tabelle Ctrl+F5 (ab A1) oder Shift+F5 (ab der aktuellen Zelle). In HWP-Dokumenten Ctrl+F5 (F5 markiert dort Tabellenzellen).
 - **Weitere Einstiege**: In Word öffnen Ctrl+F5 und Shift+F5 die Leseansicht ohne Vollbild, in PDF starten sie ab der aktuellen Seite, in HTML präsentieren sie im Tab.
 - **Beenden**: Esc oder F5. F11 ist der Vollbildmodus des Fensters und ändert die Dokumentansicht nicht.
 

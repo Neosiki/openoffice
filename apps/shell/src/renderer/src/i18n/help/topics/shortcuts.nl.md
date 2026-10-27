@@ -24,7 +24,7 @@ Elke editor heeft een eigen toetsenindeling en slechts een paar werken overal. D
 
 ## Presentatiemodus
 
-- **Starten**: F5 in Word, PDF, Mindmap, HTML en Markdown. In een werkblad Ctrl+F5 (vanaf A1) of Shift+F5 (vanaf de actieve cel).
+- **Starten**: F5 in Word, PDF, Mindmap, HTML en Markdown. In een werkblad Ctrl+F5 (vanaf A1) of Shift+F5 (vanaf de actieve cel). In een HWP-document Ctrl+F5 (F5 selecteert daar tabelcellen).
 - **Andere ingangen**: in Word openen Ctrl+F5 en Shift+F5 de leesweergave zonder volledig scherm; in PDF starten ze vanaf de huidige pagina; in HTML presenteren ze in het tabblad.
 - **Stoppen**: Esc of F5. F11 is volledig scherm van het venster en verandert de documentweergave niet.
 
