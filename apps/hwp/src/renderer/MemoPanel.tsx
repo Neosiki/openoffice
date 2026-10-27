@@ -1,9 +1,9 @@
 /**
  * The memo panel and its one editor modal.
  *
- * The panel shares the right-hand dock with the AI panel (only one is shown at a
- * time), lists the memos of the open document in document order and lets the
- * user select, add, change and remove them. The editor is an app modal, not the
+ * The panel sits in its own column beside the document, next to the AI dock
+ * rather than in it (MemoSide.tsx). It lists the memos of the open document in
+ * document order and lets the user select, add, change and remove them. The editor is an app modal, not the
  * editor's own dialog, and while it is open every HWP editor instance in the app
  * has its input taken away: the plugin locks the editor itself and a
  * BroadcastChannel asks the other tabs to lock too. The main process is told as
@@ -301,7 +301,7 @@ interface MemoEditor {
 }
 
 export interface MemoPanelProps {
-  /** the shared dock is out, on this panel */
+  /** the memo column is out */
   open: boolean
   /** this document's plugin, the only way to the memos */
   bridge: AgentBridge
@@ -309,7 +309,7 @@ export interface MemoPanelProps {
   changeTick?: number
   /** bumped when the editor's Insert > Memo menu asks for the add dialog (T4) */
   insertTick?: number
-  /** fold the dock back to its rail */
+  /** close the memo column */
   onCollapse: () => void
   /**
    * A memo modal is open somewhere, here or in another tab: saving and closing
@@ -385,8 +385,8 @@ export function MemoPanel({
         setUnsupported(true)
         setMemos([])
         setLoadFailed(false)
-        // An older engine cannot answer any memo call. Tell the user and fold
-        // the dock instead of showing an empty, unusable memo screen.
+        // An older engine cannot answer any memo call. Tell the user and close
+        // the column instead of showing an empty, unusable memo screen.
         if (!unsupportedNotifiedRef.current) {
           unsupportedNotifiedRef.current = true
           onNoticeRef.current({ key: 'memoUnsupportedBuild', tone: 'error' })
@@ -413,7 +413,7 @@ export function MemoPanel({
     }
   }, [])
 
-  // the panel is only live with the dock out: fold it and it stops reading
+  // the panel is only live with its column out: close it and it stops reading
   useEffect(() => {
     if (open) void load()
   }, [open, load])

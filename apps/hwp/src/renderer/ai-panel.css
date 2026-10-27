@@ -1291,57 +1291,46 @@
   word-break: break-word;
 }
 
-/* ---- memo panel and modal (T3): the right dock, its cards and its editor ---- */
-
-/* collapsed with the memo panel: two rail buttons in the editor's icon style */
-.ai-rail-group {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-}
-
-.ai-rail-group .ai-rail {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-6);
-  background: transparent;
-  color: var(--text);
-}
-
-.ai-rail-group .ai-rail:hover {
-  background: var(--hover);
-}
+/* ---- memo panel and modal (T3): its column beside the document, its cards and its editor ---- */
 
 .ai-rail:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-/* the AI panel and the memo panel share the dock: exactly one is out */
-.ai-dock > .memo-panel {
-  display: none;
-}
-
-.ai-dock.mode-memo:not(.collapsed) > .copilot {
-  display: none;
-}
-
-.ai-dock.mode-memo:not(.collapsed) > .memo-panel {
+/* the memo column sits between the AI dock and the document, as the PDF editor's notes do;
+ * it is hidden, not unmounted, while closed so the panel's list and locks survive */
+.memo-side {
+  position: relative;
   display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.memo-side.collapsed {
+  display: none;
+}
+
+/* drag handle on the edge toward the document */
+.memo-side-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+}
+
+.memo-side-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .memo-panel {
+  display: flex;
   flex-direction: column;
   flex-shrink: 0;
   width: 100%;
@@ -1351,7 +1340,7 @@
   background: var(--color-bg-page);
   color: var(--color-text-primary);
   font-family: var(--gs-font-sans);
-  border-left: 1px solid var(--color-border-strong);
+  /* the AI dock beside it draws its own edge; this one meets the document */
   border-right: 1px solid var(--color-border-strong);
 }
 
@@ -1486,15 +1475,6 @@
   flex: none;
   color: var(--color-text-secondary);
   font-size: 11px;
-}
-
-.memo-rail-label {
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 1.15;
-  letter-spacing: 0.02em;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
 }
 
 .memo-readonly-badge {

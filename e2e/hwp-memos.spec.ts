@@ -56,9 +56,9 @@ async function hwpPage(app: ElectronApplication): Promise<Page> {
   return page
 }
 
-/** The memo dock is a second mode of the shared dock; collapse the AI panel first. */
+/** The memo panel has its own column beside the document; the top bar's button brings it out. */
 async function openMemoPanel(page: Page): Promise<void> {
-  // A reopened tab keeps the dock's last mode: the memo panel may already be out.
+  // A reopened tab remembers the column: the memo panel may already be out.
   if (
     await page
       .locator('.memo-add-button')
@@ -66,9 +66,7 @@ async function openMemoPanel(page: Page): Promise<void> {
       .catch(() => false)
   )
     return
-  const collapse = page.locator('.ai-panel-collapse')
-  if (await collapse.isVisible().catch(() => false)) await collapse.click()
-  await page.locator('.memo-rail').click()
+  await page.locator('.memo-toggle').click()
   await expect(page.locator('.memo-panel')).not.toHaveAttribute('aria-hidden', 'true')
   await expect(page.locator('.memo-add-button')).toBeVisible()
 }
