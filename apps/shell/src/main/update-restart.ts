@@ -22,3 +22,13 @@ export function cancelUpdateRestart(): void {
 export function updateRestartRequested(): boolean {
   return restartRequested
 }
+
+/**
+ * This launch is the installer reopening the app after an update: the NSIS
+ * installer passes --updated to the app it starts (silent update with
+ * --force-run, the update's own window, its finish page). A launch by the
+ * user never carries it.
+ */
+export function reopenedByInstaller(argv: readonly string[] = process.argv): boolean {
+  return argv.includes('--updated')
+}

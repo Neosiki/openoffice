@@ -23,6 +23,12 @@ export interface InstallAttempt {
   fromVersion: string
   /** true when the installer was started in its own window, false when silent */
   visible: boolean
+  /**
+   * installer starts in a row for this version that left the app where it was,
+   * this one included; absent in records of earlier versions (read through
+   * attemptTries)
+   */
+  tries?: number
 }
 
 function isInstallAttempt(value: unknown): value is InstallAttempt {
@@ -33,8 +39,27 @@ function isInstallAttempt(value: unknown): value is InstallAttempt {
     v.version.length > 0 &&
     typeof v.fromVersion === 'string' &&
     v.fromVersion.length > 0 &&
-    typeof v.visible === 'boolean'
+    typeof v.visible === 'boolean' &&
+    (v.tries === undefined ||
+      (typeof v.tries === 'number' && Number.isInteger(v.tries) && v.tries >= 1))
   )
+}
+
+/**
+ * How many installer starts the record stands for. A record of an earlier
+ * version has no count: there a silent start was the first try and a start in
+ * the installer's window the second.
+ */
+function attemptTries(attempt: InstallAttempt): number {
+  return attempt.tries ?? (attempt.visible ? 2 : 1)
+}
+
+/**
+ * The tries count of the next installer start for `version`: one more than a
+ * failed attempt at that same version, else the first.
+ */
+export function nextAttemptTries(failed: InstallAttempt | null, version: string): number {
+  return failed !== null && failed.version === version ? attemptTries(failed) + 1 : 1
 }
 
 /** Written right before the installer starts; a failed write only costs the next launch's notice. */
@@ -85,15 +110,15 @@ export function installDidNotApply(
 
 /**
  * How far automatic installing has been pushed back for this install:
- * 0 = nothing failed, 1 = a silent install did not apply (next time the
- * installer gets its own window), 2 = the installer window did not get it done
+ * 0 = nothing failed, 1 = one installer start did not apply (the update window
+ * says so and offers one more try), 2 = a second start did not get it done
  * either (the update window points at the download page).
  */
 export type InstallFailureLevel = 0 | 1 | 2
 
 export function installFailureLevel(failed: InstallAttempt | null): InstallFailureLevel {
   if (failed === null) return 0
-  return failed.visible ? 2 : 1
+  return attemptTries(failed) >= 2 ? 2 : 1
 }
 
 /**

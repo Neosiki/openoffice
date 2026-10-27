@@ -6,11 +6,13 @@ import {
   CRASH_LOOP_WINDOW_MS,
   SESSION_RECORD_WRITE_DELAY_MS,
   createSessionRecorder,
+  holdSessionTabsForUpdateRestart,
   initSessionRecord,
   judgePreviousExit,
   markSessionCleanExit,
   markSessionClosedToTray,
   markSessionOsEnd,
+  markSessionUpdateRestart,
   noteSessionChanged,
   parseSessionRecord,
   readSessionRecord,
@@ -157,6 +159,64 @@ describe('the run lifecycle on disk', () => {
       abnormal: false,
       reason: 'clean',
     })
+  })
+
+  it('"Restart & Install" brings back the tabs held when its quit began (decision 0077)', () => {
+    const run = recorder()
+    run.startRun({ restoreRun: false })
+    const a = { kind: 'hwp' as const, title: 'a.hwp', filePath: 'C:\\a.hwp' }
+    const b = {
+      kind: 'docs' as const,
+      title: 'b.docx',
+      filePath: 'C:\\b.docx',
+      detached: true as const,
+    }
+    run.update({ tabs: [a, b], active: 0 })
+    run.holdTabsForUpdateRestart()
+    // windows closing on the way out report fewer tabs; the held list stands
+    run.update({ tabs: [] })
+    run.markUpdateRestart()
+    expect(stored()).toMatchObject({ cleanExit: true, updateRestart: true, active: 0 })
+    expect(stored().tabs).toEqual([a, b])
+    const next = recorder()
+    expect(judgePreviousExit(next.previous, store(false))).toEqual({
+      abnormal: true,
+      reason: 'updateRestart',
+      crashLoop: false,
+    })
+  })
+
+  it('a restart into an update that was not held keeps the tabs it has', () => {
+    const run = recorder()
+    run.startRun({ restoreRun: true })
+    run.update({ tabs: [{ kind: 'pdf', title: 'c.pdf', filePath: 'C:\\c.pdf' }] })
+    run.markUpdateRestart()
+    expect(stored()).toMatchObject({ cleanExit: true, updateRestart: true })
+    expect(stored().tabs).toHaveLength(1)
+    // a restore run that restarts for an update right away is no crash loop
+    expect(judgePreviousExit(recorder().previous, store(false)).crashLoop).toBe(false)
+  })
+
+  it('an ordinary quit after a cancelled "Restart & Install" is a normal exit', () => {
+    const run = recorder()
+    run.startRun({ restoreRun: false })
+    run.update({ tabs: [{ kind: 'pdf', title: 'c.pdf', filePath: 'C:\\c.pdf' }] })
+    run.holdTabsForUpdateRestart()
+    run.markCleanExit()
+    expect(stored().updateRestart).toBeUndefined()
+    expect(judgePreviousExit(recorder().previous, store(false)).abnormal).toBe(false)
+  })
+
+  it('a clean exit reopened by the installer brings the tabs back (an earlier version marked none)', () => {
+    const previous = ok(record({ cleanExit: true }))
+    expect(judgePreviousExit(previous, store(false), { reopenedByInstaller: true })).toEqual({
+      abnormal: true,
+      reason: 'updateRestart',
+      crashLoop: false,
+    })
+    expect(
+      judgePreviousExit({ status: 'missing' }, store(false), { reopenedByInstaller: true }),
+    ).toMatchObject({ abnormal: false })
   })
 
   it('a clean quit keeps the tab list, so a quit that left copies still rebuilds the tabs', () => {
@@ -510,6 +570,8 @@ describe('explicit init (headless export and second instances never touch the re
     })
     markSessionClosedToTray()
     markSessionOsEnd()
+    holdSessionTabsForUpdateRestart()
+    markSessionUpdateRestart()
     markSessionCleanExit()
     vi.advanceTimersByTime(CRASH_LOOP_WINDOW_MS * 2)
     expect(existsSync(sessionRecordPath(dir))).toBe(false)

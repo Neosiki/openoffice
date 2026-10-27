@@ -1385,7 +1385,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
     base64: string,
     mime: string,
     what: string,
-    signal: AbortSignal | undefined,
+    _signal: AbortSignal | undefined,
   ): Promise<ToolExecution> => {
     const place = placeArgs(call)
     if (!place) return bad(call, WHERE_HELP)

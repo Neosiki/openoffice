@@ -294,6 +294,8 @@ export interface LaunchRecoveryDeps {
    * only after the strip was rebuilt).
    */
   sessionChanged(): void
+  /** the installer started this run after an update: the previous tabs come back */
+  reopenedByInstaller?: boolean
 }
 
 /**
@@ -324,7 +326,9 @@ export function runLaunchRecovery(deps: LaunchRecoveryDeps): void {
   let plan: ReturnType<typeof planLaunch> | null
   try {
     const record = initSessionRecord({ userDataDir: deps.userDataDir })
-    const judgment = judgePreviousExit(record.previous, recoveryStore)
+    const judgment = judgePreviousExit(record.previous, recoveryStore, {
+      reopenedByInstaller: deps.reopenedByInstaller === true,
+    })
     plan = planLaunch({
       judgment,
       previous: record.previous,
