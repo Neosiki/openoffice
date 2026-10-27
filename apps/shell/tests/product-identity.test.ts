@@ -62,6 +62,15 @@ describe('one product name', () => {
     expect(USER_DATA_DIR_NAME).toBe(shellPackage.productName)
   })
 
+  it('names the installer process with the product name', () => {
+    // electron-builder writes package.json "description" into the NSIS
+    // installer's FileDescription (the app exe gets productName). Task Manager
+    // and Windows' "file in use" dialog show a running installer by that
+    // field, so a sentence there hid a stuck installer from a user looking
+    // for the product (external report, 2026-10-27).
+    expect(shellPackage.description).toBe(PRODUCT_NAME)
+  })
+
   it('titles every window document with the product name before any script runs', () => {
     const apps = readdirSync(join(ROOT, 'apps'))
     const pages = apps.flatMap((app) => {
