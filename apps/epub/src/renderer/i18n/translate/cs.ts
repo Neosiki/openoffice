@@ -41,6 +41,7 @@ export const cs = {
   btConfirmChecking: 'Kontrola připojení k AI…',
   btConfirmProvider: 'Použitá AI: {provider}',
   btConfirmSends: 'Text vybraných kapitol se odešle této AI.',
+  btRightsNotice: 'Překládejte pouze dokumenty, ke kterým máte práva.',
   btConfirmPaid: '{provider} si za to bude účtovat poplatek',
   btProviderChange: 'Uložený překlad vytvořila jiná AI ({stored}). Zbytek přeloží {next}.',
   btProviderUnknown: 'jiná AI',

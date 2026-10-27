@@ -23,6 +23,7 @@ export const zh = {
   trConfirmCalls: 'AI 调用：{calls} 次（{blocks} 个文字块分批发送）',
   trConfirmDone: '共 {total} 个文字块，其中 {done} 个已翻译，不会再次发送',
   trConfirmSends: '所选页面的文字将发送给此 AI。',
+  trRightsNotice: '请仅翻译您拥有权利的文件。',
   trProviderChange:
     '已保存的译文是用 {stored} 翻译的。若改用 {next} 继续，同一份译文中将混有两种 AI 的翻译。',
   trProviderUnknown: '未知的 AI',

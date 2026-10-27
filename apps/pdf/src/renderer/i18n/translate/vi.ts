@@ -25,6 +25,7 @@ export const vi = {
   trConfirmCalls: 'Số lần gọi AI: {calls} ({blocks} khối, gửi theo nhóm)',
   trConfirmDone: '{done} trên {total} khối đã được dịch và sẽ không gửi lại',
   trConfirmSends: 'Văn bản của các trang đã chọn sẽ được gửi tới AI này.',
+  trRightsNotice: 'Chỉ dịch những tài liệu mà bạn có quyền.',
   trProviderChange:
     'Bản dịch đã lưu được tạo bằng {stored}. Nếu tiếp tục bằng {next}, một bản dịch sẽ lẫn kết quả của hai AI.',
   trProviderUnknown: 'một AI không rõ',

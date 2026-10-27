@@ -41,6 +41,7 @@ export const ar = {
   btConfirmChecking: 'جارٍ التحقق من الاتصال بالذكاء الاصطناعي…',
   btConfirmProvider: 'الذكاء الاصطناعي المستخدم: {provider}',
   btConfirmSends: 'يُرسل نص الفصول المختارة إلى هذا الذكاء الاصطناعي.',
+  btRightsNotice: 'ترجم فقط المستندات التي تملك حقوقها.',
   btConfirmPaid: 'سيفرض {provider} رسومًا على ذلك',
   btProviderChange:
     'أُنشئت الترجمة المحفوظة بذكاء اصطناعي آخر ({stored}). ستُترجم البقية باستخدام {next}.',

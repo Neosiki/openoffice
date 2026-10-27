@@ -24,6 +24,7 @@ export const zhTW = {
   trConfirmCalls: 'AI 呼叫：{calls} 次（{blocks} 個文字區塊分批傳送）',
   trConfirmDone: '共 {total} 個文字區塊，其中 {done} 個已翻譯，不會再次傳送',
   trConfirmSends: '所選頁面的文字將傳送給此 AI。',
+  trRightsNotice: '請只翻譯您擁有權利的文件。',
   trProviderChange:
     '已保存的譯文是用 {stored} 翻譯的。若改用 {next} 繼續，同一份譯文中會混有兩種 AI 的翻譯。',
   trProviderUnknown: '未知的 AI',

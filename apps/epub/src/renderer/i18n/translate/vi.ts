@@ -41,6 +41,7 @@ export const vi = {
   btConfirmChecking: 'Đang kiểm tra kết nối AI…',
   btConfirmProvider: 'AI được dùng: {provider}',
   btConfirmSends: 'Văn bản của các chương đã chọn sẽ được gửi tới AI này.',
+  btRightsNotice: 'Chỉ dịch những tài liệu mà bạn có quyền.',
   btConfirmPaid: '{provider} sẽ tính phí cho việc này',
   btProviderChange:
     'Bản dịch đã lưu được tạo bằng một AI khác ({stored}). Phần còn lại sẽ được dịch bằng {next}.',

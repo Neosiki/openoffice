@@ -41,6 +41,7 @@ export const th = {
   btConfirmChecking: 'กำลังตรวจสอบการเชื่อมต่อ AI…',
   btConfirmProvider: 'AI ที่ใช้: {provider}',
   btConfirmSends: 'ข้อความของบทที่เลือกจะถูกส่งไปยัง AI นี้',
+  btRightsNotice: 'แปลเฉพาะเอกสารที่คุณมีสิทธิ์เท่านั้น',
   btConfirmPaid: '{provider} จะเรียกเก็บค่าบริการ',
   btProviderChange: 'คำแปลที่เก็บไว้ทำด้วย AI อื่น ({stored}) ส่วนที่เหลือจะแปลด้วย {next}',
   btProviderUnknown: 'AI อื่น',

@@ -26,6 +26,7 @@ export const nl = {
   trConfirmCalls: 'AI-aanroepen: {calls} ({blocks} blokken, in porties verstuurd)',
   trConfirmDone: '{done} van de {total} blokken zijn al vertaald en worden niet opnieuw verstuurd',
   trConfirmSends: 'De tekst van de gekozen pagina’s wordt naar deze AI gestuurd.',
+  trRightsNotice: 'Vertaal alleen documenten waarop u de rechten hebt.',
   trProviderChange:
     'De bewaarde vertaling is gemaakt met {stored}. Doorgaan met {next} mengt twee AI’s in één vertaling.',
   trProviderUnknown: 'een onbekende AI',

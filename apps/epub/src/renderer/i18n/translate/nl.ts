@@ -41,6 +41,7 @@ export const nl = {
   btConfirmChecking: 'AI-verbinding wordt gecontroleerd…',
   btConfirmProvider: 'Gebruikte AI: {provider}',
   btConfirmSends: 'De tekst van de gekozen hoofdstukken wordt naar deze AI verzonden.',
+  btRightsNotice: 'Vertaal alleen documenten waarop u de rechten hebt.',
   btConfirmPaid: '{provider} brengt hiervoor kosten in rekening',
   btProviderChange:
     'De bewaarde vertaling is gemaakt met een andere AI ({stored}). De rest wordt vertaald met {next}.',

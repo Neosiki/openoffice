@@ -27,6 +27,7 @@ export const pl = {
   trConfirmCalls: 'Wywołania AI: {calls} (bloki: {blocks}, wysyłane partiami)',
   trConfirmDone: 'Przetłumaczono już {done} z {total} bloków; nie zostaną wysłane ponownie',
   trConfirmSends: 'Tekst wybranych stron zostanie wysłany do tej AI.',
+  trRightsNotice: 'Tłumacz tylko dokumenty, do których masz prawa.',
   trProviderChange:
     'Zapisane tłumaczenie powstało z użyciem {stored}. Kontynuowanie z {next} wymiesza w jednym tłumaczeniu dwie AI.',
   trProviderUnknown: 'nieznanej AI',

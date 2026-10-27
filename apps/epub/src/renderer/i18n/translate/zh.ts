@@ -40,6 +40,7 @@ export const zh = {
   btConfirmChecking: '正在检查 AI 连接…',
   btConfirmProvider: '使用的 AI：{provider}',
   btConfirmSends: '所选章节的文本将发送给此 AI。',
+  btRightsNotice: '请仅翻译您拥有权利的文件。',
   btConfirmPaid: '{provider} 将收取费用',
   btProviderChange: '已保存的译文是用另一个 AI（{stored}）翻译的。其余部分将使用 {next} 翻译。',
   btProviderUnknown: '其他 AI',

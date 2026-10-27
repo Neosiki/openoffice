@@ -726,6 +726,9 @@ function BookTranslateConfirm({
           </>
         )}
       </ul>
+      <p className="bt-status" data-rights>
+        {t('btRightsNotice')}
+      </p>
       {sameAsBook && (
         <p className="bt-warning" role="alert" data-same-language>
           {t('btSameLanguage', { language })}

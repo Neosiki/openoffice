@@ -26,6 +26,7 @@ export const pt = {
   trConfirmCalls: 'Chamadas à IA: {calls} ({blocks} blocos, enviados em lotes)',
   trConfirmDone: '{done} de {total} blocos já estão traduzidos e não serão enviados de novo',
   trConfirmSends: 'O texto das páginas escolhidas é enviado para esta IA.',
+  trRightsNotice: 'Traduza apenas documentos sobre os quais tenha direitos.',
   trProviderChange:
     'A tradução guardada foi feita com {stored}. Continuar com {next} mistura duas IAs na mesma tradução.',
   trProviderUnknown: 'uma IA desconhecida',
