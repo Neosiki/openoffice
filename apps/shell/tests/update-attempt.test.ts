@@ -8,6 +8,7 @@ import {
   installDidNotApply,
   installDirWritable,
   installFailureLevel,
+  nextAttemptTries,
   readInstallAttempt,
   recordInstallAttempt,
 } from '../src/main/update-attempt'
@@ -76,10 +77,38 @@ describe('installDidNotApply', () => {
 })
 
 describe('installFailureLevel', () => {
-  it('moves from the silent install to the installer window to the download page', () => {
+  it('offers one more try after a failed start, then the download page', () => {
+    const attempt = { version: '0.2.0', fromVersion: '0.1.0', visible: true }
     expect(installFailureLevel(null)).toBe(0)
+    expect(installFailureLevel({ ...attempt, tries: 1 })).toBe(1)
+    expect(installFailureLevel({ ...attempt, tries: 2 })).toBe(2)
+    expect(installFailureLevel({ ...attempt, tries: 5 })).toBe(2)
+  })
+
+  it('reads a record of an earlier version by how its installer was started', () => {
     expect(installFailureLevel({ version: '0.2.0', fromVersion: '0.1.0', visible: false })).toBe(1)
     expect(installFailureLevel({ version: '0.2.0', fromVersion: '0.1.0', visible: true })).toBe(2)
+  })
+})
+
+describe('nextAttemptTries', () => {
+  const failed = { version: '0.2.0', fromVersion: '0.1.0', visible: true, tries: 1 }
+
+  it('counts on from a failed start at the same version', () => {
+    expect(nextAttemptTries(failed, '0.2.0')).toBe(2)
+    expect(nextAttemptTries({ ...failed, tries: undefined, visible: false }, '0.2.0')).toBe(2)
+  })
+
+  it('starts over for another version or when nothing failed', () => {
+    expect(nextAttemptTries(failed, '0.3.0')).toBe(1)
+    expect(nextAttemptTries(null, '0.2.0')).toBe(1)
+  })
+
+  it('keeps the count through the record file', () => {
+    recordInstallAttempt(dir, { ...failed, tries: 2 })
+    expect(readInstallAttempt(dir)?.tries).toBe(2)
+    writeFileSync(join(dir, INSTALL_ATTEMPT_FILE), JSON.stringify({ ...failed, tries: 0 }))
+    expect(readInstallAttempt(dir)).toBeNull()
   })
 })
 

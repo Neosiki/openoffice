@@ -38,8 +38,10 @@ export interface UpdateUiStrings {
   manualDesc: string
   /** 'install-failed': the last installer start did not update the app */
   installFailedDesc: string
-  /** 'downloaded' with visibleInstall: the installer will open in its own window */
+  /** 'downloaded' with visibleInstall: the installer window will ask for administrator approval */
   visibleInstallDesc: string
+  /** 'downloaded': what the restart does (the installer window, then the app and its documents back); empty where no installer window opens */
+  restartDesc: string
   openDownload: string
   /** label above the release-notes box */
   notesLabel: string
@@ -86,7 +88,7 @@ export interface UpdateUiState {
   lang: string
   strings: UpdateUiStrings
   releaseNotes: UpdateReleaseNotes | null
-  /** the installer will open in its own window instead of running silently */
+  /** the installer will ask for administrator approval (an install only an administrator can write) */
   visibleInstall: boolean
 }
 

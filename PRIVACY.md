@@ -317,8 +317,9 @@ Nothing in this list is uploaded by the app.
   app starts.
 - **The session record** (`session-record.json` in the data folder): the
   kind, file path and title of each open document tab, their order, which tab
-  was in front, the split view, and whether the app was closed normally, so
-  that the tabs can come back after the app or the PC shuts off unexpectedly.
+  was in front, the split view, and whether the app was closed normally or
+  restarted to install an update, so that the tabs can come back after the app
+  or the PC shuts off unexpectedly, and after an update.
   It holds no document content and is never sent anywhere.
 - **The search index** of the folders you added to the home screen,
   recent-file lists and local diagnostic logs, also in the data folder.
@@ -351,8 +352,8 @@ Nothing in this list is uploaded by the app.
   user name. It holds no document content. It is kept under 256 KB by dropping
   its older half, and the app never sends it anywhere. Next to it,
   `update-install-attempt.json` remembers the last installer start (the
-  version it was for, the version that started it, and how) so the next launch
-  can tell you when an update did not install.
+  version it was for, the version that started it, how, and how many tries in
+  a row it was) so the next launch can tell you when an update did not install.
 - **Your skills** (`~/.ieumoffice/skills`): the skills you added or made.
   A template you save with a skill is a copy of your document, kept in the
   skill's folder (`assets/`); it holds whatever that document held, so use
