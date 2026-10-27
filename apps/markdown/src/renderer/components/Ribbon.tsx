@@ -31,6 +31,7 @@ import {
   IconEyeOff,
   IconSourceCode,
   IconBacklinks,
+  IconTag,
   IconGraph,
   IconSpellcheck,
   IconTable,
@@ -60,6 +61,8 @@ interface Props {
   outlineOpen: boolean
   onToggleOutline: () => void
   backlinksOpen: boolean
+  tagsOpen: boolean
+  onToggleTags: () => void
   onToggleBacklinks: () => void
   onOpenGraph: () => void
   spellcheck: boolean
@@ -273,6 +276,8 @@ export function Ribbon({
   outlineOpen,
   onToggleOutline,
   backlinksOpen,
+  tagsOpen,
+  onToggleTags,
   onToggleBacklinks,
   onOpenGraph,
   spellcheck,
@@ -690,6 +695,16 @@ export function Ribbon({
                 onClick={onToggleBacklinks}
               >
                 <IconBacklinks size={ICON} />
+              </IconBtn>
+            )}
+            {!sourceMode && (
+              <IconBtn
+                title={t('tags')}
+                active={tagsOpen}
+                disabled={disabled}
+                onClick={onToggleTags}
+              >
+                <IconTag size={ICON} />
               </IconBtn>
             )}
             {!sourceMode && (
