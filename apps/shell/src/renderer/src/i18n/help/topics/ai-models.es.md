@@ -17,7 +17,7 @@ Todo lo que requiere una clave está en **Avanzado**, al final de la misma pági
 Para quien prefiera pagar directamente a un proveedor o ejecutar un modelo propio.
 
 - Elija un **Proveedor**, introduzca su **Clave de API** (y una **Base URL** si el proveedor la necesita), elija un **Modelo** y pulse **Guardar**. La lista incluye servidores compatibles con OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud y más.
-- Aquí la lista **Proveedor** solo decide de quién son los campos que se ven en pantalla. No cambia qué IA se está usando; eso lo decide siempre **IA que se usa**.
+- Aquí la lista **Proveedor** solo decide de quién son los campos que se ven en pantalla. No cambia qué IA se está usando; eso lo decide siempre **IA que se usa**. Si un proveedor guardado no es la IA en uso, arriba aparece **Usar esta IA**; al pulsarlo, ese proveedor pasa a ser la **IA que se usa**.
 - Los chats con un proveedor con clave usan su propia clave, y ese proveedor se los cobra.
 - Las claves se guardan en el archivo de ajustes de la aplicación en este equipo y se envían solo en las cabeceras de la petición.
 - **Probar conexión**: comprueba que el endpoint sea accesible y que el modelo esté visible antes de guardar.

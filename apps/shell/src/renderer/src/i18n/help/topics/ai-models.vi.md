@@ -17,7 +17,7 @@ Mọi thứ cần đến khóa đều nằm trong **Nâng cao**, ở cuối chí
 Dành cho những ai muốn trả tiền trực tiếp cho nhà cung cấp, hoặc muốn chạy mô hình của riêng mình.
 
 - Chọn **Nhà cung cấp**, nhập **Khóa API** của nhà cung cấp đó (và **URL cơ sở** nếu nhà cung cấp cần), chọn **Mô hình**, rồi nhấn **Lưu**. Danh sách gồm các máy chủ tương thích OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud và nhiều nhà cung cấp khác.
-- Danh sách **Nhà cung cấp** ở đây chỉ quyết định các trường của nhà cung cấp nào hiện trên màn hình. Nó không thay đổi AI đang được dùng; việc đó luôn do **AI sử dụng** quyết định.
+- Danh sách **Nhà cung cấp** ở đây chỉ quyết định các trường của nhà cung cấp nào hiện trên màn hình. Nó không thay đổi AI đang được dùng; việc đó luôn do **AI sử dụng** quyết định. Khi nhà cung cấp bạn đã lưu không phải AI đang dùng, nút **Dùng AI này** hiện ở phía trên; bấm vào đó để nhà cung cấp ấy trở thành **AI sử dụng**.
 - Các cuộc trò chuyện qua nhà cung cấp dùng khóa sẽ dùng khóa của chính bạn, và nhà cung cấp đó tính phí bạn.
 - Khóa được lưu trong tệp cài đặt của ứng dụng trên máy này và chỉ được gửi trong phần đầu yêu cầu.
 - **Kiểm tra kết nối**: xác minh điểm cuối truy cập được và mô hình hiển thị trước khi lưu.
