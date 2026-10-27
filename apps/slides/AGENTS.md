@@ -42,6 +42,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 메인 코드는 shell 번들에 들어간다(`../../../slides/src/main/slides-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
 - 쓸 만한 답을 내지 못한 실행의 사후 기록(`ai:log-run-failure` → `userData/ai-run-failures.jsonl`, 2MB에서 한 세대 회전)은 `registerAiIpc`에 있어 단독 실행에서만 남는다. shell 안에서는 이 채널에 핸들러가 없다.
 - 패널은 공용 부품으로 조립한다. 보내기는 `useAiSendGate`, 연결 상태와 막힌 실행 판정은 `src/renderer/ai/subscription.ts`, 문장은 `aiRunErrorText`를 쓴다. 메인의 핸들러는 먼저 로드된 모듈이 등록하므로 렌더러 쪽 호출은 모두 실패를 견딘다(없으면 상태는 `checking`).
+- **AI 그림 넣기는 `image_search` → `insert_web_image`, `generate_image` → `insert_web_image` 두 걸음이다.** 채팅에 붙인 그림은 `insert_web_image`의 `url=attachment://<파일 이름>`으로 넣고, 이름은 패널의 목록(`resolveAttachmentImage`)에서만 바이트로 풀린다. 지시문은 그 대화의 그림 이름을 `attachedImageNote`로 적어 준다(`imageAttachmentNames`). 있던 그림을 바꾸는 것은 `replace_image`/`generate_image`의 편집 흐름이고, 새 그림 넣기는 그 경로를 건드리지 않는다.
 - 프롬프트 파일(`src/renderer/ai/prompts/*.md`)은 Prettier 대상이 아니다. Prettier가 강조 표식과 목록 들여쓰기를 바꾸면 모델이 읽는 글이 달라진다. 이 파일들을 포매터에 넣지 않는다.
 - 메인 프로세스의 Node `fetch`는 시스템 프록시를 쓰지 않아 `applyMainProcessProxy`가 환경 변수나 시스템 설정의 프록시를 전역 디스패처에 건다. 이 프록시는 구독 프로그램에는 전달되지 않는다(그쪽은 물려받은 환경 변수만 본다).
 - 메모(클래식 검토 댓글)는 `slides:get-comments`(현재 페이지)와 `slides:get-all-comments`(전 덱, 읽기 전용)로 읽는다. 메모 창은 현재 페이지/모든 페이지 두 보기를 쓰고(순수 함수는 `comments-view.ts`), AI는 `read_comments` 도구와 덱 문맥의 메모 힌트로 읽는다. 메모는 가리기 표식 대상이 아니며, 저장은 기존 댓글 경로 그대로다.

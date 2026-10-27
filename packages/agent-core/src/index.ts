@@ -14,6 +14,7 @@ export type {
   ToolExecution,
 } from './types'
 export { composeSkills } from './skill'
+export { attachedImageNote } from './attached-images'
 export { createKnowledgeBaseSkill, formatKbSize } from './knowledge-base-skill'
 export type { KnowledgeBaseDeps, KbFileInfo, KbSearchHit, KbReadPage } from './knowledge-base-skill'
 export {

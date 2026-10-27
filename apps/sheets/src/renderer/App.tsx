@@ -1286,6 +1286,11 @@ export function App({
       seen.has(a.path) ? false : (seen.add(a.path), true),
     )
   }
+  /** the path of an image the chat shows, by its exact chip name; nothing else resolves */
+  const imageAttachmentPath = (name: string): string | null => {
+    const attachment = availableAttachments().find((candidate) => candidate.name === name)
+    return attachment && ATTACHMENT_IMAGE_EXTS.has(attachment.ext) ? attachment.path : null
+  }
   /** Synchronous re-entrancy guard between runAgent trigger and loop.run
    * (loop.busy is still false while attachment images load asynchronously) */
   const runStartingRef = useRef(false)
@@ -1591,7 +1596,10 @@ export function App({
           },
         }),
         createSearchSkill(),
-        createImageSkill(() => imageGenRef.current),
+        createImageSkill(
+          () => imageGenRef.current,
+          () => availableAttachments(),
+        ),
         // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
         ...panelUserSkills({
           lang: getLang,
@@ -1952,6 +1960,7 @@ export function App({
       traceDependents: (sheetId, address) =>
         traceWorkbookDependents(readContext(), sheetId, address),
       proposeOperations,
+      attachmentPathOf: imageAttachmentPath,
       createDocument: (request) => createAiDocument({ univerRef, lazyWorkbookRef }, request),
     }
   }

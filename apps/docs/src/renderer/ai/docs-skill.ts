@@ -1,7 +1,7 @@
 import { placeholderInstruction } from './redact'
 import { redactLabelsOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
-import type { AgentSkill } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill } from '@genoffice/agent-core'
 import {
   AGENT_SYSTEM_PROMPT,
   buildDocContext,
@@ -84,7 +84,11 @@ export function createDocsSkill(
         : []
       const redact = labels.length > 0 ? `\n\n${placeholderInstruction(labels)}` : ''
       const odt = isOdtSession() ? ODT_SYSTEM_NOTE : ''
-      return AGENT_SYSTEM_PROMPT + mediaOffNote() + redact + odt
+      const attached = attachedImageNote(
+        getAttachments?.()?.names() ?? [],
+        'call insert_image with attachment set to the name',
+      )
+      return AGENT_SYSTEM_PROMPT + mediaOffNote() + attached + redact + odt
     },
     get tools() {
       const hidden = mediaToolsOff()

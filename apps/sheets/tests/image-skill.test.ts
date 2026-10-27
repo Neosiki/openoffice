@@ -87,6 +87,31 @@ describe('image skill: generate_image', () => {
   })
 })
 
+describe('image skill: attached images', () => {
+  it('names the image attachments so the model can pass the exact file name', () => {
+    const skill = createImageSkill(
+      () => true,
+      () => [
+        { name: 'chart.png', path: 'C:/tmp/chart.png', ext: 'png', sizeBytes: 10 },
+        { name: 'notes.txt', path: 'C:/tmp/notes.txt', ext: 'txt', sizeBytes: 10 },
+        { name: 'photo.jpg', path: 'C:/tmp/photo.jpg', ext: 'jpg', sizeBytes: 10 },
+      ],
+    )
+    expect(skill.systemPrompt).toContain('chart.png, photo.jpg')
+    expect(skill.systemPrompt).not.toContain('notes.txt')
+    expect(skill.systemPrompt).toContain('add_image')
+    expect(skill.systemPrompt).toContain('attachment')
+  })
+
+  it('adds nothing when the chat has no image attachments', () => {
+    const skill = createImageSkill(
+      () => true,
+      () => [{ name: 'notes.txt', path: 'C:/tmp/notes.txt', ext: 'txt', sizeBytes: 10 }],
+    )
+    expect(skill.systemPrompt).not.toContain('Images attached to this chat')
+  })
+})
+
 describe('image skill: unknown tool', () => {
   it('fails closed', async () => {
     stubDesktopApi({})

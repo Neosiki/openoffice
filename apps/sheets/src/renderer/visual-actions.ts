@@ -558,7 +558,7 @@ export function insertAiImageVisual(
     },
     mediaType: image.mediaType,
     mediaDataUrl: image.dataUrl,
-    name: op.path.split('/').pop() ?? 'image',
+    name: op.attachment ?? op.path.split(/[\\/]/).pop() ?? 'image',
   }
   pushVisualAddUndo(ctx, runtime, state, visual)
   queueCtxVisualInstall(ctx, runtime)

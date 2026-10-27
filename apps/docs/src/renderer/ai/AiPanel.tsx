@@ -1020,6 +1020,10 @@ export function AiPanel({
           () => ({
             pathOf: (name) =>
               availableAttachments().find((attachment) => attachment.name === name)?.path ?? null,
+            names: () =>
+              availableAttachments()
+                .filter((attachment) => ATTACHMENT_IMAGE_EXTS.has(attachment.ext))
+                .map((attachment) => attachment.name),
           }),
         ),
         createFilesSkill(availableAttachments),

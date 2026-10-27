@@ -544,8 +544,10 @@ describe('insert_image freshness baseline', () => {
         undefined,
         () => ({
           pathOf: (name) => (name === 'probe.png' ? 'C:/tmp/probe.png' : null),
+          names: () => ['probe.png'],
         }),
       )
+      expect(skill.systemPrompt).toContain('probe.png')
       const before = JSON.stringify(editor.getJSON())
       const exec = await skill.executeTool({
         id: 't',
@@ -572,7 +574,7 @@ describe('insert_image freshness baseline', () => {
       undefined,
       undefined,
       undefined,
-      () => ({ pathOf: () => null }),
+      () => ({ pathOf: () => null, names: () => [] }),
     )
     const exec = await skill.executeTool({
       id: 't',

@@ -700,6 +700,8 @@ export interface AiDocExtras {
  */
 export interface AiAttachmentAccess {
   pathOf(name: string): string | null
+  /** exact names of the image files in this chat, for the prompt */
+  names(): string[]
 }
 
 export interface AiCommentsAccess {

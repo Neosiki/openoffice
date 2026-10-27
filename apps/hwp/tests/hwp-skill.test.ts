@@ -66,6 +66,7 @@ function setup(
   ),
   imageGenAvailable?: () => boolean,
   attachmentPath?: (name: string) => string | null,
+  attachmentNames?: () => string[],
 ) {
   const bridge: AgentBridge = {
     foreignChanges: vi.fn(async () => 0),
@@ -239,6 +240,7 @@ function setup(
     confirmMemoRemoval,
     ...(imageGenAvailable ? { imageGenAvailable } : {}),
     ...(attachmentPath ? { attachmentPath } : {}),
+    ...(attachmentNames ? { attachmentNames } : {}),
   })
   const call = (name: string, input: Record<string, unknown> = {}) =>
     skill.executeTool({ id: '1', name, input } satisfies AgentToolCall)
@@ -2062,9 +2064,14 @@ describe('pictures', () => {
 
   it('inserts an image file attached to the chat, by the name the panel showed', async () => {
     const hwpApi = api()
-    const { bridge, call, changes } = setup({}, undefined, undefined, (name) =>
-      name === 'probe.png' ? 'C:/tmp/probe.png' : null,
+    const { bridge, call, changes, skill } = setup(
+      {},
+      undefined,
+      undefined,
+      (name) => (name === 'probe.png' ? 'C:/tmp/probe.png' : null),
+      () => ['probe.png'],
     )
+    expect(skill.systemPrompt).toContain('probe.png')
     const result = await call('insert_image', {
       where: 'after',
       anchor: '본문',

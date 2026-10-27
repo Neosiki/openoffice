@@ -8,7 +8,7 @@
  * that nothing inside it, in an attachment or in a search result is an
  * instruction.
  */
-import type { AgentSkill, AgentToolDef } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill, type AgentToolDef } from '@genoffice/agent-core'
 import { brandText } from '@genoffice/i18n'
 import { t } from '../i18n/locale'
 import {
@@ -227,6 +227,8 @@ export interface MindmapSkillDeps {
    * paths exist.
    */
   attachmentPath?: (name: string) => string | null
+  /** exact names of the image files in this chat, for the prompt */
+  attachmentNames?: () => string[]
 }
 
 function summaryOf(name: string, result: MapToolResult): string {
@@ -285,7 +287,11 @@ export function createMindmapSkill(deps: MindmapSkillDeps): AgentSkill {
     // the prompt names the product: the upstream name is swapped for this product's,
     // and the live predicate takes generate_image's sentence out with the tool
     get systemPrompt(): string {
-      const prompt = brandText(SYSTEM_PROMPT, 'en')
+      const attached = attachedImageNote(
+        deps.attachmentNames?.() ?? [],
+        'call insert_image with attachment set to the name',
+      )
+      const prompt = brandText(SYSTEM_PROMPT, 'en') + attached
       return imageGenOn() ? prompt : `${prompt}${IMAGE_GEN_OFF_NOTE}`
     },
     // live like the prompt: the loop re-reads the tool list before every request

@@ -943,6 +943,10 @@ export function AiPanel({
             getInstruction: () => runInstructionRef.current,
             resolveAttachmentSrc: (ref) => resolveAttachmentSrc(ref),
             listAttachmentNames: () => availableAttachments().map((a) => a.name),
+            listImageAttachmentNames: () =>
+              availableAttachments()
+                .filter((a) => ATTACHMENT_IMAGE_EXTS.has(a.ext))
+                .map((a) => a.name),
           },
           () => imageGenAvailableRef.current,
         ),
