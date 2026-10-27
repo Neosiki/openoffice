@@ -442,6 +442,41 @@ describe('the local AI card', () => {
     expect(added).toMatchObject({ model: 'lab-model', kind: 'local' })
   })
 
+  it('notes where documents go for a public or unencrypted address, and still saves it', async () => {
+    install(settingsWith({ customEndpoints: [LOCAL_A], customEndpoint: 'local-a' }))
+    await openAi()
+    await click(button('Add server'))
+    const notice = () => host.querySelector<HTMLElement>('[data-local-address-notice]')
+
+    // the preset loopback address says nothing
+    expect(notice()).toBeNull()
+
+    await type(input('set-local-address'), 'http://203.0.113.5:11434/v1')
+    expect(notice()?.dataset.localAddressNotice).toBe('unencrypted')
+    expect(notice()?.textContent).toBe('Documents are sent to this address without encryption.')
+
+    await type(input('set-local-address'), 'https://203.0.113.5:8443/v1')
+    expect(notice()?.dataset.localAddressNotice).toBe('remote')
+    expect(notice()?.textContent).toBe('Documents are sent to this server.')
+
+    // a host name may be internal: https says nothing, http still warns
+    await type(input('set-local-address'), 'https://gpu-box:8443/v1')
+    expect(notice()).toBeNull()
+    await type(input('set-local-address'), 'http://gpu-box:8000/v1')
+    expect(notice()?.dataset.localAddressNotice).toBe('unencrypted')
+
+    await type(input('set-local-address'), 'http://192.168.0.20:11434/v1')
+    expect(notice()).toBeNull()
+
+    // advisory only: a public http address saves like any other
+    await type(input('set-local-address'), 'http://203.0.113.5:11434/v1')
+    await type(input('set-local-model'), 'remote-model')
+    await click(button('Save'))
+    expect(
+      stored.customEndpoints?.find((entry) => entry.baseUrl === 'http://203.0.113.5:11434/v1'),
+    ).toMatchObject({ model: 'remote-model', kind: 'local' })
+  })
+
   it('deletes the active server only after a confirmation and selects no other one', async () => {
     install(
       settingsWith({

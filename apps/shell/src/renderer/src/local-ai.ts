@@ -210,6 +210,104 @@ export function normalizeLocalBaseUrl(raw: unknown, preset: LocalPreset): LocalV
 }
 
 /**
+ * What the card says about where a chat sends documents for this address.
+ *
+ * - `unencrypted`: plain `http://` to anything that is not this PC or a
+ *   private-network IP literal.
+ * - `remote`: `https://` to a public IP literal.
+ * - `none`: everything else, including an address that does not parse (the
+ *   form's own check reports that one).
+ *
+ * Only IP literals count as private. A host name (`ollama.local`, `gpu-box`)
+ * may well be a machine on the office network, and the name alone cannot tell:
+ * over http it still reads as unencrypted, over https it says nothing. The
+ * notice is advisory; the address saves either way.
+ */
+export type LocalAddressNotice = 'none' | 'unencrypted' | 'remote'
+
+type HostScope = 'local' | 'public' | 'name'
+
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+
+/** loopback, private, link-local and "this network" IPv4 ranges */
+function isLocalIpv4(a: number, b: number): boolean {
+  return (
+    a === 127 || // 127.0.0.0/8 loopback
+    a === 10 || // 10.0.0.0/8
+    a === 0 || // 0.0.0.0/8 "this network": never routed off the PC
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+    (a === 192 && b === 168) || // 192.168.0.0/16
+    (a === 169 && b === 254) // 169.254.0.0/16 link-local
+  )
+}
+
+/**
+ * The eight 16-bit groups of an IPv6 literal in the URL parser's canonical
+ * form (lowercase hex, at most one `::`, no dotted tail), or undefined.
+ */
+function ipv6Groups(text: string): number[] | undefined {
+  const halves = text.split('::')
+  if (halves.length > 2) return undefined
+  const groupsOf = (part: string): number[] =>
+    part === ''
+      ? []
+      : part.split(':').map((group) => (/^[0-9a-f]{1,4}$/.test(group) ? parseInt(group, 16) : NaN))
+  const head = groupsOf(halves[0] ?? '')
+  const tail = halves.length === 2 ? groupsOf(halves[1] ?? '') : []
+  if ([...head, ...tail].some((group) => Number.isNaN(group))) return undefined
+  if (halves.length === 1) return head.length === 8 ? head : undefined
+  const fill = 8 - head.length - tail.length
+  if (fill < 1) return undefined
+  return [...head, ...new Array<number>(fill).fill(0), ...tail]
+}
+
+function isLocalIpv6(groups: readonly number[]): boolean {
+  const [g0 = 0, g1 = 0, g2 = 0, g3 = 0, g4 = 0, g5 = 0, g6 = 0, g7 = 0] = groups
+  const leadingZero = g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0
+  // ::1 loopback and :: unspecified (the IPv6 "this host")
+  if (leadingZero && g5 === 0 && g6 === 0 && (g7 === 1 || g7 === 0)) return true
+  // ::ffff:a.b.c.d carries an IPv4 address and follows the IPv4 rules
+  if (leadingZero && g5 === 0xffff) return isLocalIpv4(g6 >> 8, g6 & 0xff)
+  if ((g0 & 0xfe00) === 0xfc00) return true // fc00::/7 unique local
+  if ((g0 & 0xffc0) === 0xfe80) return true // fe80::/10 link-local
+  return false
+}
+
+/** Whether a parsed URL host is this PC or a private network, a public IP, or a name. */
+function hostScopeOf(hostname: string): HostScope {
+  const host = hostname.toLowerCase()
+  if (host === 'localhost' || host === 'localhost.') return 'local'
+  const v4 = IPV4_RE.exec(host)
+  if (v4) {
+    const octets = v4.slice(1).map(Number)
+    if (octets.some((octet) => octet > 255)) return 'name'
+    return isLocalIpv4(octets[0]!, octets[1]!) ? 'local' : 'public'
+  }
+  if (host.startsWith('[') && host.endsWith(']')) {
+    const groups = ipv6Groups(host.slice(1, -1))
+    if (!groups) return 'name'
+    return isLocalIpv6(groups) ? 'local' : 'public'
+  }
+  return 'name'
+}
+
+/** The notice for an address as the user typed it (a scheme-less address reads as http). */
+export function localAddressNotice(raw: unknown): LocalAddressNotice {
+  const address = normalizeLocalBaseUrl(raw, 'other')
+  if (!address.ok) return 'none'
+  let url: URL
+  try {
+    url = new URL(address.value)
+  } catch {
+    return 'none'
+  }
+  // the URL parser has already folded case and short IPv4 forms (127.1) into canonical ones
+  const scope = hostScopeOf(url.hostname)
+  if (url.protocol === 'http:') return scope === 'local' ? 'none' : 'unencrypted'
+  return scope === 'public' ? 'remote' : 'none'
+}
+
+/**
  * A whole number of milliseconds inside 60,000..600,000. An absent or blank
  * value means the 300,000 default; anything else that does not fit is a range
  * error, and the caller does not save it.

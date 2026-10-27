@@ -491,6 +491,8 @@ export const strings = {
     helpHitCount: '{n} 个主题',
     setLocalAddServer: '添加服务器',
     setLocalAddress: '地址',
+    setLocalAddressRemote: '文档将发送到此服务器。',
+    setLocalAddressUnencrypted: '文档将以未加密的方式发送到此地址。',
     setLocalApiKey: 'API 密钥（可选）',
     setLocalContext: '上下文',
     setLocalContextMayDiffer: '服务器未报告已加载的上下文，此值可能与实际值不同。',
@@ -1066,6 +1068,8 @@ export const strings = {
     helpHitCount: '{n} topics',
     setLocalAddServer: 'Add server',
     setLocalAddress: 'Address',
+    setLocalAddressRemote: 'Documents are sent to this server.',
+    setLocalAddressUnencrypted: 'Documents are sent to this address without encryption.',
     setLocalApiKey: 'API key (optional)',
     setLocalContext: 'Context',
     setLocalContextMayDiffer:
@@ -1646,6 +1650,8 @@ export const strings = {
     helpHitCount: '{n} chủ đề',
     setLocalAddServer: 'Thêm máy chủ',
     setLocalAddress: 'Địa chỉ',
+    setLocalAddressRemote: 'Tài liệu sẽ được gửi đến máy chủ này.',
+    setLocalAddressUnencrypted: 'Tài liệu sẽ được gửi đến địa chỉ này mà không được mã hóa.',
     setLocalApiKey: 'Khóa API (tùy chọn)',
     setLocalContext: 'Ngữ cảnh',
     setLocalContextMayDiffer:
@@ -2242,6 +2248,8 @@ export const strings = {
     helpHitCount: '{n} 件のトピック',
     setLocalAddServer: 'サーバーを追加',
     setLocalAddress: 'アドレス',
+    setLocalAddressRemote: '文書はこのサーバーに送信されます。',
+    setLocalAddressUnencrypted: '文書は暗号化されずにこのアドレスへ送信されます。',
     setLocalApiKey: 'API キー（任意）',
     setLocalContext: 'コンテキスト',
     setLocalContextMayDiffer:
@@ -2822,6 +2830,8 @@ export const strings = {
     helpHitCount: '주제 {n}개',
     setLocalAddServer: '서버 추가',
     setLocalAddress: '주소',
+    setLocalAddressRemote: '문서가 이 서버로 전송됩니다.',
+    setLocalAddressUnencrypted: '문서가 암호화 없이 이 주소로 전송됩니다.',
     setLocalApiKey: 'API 키(선택)',
     setLocalContext: '컨텍스트',
     setLocalContextMayDiffer: '서버가 불러온 문맥을 알려 주지 않아 실제 문맥과 다를 수 있습니다.',
@@ -3421,6 +3431,8 @@ export const strings = {
     helpHitCount: '{n} rubriques',
     setLocalAddServer: 'Ajouter un serveur',
     setLocalAddress: 'Adresse',
+    setLocalAddressRemote: 'Les documents sont envoyés à ce serveur.',
+    setLocalAddressUnencrypted: 'Les documents sont envoyés à cette adresse sans chiffrement.',
     setLocalApiKey: 'Clé API (facultative)',
     setLocalContext: 'Contexte',
     setLocalContextMayDiffer:
@@ -4029,6 +4041,8 @@ export const strings = {
     helpHitCount: '{n} Abschnitte',
     setLocalAddServer: 'Server hinzufügen',
     setLocalAddress: 'Adresse',
+    setLocalAddressRemote: 'Dokumente werden an diesen Server gesendet.',
+    setLocalAddressUnencrypted: 'Dokumente werden unverschlüsselt an diese Adresse gesendet.',
     setLocalApiKey: 'API-Schlüssel (optional)',
     setLocalContext: 'Kontext',
     setLocalContextMayDiffer:
@@ -4629,6 +4643,8 @@ export const strings = {
     helpHitCount: '{n} temas',
     setLocalAddServer: 'Añadir servidor',
     setLocalAddress: 'Dirección',
+    setLocalAddressRemote: 'Los documentos se envían a este servidor.',
+    setLocalAddressUnencrypted: 'Los documentos se envían a esta dirección sin cifrar.',
     setLocalApiKey: 'Clave de API (opcional)',
     setLocalContext: 'Contexto',
     setLocalContextMayDiffer:
@@ -5207,6 +5223,8 @@ export const strings = {
     helpHitCount: '{n} หัวข้อ',
     setLocalAddServer: 'เพิ่มเซิร์ฟเวอร์',
     setLocalAddress: 'ที่อยู่',
+    setLocalAddressRemote: 'เอกสารจะถูกส่งไปยังเซิร์ฟเวอร์นี้',
+    setLocalAddressUnencrypted: 'เอกสารจะถูกส่งไปยังที่อยู่นี้โดยไม่มีการเข้ารหัส',
     setLocalApiKey: 'คีย์ API (ไม่บังคับ)',
     setLocalContext: 'บริบท',
     setLocalContextMayDiffer: 'เซิร์ฟเวอร์ไม่ได้รายงานบริบทที่โหลดไว้ ค่านี้อาจแตกต่างจากค่าจริง',
@@ -5799,6 +5817,8 @@ export const strings = {
     helpHitCount: '{n} topik',
     setLocalAddServer: 'Tambah server',
     setLocalAddress: 'Alamat',
+    setLocalAddressRemote: 'Dokumen dikirim ke server ini.',
+    setLocalAddressUnencrypted: 'Dokumen dikirim ke alamat ini tanpa enkripsi.',
     setLocalApiKey: 'Kunci API (opsional)',
     setLocalContext: 'Konteks',
     setLocalContextMayDiffer:
@@ -6396,6 +6416,8 @@ export const strings = {
     helpHitCount: '{n} тем',
     setLocalAddServer: 'Добавить сервер',
     setLocalAddress: 'Адрес',
+    setLocalAddressRemote: 'Документы отправляются на этот сервер.',
+    setLocalAddressUnencrypted: 'Документы отправляются на этот адрес без шифрования.',
     setLocalApiKey: 'Ключ API (необязательно)',
     setLocalContext: 'Контекст',
     setLocalContextMayDiffer:
@@ -6976,6 +6998,8 @@ export const strings = {
     helpHitCount: '{n} مواضيع',
     setLocalAddServer: 'إضافة خادم',
     setLocalAddress: 'العنوان',
+    setLocalAddressRemote: 'تُرسَل المستندات إلى هذا الخادم.',
+    setLocalAddressUnencrypted: 'تُرسَل المستندات إلى هذا العنوان دون تشفير.',
     setLocalApiKey: 'مفتاح API (اختياري)',
     setLocalContext: 'السياق',
     setLocalContextMayDiffer:
@@ -7565,6 +7589,8 @@ export const strings = {
     helpHitCount: '{n} tópicos',
     setLocalAddServer: 'Adicionar servidor',
     setLocalAddress: 'Endereço',
+    setLocalAddressRemote: 'Os documentos são enviados para este servidor.',
+    setLocalAddressUnencrypted: 'Os documentos são enviados para este endereço sem criptografia.',
     setLocalApiKey: 'Chave de API (opcional)',
     setLocalContext: 'Contexto',
     setLocalContextMayDiffer:
@@ -8153,6 +8179,9 @@ export const strings = {
     helpHitCount: '{n} argomenti',
     setLocalAddServer: 'Aggiungi server',
     setLocalAddress: 'Indirizzo',
+    setLocalAddressRemote: 'I documenti vengono inviati a questo server.',
+    setLocalAddressUnencrypted:
+      'I documenti vengono inviati a questo indirizzo senza crittografia.',
     setLocalApiKey: 'Chiave API (facoltativa)',
     setLocalContext: 'Contesto',
     setLocalContextMayDiffer:
@@ -8739,6 +8768,8 @@ export const strings = {
     helpHitCount: '{n} tematów',
     setLocalAddServer: 'Dodaj serwer',
     setLocalAddress: 'Adres',
+    setLocalAddressRemote: 'Dokumenty są wysyłane na ten serwer.',
+    setLocalAddressUnencrypted: 'Dokumenty są wysyłane na ten adres bez szyfrowania.',
     setLocalApiKey: 'Klucz API (opcjonalny)',
     setLocalContext: 'Kontekst',
     setLocalContextMayDiffer:
@@ -9320,6 +9351,8 @@ export const strings = {
     helpHitCount: '{n} témat',
     setLocalAddServer: 'Přidat server',
     setLocalAddress: 'Adresa',
+    setLocalAddressRemote: 'Dokumenty se odesílají na tento server.',
+    setLocalAddressUnencrypted: 'Dokumenty se na tuto adresu odesílají bez šifrování.',
     setLocalApiKey: 'Klíč API (volitelný)',
     setLocalContext: 'Kontext',
     setLocalContextMayDiffer:
@@ -9904,6 +9937,8 @@ export const strings = {
     helpHitCount: '{n} onderwerpen',
     setLocalAddServer: 'Server toevoegen',
     setLocalAddress: 'Adres',
+    setLocalAddressRemote: 'Documenten worden naar deze server verzonden.',
+    setLocalAddressUnencrypted: 'Documenten worden zonder versleuteling naar dit adres verzonden.',
     setLocalApiKey: 'API-sleutel (optioneel)',
     setLocalContext: 'Context',
     setLocalContextMayDiffer:
@@ -10491,6 +10526,8 @@ export const strings = {
     helpHitCount: '{n} topik',
     setLocalAddServer: 'Tambah pelayan',
     setLocalAddress: 'Alamat',
+    setLocalAddressRemote: 'Dokumen dihantar ke pelayan ini.',
+    setLocalAddressUnencrypted: 'Dokumen dihantar ke alamat ini tanpa penyulitan.',
     setLocalApiKey: 'Kunci API (pilihan)',
     setLocalContext: 'Konteks',
     setLocalContextMayDiffer:
@@ -11054,6 +11091,8 @@ export const strings = {
     helpHitCount: '{n} נושאים',
     setLocalAddServer: 'הוסף שרת',
     setLocalAddress: 'כתובת',
+    setLocalAddressRemote: 'המסמכים נשלחים לשרת הזה.',
+    setLocalAddressUnencrypted: 'המסמכים נשלחים לכתובת הזו ללא הצפנה.',
     setLocalApiKey: 'מפתח API (אופציונלי)',
     setLocalContext: 'הקשר',
     setLocalContextMayDiffer: 'השרת לא דיווח על ההקשר שנטען; ייתכן שערך זה שונה מהערך בפועל.',
@@ -11633,6 +11672,8 @@ export const strings = {
     helpHitCount: '{n} विषय',
     setLocalAddServer: 'सर्वर जोड़ें',
     setLocalAddress: 'पता',
+    setLocalAddressRemote: 'दस्तावेज़ इस सर्वर पर भेजे जाते हैं।',
+    setLocalAddressUnencrypted: 'दस्तावेज़ बिना एन्क्रिप्शन के इस पते पर भेजे जाते हैं।',
     setLocalApiKey: 'API कुंजी (वैकल्पिक)',
     setLocalContext: 'संदर्भ',
     setLocalContextMayDiffer:
@@ -12185,6 +12226,8 @@ export const strings = {
     helpHitCount: '{n} 個主題',
     setLocalAddServer: '新增伺服器',
     setLocalAddress: '位址',
+    setLocalAddressRemote: '文件會傳送到此伺服器。',
+    setLocalAddressUnencrypted: '文件會以未加密的方式傳送到此位址。',
     setLocalApiKey: 'API 金鑰（選用）',
     setLocalContext: '上下文',
     setLocalContextMayDiffer: '伺服器未回報已載入的上下文，此值可能與實際值不同。',

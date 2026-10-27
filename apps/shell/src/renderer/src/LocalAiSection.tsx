@@ -18,6 +18,7 @@ import {
   applyInspection,
   applyPreset,
   applyTestResult,
+  localAddressNotice,
   localEndpointDraft,
   localEndpoints,
   localServerStatus,
@@ -529,6 +530,8 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
 
   const model = draft?.model.trim() ?? ''
   const profile = model ? profileOf(model) : {}
+  // where a chat would send documents: advisory only, saving is never blocked
+  const addressNotice = draft ? localAddressNotice(draft.baseUrl) : 'none'
   const models = draft?.models ?? []
 
   return (
@@ -664,6 +667,19 @@ export function LocalAiSection({ t, settings, onApply }: LocalAiSectionProps) {
               }}
             />
           </div>
+          {addressNotice === 'unencrypted' && (
+            <div
+              className="set-field-desc set-local-warning"
+              data-local-address-notice="unencrypted"
+            >
+              {t('setLocalAddressUnencrypted')}
+            </div>
+          )}
+          {addressNotice === 'remote' && (
+            <div className="set-field-desc" data-local-address-notice="remote">
+              {t('setLocalAddressRemote')}
+            </div>
+          )}
 
           <div className="set-field">
             <div className="set-field-text">

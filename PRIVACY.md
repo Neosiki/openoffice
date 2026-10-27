@@ -60,6 +60,12 @@ public IP address, as any website you visit does.
 Parts of a document that you marked as hidden from AI, in the editors that
 offer that marking, are withheld from the request whichever provider is used.
 
+When a local AI server's address is not this PC or a private-network IP
+address, the Local AI card says where documents go: over `http://` it warns
+that they are sent without encryption, and for a public IP address over
+`https://` it notes that they are sent to that server. It only tells you; the
+address is saved either way.
+
 ## How far hiding reaches
 
 The PowerPoint, Markdown and HTML editors let you hide parts of a document
