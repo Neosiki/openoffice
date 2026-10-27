@@ -171,6 +171,43 @@ jobs:
             echo "pdf read should answer resource_limit under the cap"; cat "$work/pdf.json"; exit 1;
           }
 
+      # The same command line without the Electron runtime: a tarball an agent
+      # sandbox or server can unpack. Proved in a bare Node image (no GTK, no
+      # app) under the 2 GB virtual-memory cap such containers usually have.
+      - name: Build the standalone command-line archive
+        run: |
+          set -euo pipefail
+          node packages/cli/pack-tarball.mjs \
+            --from apps/shell/release/linux-unpacked/resources \
+            --out apps/shell/release --platform linux --arch x64
+          cat apps/shell/release/ieumoffice-cli_*.tar.gz.sha256
+
+      - name: The standalone archive runs without GTK or the app
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/apps/shell/release:/dist:ro" \
+            -v "$RUNNER_TEMP/smoke:/work:ro" \
+            node:22-slim bash -c '
+              set -euo pipefail
+              ulimit -v 2097152
+              mkdir -p /tmp/cli
+              tar -xzf /dist/ieumoffice-cli_*.tar.gz -C /tmp/cli
+              cli=/tmp/cli/ieumoffice-cli/cli/ieumoffice
+              "$cli" --version
+              printf "# Standalone\n\n- one\n- two\n" > /tmp/note.md
+              "$cli" create --type docx --from /tmp/note.md --out /tmp/note.docx --json
+              "$cli" docs read /tmp/note.docx --json
+              "$cli" capabilities --json > /tmp/cap.json
+              grep -q "\"wasm\":{\"available\":false" /tmp/cap.json
+              set +e
+              "$cli" pdf read /work/note.md.pdf --json > /tmp/pdf.json 2>/dev/null
+              code=$?
+              set -e
+              [ "$code" -eq 3 ]
+              grep -q "\"error\":\"resource_limit\"" /tmp/pdf.json
+            '
+
       - name: List the release files
         run: ls -la apps/shell/release
 
@@ -182,6 +219,8 @@ jobs:
             apps/shell/release/*.AppImage
             apps/shell/release/*.deb
             apps/shell/release/*.rpm
+            apps/shell/release/*cli*.tar.gz
+            apps/shell/release/*cli*.tar.gz.sha256
             apps/shell/release/*-linux.yml
           if-no-files-found: error
           retention-days: 14
@@ -210,5 +249,5 @@ jobs:
           feed=$(ls linux/*-linux.yml)
           built=$(sed -n 's/^version: *//p' $feed | tr -d "'\"")
           [ "v$built" = "$TAG" ] || { echo "built $built, but the release is $TAG"; exit 1; }
-          gh release upload "$TAG" linux/*.AppImage linux/*.deb linux/*.rpm $feed --clobber
+          gh release upload "$TAG" linux/*.AppImage linux/*.deb linux/*.rpm linux/*cli*.tar.gz linux/*cli*.tar.gz.sha256 $feed --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'

@@ -264,16 +264,18 @@ Linux판(64비트 x64)도 베타로 냅니다. Windows·Mac 설치 파일과 **�
 
 **손으로 올리기.** release_tag를 비워 두면 실행 결과의 **Artifacts**에서 `ieumoffice-linux-x64`를 내려받아 직접 올립니다.
 
-| 파일                                              | 설명                                                                     | 릴리스에 올리나   |
-| ------------------------------------------------- | ------------------------------------------------------------------------ | ----------------- |
-| `IeumOffice-<버전>.AppImage`                      | 설치 없이 실행하는 단일 파일. 스스로 업데이트한다                        | **올린다 (필수)** |
-| `ieumoffice_<버전>_amd64.deb`                     | Ubuntu·Debian용 패키지(`/opt/IeumOffice`에 설치, `/usr/bin/ieumoffice`)  | **올린다 (필수)** |
-| `ieumoffice-<버전>.x86_64.rpm`                    | Fedora·RHEL·openSUSE용 패키지                                            | **올린다**        |
-| `latest-linux.yml` (베타 번호면 `beta-linux.yml`) | Linux 앱이 새 버전을 알아보는 안내 파일. `AppImage` 자동 업데이트에 쓴다 | **올린다 (필수)** |
+| 파일                                                   | 설명                                                                     | 릴리스에 올리나   |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ | ----------------- |
+| `IeumOffice-<버전>.AppImage`                           | 설치 없이 실행하는 단일 파일. 스스로 업데이트한다                        | **올린다 (필수)** |
+| `ieumoffice_<버전>_amd64.deb`                          | Ubuntu·Debian용 패키지(`/opt/IeumOffice`에 설치, `/usr/bin/ieumoffice`)  | **올린다 (필수)** |
+| `ieumoffice-<버전>.x86_64.rpm`                         | Fedora·RHEL·openSUSE용 패키지                                            | **올린다**        |
+| `ieumoffice-cli_<버전>_linux-x64.tar.gz` (+ `.sha256`) | 데스크톱 앱 없이 도는 명령줄 묶음(Linux x64). 에이전트 샌드박스·서버용   | **올린다**        |
+| `latest-linux.yml` (베타 번호면 `beta-linux.yml`)      | Linux 앱이 새 버전을 알아보는 안내 파일. `AppImage` 자동 업데이트에 쓴다 | **올린다 (필수)** |
 
 알아 둘 것:
 
 - **`AppImage`는 스스로 업데이트하고, `deb`·`rpm`은 새 버전을 알려 주기만 합니다.** `deb`·`rpm`으로 설치한 앱은 `/opt/IeumOffice`가 관리자 권한 폴더여서 스스로 덮어쓰지 않고, 업데이트 창에서 "다운로드 페이지 열기"로 안내합니다. `latest-linux.yml`을 올려 두어야 새 버전을 알아봅니다.
+- **명령줄 묶음은 설치 스크립트와 함께 냅니다.** 사이트의 `install.sh`(원본은 `packaging/cli/install.sh`)의 `DEFAULT_VERSION`을 이번 버전으로 고쳐 사이트에 올려야 `curl … | sh`가 새 버전을 설치합니다. 묶음은 Electron·GTK 없이 돌고, PDF·한글·웹 명령은 가상 메모리 상한(`ulimit -v`)이 낮으면 크래시 대신 `resource_limit`으로 답합니다(`packaging/cli/README.md`).
 - Linux판의 동작은 저장소 주인이 직접 확인할 수 없습니다. Linux 사용자에게서 들어온 보고를 `docs/tracking/status.md`에 적습니다.
 
 ## 13. 소개 사이트에 업데이트 소식 올리기 (정식 공개 뒤, 매번)
