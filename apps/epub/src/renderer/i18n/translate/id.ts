@@ -41,6 +41,7 @@ export const id = {
   btConfirmChecking: 'Memeriksa koneksi AI…',
   btConfirmProvider: 'AI yang digunakan: {provider}',
   btConfirmSends: 'Teks bab yang dipilih dikirim ke AI ini.',
+  btRightsNotice: 'Terjemahkan hanya dokumen yang Anda miliki haknya.',
   btConfirmPaid: '{provider} akan mengenakan biaya untuk ini',
   btProviderChange:
     'Terjemahan yang tersimpan dibuat dengan AI lain ({stored}). Sisanya akan diterjemahkan dengan {next}.',

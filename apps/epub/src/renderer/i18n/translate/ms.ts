@@ -41,6 +41,7 @@ export const ms = {
   btConfirmChecking: 'Menyemak sambungan AI…',
   btConfirmProvider: 'AI yang digunakan: {provider}',
   btConfirmSends: 'Teks bab yang dipilih dihantar kepada AI ini.',
+  btRightsNotice: 'Terjemah hanya dokumen yang anda mempunyai haknya.',
   btConfirmPaid: '{provider} akan mengenakan caj untuk ini',
   btProviderChange:
     'Terjemahan yang disimpan dibuat dengan AI lain ({stored}). Selebihnya akan diterjemah dengan {next}.',

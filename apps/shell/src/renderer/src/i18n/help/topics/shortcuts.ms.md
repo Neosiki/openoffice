@@ -24,7 +24,7 @@ Setiap editor mempunyai pengikatan kekunci sendiri, dan hanya sebahagian kecil d
 
 ## Mod persembahan
 
-- **Mula**: F5 dalam Word, PDF, Mindmap, HTML dan Markdown. Dalam hamparan, Ctrl+F5 (dari A1) atau Shift+F5 (dari sel aktif).
+- **Mula**: F5 dalam Word, PDF, Mindmap, HTML dan Markdown. Dalam hamparan, Ctrl+F5 (dari A1) atau Shift+F5 (dari sel aktif). Dalam dokumen HWP, Ctrl+F5 (di situ F5 memilih sel jadual).
 - **Pintu lain**: dalam Word, Ctrl+F5 dan Shift+F5 membuka paparan bacaan tanpa skrin penuh; dalam PDF bermula dari halaman aktif; dalam HTML membentang di dalam tab.
 - **Tamat**: Esc atau F5. F11 ialah skrin penuh tetingkap dan tidak mengubah paparan dokumen.
 

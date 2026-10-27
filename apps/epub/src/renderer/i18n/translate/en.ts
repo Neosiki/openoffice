@@ -41,6 +41,7 @@ export const en = {
   btConfirmChecking: 'Checking the AI connection…',
   btConfirmProvider: 'AI used: {provider}',
   btConfirmSends: 'The text of the chosen chapters is sent to this AI.',
+  btRightsNotice: 'Translate only documents you have the rights to.',
   btConfirmPaid: '{provider} will charge for this',
   btProviderChange:
     'The stored translation was made with a different AI ({stored}). The rest will be translated with {next}.',

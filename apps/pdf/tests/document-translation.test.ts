@@ -583,6 +583,7 @@ describe('translation window: confirmation', () => {
       t('arConfirmProvider', { provider: 'Claude' }),
     )
     expect(q(m.el, '[data-paid]')).toBeNull()
+    expect(q(m.el, '[data-rights]')?.textContent).toBe(t('trRightsNotice'))
     expect(q(m.el, '[data-provider-change]')).toBeNull()
     await settle()
     expect(bridge.api.aiStream).not.toHaveBeenCalled()

@@ -293,6 +293,9 @@ describe('the confirmation', () => {
     expect(Number(q(m.el, '[data-calls]')!.dataset.calls)).toBeGreaterThan(0)
     expect(q(m.el, '[data-route="ready"]')!.dataset.provider).toBe('claude-code')
     expect(q(m.el, '[data-same-language]')).not.toBeNull()
+    expect(q(m.el, '[data-rights]')!.textContent).toBe(
+      'Translate only documents you have the rights to.',
+    )
     expect(q(m.el, '[data-paid]')).toBeNull()
     expect(q(m.el, '[data-action="start"]')!.textContent).toBe('Start')
     expect(b.aiStream).not.toHaveBeenCalled()
@@ -320,6 +323,7 @@ describe('the confirmation', () => {
     await openWindow(m)
     await toConfirm(m)
     expect(q(m.el, '[data-paid]')?.textContent).toContain('요금이 부과됩니다')
+    expect(q(m.el, '[data-rights]')?.textContent).toBe('권리를 가진 문서만 번역하세요.')
     expect(q(m.el, '[data-same-language]')).toBeNull()
   })
 

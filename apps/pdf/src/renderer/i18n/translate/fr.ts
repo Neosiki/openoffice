@@ -27,6 +27,7 @@ export const fr = {
   trConfirmCalls: 'Appels à l’IA : {calls} ({blocks} blocs, envoyés par lots)',
   trConfirmDone: '{done} blocs sur {total} sont déjà traduits et ne seront pas renvoyés',
   trConfirmSends: 'Le texte des pages choisies est envoyé à cette IA.',
+  trRightsNotice: 'Ne traduisez que les documents dont vous détenez les droits.',
   trProviderChange:
     'La traduction conservée a été faite avec {stored}. Continuer avec {next} mêlera deux IA dans une même traduction.',
   trProviderUnknown: 'une IA inconnue',

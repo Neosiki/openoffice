@@ -41,6 +41,7 @@ export const zhTW = {
   btConfirmChecking: '正在檢查 AI 連線…',
   btConfirmProvider: '使用的 AI：{provider}',
   btConfirmSends: '所選章節的文字會傳送給此 AI。',
+  btRightsNotice: '請只翻譯您擁有權利的文件。',
   btConfirmPaid: '{provider} 將收取費用',
   btProviderChange: '已保存的譯文是用另一個 AI（{stored}）翻譯的。其餘部分將使用 {next} 翻譯。',
   btProviderUnknown: '其他 AI',

@@ -41,6 +41,7 @@ export const hi = {
   btConfirmChecking: 'AI कनेक्शन जाँचा जा रहा है…',
   btConfirmProvider: 'उपयोग होने वाला AI: {provider}',
   btConfirmSends: 'चुने गए अध्यायों का टेक्स्ट इस AI को भेजा जाता है।',
+  btRightsNotice: 'केवल उन्हीं दस्तावेज़ों का अनुवाद करें जिनके अधिकार आपके पास हैं।',
   btConfirmPaid: '{provider} इसके लिए शुल्क लेगा',
   btProviderChange:
     'सहेजा गया अनुवाद किसी दूसरे AI ({stored}) से बना था। बाकी का अनुवाद {next} से होगा।',
