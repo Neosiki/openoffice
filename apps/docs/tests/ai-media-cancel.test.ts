@@ -46,6 +46,10 @@ vi.mock('@genoffice/ai-search', async () => ({
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   analyzeMediaTool: (...args: unknown[]) => analyzeMediaTool(...args),
   documentMediaRoots: () => [],
+  // the Codex CLI image backend is registered when the AI IPC is: this test is only
+  // about cancellation, so a stub generator and a no-op registration are enough
+  createCodexImageCliGenerator: () => async () => ({ bytes: new Uint8Array(), mime: 'image/png' }),
+  registerCodexImageGenerator: () => {},
 }))
 
 // no status check either: registering the subscription channels would look for the CLIs
