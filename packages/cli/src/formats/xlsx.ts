@@ -18,6 +18,8 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   nextFreeRelationshipId,
+  parseRelationships,
+  parseSheetElements,
   type SheetEditPlan,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
 import { PRODUCT_NAME } from '@genoffice/i18n'
@@ -1196,12 +1198,18 @@ export async function writeWorkbook(
     ...(notes.length ? { notes } : {}),
   }
   // An edit to a cell leaves the cached <v> of every formula that reads it
-  // stale, so a workbook with formulas is refreshed even when no edit wrote one.
-  if (formulaCells.length === 0 && !(await hasFormulaParts(first.buffer))) {
-    return { ...base, cachedValues: true }
-  }
+  // stale, so a workbook with formulas is refreshed even when no edit wrote
+  // one. A batch that cannot change any value (column widths, styles,
+  // outline levels, notes) leaves every cached result as it was.
+  const changesValues =
+    formulaCells.length > 0 || canChangeValues(edits, plan, structuralOps, gateway)
+  if (!changesValues) return { ...base, cachedValues: true }
+  const inFile = await formulaCellsInPackage(first.buffer)
+  if (formulaCells.length === 0 && inFile.size === 0) return { ...base, cachedValues: true }
   if (!xlsxSidecarPath()) {
-    if (formulaCells.length === 0) return { ...base, cachedValues: true }
+    if (formulaCells.length === 0) {
+      return { ...base, notes: [...notes, NO_ENGINE_STALE_NOTE], cachedValues: true }
+    }
     return {
       ...base,
       cachedValues: false,
@@ -1212,6 +1220,7 @@ export async function writeWorkbook(
     const { values, uncached, unparsed, leftStale } = await evaluateFormulas(
       outputPath,
       formulaCells,
+      inFile,
       renames,
     )
     const stale = leftStale ? { notes: [...notes, STALE_NOTE] } : {}
@@ -1264,14 +1273,104 @@ const STALE_NOTE = {
     'the workbook has more formulas than a write refreshes cached results for, so formulas that read the edited cells may show an old result until the file is opened in Excel',
 }
 
-/** Whether any worksheet of the package holds a formula. */
-async function hasFormulaParts(buffer: Buffer): Promise<boolean> {
-  const zip = await JSZip.loadAsync(buffer)
-  for (const name of Object.keys(zip.files)) {
-    if (!/^xl\/worksheets\/[^/]+\.xml$/.test(name)) continue
-    if (/<f[\s>/]/.test(await zip.file(name)!.async('string'))) return true
+const NO_ENGINE_STALE_NOTE = {
+  code: 'dependent_formulas_not_refreshed',
+  message:
+    'xlsx engine not found, so formulas that read the edited cells keep their old result until the file is opened in Excel',
+}
+
+/** Structural ops that move no cell and hide none: they cannot change what a formula reads. */
+const VALUE_NEUTRAL_STRUCTURAL = new Set([
+  'set-row-size',
+  'set-col-size',
+  'set-col-style',
+  'set-rows-outline',
+  'set-cols-outline',
+  'set-outline-pr',
+])
+
+/**
+ * Whether the batch can change a value some formula reads. Anything not known
+ * to leave values alone counts as changing them: a wrong "no" would keep a
+ * stale result, a wrong "yes" only costs a refresh.
+ */
+export function canChangeValues(
+  edits: readonly CellEdit[],
+  plan: SheetEditPlan | undefined,
+  structuralOps: readonly SheetStructuralOps[],
+  gateway: GatewayPayloads,
+): boolean {
+  if (edits.some((e) => e.writeValue)) return true
+  if (
+    structuralOps.some((sheet) => sheet.ops.some((op) => !VALUE_NEUTRAL_STRUCTURAL.has(op.kind)))
+  ) {
+    return true
   }
-  return false
+  if (plan && (plan.renames.length || plan.additions.length || plan.removals.length)) return true
+  return (
+    gateway.filterStates.length > 0 ||
+    gateway.definedNamesState !== null ||
+    gateway.tableAdditions.length > 0 ||
+    gateway.hiddenOps.length > 0 ||
+    gateway.pivotAdditions.length > 0 ||
+    gateway.bakedCells.length > 0 ||
+    gateway.tabs.duplicates.length > 0
+  )
+}
+
+/**
+ * The formula cells of every worksheet in the package, by the sheet names the
+ * file carries, read from the sheet XML: any <c> with an <f> child counts,
+ * the dependents of a shared formula (<f t="shared" si="0"/>) included. The
+ * engine is not asked, so a large workbook costs a scan of its XML, not a
+ * read of every cell through the sidecar.
+ */
+async function formulaCellsInPackage(
+  buffer: Buffer,
+): Promise<Map<string, { row: number; column: number }[]>> {
+  const zip = await JSZip.loadAsync(buffer)
+  const read = async (name: string) => (await zip.file(name)?.async('string')) ?? ''
+  const targets = new Map(
+    parseRelationships(await read('xl/_rels/workbook.xml.rels'))
+      .filter((rel) => rel.id !== undefined && !rel.external)
+      .map((rel) => [
+        rel.id!,
+        rel.target.startsWith('/') ? rel.target.slice(1) : `xl/${rel.target.replace(/^\.\//, '')}`,
+      ]),
+  )
+  const found = new Map<string, { row: number; column: number }[]>()
+  for (const sheet of parseSheetElements(await read('xl/workbook.xml'))) {
+    const part = sheet.relationshipId === undefined ? undefined : targets.get(sheet.relationshipId)
+    if (!part) continue
+    const cells = formulaCellsInSheet(await read(part))
+    if (cells.length) found.set(sheet.name, cells)
+  }
+  return found
+}
+
+export function formulaCellsInSheet(xml: string): { row: number; column: number }[] {
+  const cells: { row: number; column: number }[] = []
+  let nextRow = 0
+  for (const rowMatch of xml.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+    const rowNumber = /\br="(\d+)"/.exec(rowMatch[1] ?? '')?.[1]
+    const row = rowNumber ? Number(rowNumber) - 1 : nextRow
+    nextRow = row + 1
+    let nextColumn = 0
+    for (const cellMatch of (rowMatch[2] ?? '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const address = /\br="([A-Za-z]+\d+)"/.exec(cellMatch[1] ?? '')?.[1]
+      let column = nextColumn
+      if (address) {
+        try {
+          column = parseAddress(address.toUpperCase()).column
+        } catch {
+          // keep the running column
+        }
+      }
+      nextColumn = column + 1
+      if (cellMatch[2] !== undefined && /<f[\s>/]/.test(cellMatch[2])) cells.push({ row, column })
+    }
+  }
+  return cells
 }
 
 /**
@@ -1289,6 +1388,7 @@ const list = (cells: readonly string[]) =>
 async function evaluateFormulas(
   path: string,
   formulaCells: readonly CellEdit[],
+  inFile: ReadonlyMap<string, { row: number; column: number }[]>,
   renames: Record<string, string>,
 ): Promise<{
   values: SheetFormulaValues[]
@@ -1307,12 +1407,7 @@ async function evaluateFormulas(
     const unparsed: string[] = []
     // formulas no edit wrote but whose inputs an edit may have changed: their
     // cached <v> is refreshed too, and kept as it is when the engine cannot tell
-    const { cells: untouched, leftStale } = await untouchedFormulaCells(
-      client,
-      path,
-      wanted,
-      originalName,
-    )
+    const { cells: untouched, leftStale } = untouchedFormulaCells(inFile, wanted, originalName)
     const bySheet = new Map<string, { row: number; column: number }[]>()
     for (const e of [...formulaCells, ...untouched]) {
       bySheet.set(e.sheetName, [...(bySheet.get(e.sheetName) ?? []), e])
@@ -1363,52 +1458,33 @@ const UNTOUCHED_FORMULA_CAP = 100_000
 const UNTOUCHED_BOX_CAP = 1_000_000
 
 /**
- * Formula cells of the file on disk that `edited` ("sheet row column" keys)
- * did not write, named by the file's original sheet names. Past the caps it
- * answers with none: a refresh of part of them would only mix fresh and stale.
+ * Formula cells of the file that `edited` ("sheet row column" keys) did not
+ * write, named by the file's original sheet names. Past the caps it answers
+ * with none: a refresh of part of them would only mix fresh and stale.
  */
-async function untouchedFormulaCells(
-  client: XlsxSidecarClient,
-  path: string,
+function untouchedFormulaCells(
+  inFile: ReadonlyMap<string, readonly { row: number; column: number }[]>,
   edited: ReadonlySet<string>,
   originalName: (written: string) => string,
-): Promise<{ cells: { sheetName: string; row: number; column: number }[]; leftStale: boolean }> {
-  const wb = (await client.open(path, 'en')) as OpenedWorkbook
-  try {
-    const found: { sheetName: string; row: number; column: number }[] = []
-    let leftStale = false
-    for (const meta of wb.sheets) {
-      if (!meta.rowCount || !meta.columnCount) continue
-      const sheetName = originalName(meta.name)
-      const all: { sheetName: string; row: number; column: number }[] = []
-      const bands = recalcBands({
-        startRow: 0,
-        endRow: meta.rowCount - 1,
-        startColumn: 0,
-        endColumn: meta.columnCount - 1,
-      })
-      for (const band of bands) {
-        const read = await readRangeIndexed(client, wb.sessionId, meta.id, band)
-        for (const c of read.cells) {
-          if (!c.formula || edited.has(`${sheetName} ${c.row} ${c.column}`)) continue
-          all.push({ sheetName, row: c.row, column: c.column })
-          if (found.length + all.length > UNTOUCHED_FORMULA_CAP)
-            return { cells: [], leftStale: true }
-        }
-      }
-      if (all.length === 0) continue
-      const box = boundingBox(all)
-      const area = (box.endRow - box.startRow + 1) * (box.endColumn - box.startColumn + 1)
-      if (area > UNTOUCHED_BOX_CAP) {
-        leftStale = true
-        continue
-      }
-      found.push(...all)
+): { cells: { sheetName: string; row: number; column: number }[]; leftStale: boolean } {
+  const found: { sheetName: string; row: number; column: number }[] = []
+  let leftStale = false
+  for (const [written, cells] of inFile) {
+    const sheetName = originalName(written)
+    const all = cells
+      .filter((c) => !edited.has(`${sheetName} ${c.row} ${c.column}`))
+      .map((c) => ({ sheetName, row: c.row, column: c.column }))
+    if (found.length + all.length > UNTOUCHED_FORMULA_CAP) return { cells: [], leftStale: true }
+    if (all.length === 0) continue
+    const box = boundingBox(all)
+    const area = (box.endRow - box.startRow + 1) * (box.endColumn - box.startColumn + 1)
+    if (area > UNTOUCHED_BOX_CAP) {
+      leftStale = true
+      continue
     }
-    return { cells: found, leftStale }
-  } finally {
-    await client.close(wb.sessionId)
+    found.push(...all)
   }
+  return { cells: found, leftStale }
 }
 
 interface Bounds {
