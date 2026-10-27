@@ -324,9 +324,47 @@ describe('rhwp memo menu patches', () => {
     ).toThrow(/exactly one/)
   })
 
+  // the ends of the two right-click lists, as the pinned release has them
+  const menus = [
+    '  private getTableContextMenuItems(): ContextMenuItem[] {',
+    '    return [',
+    "      { type: 'command', commandId: 'table:formula', label: '계산식(F)...' },",
+    "      { type: 'separator' },",
+    "      { type: 'command', commandId: 'table:split', label: '표 나누기' },",
+    '    ];',
+    '  }',
+    '  private getDefaultContextMenuItems(): ContextMenuItem[] {',
+    '    return [',
+    "      { type: 'command', commandId: 'format:para-num-shape', label: '문단 번호 모양(N)...' },",
+    '    ];',
+    '  }',
+  ].join('\n')
+
+  it('put the memo command in the body and table cell right-click menus', () => {
+    const patched = applyPatch('studio-memo-context-menu', menus)
+    const table = patched.slice(0, patched.indexOf('getDefaultContextMenuItems'))
+    const body = patched.slice(patched.indexOf('getDefaultContextMenuItems'))
+    for (const menu of [table, body]) {
+      expect(menu.match(/commandId: 'insert:comment'/g)).toHaveLength(1)
+    }
+    // no label of its own: the menu shows the command's localized 메모 / Memo
+    expect(patched).toContain("      { type: 'command', commandId: 'insert:comment' },")
+    expect(body).toMatch(/'insert:comment' \},\n {4}\];/)
+  })
+
+  it('keep CRLF sources working and fail when a list changed', () => {
+    const crlf = applyPatch('studio-memo-context-menu', menus.replaceAll('\n', '\r\n'))
+    expect(crlf.match(/'insert:comment'/g)).toHaveLength(2)
+    expect(crlf).not.toMatch(/[^\r]\n/)
+    expect(() =>
+      applyPatch('studio-memo-context-menu', menus.replace("'table:formula'", "'table:sum'")),
+    ).toThrow(/rhwp patch/)
+  })
+
   it('are all in the studio build', () => {
     for (const name of [
       'studio-memo-command',
+      'studio-memo-context-menu',
       'studio-memo-label-ko',
       'studio-memo-label-en',
     ] as const) {

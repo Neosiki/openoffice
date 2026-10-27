@@ -75,6 +75,11 @@
  *   document open outside form mode it sends `ieum:memo-insert` to the window the app
  *   listens on, and the menu names it 메모 (Memo) in the studio's two languages.
  *
+ * studio-memo-context-menu
+ *   The right-click menus of body text and of a table cell gain the same 메모 command,
+ *   so a selection can take a memo without going to the Insert menu. The menu keeps the
+ *   selection, and the memo editor reads it when it opens.
+ *
  * studio-memo-anchors, studio-memo-delete-undo
  *   The engine drops a memo when Backspace or Delete removes the last character of its
  *   anchor (vendor/rhwp-core patch 0018, decision 0072). The studio's undo of a typed
@@ -644,6 +649,33 @@ const PATCHES = {
       '  },',
     ].join('\n'),
   },
+  'studio-memo-context-menu': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    edits: [
+      // the menu of body text (and of a header or footer)
+      {
+        find:
+          "      { type: 'command', commandId: 'format:para-num-shape', label: '문단 번호 모양(N)...' },\n" +
+          '    ];',
+        replace:
+          "      { type: 'command', commandId: 'format:para-num-shape', label: '문단 번호 모양(N)...' },\n" +
+          "      { type: 'separator' },\n" +
+          "      { type: 'command', commandId: 'insert:comment' },\n" +
+          '    ];',
+      },
+      // the menu inside a table cell, after the cell's own commands
+      {
+        find:
+          "      { type: 'command', commandId: 'table:formula', label: '계산식(F)...' },\n" +
+          "      { type: 'separator' },",
+        replace:
+          "      { type: 'command', commandId: 'table:formula', label: '계산식(F)...' },\n" +
+          "      { type: 'separator' },\n" +
+          "      { type: 'command', commandId: 'insert:comment' },\n" +
+          "      { type: 'separator' },",
+      },
+    ],
+  },
   'studio-memo-label-ko': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]i18n[\\/]locales[\\/]ko\.ts$/,
     find: '  "command.insert.comment.label": "주석",',
@@ -769,6 +801,7 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-single-cell-resize',
   'studio-merged-row-below',
   'studio-memo-command',
+  'studio-memo-context-menu',
   'studio-memo-label-ko',
   'studio-memo-label-en',
   'studio-memo-anchors',
