@@ -91,7 +91,7 @@
 
 ## 이 모듈의 방식
 
-- **발표 모드는 편집기의 chrome API를 쓴다.** Ctrl/Shift+F5는 HTML 전체화면으로 열고, `editor.chrome.set({ menu:false, toolbar:false, statusbar:false })`로 편집기 자체의 메뉴·도구 줄·상태 줄을 숨긴다. 한컴의 표 칸 블록 선택과 겹치지 않도록 F5 단독으로는 발표를 시작하지 않는다. Esc·F5로 끝나면 발표 전의 chrome 표시를 그대로 되돌린다. 바깥 틀에서는 AI 창과 알림을 숨긴다(`.hwp-presenting`). 키 판정은 `@genoffice/ui`의 `presentationKeyOf`를 `src/renderer/presentation-keys.ts`에서 한글용으로 걸러 쓰고, F11은 Electron 전체화면 역할에 맡긴다.
+- **발표 모드는 편집기의 chrome API를 쓴다.** Ctrl+F5(Mac은 Cmd+F5)는 HTML 전체화면으로 열고, `editor.chrome.set({ menu:false, toolbar:false, statusbar:false })`로 편집기 자체의 메뉴·도구 줄·상태 줄을 숨긴다. 한컴에서 F5는 셀 블록, Shift+F5는 방향키로 늘리는 셀 블록이라 둘로는 발표를 시작하지 않는다(2026-10-26 사용자 신고: 표 칸의 F5가 발표를 켰다). 편집기는 수정자와 상관없이 F5를 셀 블록으로 읽으므로, 발표가 가져간 키는 편집기에 넘기지 않는다(`stopPropagation`). Esc·F5로 끝나면 발표 전의 chrome 표시를 그대로 되돌린다. 바깥 틀에서는 AI 창과 알림을 숨긴다(`.hwp-presenting`). 키 판정은 `@genoffice/ui`의 `presentationKeyOf`를 `src/renderer/presentation-keys.ts`에서 한글용으로 걸러 쓰고, F11은 Electron 전체화면 역할에 맡긴다.
 - 메인 코드는 shell 번들에 들어간다(`../../../hwp/src/main/hwp-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
 - `npm run build`·`dev`는 먼저 `scripts/build-studio.mjs`를 돌린다. 처음에는 rhwp 저장소에서 필요한 폴더만 받아(약 16MB, `node_modules/.cache/rhwp-studio`) 이 저장소의 vite로 빌드하고, 결과를 `public/studio`에 둔다(git에 넣지 않는다. 렌더러의 vite `publicDir`이다). 스크립트, 버전, 엔진 WASM이 그대로면 건너뛴다. Rust는 필요 없다. WASM은 `vendor/rhwp-core`에 빌드해 둔 것을 쓴다.
 - 저장 한 번은 세 단계다. 메인이 대상과 형식을 정하고(`beginSave`, "다른 이름으로"면 대화 상자), 렌더러가 편집기에서 바이트를 받고, 메인이 쓴다(`commitSave`). 렌더러가 바이트를 만들지 못하면 `abortSave`로 기다리는 쪽을 풀어 준다.

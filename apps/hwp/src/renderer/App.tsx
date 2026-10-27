@@ -131,7 +131,7 @@ export default function App() {
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
-  /** Ctrl/Shift+F5: the document alone in fullscreen, with the editor's own chrome hidden */
+  /** Ctrl+F5: the document alone in fullscreen, with the editor's own chrome hidden */
   const [presenting, setPresenting] = useState(false)
   const presentingRef = useRef(false)
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
@@ -672,9 +672,9 @@ export default function App() {
     [],
   )
 
-  // Ctrl/Shift+F5: the document alone in fullscreen; bare F5 stays with Hancom's
-  // table-cell selection. The editor's menu/toolbar/status bar hide with its own
-  // chrome API and come back exactly as they were when the show ends.
+  // Ctrl+F5: the document alone in fullscreen; F5 and Shift+F5 stay with Hancom's
+  // cell blocks. The editor's menu/toolbar/status bar hide with its own chrome API
+  // and come back exactly as they were when the show ends.
   useEffect(() => {
     const enter = async (): Promise<void> => {
       const editor = editorRef.current
@@ -707,10 +707,10 @@ export default function App() {
       const action = hwpPresentationKeyOf(event, presentingRef.current)
       if (!action) return
       event.preventDefault()
-      if (action === 'exit') {
-        event.stopPropagation()
-        exit()
-      } else void enter()
+      // the editor reads any F5 as a cell block: a key the show takes is not its key
+      event.stopPropagation()
+      if (action === 'exit') exit()
+      else void enter()
     }
     // The document lives inside rhwp's own frame, so keys pressed there never
     // reach this window: listen on both. A cross-origin frame simply gets none.

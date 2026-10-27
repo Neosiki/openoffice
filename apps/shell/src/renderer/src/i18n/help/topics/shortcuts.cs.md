@@ -24,7 +24,7 @@ Každý editor má vlastní přiřazení kláves a funguje všude jen několik z
 
 ## Režim prezentace
 
-- **Spuštění**: F5 ve Word, PDF, Mindmap, HTML a Markdown. V tabulce Ctrl+F5 (od A1) nebo Shift+F5 (od aktivní buňky).
+- **Spuštění**: F5 ve Word, PDF, Mindmap, HTML a Markdown. V tabulce Ctrl+F5 (od A1) nebo Shift+F5 (od aktivní buňky). V dokumentech HWP Ctrl+F5 (F5 tam vybírá buňky tabulky).
 - **Další vstupy**: ve Word otevřou Ctrl+F5 a Shift+F5 režim čtení bez celé obrazovky; v PDF začnou na aktuální stránce; v HTML prezentují na kartě.
 - **Ukončení**: Esc nebo F5. F11 je celá obrazovka okna a nemění zobrazení dokumentu.
 

@@ -24,7 +24,7 @@ Setiap editor punya pengikatan tombol sendiri, dan hanya sebagian yang berlaku d
 
 ## Mode presentasi
 
-- **Mulai**: F5 di Word, PDF, Mindmap, HTML, dan Markdown. Di spreadsheet, Ctrl+F5 (dari A1) atau Shift+F5 (dari sel aktif).
+- **Mulai**: F5 di Word, PDF, Mindmap, HTML, dan Markdown. Di spreadsheet, Ctrl+F5 (dari A1) atau Shift+F5 (dari sel aktif). Di dokumen HWP, Ctrl+F5 (di sana F5 memilih sel tabel).
 - **Pintu lain**: di Word, Ctrl+F5 dan Shift+F5 membuka tampilan baca tanpa layar penuh; di PDF mulai dari halaman aktif; di HTML presentasi di dalam tab.
 - **Selesai**: Esc atau F5. F11 adalah layar penuh jendela dan tidak mengubah tampilan dokumen.
 

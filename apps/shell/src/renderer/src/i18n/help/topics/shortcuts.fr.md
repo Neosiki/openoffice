@@ -24,7 +24,7 @@ Chaque éditeur a ses propres combinaisons de touches, et seules quelques-unes f
 
 ## Mode Présentation
 
-- **Démarrer** : F5 dans Word, PDF, Mindmap, HTML et Markdown. Dans un tableur, Ctrl+F5 (depuis A1) ou Maj+F5 (depuis la cellule active).
+- **Démarrer** : F5 dans Word, PDF, Mindmap, HTML et Markdown. Dans un tableur, Ctrl+F5 (depuis A1) ou Maj+F5 (depuis la cellule active). Dans un document HWP, Ctrl+F5 (F5 y sélectionne des cellules de tableau).
 - **Autres entrées** : dans Word, Ctrl+F5 et Maj+F5 ouvrent la vue Lecture sans plein écran ; dans PDF, elles démarrent à la page active ; dans HTML, elles présentent dans l’onglet.
 - **Quitter** : Échap ou F5. F11 est le plein écran de la fenêtre et ne change pas la vue du document.
 

@@ -4,7 +4,7 @@ import { closeAndSaveVideo, launchShell, waitForPageWithUrl } from './helpers'
 
 const TABLE = join(__dirname, '..', 'apps', 'hwp', 'tests', 'fixtures', 'format-copy-table.hwp')
 
-test('bare F5 stays with the editor and Ctrl+F5 starts the HWP presenter', async () => {
+test('F5 and Shift+F5 stay with the editor and Ctrl+F5 starts the HWP presenter', async () => {
   const launched = await launchShell({
     onboardingSeen: true,
     lang: 'ko',
@@ -21,9 +21,11 @@ test('bare F5 stays with the editor and Ctrl+F5 starts the HWP presenter', async
     const box = (await hwp.locator('.hwp-editor-host iframe').boundingBox())!
     await hwp.mouse.click(box.x + box.width * 0.4, box.y + 300)
 
-    await hwp.keyboard.press('F5')
-    await expect(hwp.locator('.hwp-app')).not.toHaveClass(/hwp-presenting/)
-    expect(await hwp.evaluate(() => document.fullscreenElement !== null)).toBe(false)
+    for (const key of ['F5', 'Shift+F5']) {
+      await hwp.keyboard.press(key)
+      await expect(hwp.locator('.hwp-app')).not.toHaveClass(/hwp-presenting/)
+      expect(await hwp.evaluate(() => document.fullscreenElement !== null)).toBe(false)
+    }
 
     await hwp.keyboard.press('Control+F5')
     await expect(hwp.locator('.hwp-app')).toHaveClass(/hwp-presenting/)

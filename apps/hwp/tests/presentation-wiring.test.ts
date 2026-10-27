@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { hwpPresentationKeyOf } from '../src/renderer/presentation-keys'
 
 /**
- * HWP reserves bare F5 for Hancom's table-cell selection. Modified F5 keys
- * still enter the presenter, which uses fullscreen and the rhwp chrome API.
+ * HWP leaves F5 and Shift+F5 to Hancom's cell blocks. Ctrl+F5 (Cmd+F5) enters
+ * the presenter, which uses fullscreen and the rhwp chrome API.
  */
 describe('HWP presentation wiring', () => {
   const app = readFileSync(resolve(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
@@ -19,12 +19,29 @@ describe('HWP presentation wiring', () => {
     ...overrides,
   })
 
-  it('leaves bare F5 to table-cell selection and presents with Ctrl/Shift+F5', () => {
+  it('leaves F5 and Shift+F5 to cell blocks and presents with Ctrl+F5', () => {
     expect(hwpPresentationKeyOf(key(), false)).toBeNull()
+    expect(hwpPresentationKeyOf(key({ shiftKey: true }), false)).toBeNull()
+    expect(hwpPresentationKeyOf(key({ ctrlKey: true, shiftKey: true }), false)).toBeNull()
+    expect(hwpPresentationKeyOf(key({ altKey: true, ctrlKey: true }), false)).toBeNull()
+    expect(hwpPresentationKeyOf(key({ ctrlKey: true, repeat: true }), false)).toBeNull()
     expect(hwpPresentationKeyOf(key({ ctrlKey: true }), false)).toBe('present-windowed')
     expect(hwpPresentationKeyOf(key({ metaKey: true }), false)).toBe('present-windowed')
-    expect(hwpPresentationKeyOf(key({ shiftKey: true }), false)).toBe('present-windowed')
+  })
+
+  it('ends the show with F5 or Esc, and only then', () => {
     expect(hwpPresentationKeyOf(key(), true)).toBe('exit')
+    expect(hwpPresentationKeyOf(key({ shiftKey: true }), true)).toBe('exit')
+    expect(hwpPresentationKeyOf(key({ key: 'Escape' }), true)).toBe('exit')
+    expect(hwpPresentationKeyOf(key({ key: 'Escape' }), false)).toBeNull()
+  })
+
+  it('keeps a key the show takes away from the editor', () => {
+    const onKey = app.slice(app.indexOf('const onKey'), app.indexOf("addEventListener('keydown'"))
+    expect(onKey).toContain('event.stopPropagation()')
+    expect(onKey.indexOf('event.stopPropagation()')).toBeLessThan(
+      onKey.indexOf("if (action === 'exit')"),
+    )
   })
 
   it('uses the editor chrome API and fullscreen for the presenter', () => {
