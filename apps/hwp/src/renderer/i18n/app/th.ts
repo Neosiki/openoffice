@@ -79,6 +79,8 @@ export const th = {
   aiToolInsert: 'เพิ่มย่อหน้า {count} ย่อหน้า',
   aiToolDelete: 'ลบย่อหน้าแล้ว · {text}',
   aiToolTable: 'เพิ่มตารางแล้ว · {rows} × {cols}',
+  aiToolImageSearchDone: 'ค้นหารูปภาพ "{query}" ({count} รูป)',
+  aiToolInsertImage: 'แทรกรูปภาพแล้ว {what}',
   aiToolFormat: 'เปลี่ยนรูปแบบแล้ว · {text}',
   aiFmtBold: 'ตัวหนา',
   aiFmtItalic: 'ตัวเอียง',

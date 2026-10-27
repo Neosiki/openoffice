@@ -160,6 +160,9 @@ const ai: MindmapAiApi = {
   readUrl: (url, offset) => ipcRenderer.invoke(AI_CHANNELS.readUrl, url, offset),
   imageSearch: (query, maxResults) =>
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
+  generateImage: (op) => ipcRenderer.invoke(MINDMAP_CHANNELS.aiGenerateImage, op),
+  fetchImage: (url) => ipcRenderer.invoke(MINDMAP_CHANNELS.fetchImage, url),
+  aiToolCapabilities: () => ipcRenderer.invoke(AI_CHANNELS.toolCapabilities),
 }
 
 // ---- questions from the in-app MCP server: the renderer answers; T13 asks from the main process ----

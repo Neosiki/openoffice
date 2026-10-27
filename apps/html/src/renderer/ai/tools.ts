@@ -415,7 +415,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
     },
   },
   {
-    name: 'search_images',
+    name: 'image_search',
     description:
       'Search the web for images. Returns a list of image URLs with titles and sizes; after picking one, place it with apply_ops (an <img> whose src is the imageUrl). For illustration/diagram-style art that search cannot find, or when the user asks you to generate/draw a picture, use generate_image instead.',
     inputSchema: {
@@ -430,7 +430,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   {
     name: 'generate_image',
     description:
-      'Generate an illustration with AI from a text prompt and insert it into the page (after the selected element, else at the end of <body>). For illustration/diagram-style art that search_images cannot find, or when the user asks to generate/draw a picture.',
+      'Generate an illustration with AI from a text prompt and insert it into the page (after the selected element, else at the end of <body>). For illustration/diagram-style art that image_search cannot find, or when the user asks to generate/draw a picture.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -647,7 +647,7 @@ async function persistImageSrc(
 }
 
 /**
- * search_images (read-only): the same main-process image search as
+ * image_search (read-only): the same main-process image search as
  * docs/sheets/slides (Serper etc. with DuckDuckGo fallback). A backend failure
  * must not read as an empty gallery — the model would fabricate image choices.
  */
@@ -679,7 +679,7 @@ async function executeImageSearch(call: AgentToolCall): Promise<ToolExecution> {
 
 /** hidden from the tool list while no image provider is reachable (see createHtmlSkill) */
 export const IMAGE_GEN_OFF_NOTE =
-  '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use search_images for imagery.'
+  '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
 
 export function createHtmlSkillCore(access: HtmlDocAccess): {
   buildContext(): string
@@ -1173,7 +1173,7 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
             '',
           )
         }
-        case 'search_images':
+        case 'image_search':
           return executeImageSearch(call)
         case 'generate_image':
           return generateImage(call)

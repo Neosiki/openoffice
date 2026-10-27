@@ -129,6 +129,7 @@ export const cs = {
   aiSumAnalyzeMediaDone: 'Média analyzována',
   aiSumInsertImage: 'Vložit obrázek',
   aiSumInsertWebImage: 'Vložen obrázek z webu',
+  aiSumInsertAttachedImage: 'Vložen přiložený obrázek',
   aiSumGenerateImage: 'Vygenerovat obrázek',
   aiSumInsertedGenImage: 'Vložen obrázek vygenerovaný AI',
   aiSumUnknownTool: 'Neznámý nástroj',

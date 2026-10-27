@@ -119,6 +119,7 @@ import {
   sanitizeAiSettings,
   sanitizeCliPath,
   setAiUserAgent,
+  setCodexImageGenerationAvailable,
   setRescueFetch,
   streamForProvider,
   type AiChatRequest,
@@ -139,7 +140,9 @@ import {
 import {
   abortMediaCalls,
   aiToolCapabilities,
+  createCodexImageCliGenerator,
   generateImageTool,
+  registerCodexImageGenerator,
   testSearchProvider,
   webSearchTool,
   imageSearchTool,
@@ -3960,7 +3963,29 @@ const AI_RUN_TEXTS: AiRunTexts = {
   noModel: () => tm('errNoModel'),
 }
 
+let codexImageRegistered = false
+
+/**
+ * Codex image generation through the official CLI (the path the `codex-image` skill
+ * documents): one `codex exec` per image, with the account's OAuth login and the built-in
+ * image_gen tool, in a throw-away folder. The chat loop keeps every built-in tool off; this
+ * is a separate call, so nothing of a conversation goes through it. Registered once per
+ * process, before the capability report can be asked.
+ */
+function registerCodexImageBackend(): void {
+  if (codexImageRegistered) return
+  codexImageRegistered = true
+  registerCodexImageGenerator(
+    createCodexImageCliGenerator({
+      settingsPath: SETTINGS_PATH,
+      tempRoot: () => app.getPath('temp'),
+    }),
+  )
+  setCodexImageGenerationAvailable(true)
+}
+
 export function registerAiIpc(): void {
+  registerCodexImageBackend()
   app.once('before-quit', shutdownCodexAppServers)
   // the subscription channels (statuses, recheck, login, install, metered) exist once per
   // process: whichever editor main asks first registers them and starts the first check

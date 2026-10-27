@@ -220,6 +220,11 @@ const api: HwpApi = {
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
   readUrl: (url, offset) => ipcRenderer.invoke(AI_CHANNELS.readUrl, url, offset),
+  imageSearch: (query, maxResults) =>
+    ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
+  generateImage: (op) => ipcRenderer.invoke(HWP_CHANNELS.aiGenerateImage, op),
+  fetchImage: (url) => ipcRenderer.invoke(HWP_CHANNELS.fetchImage, url),
+  aiToolCapabilities: () => ipcRenderer.invoke(AI_CHANNELS.toolCapabilities),
   onAiStream: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
     ipcRenderer.on(AI_CHANNELS.streamChunk, listener)

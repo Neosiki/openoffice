@@ -79,6 +79,8 @@ export const vi = {
   aiToolInsert: 'Đã thêm {count} đoạn văn',
   aiToolDelete: 'Đã xóa đoạn văn · {text}',
   aiToolTable: 'Đã thêm bảng · {rows} × {cols}',
+  aiToolImageSearchDone: 'Tìm kiếm hình ảnh "{query}" ({count} hình)',
+  aiToolInsertImage: 'Đã chèn hình ảnh {what}',
   aiToolFormat: 'Đã đổi định dạng · {text}',
   aiFmtBold: 'In đậm',
   aiFmtItalic: 'In nghiêng',

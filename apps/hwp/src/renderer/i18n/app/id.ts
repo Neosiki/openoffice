@@ -80,6 +80,8 @@ export const id = {
   aiToolInsert: 'Paragraf ditambahkan: {count}',
   aiToolDelete: 'Paragraf dihapus · {text}',
   aiToolTable: 'Tabel ditambahkan · {rows} × {cols}',
+  aiToolImageSearchDone: 'Pencarian gambar "{query}" ({count} gambar)',
+  aiToolInsertImage: 'Gambar disisipkan {what}',
   aiToolFormat: 'Format diubah · {text}',
   aiFmtBold: 'Tebal',
   aiFmtItalic: 'Miring',

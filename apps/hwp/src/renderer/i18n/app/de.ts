@@ -83,6 +83,8 @@ export const de = {
   aiToolInsert: 'Absätze hinzugefügt: {count}',
   aiToolDelete: 'Absatz entfernt · {text}',
   aiToolTable: 'Tabelle eingefügt · {rows} × {cols}',
+  aiToolImageSearchDone: 'Bildersuche „{query}“ ({count} Bilder)',
+  aiToolInsertImage: 'Bild eingefügt {what}',
   aiToolFormat: 'Formatierung geändert · {text}',
   aiFmtBold: 'Fett',
   aiFmtItalic: 'Kursiv',

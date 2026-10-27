@@ -129,6 +129,7 @@ export const pl = {
   aiSumAnalyzeMediaDone: 'Przeanalizowano multimedia',
   aiSumInsertImage: 'Wstaw obraz',
   aiSumInsertWebImage: 'Wstawiono obraz z internetu',
+  aiSumInsertAttachedImage: 'Wstawiono załączony obraz',
   aiSumGenerateImage: 'Generuj obraz',
   aiSumInsertedGenImage: 'Wstawiono obraz wygenerowany przez AI',
   aiSumUnknownTool: 'Nieznane narzędzie',

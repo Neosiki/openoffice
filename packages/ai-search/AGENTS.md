@@ -10,12 +10,12 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - 이미지 생성·미디어 분석 호출의 취소: 진행 중인 호출을 창(webContents id)별로 기억해 두고, 창이 사라지거나 그 창의 AI 실행이 중단되면 끊는 `withMediaCallSignal`·`abortMediaCalls`(`src/media-call-abort.ts`).
 - 경로 결정: `resolveImageRoute`·`resolveImageAnalysisRoute`·`resolveVideoAnalysisRoute`·`headlessSubscriptionBlocked`(`src/tool-routing.ts`)와 같은 함수로 만든 가용성 보고 `aiToolCapabilities`(`src/tool-capabilities.ts`).
 - 자동 호출 경로의 구독 요청 차례와 사용량 기록: `runHeadlessSubscriptionCall`·`headlessSubscriptionUsage`(`src/headless-ledger.ts`). 명령줄의 PDF 작업(`pdf ai-read`, `pdf translate`)도 모델 호출마다 이 차례를 거친다.
-- Codex 이미지 생성기가 스스로 등록하는 자리 `registerCodexImageGenerator`(`src/codex-image-generator.ts`).
+- Codex 이미지 생성기가 스스로 등록하는 자리 `registerCodexImageGenerator`(`src/codex-image-generator.ts`)와, 그 자리에 들어가는 CLI 생성기 `createCodexImageCliGenerator`(`src/codex-image-cli.ts`, 결정 0076): `codex exec` 한 번으로 내장 `image_gen`을 쓰고, 임시 폴더에 쓰인 이미지 파일을 읽어 돌려준다. 로그인 파일은 읽지 않는다(CLI가 스스로 인증한다).
 
 ## 맡지 않는 것 (경계)
 
 - 제공자 선택 규칙, 구독 프로그램의 시작·종료, 연결 상태 확인은 `packages/ai-provider`의 범위다. 이 모듈은 호출자가 넘긴 `statuses`를 읽기만 하고, 상태를 직접 확인하거나 벤더 프로그램을 띄우지 않는다.
-- Codex로 이미지를 "만드는 방법"은 이 모듈의 범위가 아니다. 여기는 요청을 Codex로 보낼지 정하고 등록된 생성기를 부를 뿐이다. 지금은 등록되는 생성기가 없어 이미지 생성은 키 제공자로만 된다.
+- Codex로 이미지를 "만드는 방법"은 원래 이 모듈의 범위가 아니었지만, 결정 0076으로 CLI 생성기(`codex-image-cli.ts`)를 여기 두었다. 채팅 세션과 분리된 `codex exec` 한 번이며, 채팅의 도구 통제 규칙은 그대로다. 앱이 시작할 때 `apps/docs`의 메인이 등록하고 가용성을 켠다. 무료 요금제에는 이미지 도구가 없으므로 첫 실패에서 그 실행 동안 경로를 숨긴다(요금제 이름으로 미리 추측하지 않는다).
 - 받은 이미지를 문서에 넣는 일, 도구를 모델에게 노출할지 정하는 일은 각 에디터(`apps/*/src/renderer/ai`)의 범위다.
 - 명령의 인자·출력 형식·종료 코드는 `packages/cli`의 범위다. 이 모듈의 도구는 `{ url | text | error, errorCode, resetsAt }` 객체를 돌려줄 뿐이다.
 - Electron을 import하지 않는다. 이 코드는 Electron 없이 도는 명령줄 번들에도 들어가므로 `@genoffice/electron-utils`는 패키지 루트가 아니라 `generated-images`·`remote-image`·`safe-remote-url` 하위 경로로만 import한다(루트는 Electron에 묶인 모듈을 다시 내보낸다).
@@ -49,5 +49,6 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - 테스트는 네트워크와 벤더 프로그램에 닿지 않는다. `@genoffice/ai-provider`의 `generateImageWithProvider`·`analyzeMediaWithProvider`·`streamForProvider`를 `vi.mock`으로 바꾸고, 상태는 `tests/routing-helpers.ts`의 `status()`로 만든다. 구독 경로를 타는 테스트에서 `streamForProvider`를 바꾸지 않으면 실제 프로그램이 뜬다.
 - 설정 파일 픽스처에는 `providers` 블록을 항상 넣는다(`writeSettings`). 그 블록이 없는 파일은 제공자 도입 이전 파일로 읽혀 모든 구역이 기본값으로 초기화된다.
 - 바꾸면 반드시 테스트하는 것: 화면·자동 호출 × 스위치 켬·끔 × 구독 `ready`·종량 허용·미연결 조합에서 경로와 보고가 같은 답인지, 환경 변수 키가 선택을 바꾸지 못하는지(`tests/search-free-route.test.ts`), 21번째 이후 요청도 거절되지 않는지, 손상된 장부와 쓸 수 없는 장부가 요청을 막지 않는지, 예전 판의 동의가 꺼짐으로 읽히는지, 죽은 프로세스의 잠금, 동시에 들어온 두 요청이 차례로 도는지.
-- `tests/codex-image-absent.test.ts`는 "이 빌드에는 Codex 이미지 생성이 없다"를 고정한다. 생성기를 추가하면 이 테스트와 가용성 판단을 함께 바꾼다.
+- `tests/codex-image-absent.test.ts`는 "패키지 진입점만으로는 Codex 이미지 생성기가 등록되지 않는다"를 고정한다. 앱의 등록은 `apps/docs`가 하며, 그 등록을 바꾸면 이 테스트와 가용성 판단을 함께 본다.
+- `tests/codex-image-cli.test.ts`는 가짜 CLI로 `codex exec` 명령 모양(이미지 도구, `workspace-write`, `--skip-git-repo-check`, 크기·품질), 파일 회수(다른 이름 포함), 요금제 실패 문장과 그 뒤의 경로 숨김, 임시 폴더 정리를 확인한다. 실제 유료 계정 호출은 하지 않는다.
 - Windows에서 `tests/media-local-path.test.ts`의 `documentMediaRoots` 한 건은 변경과 무관하게 실패한다(기대값이 `/work`인데 Windows의 `dirname`은 `\work`를 돌려준다).

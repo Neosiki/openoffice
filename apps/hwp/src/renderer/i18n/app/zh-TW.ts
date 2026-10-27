@@ -76,6 +76,8 @@ export const zhTW = {
   aiToolInsert: '已新增 {count} 個段落',
   aiToolDelete: '已刪除段落 · {text}',
   aiToolTable: '已插入表格 · {rows} 列 {cols} 欄',
+  aiToolImageSearchDone: '圖片搜尋「{query}」（{count} 張）',
+  aiToolInsertImage: '已插入圖片 {what}',
   aiToolFormat: '已變更格式 · {text}',
   aiFmtBold: '粗體',
   aiFmtItalic: '斜體',

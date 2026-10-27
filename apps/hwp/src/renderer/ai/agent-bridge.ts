@@ -24,6 +24,7 @@ const METHODS = [
   'insertParagraphs',
   'deleteParagraph',
   'insertTable',
+  'insertPicture',
   'formatText',
   'formatParagraph',
   'listTables',
