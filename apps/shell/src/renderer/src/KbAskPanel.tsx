@@ -15,9 +15,11 @@ import {
   AiBlockedNotice,
   AiComposer,
   AiConnectPrompt,
+  AiToolsUnsupportedNotice,
   AiTypingIndicator,
   AiUsageChip,
   addTokenUsage,
+  aiContextConfirmText,
   aiRunErrorText,
   aiSubscriptionText,
   createFileNav,
@@ -36,6 +38,8 @@ import type { AiSettings } from '@genoffice/ai-provider'
 import {
   AI_SUBSCRIPTION_PROVIDERS,
   isSubscriptionProvider,
+  localContextLimit,
+  localModelCapabilities,
   selectAiProvider,
   type AiSubscriptionProviderId,
 } from '@genoffice/ai-provider/browser'
@@ -251,10 +255,16 @@ export function KbAskPanel({
         unknownErrorText: () => t('askUnknownError'),
         // the subscription causes are worded once for every AI surface of the suite
         errorText: (cause) => aiRunErrorText(langRef.current, cause),
+        // a local model's window: the transport warns at 80% and asks once per run
+        contextLimit: (settings) => localContextLimit(settings),
+        confirmContext: (warning) => window.confirm(aiContextConfirmText(langRef.current, warning)),
         onStreamError: (error) => {
           streamErrorRef.current = askBlockedRunOf(error)
         },
       }),
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeSkills('kb+skills', '', [
         createKnowledgeBaseSkill({
           listFiles: () => corpusRef.current,
@@ -730,6 +740,9 @@ export function KbAskPanel({
             {aiSubscriptionText(lang, 'actionOpenSettings')}
           </button>
         </p>
+      )}
+      {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+        <AiToolsUnsupportedNotice lang={lang} />
       )}
       <AiComposer
         value={draft}

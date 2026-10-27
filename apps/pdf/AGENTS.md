@@ -79,6 +79,11 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 문서 작업 엔진은 화면 프로세스에서 돈다. 페이지 그림은 화면이 자기 PDF.js 사본으로 그리고, 모델 호출은 AI 창과 같은 `ai:stream`으로 간다. 결과 쓰기는 `ipc-store.ts`를 거쳐 셸의 보관소로 간다. 셸은 그 창에 열린 파일에서 자기가 계산한 해시만 받아들인다.
 - `src/shared/ipc.ts`의 `structure*`·`store*` 채널 모양을 바꾸면 셸의 처리 코드(`apps/shell/src/main/pdf-structure/`)도 함께 고치고 셸을 다시 빌드한다.
 
+## 로컬 AI (결정 0067)
+
+- 문서 작업 `doc-jobs/model-call.ts`는 `createModelCall` 하나마다 `contextGate` 하나를 만들고 `runId`를 요청에 싣는다. 호출자는 `runId`만 넘긴다.
+- 문맥 확인을 거절하면 그 작업은 `context-limit`으로 멈추고 모델을 부르지 않는다. `InsightsCard`의 `startSingle`과 `runJob`은 서로 다른 실행이다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/pdf`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/pdf`. 환경은 `jsdom`이다.

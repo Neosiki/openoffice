@@ -1,6 +1,9 @@
 export type {
+  AiCustomEndpoint,
   AiChatRequest,
   AiChatResponse,
+  AiLocalModelProfile,
+  AiLocalValueSource,
   AiMediaProviderConfig,
   AiMediaProviderId,
   AiMediaProviderMeta,
@@ -124,6 +127,69 @@ export {
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from './custom-endpoints'
+export type { RemoveCustomEndpointOptions } from './custom-endpoints'
+export {
+  DEFAULT_LOCAL_CONTEXT_TOKENS,
+  DEFAULT_LOCAL_TIMEOUT_MS,
+  MAX_LOCAL_CONTEXT_TOKENS,
+  MAX_LOCAL_MODEL_ID_LENGTH,
+  MAX_LOCAL_MODEL_PROFILES,
+  MAX_LOCAL_NOTES_LENGTH,
+  MAX_LOCAL_TIMEOUT_MS,
+  MIN_LOCAL_TIMEOUT_MS,
+  localContextLimit,
+  localContextTokensOf,
+  localEndpointFieldsOf,
+  localEndpointTimeoutMs,
+  localModelCapabilities,
+  localModelProfileOf,
+  localModelProfilesOf,
+  localTimeoutMsOf,
+  localValueSourceOf,
+  mergeLocalModelProfile,
+} from './local-profile'
+export type {
+  AiLocalContextLimit,
+  AiLocalEndpointFields,
+  AiLocalModelCapabilities,
+} from './local-profile'
+export { inspectLocalModel, listLocalModels } from './local-models'
+export type {
+  AiLocalDiscoveryErrorCode,
+  AiLocalDiscoveryRequest,
+  AiLocalDiscoveryResult,
+  AiLocalInspection,
+  AiLocalInspectionRequest,
+  AiLocalInspectionResult,
+  AiLocalModelSummary,
+  AiLocalRequestOptions,
+  AiLocalServerKind,
+} from './local-models'
+export { testLocalModel } from './local-test'
+export type {
+  AiLocalCheck,
+  AiLocalCheckCode,
+  AiLocalCheckStatus,
+  AiLocalTestInput,
+  AiLocalTestOptions,
+  AiLocalTestResult,
+} from './local-test'
+export {
+  cancelLocalTestForIpc,
+  inspectLocalModelForIpc,
+  listLocalModelsForIpc,
+  parseLocalDiscoveryInput,
+  parseLocalInspectionInput,
+  parseLocalTestInput,
+  testLocalModelForIpc,
+} from './local-ipc'
+export type {
+  AiLocalDiscoveryIpcInput,
+  AiLocalInspectionIpcInput,
+  AiLocalTestIpcInput,
+  AiLocalTestIpcOptions,
+  AiLocalTestOwner,
+} from './local-ipc'
 export {
   AI_MEDIA_PROVIDERS,
   GEMINI_MEDIA_BASE_URL,
@@ -176,7 +242,7 @@ export { freeLimitOf } from './free-ai'
 export type { FreeAiConnectResult, FreeAiProviderId, FreeAiQuota } from './free-ai'
 export { parseOutputCapRejection } from './output-cap'
 export { AiCreditsError, sseLines, streamForProvider } from './stream'
-export type { StreamCallbacks } from './stream'
+export type { StreamCallbacks, StreamForProviderOptions } from './stream'
 export {
   AI_CHAT_RESPONSE_TIMEOUT_MS,
   AI_CONNECT_TIMEOUT_MS,

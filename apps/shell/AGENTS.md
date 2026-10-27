@@ -117,6 +117,13 @@
 - deb의 의존성(`electron-builder.cjs`의 `deb.depends`)은 electron-builder 기본 목록을 그대로 적고, Ubuntu 24.04·Debian 13의 64비트 time_t 전환으로 이름이 바뀐 패키지에는 `libgtk-3-0 | libgtk-3-0t64`처럼 대안을 함께 적는다(설정하면 기본 목록이 통째로 바뀌므로 전체를 적어야 한다). `tests/linux-deb-dependencies.test.ts`가 기본 목록과의 어긋남을 잡고, `linux-build.yml`이 배포 전에 확인한다.
 - 패키징은 저장소 루트에서 한다: `npm run dist:win -- -- --publish never`. `--`가 두 번 필요하고, `--publish never`가 없으면 electron-builder가 업로드를 시도한다. xlsx 사이드카는 `target/x86_64-pc-windows-gnu/release/`에 있어야 하므로 Windows에서 MSVC로 빌드했다면 `target/release/xlsx-sidecar.exe`를 그리로 복사한다. OCR 도우미 컴파일에는 Windows SDK가 필요하다.
 
+## 로컬 AI (결정 0067)
+
+- 연결 테스트 중에는 "취소" 단추(기존 `cancel` 문구)가 보이고, 카드를 닫거나 다른 서버로 바꾸거나 주소·키를 고치면 같은 장치(`cancelLocalTest(testId)`)로 메인 프로세스의 요청까지 끊는다. 끊긴 테스트의 늦은 답은 버린다.
+- 설정 → AI의 `LocalAiSection`은 `local-ai.ts`의 순수 규칙만 쓴다. 서버 저장·테스트는 활성 AI를 바꾸지 않고, 설정을 열거나 서버를 고르는 것만으로 접속하지 않는다. 모델 목록은 마지막으로 읽은 것을 남긴다.
+- 고급 `Custom` 저장은 `withAdvancedCustomSave`로 최신 파일의 다른 서버와 `kind`·`modelProfiles`·`timeoutMs`를 보존한다.
+- 새 문구는 `strings.ts` 21개 언어에 있고, 카드의 색은 기존 토큰만 쓴다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/shell`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/shell`. 환경은 `node`다.

@@ -8,7 +8,9 @@ import {
   AiFirstConnectionNotice,
   AiInputTruncatedNotice,
   AiMark,
+  AiToolsUnsupportedNotice,
   AiSubscriptionUsageLine,
+  aiContextConfirmText,
   aiRunErrorText,
   aiSubscriptionText,
   useAiSendGate,
@@ -41,6 +43,7 @@ import {
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
+import { localContextLimit, localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type {
   AiSettings,
   AiToolCapabilities,
@@ -56,6 +59,7 @@ import {
   type DeckProgressEvent,
 } from './slides-skill'
 import { extractJsonObject, parseOutlineJson } from './outline-json'
+import { createDeckContextGate } from './deck-context-gate'
 import { buildPageSystemPrompt } from './page-system-prompt'
 import { templateSelectionState } from './template-selection-state'
 import { TemplateStartGallery } from './TemplateGallery'
@@ -1023,6 +1027,13 @@ export function AiPanel({
       error?: string
       errKind?: 'timeout' | 'empty' | 'stopped'
     }
+    // These calls skip the panel's transport, so they get its context check
+    // here: the same window and dialog, asked once per run (the loop's signal),
+    // and a decline stops the rest of that run's deck calls without asking again.
+    const deckContextGate = createDeckContextGate<AiSettings>({
+      contextLimit: (settings) => localContextLimit(settings),
+      confirm: (warning) => window.confirm(aiContextConfirmText(getLang(), warning)),
+    })
     const runLlmAttempt = (
       settings: AiSettings,
       system: string,
@@ -1034,6 +1045,15 @@ export function AiPanel({
       new Promise((resolve) => {
         if (signal?.aborted) {
           resolve({ ok: false, error: tGlobal('aiErrStopped'), errKind: 'stopped' })
+          return
+        }
+        // declined: the model is not called, and 'stopped' keeps retry ladders from trying again
+        if (!deckContextGate.allows(settings, system, user, signal)) {
+          resolve({
+            ok: false,
+            error: aiRunErrorText(getLang(), { kind: 'context-limit' }) ?? tGlobal('aiErrStopped'),
+            errKind: 'stopped',
+          })
           return
         }
         const requestId = crypto.randomUUID()
@@ -1538,6 +1558,8 @@ export function AiPanel({
     loopRef.current = new AgentLoop({
       transport: createElectronTransport(() => settingsRef.current, transportHooksRef.current),
       systemSuffix: aiLangDirective,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () => localModelCapabilities(settingsRef.current).tools !== false,
       skill: composeWithDrive('slides+files', '', () => loopRef.current?.messages ?? [], [
         createSlidesSkill(access),
         createFilesSkill(availableAttachments, (path) => readAttachmentPathsRef.current.add(path)),
@@ -2134,6 +2156,7 @@ export function AiPanel({
         let result = await qcSlidePage({
           access,
           transport,
+          settings: () => settingsRef.current,
           pageIndex: page,
           screenshot: shot,
           systemSuffix: aiLangDirective,
@@ -2144,6 +2167,7 @@ export function AiPanel({
           result = await qcSlidePage({
             access,
             transport,
+            settings: () => settingsRef.current,
             pageIndex: page,
             screenshot: null,
             systemSuffix: aiLangDirective,
@@ -2703,6 +2727,9 @@ export function AiPanel({
           )}
           {inputTruncated && (
             <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+          )}
+          {localModelCapabilities(liveSettings).tools === false && (
+            <AiToolsUnsupportedNotice lang={lang} />
           )}
           <AiSubscriptionUsageLine usage={subscriptionUsage} lang={lang} />
           <TemplatePicker

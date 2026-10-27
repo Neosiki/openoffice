@@ -25,6 +25,7 @@ import {
   AI_QUEUE_LABELS,
   AiScopeQuote,
   AiSubscriptionUsageLine,
+  AiToolsUnsupportedNotice,
   AiTypingIndicator,
   AiUsageChip,
   type AiScopeQuoteData,
@@ -43,6 +44,7 @@ import type {
   AiSubscriptionUsage,
   SubscriptionConnectHelpPath,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type { AiBlockedRun } from './subscription-state'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
@@ -940,6 +942,10 @@ export function AiChatPanel({
         {subscription.inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={subscription.onDismissTruncated} />
         )}
+        {subscription.settings !== null &&
+          localModelCapabilities(subscription.settings).tools === false && (
+            <AiToolsUnsupportedNotice lang={lang} />
+          )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           queueStrip={

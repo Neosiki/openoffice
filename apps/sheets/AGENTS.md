@@ -46,6 +46,11 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 디자인 템플릿 글꼴은 쓸 때만 불러온다. 시작할 때는 면마다 `genoffice-docx-media://template-fonts/<file>` 주소의 `FontFace`를 바이트를 읽지 않고 등록만 한다. shell 안에서는 워드 편집기의 메인이 이 주소에 답하고(`apps/docs/src/main/lazy-media.ts`, 응답은 `@genoffice/electron-utils/template-font-response`, 면 목록과 주소는 `@genoffice/ui/template-fonts`), 시트를 단독으로 띄우면 시트 메인이 직접 답한다(`src/main/template-fonts.ts`, 목록에 있는 파일 이름만). 통합 문서를 열면 그 문서가 쓰는 템플릿 패밀리를 먼저 불러(최대 3초) 첫 레이아웃이 실제 글꼴로 재게 하고, 면 하나가 다 불러지면 글자 측정 캐시를 버리고 시트를 다시 그린다. PDF 내보내기와 인쇄의 숨은 창은 페이지가 선언한 글꼴만 보므로 같은 파일을 `file://` `@font-face`로 적는다. 저장되는 .xlsx는 바뀌지 않는다.
 - 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `dialogs/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
 
+## 로컬 AI (결정 0067)
+
+- 단독 실행 시트의 `aiCustomEndpointSchema`는 `kind`, `modelProfiles`, `timeoutMs`를 받는다. 좁은 스키마로 되돌리면 단독 실행 시트가 로컬 설정을 거절한다.
+- `App.tsx`의 AI 루프는 `toolsAllowed`로 `localModelCapabilities`를 읽고, `AiChatPanel`은 `tools: false`일 때 `AiToolsUnsupportedNotice`를 보여 준다.
+
 ## 테스트
 
 - `npm run test -w @genoffice/sheets`는 Rust 테스트와 사이드카 빌드를 먼저 돌린다(`cargo` 필요). TypeScript 쪽만 볼 때는 이 폴더에서 `npx vitest run`을 쓴다. Windows에서 `cargo`가 PATH에 없으면 `%USERPROFILE%\.cargo\bin`을 앞에 붙인다.

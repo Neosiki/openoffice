@@ -37,7 +37,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - 메인 코드는 shell 번들에 들어간다. shell이 `../../../docs/src/main/docs-main`을 상대 경로로 import하므로 `src/main`을 고친 뒤에는 shell을 다시 빌드해야 변경이 실행된다. 단독 실행(`src/main/index.ts` → `startDocsStandalone`)은 개발용이다.
 - **발표 모드는 읽기 모드를 전체화면으로 쓴다.** F5는 읽기 모드 + HTML 전체화면(셸 탭 줄까지 덮인다) + 쪽 맞춤, Ctrl+F5는 전체화면 없이 읽기 모드만, F5·Esc는 끝낸다. 키 판정은 `@genoffice/ui`의 `presentationKeyOf` 하나이고, 발표 중에는 `.presentation-mode`가 상태 표시줄을 숨긴다. 전체화면이 OS에서 풀려도(`fullscreenchange`) 읽기 모드까지 끝낸다.
 - 채널 이름으로 소유를 구분한다. `ai:*`는 앱 전체가 공유하고 여기서 한 번 등록된다. 다른 에디터와 겹칠 수 있는 것은 `docs:` 접두사를 붙인다(`docs:analyze-media`, `docs:ai-generate-image`). 슬라이드가 같은 프로세스에서 자기 `ai:generate-image`·`ai:analyze-media`를 등록하기 때문이다.
-- 스트림 중에는 제공자 쪽에서 움직임이 있을 때 `ping` 조각을 보낸다(5초에 한 번을 넘지 않는다). 렌더러의 침묵 감시가 "느린 턴"과 "죽은 턴"을 구별하는 근거다. 렌더러가 사라지면 `abortOnDestroyed`가 요청을 끊는다.
+- 스트림 중에는 제공자 쪽에서 움직임이 있을 때 `ping` 조각을 보낸다(5초에 한 번을 넘지 않는다). 로컬 서버는 응답 헤더만 온 뒤 모델을 아직 읽는 중일 수 있으므로, 첫 `delta`·`reasoning`·`tool-call`이 오기 전까지 ping을 계속 보낸다. 렌더러의 침묵 감시가 "느린 턴"과 "죽은 턴"을 구별하는 근거다. 렌더러가 사라지면 `abortOnDestroyed`가 요청을 끊는다.
 - `ai:stream`의 조각은 `createChunkCoalescer`(`src/main/stream-coalesce.ts`)를 거친다. `delta`·`reasoning`은 32ms 동안 모아 한 조각으로 보내고, 다른 종류의 조각은 모은 것을 먼저 보낸 뒤 보낸다. 토큰마다 IPC 메시지와 대화 다시 그리기가 생기지 않게 하기 위해서다. 이 처리기에서 조각을 보내는 새 경로는 `send`가 아니라 같은 묶음(`out.push`)을 거쳐야 순서가 지켜진다.
 - AI 실행의 되돌리기 지점은 JSON 사본이 아니라 문서 노드 그대로다(`ai/rollback-snapshot.ts`). 바뀌지 않는 노드라 그 뒤의 문서와 손대지 않은 부분을 함께 쓴다. 되돌리기는 `setContent`에 노드를 넘기고, 편집기가 다시 만들어져 스키마가 다르면 JSON으로 바꿔 넣는다.
 - `ai:stream-cancel`은 그 id의 스트림과 함께, 보낸 창이 진행 중인 이미지 생성·미디어 분석 호출도 끊는다(`abortMediaCalls`). 도구가 실행되는 동안의 중단은 이미 끝난 턴의 id로 오기 때문에 호출을 창으로 찾는다. shell 안에서는 이 핸들러가 모든 에디터의 중단에 응답하므로, 이미지·미디어 핸들러는 어느 에디터의 것이든 `withMediaCallSignal`로 감싼다. 두 번째 인자로 `'request'`를 받으면 그 id의 스트림만 끊고 미디어 호출은 두는데, 도구를 쓰지 않는 PDF 문서 작업의 호출이 이렇게 중단해 같은 탭의 AI 창 작업을 건드리지 않는다.
@@ -59,6 +59,11 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - 복구 사본은 공용 복구 저장소(`@genoffice/electron-utils`의 `createRecoveryStore`)에 둔다. 폴더와 이름(`docs-autosave`, 경로 sha1 앞 16글자 + `.docx`/`.odt`)은 이전 버전 그대로라 업데이트 전 사본도 열 때 묻는다. 탭마다 어떤 사본을 썼는지, 닫기가 어떻게 정해졌는지는 `src/main/docs-recovery.ts`가 기억하고, 지우기는 저장(`saved`), "저장 안 함"·MCP 버리기(`dontSave`, `discardDocsRecovery`), 깨끗한 닫기(`closedClean`, 그 탭이 쓴 사본만)로만 한다. 앱이 끝나는 중에는 깨끗한 닫기도 지우지 않고, 화면이 죽은 탭과 응답 없는 탭을 "그래도 닫기"로 닫은 탭은 사본을 남긴다(뒤의 것은 "나중에"로 둔다). 저장은 어느 것이든 그 탭의 제목 없는 사본 자리도 지운다. 사본 바이트는 저장할 때와 같다: 나중에 불러오는 그림도 쓰기 표를 받은 뒤 채워 넣으므로(`prepareRecoveryBytes`), 원본 파일이 없어져도 사본만으로 열린다. 암호가 맞지 않아 원본으로 연 사본은 "나중에"로 돌린다. 제목 없는 문서의 사본은 앱 데이터의 `untitled/` 자리에만 쓰고, 사용자 폴더에 파일을 만들지 않는다. 열 때는 문서 이름이 든 공용 물음(Esc·닫기 = 되살리기, 파일이 더 새로우면 그 줄을 보임)이나 시작 목록의 결정을 따른다. 껍데기 앱은 `registerDocsIpc`가 등록한 `RecoveryEditorContract`로 탭을 되살린다.
 - 문서 바이트는 IPC 응답이 아니라 미디어 프로토콜의 일회용 주소로 렌더러에 건넨다(`byte-handoff.ts`). IPC 직렬화가 버퍼를 통째로 복사해 1GB 파일에서 메인 프로세스가 죽었기 때문이다.
 - 디자인 템플릿 글꼴은 설치 파일에 한 번만 들어 있고(`resources/template-fonts`) 렌더러 빌드 자산으로 import하지 않는다. 같은 미디어 프로토콜의 `template-fonts` 호스트가 목록에 있는 파일만 내주고(`main/lazy-media.ts`가 `@genoffice/electron-utils/template-font-response`로 답한다. 면 목록과 주소는 `@genoffice/ui/template-fonts`에 있다), 렌더러가 시작할 때 실제 패밀리 이름으로 등록한다(`renderer/template-fonts.ts`). 인쇄와 PDF 내보내기(창 없는 내보내기 포함)는 같은 렌더러에서 돌므로 따로 등록하지 않는다.
+
+## 로컬 AI (결정 0067)
+
+- `registerAiIpc`가 `ai:local-models`·`ai:local-inspect`·`ai:local-test`·`ai:local-test-cancel`을 등록한다. 입력은 `local-ipc.ts` 파서로 검사하고, 실패는 `shape`로 답한다. 연결 테스트는 보낸 창(`event.sender.id`)과 `testId`로 끊을 수 있고, 보낸 창이 닫혀도 끊긴다(`abortOnDestroyed`).
+- `ai:stream`은 활성 `custom`+`kind:'local'`일 때 그 서버의 `timeoutMs`를 `streamForProvider`에 넘기고, 기다리는 동안 `ai-keepalive.ts`의 `ping`을 보낸다. 다른 제공자에는 적용하지 않는다.
 
 ## 테스트
 

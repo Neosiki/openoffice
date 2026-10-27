@@ -63,6 +63,11 @@
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.
 - 브랜드 로고는 두 테마에서 공식 색을 유지한다(크롬이 아니라 브랜드 자산). 단색 로고는 `currentColor`를 써서 어두운 테마에서 읽히게 한다.
 
+## 로컬 AI (결정 0067)
+
+- `src/strings-ai-context/<lang>.ts` 21개 언어와 집계 `src/strings-ai-context.ts`가 문맥 확인 문장, 도구 미지원 안내, `context-limit` 오류 문장을 담는다. `zh`가 키 집합을 정한다.
+- `AiToolsUnsupportedNotice`는 `tools: false`가 확인된 모델에서 "글만 제안"을 알린다. 9개 편집기 AI 창과 홈 질문 패널이 쓴다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/ui`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ui`. Windows에서 전부 통과한다.

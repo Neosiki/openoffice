@@ -1991,6 +1991,8 @@ async function executeTool(
         canvasW: 1280,
         canvasH: 720,
         ...(regenBasedOn ? { templateDevices: true } : {}),
+        // the run's signal: Stop ends the redo, and its two attempts share one context check
+        ...(signal ? { signal } : {}),
       }
       const runRegen = async (gen: NonNullable<DeckAccess['generatePageLocal']>) => {
         for (let attempt = 0; attempt < 2 && !marker; attempt++) {

@@ -384,6 +384,8 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
       const ask = createModelCall({
         settings: () => route.settings,
         lang: () => propsRef.current.lang,
+        // one id for this job's calls: a large document is confirmed once, not per batch
+        runId: crypto.randomUUID(),
         guard: async () => {
           const statuses = await attemptSubscription((s) => s.statuses())
           const current = await window.pdfApi?.getAiSettings().catch(() => null)

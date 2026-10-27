@@ -9,6 +9,7 @@ import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 
 import { AgentLoop, composeWithDrive } from '@genoffice/agent-core'
 import {
   isSubscriptionProvider,
+  localModelCapabilities,
   selectAiProvider,
   type AiSettings,
   type AiSubscriptionProviderId,
@@ -21,6 +22,7 @@ import {
   AiFirstConnectionNotice,
   AiInputTruncatedNotice,
   AiMark,
+  AiToolsUnsupportedNotice,
   AiQueueStrip,
   AI_QUEUE_LABELS,
   AiScopeQuote,
@@ -586,6 +588,9 @@ export function AiPanel({
           setSubscriptionUsage((prev) => mergeSubscriptionUsage(prev, usage)),
         onInputTruncated: () => setInputTruncated(true),
       }),
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        settingsRef.current ? localModelCapabilities(settingsRef.current).tools !== false : true,
       skill: composeWithDrive('pdf', '', () => loopRef.current?.messages ?? [], [
         createPdfSkill(deps),
         // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
@@ -1135,6 +1140,9 @@ export function AiPanel({
         )}
         {inputTruncated && (
           <AiInputTruncatedNotice lang={lang} onDismiss={() => setInputTruncated(false)} />
+        )}
+        {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
+          <AiToolsUnsupportedNotice lang={lang} />
         )}
         {/* In-progress state: a standalone three-dot row at the end of the stream, kept until done */}
         {busy && <AiTypingIndicator label={typingLabel} />}

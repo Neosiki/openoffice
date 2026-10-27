@@ -15,6 +15,18 @@ export { streamOpenAiCompatible } from './protocols/openai-compatible'
 export { AiCreditsError, sseLines } from './protocols/shared'
 export type { StreamCallbacks } from './protocols/shared'
 
+/** Optional shaping of one turn, resolved by the caller (never by the provider itself). */
+export interface StreamForProviderOptions {
+  /**
+   * A first-response limit for this request, in milliseconds. Only the
+   * OpenAI-compatible transport has a per-request watchdog, so this reaches the
+   * connect and idle timeouts there; other protocols keep their own budgets.
+   * A local server loads the model on the first turn, so its endpoint can ask
+   * for a longer wait than the default.
+   */
+  timeoutMs?: number | undefined
+}
+
 /** route a streaming, tool-calling-capable turn by provider id */
 export async function streamForProvider(
   provider: AiProviderSelection,
@@ -24,6 +36,7 @@ export async function streamForProvider(
   tools: AgentToolDef[],
   maxTokens: number,
   cb: StreamCallbacks,
+  options: StreamForProviderOptions = {},
 ): Promise<void> {
   const endpoint = getProviderAdapter(provider).resolveEndpoint(config)
   const { baseUrl } = endpoint
@@ -48,6 +61,7 @@ export async function streamForProvider(
           omitTemperature: endpoint.omitTemperature,
           useMaxCompletionTokens: endpoint.useMaxCompletionTokens,
           bodyExtras: endpoint.bodyExtras,
+          ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
         })
     }
   })

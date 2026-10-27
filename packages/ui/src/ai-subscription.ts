@@ -26,6 +26,7 @@ import {
 } from '@genoffice/ai-provider/browser'
 import { htmlLang, type Lang } from '@genoffice/i18n'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
+import { aiContextText } from './strings-ai-context'
 
 /** Subscription providers are named in plain text only: no vendor mark, no CLI product name */
 const SUBSCRIPTION_NAMES: Record<AiSubscriptionProviderId, string> = {
@@ -476,10 +477,11 @@ export function formatAiResetTime(lang: Lang, resetsAt: number, now: number = Da
 }
 
 /**
- * The localized message for a run error of the subscription contract, so every
- * editor words it the same way. Returns undefined for the kinds each editor
- * already words itself (`timeout`, `credits`, `network`, `overloaded`), which
- * makes it usable directly as the transport's `errorText` option.
+ * The localized message for a run error of the subscription contract or the
+ * context gate, so every editor words it the same way. Returns undefined for
+ * the kinds each editor already words itself (`timeout`, `credits`, `network`,
+ * `overloaded`), which makes it usable directly as the transport's `errorText`
+ * option.
  */
 export function aiRunErrorText(
   lang: Lang,
@@ -517,6 +519,8 @@ export function aiRunErrorText(
       return hasTime
         ? aiSubscriptionText(lang, 'errFreeLimitReset', { time })
         : aiSubscriptionText(lang, 'errFreeLimit')
+    case 'context-limit':
+      return aiContextText(lang, 'errContextLimit')
     default:
       return undefined
   }

@@ -15,6 +15,7 @@ import type { Lang } from '@genoffice/i18n'
 import { AI_SUBSCRIPTION_PROVIDERS, selectAiProvider } from '@genoffice/ai-provider/browser'
 import type { AiSettings, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
 import { FreeAiCards } from './FreeAiCards'
+import { LocalAiSection } from './LocalAiSection'
 import type { TFunc } from './locale'
 import type { SubscriptionConnection } from './subscription-client'
 import {
@@ -214,9 +215,10 @@ export function AiSection({
     }
   }, [])
 
-  const change = (apply: (current: AiSettings) => AiSettings) => {
-    void changeAiSettings(apply).then((next) => {
+  const change = (apply: (current: AiSettings) => AiSettings): Promise<AiSettings | null> => {
+    return changeAiSettings(apply).then((next) => {
       if (next) setSettings(next)
+      return next
     })
   }
 
@@ -329,9 +331,10 @@ export function AiSection({
       </h4>
       <div className="set-field-desc set-ai-note">{t('setFreeDesc')}</div>
       <FreeAiCards t={t} />
+      {settings && <LocalAiSection t={t} settings={settings} onApply={change} />}
       {settings && (
         <>
-          <div className="set-field">
+          <div className="set-field" data-ai-use="">
             <div className="set-field-text">
               <div className="set-field-stack">
                 <label className="set-field-label">{t('setAiUse')}</label>
