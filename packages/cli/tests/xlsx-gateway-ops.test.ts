@@ -431,12 +431,21 @@ describe('genoffice sheet apply --ops: gateway-written features', () => {
         { op: 'add_sheet', name: 'Notes' },
         { op: 'rename_sheet', sheet: 'Notes', name: 'SALES' },
       ],
+      // a sheet added earlier in the same batch counts too
+      [
+        { op: 'add_sheet', name: 'Notes' },
+        { op: 'add_sheet', name: 'NOTES' },
+      ],
     ]) {
       const r = await apply(out, ops)
       expect(r.code).toBe(1)
       expect(r.json().message).toMatch(/already exists/)
     }
     expect((await parts(out)).get('xl/workbook.xml')!.match(/<sheet /g)).toHaveLength(1)
+    // a rename to the very same name is refused as before
+    const same = await apply(out, [{ op: 'rename_sheet', sheet: 'sales', name: 'sales' }])
+    expect(same.code).toBe(1)
+    expect(same.json().message).toMatch(/already exists/)
     // changing only the case of a sheet's own name is still a rename
     expect((await apply(out, [{ op: 'rename_sheet', sheet: 'sales', name: 'Sales' }])).code).toBe(0)
     expect((await parts(out)).get('xl/workbook.xml')).toContain('name="Sales"')
