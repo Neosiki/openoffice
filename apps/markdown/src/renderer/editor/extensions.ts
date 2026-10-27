@@ -37,7 +37,7 @@ import {
   renderTable,
 } from './markdownStyleRenderers'
 import { boundOrderedList, boundTable, boundTaskList } from './boundedTokenizers'
-import { WikiLink, WikiLinkResolve } from './wikilink'
+import { WikiLink, WikiLinkResolve, WikiAliasDisplay } from './wikilink'
 import type { WikiLinkOptions } from './wikilink'
 import type { SlashController, SlashItem } from './slashCommand'
 import { FootnoteDefinition, FootnoteNav, FootnoteReference } from './footnote'
@@ -145,6 +145,8 @@ export function buildExtensions(options: BuildExtensionsOptions): AnyExtension[]
     FootnoteReference,
     FootnoteNav,
     WikiLinkResolve.configure(options.wikiLink ?? {}),
+    // an aliased link reads as its alias: the syntax is hidden in the view only
+    WikiAliasDisplay,
     BlockDragHandle,
     BlockKeymap,
     AiHighlight,
