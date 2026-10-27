@@ -267,12 +267,7 @@ export class InMemoryWorkbookAdapter implements WorkbookAdapter {
       }
       if (operation.op === 'rename_sheet') {
         const sheet = findSheet(working, operation.sheetId)
-        if (
-          working.sheets.some(
-            (candidate) =>
-              candidate.id !== sheet.id && sameSheetName(candidate.name, operation.name),
-          )
-        ) {
+        if (working.sheets.some((candidate) => candidate.name === operation.name)) {
           throw new WorkbookConflictError(`A sheet named "${operation.name}" already exists.`)
         }
         sheetRenames.push({ sheetId: sheet.id, before: sheet.name, after: operation.name })
@@ -439,12 +434,6 @@ export class InMemoryWorkbookAdapter implements WorkbookAdapter {
   }
 }
 
-/// Excel compares sheet names without regard to case, and a workbook holding
-/// "Data" and "data" opens with a repair prompt.
-function sameSheetName(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase()
-}
-
 /// Row/column shifts re-key cell addresses and rewrite A1 references in every
 /// formula of the workbook (deleted targets become #REF!, ranges shrink).
 /// Returns the cells whose formulas ended up with #REF!.
@@ -455,7 +444,7 @@ function applyStructuralOp(snapshot: WorkbookSnapshot, op: StructuralOperation):
     )
   }
   if (op.op === 'add_sheet') {
-    if (snapshot.sheets.some((candidate) => sameSheetName(candidate.name, op.name))) {
+    if (snapshot.sheets.some((candidate) => candidate.name === op.name)) {
       throw new WorkbookConflictError(`A sheet named "${op.name}" already exists.`)
     }
     const sheets = snapshot.sheets as WorksheetState[]
