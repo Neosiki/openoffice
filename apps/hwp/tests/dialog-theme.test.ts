@@ -333,6 +333,24 @@ describe('HWP dialog design system', () => {
     expect(overridden).toEqual([])
   })
 
+  it('puts no accent stripe on a dialog edge or in front of a heading', () => {
+    const appCss = readFileSync(
+      join(__dirname, '..', 'src', 'renderer', 'dialog-theme.css'),
+      'utf8',
+    )
+    const decorated = [...styleRules(DIALOG_THEME_CSS), ...styleRules(appCss)]
+      .map((rule) => rule.selector)
+      .filter((selector) =>
+        /\.(dialog-wrap|memo-modal|find-dialog|dialog-section-title)::(before|after)$/.test(
+          selector,
+        ),
+      )
+    expect(decorated).toEqual([])
+    expect(DIALOG_THEME_CSS).not.toMatch(
+      /border-(top|left):\s*[2-9]px solid var\(--ieum-dialog-accent\)/,
+    )
+  })
+
   it('does not grey out drop-downs as read-only', () => {
     // Chromium matches every <select> with :read-only.
     const readOnly = styleRules(DIALOG_THEME_CSS).filter((rule) =>

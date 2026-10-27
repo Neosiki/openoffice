@@ -21,8 +21,9 @@
  *   chrome is a document tool, so the dialog should feel like paper on a desk,
  *   not like a web card.
  * - compact office density: 12px text, 26-30px controls, 4-8px radii.
- * - one accent per dialog (the left ribbon and the primary button); everything
- *   else is neutral, so form fields stay easy to scan.
+ * - one accent per dialog, the primary button; everything else is neutral,
+ *   so form fields stay easy to scan. No accent stripes or bars on the edge of
+ *   a dialog or in front of a heading.
  * - the user's "oldschool" studio skin is respected: while that skin is on,
  *   this layer turns itself off.
  * - the look wins, the layout does not: rhwp sizes some dialogs on their own
@@ -163,7 +164,6 @@ export const DIALOG_THEME_CSS = `
 }
 
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-wrap {
-  position: relative;
   display: flex;
   flex-direction: column;
   max-height: calc(100dvh - 40px);
@@ -178,23 +178,6 @@ export const DIALOG_THEME_CSS = `
   line-height: 1.45;
   color-scheme: inherit;
   animation: ieum-dialog-in 180ms var(--ieum-dialog-ease) both;
-}
-
-/* The signature: one blue paper edge down the left side. */
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-wrap::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: linear-gradient(
-    180deg,
-    var(--ieum-dialog-accent) 0%,
-    var(--ieum-dialog-accent) 58%,
-    color-mix(in srgb, var(--ieum-dialog-accent) 28%, transparent) 100%
-  );
-  pointer-events: none;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -627,15 +610,6 @@ export const DIALOG_THEME_CSS = `
   letter-spacing: 0.02em;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-section-title::before {
-  content: '';
-  flex: 0 0 auto;
-  width: 3px;
-  height: 11px;
-  border-radius: 2px;
-  background: var(--ieum-dialog-accent-line);
-}
-
 /* Spacing and label widths are layout: several dialogs line their labels up
    with a wider min-width of their own (object, equation, paragraph spacing). */
 :where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-row {
@@ -697,6 +671,12 @@ export const DIALOG_THEME_CSS = `
 
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-select {
   padding: 0 6px;
+}
+
+/* Number fields: rhwp sizes many of them inline to 40-60px, and a wider inset
+   pushes "100" under the spinner. */
+:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-input {
+  padding: 0 4px;
 }
 
 :where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-text-input {
@@ -854,7 +834,6 @@ export const DIALOG_THEME_CSS = `
   overflow: hidden;
   background: var(--ieum-dialog-surface);
   border: 1px solid var(--ieum-dialog-line);
-  border-top: 3px solid var(--ieum-dialog-accent);
   border-radius: var(--ieum-dialog-radius);
   box-shadow: var(--ieum-dialog-shadow);
   color: var(--ieum-dialog-ink);
