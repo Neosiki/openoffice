@@ -28,7 +28,7 @@ Reglas: la extensión se conserva automáticamente; los caracteres no permitidos
 - **⌘S / ctrl+S** guarda el archivo actual; si no tiene título, primero pregunta por la ubicación y el nombre.
 - **Guardar como** escribe un archivo nuevo y deja el original intacto; las ediciones posteriores se dirigen al archivo nuevo.
 - Cada guardado es atómico (archivo temporal y renombrado): salir a mitad de la escritura no puede corromper el archivo.
-- El autoguardado solo entra en juego tras el primer guardado manual (véase [Inicio rápido](help://getting-started)).
+- El autoguardado sigue el interruptor de cada editor; un documento nuevo sin archivo propio empieza tras su primer guardado (véase [Inicio rápido](help://getting-started)).
 
 ## Exportar a PDF
 

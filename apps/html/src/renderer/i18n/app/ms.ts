@@ -99,6 +99,7 @@ export const ms = {
   alignLeft: 'Jajar kiri',
   alignCenter: 'Tengah',
   alignRight: 'Jajar kanan',
+  alignJustify: 'Justifikasi',
   fontSizeDec: 'Kecilkan saiz fon',
   fontSizeInc: 'Besarkan saiz fon',
   typography: 'Tipografi',

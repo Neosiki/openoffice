@@ -213,6 +213,9 @@ const worksheetMetadataSchema = z
           author: z.string(),
           text: z.string(),
           thread: sheetThreadSchema.extend({ text: z.string() }).optional(),
+          /// The picture the note's shape is showing, fetched with readMedia
+          /// under this id — the same shape a cell image would use.
+          image: z.object({ id: z.string() }).strict().optional(),
         })
         .strict(),
     ),
@@ -1724,6 +1727,25 @@ export const workbookNoteStateSchema = z
             author: z.string().max(255),
             text: z.string().max(32_767),
             thread: sheetThreadSchema.nullable().optional(),
+            /**
+             * The picture this note shows. Absent keeps whatever the note was
+             * already carrying; `null` takes the picture away.
+             */
+            picture: z
+              .object({
+                mediaType: z.enum(['image/png', 'image/jpeg', 'image/gif']),
+                /// ~20MB decoded
+                base64: z.string().min(1).max(28_000_000),
+                /// The picture's pixel size: the note's shape is given it, so a
+                /// photograph is shown at its own proportions.
+                widthPx: z.number().int().positive().max(200_000),
+                heightPx: z.number().int().positive().max(200_000),
+                /// The file name, carried into the picture's title.
+                name: z.string().max(255).optional(),
+              })
+              .strict()
+              .nullable()
+              .optional(),
           })
           .strict(),
       )

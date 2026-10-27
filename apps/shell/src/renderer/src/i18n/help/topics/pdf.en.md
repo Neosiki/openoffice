@@ -84,7 +84,7 @@ Six tools: **ink, rectangle, ellipse, arrow, note**, plus the **redaction box** 
 
 ## Saving
 
-- Regular Save/autosave writes annotations and edits back into the file (atomic).
+- Regular Save/autosave writes annotations and edits back into the file (atomic). The **Auto save** toggle at the left of the ribbon turns autosave on or off.
 - **Redaction goes through its Apply flow** producing a copy, leaving the original untouched so sensitive content does not linger in it.
 
 ## Selection bar shortcuts

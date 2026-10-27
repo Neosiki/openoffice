@@ -1,4 +1,4 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import type { Lang } from '@genoffice/i18n'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { SubscriptionApi } from './subscription-api'
@@ -98,6 +98,9 @@ export const PDF_CHANNELS = {
   saveAsRequest: 'pdf:save-as-request',
   saveAsResult: 'pdf:save-as-result',
   saveAsFlow: 'pdf:save-as-flow',
+  // the shell-wide AutoSave default (Settings › General), read by every editor
+  getAutoSaveDefault: 'app:get-auto-save-default',
+  autoSaveDefaultChanged: 'app:auto-save-default-changed',
   printRequest: 'pdf:print-request',
   fileRenamed: 'pdf:file-renamed',
   // crash recovery: copies of unsaved edits in the app data folder (never the file itself)
@@ -466,6 +469,17 @@ export type DrawingInput =
     })
   | (DrawBase & { kind: 'rect'; rect: [number, number, number, number] })
   | (DrawBase & { kind: 'ellipse'; rect: [number, number, number, number] })
+  | {
+      /** Hyperlink placed by the user; written as a Link annotation */
+      kind: 'link'
+      pageIndex: number
+      /** PDF user space [x1,y1,x2,y2] */
+      rect: [number, number, number, number]
+      /** External target (http/https/mailto/…); exactly one of url / destPage is set */
+      url?: string
+      /** In-document jump: 1-based page number */
+      destPage?: number
+    }
   | (DrawBase & { kind: 'line'; from: [number, number]; to: [number, number] })
   | (DrawBase & { kind: 'arrow'; from: [number, number]; to: [number, number] })
   | {
@@ -1476,7 +1490,7 @@ export interface PdfApi {
       untitled name, so user-chosen names are never touched. */
   autoRename(path: string, baseName: string): Promise<PdfAutoRenameResult>
   /** Whether the file is a shell-created blank still carrying its untitled name
-      (gates the after-AI-run silent save; a PDF the user merely opened must never auto-write) */
+      (gates the after-AI-run silent save) */
   isUntitled(path: string): Promise<boolean>
   /** Whether the file is an untitled copy (a skill template's): its first save asks where */
   isUntitledCopy?(path: string): Promise<boolean>
@@ -1594,6 +1608,9 @@ export interface PdfApi {
   sendSaveAsResult(ok: boolean | 'cancelled'): void
   /** True while the shell's Save As flow (dialog included) is open — the renderer pauses autosave, since the dialog's window blur would otherwise trigger a save into the original */
   onSaveAsFlow(handler: (inFlight: boolean) => void): () => void
+  /** The shell-wide AutoSave default; a per-window override is kept in localStorage */
+  getAutoSaveDefault(): Promise<AutoSaveDefault>
+  onAutoSaveDefaultChanged(handler: (value: AutoSaveDefault) => void): () => void
   /** Shell menu Print → renderer runs its print flow (save, rasterize, system dialog) */
   onPrintRequest(handler: () => void): () => void
   /** The file was renamed or moved from the shell (home Folders / Files pane); the viewer follows the new path */

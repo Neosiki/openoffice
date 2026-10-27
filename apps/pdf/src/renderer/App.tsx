@@ -159,6 +159,7 @@ import { hasUnsavedPageEdits, toggleBilingual, toggleSpread } from './bilingual/
 import { createPageRenderer } from './ai-read/render-page'
 import { loadAiReadTexts } from './ai-read/search-texts'
 import { DocumentJobSession } from './doc-jobs/job-session'
+import { LinkDialog, type LinkDraft } from './LinkDialog'
 import { CertSignDialog } from './CertSignDialog'
 import { InsightsCard } from './ai/insights/InsightsCard'
 import { useDocumentInsights } from './ai/insights/useDocumentInsights'
@@ -250,6 +251,7 @@ import {
   onAiRailClick,
   rememberAiPanelOpen,
   presentationKeyOf,
+  useAutoSavePref,
   useDismissablePopover,
   useRibbonCollapse,
   useAiSidebarEnabled,
@@ -396,6 +398,7 @@ import {
   IconConvertPdf,
   IconInsertImage,
   IconEditImage,
+  IconLink,
   IconNight,
   IconSpread,
   IconSinglePage,
@@ -1172,10 +1175,11 @@ export default function App() {
   /** Transient message toast (save failures, skipped/rejected text edits) */
   const [notice, setNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
-  /** Autosave gate: this file was saved explicitly at least once */
-  const savedOnceRef = useRef(false)
+  const [autoSave, setAutoSave] = useAutoSavePref('pdfapp.autoSave', window.pdfApi)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchMatchCase, setSearchMatchCase] = useState(false)
+  const [searchWholeWord, setSearchWholeWord] = useState(false)
   const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([])
   const [searchCur, setSearchCur] = useState(0)
   const [printing, setPrinting] = useState(false)
@@ -1720,8 +1724,6 @@ export default function App() {
     async (path: string) => {
       try {
         setFilePath(path)
-        // A newly opened file starts outside the autosave gate
-        savedOnceRef.current = false
         await loadDoc(path, null)
         // a restored recovery copy opens with unsaved changes (the file is untouched until Save)
         const recovered = await window.pdfApi.recoveryState?.(path).catch(() => null)
@@ -2843,7 +2845,9 @@ export default function App() {
       void getSearchIndex()?.then((idx) => {
         if (cancelled) return
         const query = searchQuery.trim()
-        setSearchMatches(searchInIndex(idx, query))
+        setSearchMatches(
+          searchInIndex(idx, query, { matchCase: searchMatchCase, wholeWord: searchWholeWord }),
+        )
         setSearchCur(0)
         // pages whose positioned text has no hit may still have it in their AI reading
         void getAiReadTexts().then((texts) => {
@@ -2855,7 +2859,7 @@ export default function App() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchOpen, searchQuery, getSearchIndex, getAiReadTexts])
+  }, [searchOpen, searchQuery, searchMatchCase, searchWholeWord, getSearchIndex, getAiReadTexts])
 
   /** Pages with unsaved deletion are excluded from match navigation */
   const activeMatches = useMemo(
@@ -4995,8 +4999,6 @@ export default function App() {
       noteFlush.drawings !== drawings ||
       noteFlush.noteEdits !== noteEdits
     if (!anythingToSave || !filePath) return Promise.resolve(!anythingToSave)
-    // An explicit save opts this file into autosave
-    if (!autosave) savedOnceRef.current = true
     // What this save writes — the post-save reload subtracts exactly this, keeping
     // any edits the user makes while the write is in flight
     const snapshot: SavedSnapshot = {
@@ -5375,17 +5377,20 @@ export default function App() {
   useEffect(() => window.pdfApi.onSaveAsFlow((inFlight) => (saveAsFlowRef.current = inFlight)), [])
 
   // Autosave (same strategy as Docs): every 30s and on window blur, silently persist pending
-  // edits via the regular save() path; skipped while a save is in flight or without a file path.
-  // Gated on one explicit save first: a PDF opened only to read must never be
-  // overwritten because a thumbnail got dragged or a markup tool tapped — Save (⌘S / the
-  // toolbar button / File ▸ Save) is what opts this file into unattended writes.
+  // edits via the regular save() path while the ribbon toggle (or the shell-wide default) is
+  // on; skipped while a save is in flight, without a file path, in a read-only document,
+  // during presentation, or in an untitled copy whose first explicit save must ask where
+  // it goes.
+  // A PDF that was only read has no pending edits, so it is never written.
   useAutosave(
     () =>
-      savedOnceRef.current &&
+      autoSave &&
       ordinaryDirty &&
       saveInFlightRef.current === null &&
       filePath !== '' &&
+      !untitledCopyRef.current &&
       !readOnly &&
+      !presenting &&
       !saveAsFlowRef.current &&
       !redactionRequestInFlightRef.current,
     () => void save(true),
@@ -5476,7 +5481,16 @@ export default function App() {
 
   // ── Drawing annotations ──
 
+  /** Drawn link box waiting for its target (URL or page) in the dialog */
+  const [linkDraft, setLinkDraft] = useState<LinkDraft | null>(null)
+
   const commitDrawing = (origIdx: number, input: DrawingInput) => {
+    // A link needs its target before it can join the edit ops (validate requires
+    // exactly one of url/destPage); the drawn box waits in the dialog
+    if (input.kind === 'link') {
+      setLinkDraft({ pageIndex: origIdx, rect: input.rect })
+      return
+    }
     applyEditOps([{ op: 'addDrawing', drawing: { ...input, pageIndex: origIdx } }])
   }
 
@@ -7434,20 +7448,19 @@ export default function App() {
 
   /**
    * After an AI run that mutated a shell-created blank still carrying its untitled
-   * name, silently save once: the save's auto-rename then derives the file name from
-   * the inserted text — mirrors docs/sheets, where AI generation names the draft.
-   * PDFs the user merely opened keep the pending-until-⌘S contract (isUntitled is
-   * false for them, and the main process would refuse the rename anyway).
+   * name, silently save once when autosave is on: the save's auto-rename then derives
+   * the file name from the inserted text — mirrors docs/sheets, where AI generation
+   * names the draft. PDFs the user merely opened are not touched by this path
+   * (isUntitled is false for them, and the main process would refuse the rename
+   * anyway); their normal autosave still follows the toggle.
    */
   const autoSaveAfterAiRun = async () => {
-    if (!filePath || readOnly) return
+    if (!autoSave || !filePath || readOnly) return
     try {
       if (!(await window.pdfApi.isUntitled(filePath))) return
     } catch {
       return
     }
-    // A file we created ourselves is safe to keep autosaving from here on
-    savedOnceRef.current = true
     void save(true)
   }
 
@@ -8460,6 +8473,16 @@ export default function App() {
             <IconRedo />
           </button>
           <span className="qa-sep" />
+          <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
+            <span className="autosave-knob" />
+            <span className="autosave-text">{t('autoSave')}</span>
+            <input
+              type="checkbox"
+              checked={autoSave}
+              onChange={(e) => setAutoSave(e.target.checked)}
+            />
+          </label>
+          <span className="qa-sep" />
           {RIBBON_TABS.map(({ id, labelKey }) => (
             <button
               key={id}
@@ -8499,7 +8522,7 @@ export default function App() {
           )}
           <span className="ribbon-tabs-spacer" />
           {readOnly && <span className="tb-readonly">{t('roEncrypted')}</span>}
-          {/* The file on disk is only touched by an explicit save until then. */}
+          {/* Pending edits wait for an explicit save or an enabled autosave. */}
           {saveState === 'saving' ? (
             <span className="tb-save-pending">{t('saving')}</span>
           ) : (
@@ -8925,6 +8948,25 @@ export default function App() {
                       <IconEditImage />
                     </span>
                     <span>{t('editImage')}</span>
+                  </button>
+                  <button
+                    className={`rb-big${drawTool === 'link' ? ' active' : ''}`}
+                    disabled={readOnly}
+                    data-tip={t('editLinkHint')}
+                    onClick={() => {
+                      setEditTextMode(false)
+                      setTextDraft(null)
+                      setPendingTextInsert(null)
+                      setPendingSign(null)
+                      setImagePick(null)
+                      setEditImageMode(false)
+                      setDrawTool((tool) => (tool === 'link' ? null : 'link'))
+                    }}
+                  >
+                    <span className="rb-big-icon">
+                      <IconLink />
+                    </span>
+                    <span>{t('editLink')}</span>
                   </button>
                 </div>
               </div>
@@ -11244,6 +11286,24 @@ export default function App() {
                     else if (e.key === 'Escape') closeSearch()
                   }}
                 />
+                <button
+                  className={`rb-icon pdf-search-opt${searchMatchCase ? ' is-active' : ''}`}
+                  data-tip={t('searchMatchCase')}
+                  aria-label={t('searchMatchCase')}
+                  aria-pressed={searchMatchCase}
+                  onClick={() => setSearchMatchCase((v) => !v)}
+                >
+                  Aa
+                </button>
+                <button
+                  className={`rb-icon pdf-search-opt${searchWholeWord ? ' is-active' : ''}`}
+                  data-tip={t('searchWholeWord')}
+                  aria-label={t('searchWholeWord')}
+                  aria-pressed={searchWholeWord}
+                  onClick={() => setSearchWholeWord((v) => !v)}
+                >
+                  W
+                </button>
                 <span className="pdf-search-count">
                   {searchQuery.trim()
                     ? activeMatches.length > 0
@@ -11787,6 +11847,29 @@ export default function App() {
             )}
             {stampDlg && (
               <StampDialog t={t} onCancel={() => setStampDlg(false)} onApply={applyStamps} />
+            )}
+            {linkDraft && (
+              <LinkDialog
+                t={t}
+                pageCount={pageCount}
+                onCancel={() => setLinkDraft(null)}
+                onApply={(target) => {
+                  const draft = linkDraft
+                  setLinkDraft(null)
+                  if (!draft) return
+                  applyEditOps([
+                    {
+                      op: 'addDrawing',
+                      drawing: {
+                        kind: 'link',
+                        pageIndex: draft.pageIndex,
+                        rect: draft.rect,
+                        ...target,
+                      },
+                    },
+                  ])
+                }}
+              />
             )}
             {imageDialog?.kind === 'crop' && (
               <CropDialog

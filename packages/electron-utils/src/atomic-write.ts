@@ -27,9 +27,33 @@ const isRetryableRename = (error: unknown) => RETRYABLE_RENAME_CODES.has(errorCo
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 
-/** a fresh `.<name>.<12 hex>.tmp` path in the target's folder */
+/**
+ * Most bytes of the target's name a temp name carries. The temp name adds
+ * `.` + `.` + 12 hex + `.tmp` (18 bytes) and Linux and macOS cap a file name
+ * at 255 bytes, so a long Hangul name (3 bytes a letter) must be shortened
+ * or the temp file cannot be created even though the target itself exists.
+ */
+const TEMP_NAME_MAX_BYTES = 200
+
+/** `name` cut to at most `maxBytes` of UTF-8, never inside a character */
+function nameHead(name: string, maxBytes: number): string {
+  if (Buffer.byteLength(name) <= maxBytes) return name
+  let head = ''
+  let bytes = 0
+  for (const char of name) {
+    bytes += Buffer.byteLength(char)
+    if (bytes > maxBytes) break
+    head += char
+  }
+  return head
+}
+
+/** a fresh `.<name>.<12 hex>.tmp` path in the target's folder (a long name is cut short) */
 export const tempPathBeside = (filePath: string) =>
-  join(dirname(filePath), `.${basename(filePath)}.${randomBytes(6).toString('hex')}.tmp`)
+  join(
+    dirname(filePath),
+    `.${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(6).toString('hex')}.tmp`,
+  )
 
 async function syncFileBestEffort(path: string): Promise<void> {
   let handle
@@ -147,6 +171,38 @@ export async function atomicMoveFile(tempPath: string, filePath: string): Promis
   }
   await copyFile(tempPath, filePath)
   await unlink(tempPath).catch(() => {})
+}
+
+/**
+ * The same contract for output that is produced as a stream rather than held
+ * in one Buffer: `write` fills the sibling temp path (a large deck streams out
+ * of JSZip chunk by chunk and never fits atomicWriteFile's single buffer), and
+ * only a temp that `write` completed is synced and renamed over the target. A
+ * writer that throws part-way leaves the target untouched, so a save that dies
+ * mid-stream keeps the previous file on disk instead of a truncated one
+ * (genoffice#2123).
+ */
+export async function atomicWriteVia(
+  filePath: string,
+  write: (tempPath: string) => Promise<void>,
+): Promise<void> {
+  const tmp = tempPathBeside(filePath)
+  try {
+    await write(tmp)
+    await syncFileBestEffort(tmp)
+  } catch (error) {
+    await unlink(tmp).catch(() => {})
+    throw error
+  }
+  try {
+    await renameWithRetry(tmp, filePath)
+    return
+  } catch {
+    // fall through to the in-place copy
+  }
+  // Keep the completed temp until the fallback lands, as atomicWriteFile does.
+  await copyFile(tmp, filePath)
+  await unlink(tmp).catch(() => {})
 }
 
 /**

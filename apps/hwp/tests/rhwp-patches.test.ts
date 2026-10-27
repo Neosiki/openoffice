@@ -268,6 +268,194 @@ describe('rhwp nested-table patches', () => {
   })
 })
 
+describe('rhwp memo menu patches', () => {
+  // the studio's text around the command, as the pinned release has it
+  const insert = [
+    "  stub('insert:para-band', t('command.insert.paraBand.label')),",
+    "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    '  {',
+    "    id: 'insert:footnote',",
+  ].join('\n')
+
+  it('turn the comment stub into a command that asks the app for a memo', () => {
+    const patched = applyPatch('studio-memo-command', insert)
+    expect(patched).not.toContain("stub('insert:comment'")
+    expect(patched).toContain("    id: 'insert:comment',")
+    expect(patched).toContain("    icon: 'icon-comment',")
+    expect(patched).toContain('canExecute: (ctx) => ctx.hasDocument && !ctx.isFormMode')
+    expect(patched).toContain("globalThis.dispatchEvent(new CustomEvent('ieum:memo-insert'))")
+    // no shortcut: the menu shows none for the memo
+    const command = patched.slice(
+      patched.indexOf("    id: 'insert:comment',"),
+      patched.indexOf("    id: 'insert:footnote',"),
+    )
+    expect(command).not.toContain('shortcutLabel')
+  })
+
+  it('name the menu 메모 in Korean and Memo in English', () => {
+    const ko = '  "command.insert.comment.label": "주석",'
+    expect(applyPatch('studio-memo-label-ko', ko)).toBe('  "command.insert.comment.label": "메모",')
+    const en = '  "command.insert.comment.label": "Comments",'
+    expect(applyPatch('studio-memo-label-en', en)).toBe('  "command.insert.comment.label": "Memo",')
+  })
+
+  it('fail when the stub or a label is gone', () => {
+    expect(() => applyPatch('studio-memo-command', 'export const insertCommands = []')).toThrow(
+      /rhwp patch/,
+    )
+    expect(() => applyPatch('studio-memo-label-ko', 'const catalog = {}')).toThrow(/rhwp patch/)
+    expect(() => applyPatch('studio-memo-label-en', 'const catalog = {}')).toThrow(/rhwp patch/)
+  })
+
+  it('refuse to guess between two matches', () => {
+    const twice = [
+      "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+      "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
+    ].join('\n')
+    expect(() => applyPatch('studio-memo-command', twice)).toThrow(/exactly one/)
+    expect(() =>
+      applyPatch('studio-memo-label-ko', '  "command.insert.comment.label": "주석",\n'.repeat(2)),
+    ).toThrow(/exactly one/)
+    expect(() =>
+      applyPatch(
+        'studio-memo-label-en',
+        '  "command.insert.comment.label": "Comments",\n'.repeat(2),
+      ),
+    ).toThrow(/exactly one/)
+  })
+
+  it('are all in the studio build', () => {
+    for (const name of [
+      'studio-memo-command',
+      'studio-memo-label-ko',
+      'studio-memo-label-en',
+    ] as const) {
+      expect(STUDIO_PATCHES).toContain(name)
+    }
+  })
+})
+
+describe('rhwp memo delete-undo patches', () => {
+  // the studio's text around the patches, as the pinned release has it
+  const bridge = [
+    '  getHyperlinkContext(target: HyperlinkTarget): HyperlinkContext {',
+    "    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');",
+    '    return JSON.parse(this.doc.getHyperlinkContext(JSON.stringify(target)));',
+    '  }',
+    '',
+  ].join('\n')
+  const command = [
+    'export class DeleteTextCommand implements EditCommand {',
+    '  execute(wasm: WasmBridge): DocumentPosition {',
+    '    if (!isCaption && this.count > 0) {',
+    '      const target = hyperlinkTarget(this.position);',
+    '      const context = wasm.getHyperlinkContext(target);',
+    '      if (context.links.some(link => this.position.charOffset < link.end',
+    '        && link.start < this.position.charOffset + this.count)) {',
+    '        this.fragmentId = wasm.captureDeleteRange(target.section, target.para, target.para);',
+    '      }',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n')
+  const patched = applyPatch('studio-memo-delete-undo', command)
+
+  type Anchor = {
+    sectionIndex: number
+    paraIndex: number | null
+    startCharIdx: number | null
+    endCharIdx: number | null
+    path: { controlIndex: number; cellIndex?: number; paraIndex: number }[] | null
+  }
+  type Target = { section: number; para: number; cellPath: [number, number, number][] }
+
+  /** The helper the patch adds, run against a bridge that holds the given memos. */
+  function overlaps(anchors: Anchor[], target: Target, offset: number, count: number): boolean {
+    const start = patched.indexOf('export function memoAnchorOverlaps(')
+    const block = patched.slice(start, patched.indexOf('\n}\n', start) + 2)
+    const js = ts.transpileModule(block.replace('export function', 'function'), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText
+    const helper = new Function(`${js}\nreturn memoAnchorOverlaps`)() as (
+      wasm: { getMemoAnchors(): Anchor[] },
+      target: Target,
+      offset: number,
+      count: number,
+    ) => boolean
+    return helper({ getMemoAnchors: () => anchors }, target, offset, count)
+  }
+
+  const body = (start: number, end: number): Anchor => ({
+    sectionIndex: 0,
+    paraIndex: 3,
+    startCharIdx: start,
+    endCharIdx: end,
+    path: null,
+  })
+
+  it('give the bridge the memo anchors, and none from an engine without memos', () => {
+    const patched = applyPatch('studio-memo-anchors', bridge)
+    expect(patched).toContain('  getMemoAnchors(): {')
+    expect(patched).toContain("if (!doc || typeof doc.getMemoList !== 'function') return [];")
+    expect(patched).toContain('return JSON.parse(doc.getMemoList());')
+    expect(patched.indexOf('getMemoAnchors(')).toBeLessThan(
+      patched.indexOf('  getHyperlinkContext('),
+    )
+  })
+
+  it('capture the paragraph when a typed deletion touches a memo anchor, as for a link', () => {
+    expect(patched).toContain(
+      '        || memoAnchorOverlaps(wasm, target, this.position.charOffset, this.count)) {',
+    )
+    expect(patched.indexOf('export function memoAnchorOverlaps(')).toBeLessThan(
+      patched.indexOf('export class DeleteTextCommand'),
+    )
+    expect(patched.split('captureDeleteRange').length).toBe(2)
+  })
+
+  it('see a deletion inside or at the edge of a body memo, not beside it', () => {
+    const at = { section: 0, para: 3, cellPath: [] as [number, number, number][] }
+    expect(overlaps([body(2, 5)], at, 4, 1)).toBe(true)
+    expect(overlaps([body(2, 5)], at, 2, 1)).toBe(true)
+    expect(overlaps([body(2, 5)], at, 1, 1)).toBe(false)
+    expect(overlaps([body(2, 5)], at, 5, 1)).toBe(false)
+    expect(overlaps([body(2, 5)], at, 0, 9)).toBe(true)
+    // a caret memo is not removed by a deletion, so nothing to capture
+    expect(overlaps([body(2, 2)], at, 1, 2)).toBe(false)
+    // another paragraph or section, or a range-less memo spanning paragraphs
+    expect(overlaps([body(2, 5)], { ...at, para: 4 }, 3, 1)).toBe(false)
+    expect(overlaps([{ ...body(2, 5), sectionIndex: 1 }], at, 3, 1)).toBe(false)
+    expect(overlaps([{ ...body(2, 5), startCharIdx: null, endCharIdx: null }], at, 3, 1)).toBe(
+      false,
+    )
+    expect(overlaps([], at, 3, 1)).toBe(false)
+  })
+
+  it('match a memo in a table cell or a text box by its path', () => {
+    const cell: Anchor = {
+      ...body(0, 4),
+      path: [{ controlIndex: 1, cellIndex: 2, paraIndex: 0 }],
+    }
+    const box: Anchor = { ...body(0, 4), path: [{ controlIndex: 5, paraIndex: 1 }] }
+    expect(overlaps([cell], { section: 0, para: 3, cellPath: [[1, 2, 0]] }, 1, 1)).toBe(true)
+    expect(overlaps([cell], { section: 0, para: 3, cellPath: [[1, 3, 0]] }, 1, 1)).toBe(false)
+    expect(overlaps([cell], { section: 0, para: 3, cellPath: [] }, 1, 1)).toBe(false)
+    expect(overlaps([box], { section: 0, para: 3, cellPath: [[5, 0, 1]] }, 3, 1)).toBe(true)
+  })
+
+  it('fail when the text is gone, and are in the studio build', () => {
+    expect(() => applyPatch('studio-memo-anchors', 'export class WasmBridge {}')).toThrow(
+      /rhwp patch/,
+    )
+    expect(() =>
+      applyPatch('studio-memo-delete-undo', command.replace('implements EditCommand', '')),
+    ).toThrow(/rhwp patch/)
+    expect(STUDIO_PATCHES).toContain('studio-memo-anchors')
+    expect(STUDIO_PATCHES).toContain('studio-memo-delete-undo')
+  })
+})
+
 describe('rhwp font memo patches', () => {
   // the studio's text around the patches, as the pinned release has it
   const bridge = [
@@ -346,10 +534,14 @@ describe('the studio source the build fetched', () => {
     'src/core/wasm-bridge.ts',
     'src/engine/input-handler.ts',
     'src/engine/input-handler-keyboard.ts',
+    'src/engine/command.ts',
     'src/command/commands/edit.ts',
+    'src/command/commands/insert.ts',
     'src/command/commands/table.ts',
     'src/command/shortcut-map.ts',
     'src/command/registry.ts',
+    'src/i18n/locales/ko.ts',
+    'src/i18n/locales/en.ts',
   ].map((file) => join(studio, file))
 
   // only where a build has fetched it; a fresh checkout has nothing to look at
@@ -429,11 +621,16 @@ describe('rhwp Hangul-key patches', () => {
       `import { hancomCommands, installHancomMainKeys, installHancomMenuItems } from '${HANCOM_KEYS_MODULE}';`,
     )
     // the studio parts the new commands build on are handed over; the module imports none
-    expect(patched).toContain("import { InsertTextCommand } from '@/engine/command';")
+    expect(patched).toContain(
+      "import { InsertTextCommand, InsertTabCommand } from '@/engine/command';",
+    )
     expect(patched).toContain("import { ModalDialog } from '@/ui/dialog';")
     expect(patched).toContain("import { FindDialog, navigateToSearchHit } from '@/ui/find-dialog';")
+    expect(patched).toContain("import { CellBorderBgDialog } from '@/ui/cell-border-bg-dialog';")
+    expect(patched).toContain("import { showToast } from '@/ui/toast';")
     expect(patched).toContain(
-      '  InsertTextCommand, ModalDialog, FindDialog, navigateToSearchHit,\n}));',
+      '  InsertTextCommand, InsertTabCommand, ModalDialog, FindDialog, navigateToSearchHit,\n' +
+        '  CellBorderBgDialog, showToast,\n}));',
     )
     expect(patched.indexOf('registry.registerAll(hancomCommands(getLocale(), {')).toBeGreaterThan(
       patched.indexOf('registry.registerAll(toolCommands);'),
@@ -461,12 +658,105 @@ describe('rhwp Hangul-key patches', () => {
     expect(patched.indexOf('setPageNumberPos(sec')).toBeLessThan(patched.indexOf('  applyStyle('))
   })
 
+  it('give the bridge the one-cell resize call of engine patch 0016', () => {
+    const source = [
+      '  moveTableOffset(sec: number, parentPara: number, controlIdx: number, deltaH: number, deltaV: number): { ok: boolean; ppi: number; ci: number } {',
+      '    return { ok: true, ppi: 0, ci: 0 };',
+      '  }',
+      '',
+    ].join('\n')
+    const patched = applyPatch('studio-single-cell-resize', source)
+    expect(patched).toContain('  resizeTableCell(')
+    expect(patched).toContain(
+      'return JSON.parse((this.doc as any).resizeTableCell(sec, parentPara, controlIdx, row, col, vertical, forward));',
+    )
+    expect(patched.indexOf('resizeTableCell(')).toBeLessThan(patched.indexOf('  moveTableOffset('))
+  })
+
+  it('puts a new row below a merged cell after the merge, in both insert paths', () => {
+    const source = [
+      "import { t } from '../../i18n/index.ts';",
+      'function applyTableInsertRowColumn() {',
+      '  switch (mode) {',
+      "          case 'row-below':",
+      '            wasm.insertTableRow(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, cellInfo.row, true);',
+      '            break;',
+      '  }',
+      '}',
+      'const commands = [',
+      '  {',
+      "    id: 'table:insert-row-below',",
+      "    label: t('command.table.insertRowBelow.registryLabel'),",
+      '    canExecute: inTable,',
+      '    execute(services) {',
+      '      const ih = services.getInputHandler();',
+      '      if (!ih) return;',
+      '      const pos = ih.getCursorPosition();',
+      '      if (pos.parentParaIndex === undefined || pos.controlIndex === undefined || pos.cellIndex === undefined) return;',
+      '      const cellInfo = services.wasm.getCellInfo(pos.sectionIndex, pos.parentParaIndex, pos.controlIndex, pos.cellIndex);',
+      '      safeTableOp(() => ih.executeOperation({',
+      "        kind: 'snapshot',",
+      "        operationType: 'insertTableRow',",
+      '        operation: (wasm) => {',
+      '          wasm.insertTableRow(pos.sectionIndex, pos.parentParaIndex!, pos.controlIndex!, cellInfo.row, true);',
+      '          return pos;',
+      '        },',
+      "      }), '줄 추가');",
+      '    },',
+      '  },',
+      '];',
+      '',
+    ].join('\n')
+    const patched = applyPatch('studio-merged-row-below', source)
+    expect(patched).toContain(`import { insertRowBelow } from '${HANCOM_KEYS_MODULE}';`)
+    expect(patched).toContain(
+      'const afterRow = cellInfo.row + Math.max(1, cellInfo.rowSpan || 1) - 1 + i;',
+    )
+    expect(patched).toContain('wasm.mergeTableCells(')
+    expect(patched).toContain('      insertRowBelow(services);')
+    expect(patched).not.toContain('safeTableOp(() => ih.executeOperation({')
+  })
+
+  it('hand the equal-size stubs to the app’s own equalizer', () => {
+    const source = [
+      "import { t } from '../../i18n/index.ts';",
+      '// HWP/HWPX cannot persist independent per-row or per-column geometry. Keep',
+      '// commands that require that representation unavailable at command routing.',
+      'const localTableGeometryCanPersist = () => false;',
+      '',
+      '  {',
+      "    id: 'table:cell-height-equal',",
+      "    label: t('command.table.cellHeightEqual.label'),",
+      "    shortcutLabel: 'H',",
+      '    canExecute: localTableGeometryCanPersist,',
+      '    execute() {},',
+      '  },',
+      '  {',
+      "    id: 'table:cell-width-equal',",
+      "    label: t('command.table.cellWidthEqual.label'),",
+      "    shortcutLabel: 'W',",
+      '    canExecute: localTableGeometryCanPersist,',
+      '    execute() {},',
+      '  },',
+      '',
+    ].join('\n')
+    const patched = applyPatch('studio-hancom-equal-cells', source)
+    expect(patched).toContain(`import { equalizeTableCells } from '${HANCOM_KEYS_MODULE}';`)
+    expect(patched).not.toContain('localTableGeometryCanPersist')
+    expect(patched).toContain('    canExecute: inTableOrCellSelection,')
+    expect(patched).toContain("      equalizeTableCells(services, 'height', getLocale() === 'ko');")
+    expect(patched).toContain("      equalizeTableCells(services, 'width', getLocale() === 'ko');")
+  })
+
   it('hand the sequences to the module, the second key first and the IME path too', () => {
     const source = [
       "import { matchShortcut, defaultShortcuts } from '@/command/shortcut-map';",
       'export function onKeyDown(this: any, e: KeyboardEvent): void {',
       '  this._cellBlockLetterImeGuard?.reset();',
       '  if (this._pendingChordK) {}',
+      '  if (this.connectorDrawingMode) {',
+      '    return;',
+      '  }',
       '  if (e.isComposing || e.keyCode === 229) {',
       "    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyM') {",
       '      e.preventDefault();',
@@ -489,11 +779,18 @@ describe('rhwp Hangul-key patches', () => {
     ].join('\n')
     const patched = applyPatch('studio-hancom-chords', source)
     expect(patched).toContain(
-      `import { hancomChordKey, hancomChordStart, hancomContextKey, hancomCtrlKey } from '${HANCOM_KEYS_MODULE}';`,
+      `import { hancomCellBlockKey, hancomCellKey, hancomChordKey, hancomChordStart, hancomContextKey, hancomCtrlKey, hancomTableObjectKey } from '${HANCOM_KEYS_MODULE}';`,
     )
     // the second key is looked at before anything else the handler does
     expect(patched).toContain(
       '  this._cellBlockLetterImeGuard?.reset();\n  if (hancomChordKey(this, e)) return;\n  if (this._pendingChordK)',
+    )
+    // a table-object key and H/W in a cell block come before the selection is dropped
+    expect(patched).toContain(
+      '  if (hancomTableObjectKey(this, e)) return;\n' +
+        '  if (hancomCellBlockKey(this, e)) return;\n' +
+        '  if (hancomCellKey(this, e)) return;\n' +
+        '  if (this.connectorDrawingMode) {',
     )
     // the studio no longer starts its own Ctrl+M on the IME path
     expect(patched).not.toContain('this._pendingChordM = true;')

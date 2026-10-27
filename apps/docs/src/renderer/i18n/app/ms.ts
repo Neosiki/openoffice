@@ -583,4 +583,7 @@ export const ms = {
   appOdtLabelObject: 'Objek (dipaparkan dalam Hancom)',
   appOdtLabelNotice:
     'Objek yang dilukis sebagai kotak berlabel mungkin kelihatan berbeza daripada paparannya dalam Hancom Office.',
+  appMergeSourceLoaded: '{name} dimuatkan ({n} rekod)',
+  appMergeWritten: '{n} dokumen ditulis',
+  appMergeNothingToWrite: 'Tiada untuk ditulis',
 } satisfies Record<keyof typeof zh, string>

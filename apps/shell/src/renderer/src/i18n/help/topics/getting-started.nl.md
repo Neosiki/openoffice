@@ -38,7 +38,7 @@ Een nieuw document opent zonder titel; het bestand op schijf wordt pas aangemaak
 ## Het opslagmodel
 
 - **Handmatig opslaan**: ⌘S/ctrl+S, of Bestand ▸ Opslaan / Opslaan als… Bij de eerste keer opslaan wordt om locatie en naam gevraagd.
-- **Automatisch opslaan** gaat pas aan nadat je het bestand minstens één keer handmatig hebt opgeslagen — een PDF dat je alleen hebt gelezen wordt nooit stilletjes overschreven. Automatisch opslaan treedt kort op nadat de inhoud is gewijzigd.
+- **Automatisch opslaan** volgt de schakelaar van elke editor (en de appbrede standaard). Een PDF die je alleen leest, wordt nooit stilletjes overschreven; een nieuw document zonder eigen bestand wordt pas na de eerste keer opslaan automatisch opgeslagen.
 - Een tabblad met onopgeslagen wijzigingen sluiten vraagt eerst om Opslaan / Weggooien / Annuleren.
 - Elke schrijfactie is atomair (tijdelijk bestand + hernoemen), zodat een stroomstoring nooit een half bestand achterlaat.
 

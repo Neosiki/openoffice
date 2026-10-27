@@ -55,6 +55,27 @@ async function templateDocx(dir: string): Promise<string> {
 }
 
 describe('genoffice merge', () => {
+  it('fills Korean placeholder keys and reports a Korean key it has no value for', async () => {
+    const dir = tempDir()
+    const md = join(dir, 'quote.md')
+    writeFileSync(md, '# 견적서\n\n{{ 고객명 }} 님, 총액 {{금액}}원\n\n담당 {{담당자}}\n')
+    const template = join(dir, 'quote.docx')
+    expect((await run(['create', '--type', 'docx', '--from', md, '--out', template])).code).toBe(0)
+    const out = join(dir, 'filled.docx')
+    const data = dataFile(dir, { 고객명: '김철수', 금액: '12,000' })
+    const r = await run(['merge', template, '--data', data, '--out', out, '--json'])
+    expect(r.code).toBe(0)
+    expect(r.json().detail).toMatchObject({
+      filled: 2,
+      used_keys: ['고객명', '금액'],
+      unresolved_placeholders: [{ key: '담당자', placeholder: '{{담당자}}', reason: 'no_key' }],
+      unused_keys: [],
+    })
+    const xml = await documentXml(out)
+    expect(xml).toContain('김철수 님, 총액 12,000원')
+    expect(xml).not.toContain('{{고객명')
+  })
+
   it('fills a docx template, keeps table cells and reports split and unknown placeholders', async () => {
     const dir = tempDir()
     const template = await templateDocx(dir)
@@ -254,7 +275,7 @@ describe('genoffice merge', () => {
     expect(r.json().detail.used_keys).toEqual(['addr', 'name'])
     const read = await run(['docs', 'read', out, '--full', '--json'])
     const texts = read.json().detail.items.map((b: { text: string }) => b.text)
-    expect(texts[0]).toMatch(/^A.?B \{\{name\}\}$/)
+    expect(texts[0]).toBe('A\nB {{name}}')
     expect(texts[1]).toBe('X')
     expect(await documentXml(out)).toContain('<w:br/>')
   })
@@ -482,6 +503,54 @@ describe('genoffice merge', () => {
     const meta = await run(['sheet', 'read', out, '--sheet', 'Meta', '--json'])
     expect(meta.json().detail.rows[0]).toEqual(['2026-10-01', 'plain'])
   })
+
+  it.skipIf(!sidecar)(
+    'reports a placeholder inside an xlsx formula instead of leaving it silently',
+    async () => {
+      const dir = tempDir()
+      const table = join(dir, 'formula.json')
+      writeFileSync(
+        table,
+        JSON.stringify([
+          ['Customer', '{{name}}'],
+          ['Greeting', '="Dear {{name}}"'],
+          ['Total', '=LEN(B1)'],
+        ]),
+      )
+      const template = join(dir, 'formula.xlsx')
+      expect(
+        (await run(['create', '--type', 'xlsx', '--from', table, '--out', template])).code,
+      ).toBe(0)
+      const out = join(dir, 'formula-out.xlsx')
+      const data = dataFile(dir, DATA)
+      const r = await run(['merge', template, '--data', data, '--out', out, '--json'])
+      expect(r.code).toBe(0)
+      // the plain cell is filled; the formula is never rewritten, so its placeholder is reported
+      expect(r.json().summary).toBe('1 placeholders filled, 1 unresolved')
+      expect(r.json().detail.unresolved_placeholders).toEqual([
+        {
+          placeholder: '{{name}}',
+          key: 'name',
+          reason: 'formula_cell',
+          location: { sheet: 'formula', cell: 'B2' },
+        },
+      ])
+      expect(r.json().warnings[0].suggestion).toMatch(/plain text cell/)
+      const strict = await run([
+        'merge',
+        template,
+        '--data',
+        data,
+        '--out',
+        out,
+        '--force',
+        '--strict',
+        '--json',
+      ])
+      expect(strict.code).toBe(1)
+      expect(strict.json().error).toBe('unresolved_placeholder')
+    },
+  )
 
   it.skipIf(!sidecar)(
     'fills an xlsx template whose used range exceeds the DSL expansion cap',

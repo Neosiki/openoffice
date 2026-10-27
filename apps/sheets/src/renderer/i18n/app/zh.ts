@@ -654,7 +654,6 @@ export const zh = {
   appRemoveLink: '删除链接',
   // Ribbon common
   appNotAvailableYet: '暂不可用',
-  appComingSoon: '即将推出',
   // Chart Design tab
   appGroupChartLayouts: '图表布局',
   appAddChartElement: '添加图表元素',
@@ -1383,6 +1382,15 @@ export const zh = {
   appTableFileUnnamed: '此表格在文件中没有名称，无法在此修改。',
   appTableRowsNotLoaded: '表格所在行仍在加载——请稍后重试。',
   appTableTotalLabel: '汇总',
+  appNotePicturesPaneTitle: '批注图片',
+  appNotePicturesClose: '关闭',
+  appNotePicturesNone: '本工作簿没有带图片的批注。',
+  appNotePictureUnavailable: '这张图片无法显示。',
+  appNotePicturesToggle: '批注图片',
+  appNoteInsertPicture: '插入图片',
+  appNotePictureInserted: '已把图片放进 {cell} 的注释。保存后写入文件。',
+  appNotePictureRemoved: '已移除 {cell} 注释里的图片。',
+  appNotePictureRemove: '移除图片',
   appCommentsPaneTitle: '批注',
   appThreadReply: '回复',
   appThreadReplyPlaceholder: '回复…',

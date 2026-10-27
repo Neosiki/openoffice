@@ -59,6 +59,7 @@ import { useSubscriptionConnection } from './subscription-client'
 import { SkillsPane } from './skills/SkillsPane'
 import { skillsText } from './i18n/strings-skills'
 import {
+  advancedPaneUseChoice,
   advancedProviderIds,
   changeAiSettings,
   initialAdvancedProvider,
@@ -66,6 +67,7 @@ import {
   mediaSelection,
   mediaSpecialChoices,
   readAiSettings,
+  withAiSelection,
   withLiveSelectionFields,
   writeAiSettings,
 } from './settings-ai'
@@ -671,6 +673,13 @@ function AiModelPane({ t }: { t: TFunc }) {
         window.alert(error instanceof Error ? error.message : String(error))
       })
   }
+  // a saved key provider that is not the AI in use: one press selects it, as
+  // "AI to use" would; an unsaved draft offers nothing until it is written
+  const useChoice = dirty ? undefined : advancedPaneUseChoice(settings, provider, endpoint?.id)
+  const useThis = () => {
+    if (!useChoice) return
+    void changeAiSettings((current) => withAiSelection(current, useChoice))
+  }
   const test = () => {
     const seq = ++testSeqRef.current
     setTesting(true)
@@ -712,6 +721,11 @@ function AiModelPane({ t }: { t: TFunc }) {
                     : null
             }
           />
+          {useChoice && (
+            <button className="set-btn" onClick={useThis}>
+              {t('freeUse')}
+            </button>
+          )}
           <button className="set-btn" disabled={testing} onClick={test}>
             {t('setAiTest')}
           </button>
@@ -1626,6 +1640,7 @@ export function SettingsModal({
   const [docTheme, setDocTheme] = useState<DocTheme>('follow')
   const [saveDir, setSaveDir] = useState('')
   const [autoSaveOn, setAutoSaveOn] = useState(false)
+  const [autoUpdateCheckOn, setAutoUpdateCheckOn] = useState(true)
   const [defaultApp, setDefaultApp] = useState<DefaultAppStatus | null>(null)
   const [defaultAppBusy, setDefaultAppBusy] = useState(false)
   const [defaultAppFailed, setDefaultAppFailed] = useState(false)
@@ -1662,6 +1677,9 @@ export function SettingsModal({
     })
     void window.aiOffice.getUpdateChannel?.().then((ch) => {
       if (alive) setChannel(ch)
+    })
+    void window.aiOffice.getAutoUpdateCheck?.().then((on) => {
+      if (alive) setAutoUpdateCheckOn(on)
     })
     void window.aiOffice.getAppVersion?.().then((v) => {
       if (alive && v) setAppVersion(v)
@@ -2078,6 +2096,25 @@ export function SettingsModal({
                       const next = v === 'beta' ? 'beta' : 'stable'
                       setChannel(next)
                       void window.aiOffice.setUpdateChannel(next)
+                    }}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <div className="set-field-label">{t('setAutoUpdateCheck')}</div>
+                      <div className="set-field-desc">{t('setAutoUpdateCheckDesc')}</div>
+                    </div>
+                  </div>
+                  <button
+                    className="set-switch"
+                    role="switch"
+                    aria-checked={autoUpdateCheckOn}
+                    aria-label={t('setAutoUpdateCheck')}
+                    onClick={() => {
+                      const next = !autoUpdateCheckOn
+                      setAutoUpdateCheckOn(next)
+                      void window.aiOffice.setAutoUpdateCheck?.(next).catch(() => {})
                     }}
                   />
                 </div>

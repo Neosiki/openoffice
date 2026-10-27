@@ -94,7 +94,27 @@ E2E는 production 빌드에서 `window.rhwpStudio.automation`과 `window.rhwpStu
 - 표 개체 `Shift+화살표` 크기, `Shift+PageUp/Down`·`Shift+Home/End` 순서.
 - `F5` 첫 셀, `Shift+F5` 확장 선택.
 
-## 3. Phase 2 (엔진 작업, 별도 세션)
+## 2.1 Phase 1C (구현됨, 2026-10-26)
+
+- 셀 블록에서 `Ctrl+화살표`: 고른 줄/칸 전체의 크기를 바꾸고 표 전체 크기도 함께 바꾼다. 한 번의 실행 취소.
+- `Shift+화살표`로 선택한 칸 하나만 크기 조절하는 것은 이때는 못 했고, Phase 2A에서 넣었다.
+- 검증: `tests/hancom-keys.test.ts`(키 배선, 열/행 업데이트, 병합·표 안의 표 거절)와 `e2e/hwp-table.spec.ts`(F7/Ctrl+Right, F8/Ctrl+Down, Ctrl+Z).
+
+## 2.2 Phase 2A (구현됨, 2026-10-26)
+
+- 셀 블록에서 `Shift+화살표`: 현재 칸의 오른쪽/아래 경계와 같은 줄의 다음 칸을 서로 반대로 옮긴다. 표 전체 크기는 그대로다.
+- 엔진에 이미 있던 `resize_table_cell_native`(한글 `TableResizeCell*` 대응)를 WASM `resizeTableCell`로 내고(엔진 패치 0016), studio 브리지와 `ieum:table-cell-resize` 명령이 연결했다. 여러 번 눌러도 같은 경계를 이어서 옮기고, HWP 저장·다시 열기에서도 격자가 유지된다.
+- 한컴 2024와 3×3 표에서 한 번/두 번 누른 폭이 같았다(192.7/185.2px, 196.5/181.4px).
+- 한컴 2024는 병합 칸이 있는 표에서 `TableResizeCell*`을 거부했고, 로컬 리사이즈 뒤 저장·다시 열기한 격자에서도 거부했다. 앱은 편집기별로 이번 세션의 Shift 격자만 이어서 허용하고, 병합 표나 새로 연 격자는 안내하고 하지 않는다.
+- 검증: `tests/hancom-keys.test.ts`(키 배선, 호출 인자, 마지막 칸 무동작, 표 안의 표/병합 표 거절, 같은 편집기에서 이어짐), `tests/rhwp-patches.test.ts`(브리지 패치), `tests/engine-table-resize.test.ts`(실제 엔진 두 번 호출·HWP/HWPX 저장 뒤 다시 읽기·마지막 칸), `e2e/hwp-table.spec.ts`(F5+Shift+Right 두 번, 표 크기 유지, Ctrl+Z, 병합 표에서 무동작).
+
+## 2.3 Phase 2B (구현됨, 2026-10-26)
+
+- 병합 칸에서 `Ctrl+Enter`/“아래에 줄 추가”는 병합의 마지막 줄 다음에 새 줄을 넣고, 새 줄의 같은 열 범위를 다시 병합해 한컴의 `colSpan` 2 + 1 모양으로 만든다.
+- 일반 칸에서 병합을 지나 줄을 넣으면 병합이 한 줄 길어지는 것이 한컴의 동작이므로 나누지 않는다. 표 메뉴의 명령과 “줄/칸 추가하기”도 같은 계산을 쓴다.
+- 검증: `tests/hancom-keys.test.ts`(병합 칸의 마지막 줄 계산과 새 줄 병합), `tests/rhwp-patches.test.ts`(표 명령/대화 상자 패치), `e2e/hwp-table.spec.ts`(병합 칸/일반 칸/메뉴 세 경우, 새 줄 `colSpan` 2, Ctrl+Z).
+
+## 3. Phase 2 (남은 엔진 작업, 별도 세션)
 
 - 표 칸 안에 표 만들기.
 - 표 안의 표에 행/열 넣기·지우기.

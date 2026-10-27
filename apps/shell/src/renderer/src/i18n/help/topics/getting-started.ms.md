@@ -38,7 +38,7 @@ Fail .odt (teks OpenDocument, format yang disimpan oleh Hancom Office, LibreOffi
 ## Model simpanan
 
 - **Simpanan manual**: ⌘S/ctrl+S, atau Fail ▸ Simpan / Simpan Sebagai… Semasa simpanan pertama, anda akan ditanya tentang lokasi dan nama.
-- **Autosimpan** hanya diaktifkan selepas anda menyimpan fail secara manual sekurang-kurangnya sekali — PDF yang anda baca sahaja tidak akan ditulis semula secara senyap. Autosimpan berlaku tidak lama selepas kandungan berubah.
+- **Simpan automatik** mengikut suis setiap editor (dan tetapan lalai aplikasi). PDF yang anda baca sahaja tidak akan ditulis semula secara senyap, dan dokumen baharu tanpa fail sendiri mula disimpan secara automatik selepas simpanan pertamanya.
 - Menutup tab dengan perubahan yang belum disimpan akan meminta anda memilih Simpan / Buang / Batal dahulu.
 - Setiap tulisan bersifat atomik (fail sementara + penamaan semula), jadi gangguan bekalan elektrik tidak akan meninggalkan fail yang separuh jadi.
 

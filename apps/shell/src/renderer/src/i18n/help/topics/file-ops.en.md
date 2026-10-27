@@ -28,7 +28,7 @@ Rules: the extension is preserved automatically; illegal characters, trailing do
 - **⌘S / ctrl+S** saves the current file; an untitled file asks for location and name first.
 - **Save As** writes a new file and leaves the original untouched; subsequent edits target the new file.
 - Every save is atomic (temp file + rename); a mid-write quit cannot corrupt the file.
-- Autosave only kicks in after the first manual save (see [Quick start](help://getting-started)).
+- Autosave follows each editor's toggle; a new document with no file of its own starts after its first save (see [Quick start](help://getting-started)).
 
 ## Export to PDF
 

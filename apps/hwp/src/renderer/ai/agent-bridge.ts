@@ -29,6 +29,7 @@ const METHODS = [
   'listTables',
   'readTable',
   'fillCells',
+  'checkBoxes',
   'addTableLines',
   'removeTableLines',
   'deleteTable',
@@ -56,6 +57,14 @@ const METHODS = [
   'mergeCells',
   'splitCell',
   'undo',
+  'listMemos',
+  'memoSelection',
+  'insertMemo',
+  'setMemo',
+  'removeMemo',
+  'showMemoAnchors',
+  'selectMemo',
+  'setMemoLock',
 ] as const satisfies readonly (keyof AgentPluginSurface)[]
 
 export function createAgentBridge(getEditor: () => AgentBridgeEditor | null): AgentBridge {

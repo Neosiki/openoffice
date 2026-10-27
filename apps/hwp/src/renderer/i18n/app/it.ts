@@ -9,12 +9,16 @@ export const it = {
   fileSaveAs: 'Salva con nome…',
   fileExportPdf: 'Esporta come PDF…',
   filePrint: 'Stampa…',
+  autoSave: 'Salvataggio automatico',
+  autoSaveTip: 'Salva ogni 30 secondi e quando la finestra perde il focus',
   printPreparing: 'Preparazione delle pagine… ({done}/{total})',
   printSending: 'Invio delle pagine…',
   pdfFailed: 'Impossibile esportare il documento in PDF.',
   printFailed: 'Impossibile stampare il documento.',
   saveVerifyFailed:
     'Non è stato salvato nulla: la copia da scrivere, riletta, non corrispondeva al documento sullo schermo. Prova «Salva con nome» per scrivere un nuovo file.',
+  saveVerifyHint:
+    "L'originale è invariato. In Salva con nome scegli HWPX, oppure usa Esporta come PDF.",
   saveProtected:
     'Non salvato: questo documento è protetto da password e salvarlo qui lo scriverebbe senza password.',
   backupKept: 'Salvato. La versione precedente è stata conservata come {name}.',
@@ -115,6 +119,7 @@ export const it = {
   aiToolTables: 'Tabelle controllate · {count}',
   aiToolReadTable: 'Tabella {table} letta',
   aiToolFillCells: 'Tabella {table} · {count} cella/e compilata/e',
+  aiToolCheckBoxes: 'Tabella {table} · {count} casella/e spuntata/e',
   aiTableName: 'Tabella {table}',
   aiTableRowsAdded: '{count} riga/righe aggiunta/e',
   aiTableColsAdded: '{count} colonna/e aggiunta/e',
@@ -140,4 +145,57 @@ export const it = {
   aiReverted: 'Modifiche annullate',
   aiRevertRefused:
     'Non è stato possibile annullare queste modifiche in un colpo solo. Se il documento è stato modificato in seguito, usa Annulla dell’editor (Ctrl+Z).',
+  memoTitle: 'Commenti',
+  memoOpen: 'Commenti',
+  memoAdd: 'Aggiungi commento',
+  memoEmpty: 'Nessun commento.',
+  memoNoBody: 'Nessun testo',
+  memoPage: 'pag. {page}',
+  memoUnknownAuthor: 'Sconosciuto',
+  memoReadOnly: 'Sola lettura',
+  memoReadOnlyFormatted:
+    'Questo commento mescola formattazioni, quindi il testo non può essere modificato qui.',
+  memoReadOnlyObject:
+    'Questo commento contiene una tabella, un’immagine o un altro oggetto, quindi il testo non può essere modificato qui.',
+  memoReadOnlyPlace:
+    'I commenti in intestazioni, piè di pagina o note non possono essere modificati qui.',
+  memoReadOnlyProtected:
+    'I commenti di un documento protetto da password non possono essere modificati qui.',
+  memoEdit: 'Modifica',
+  memoDelete: 'Elimina',
+  memoNewTitle: 'Aggiungi commento',
+  memoEditTitle: 'Modifica commento',
+  memoAuthor: 'Autore',
+  memoBody: 'Commento',
+  memoBodyPlaceholder: 'Scrivi un commento…',
+  memoSelectionLabel: 'Testo selezionato: {text}',
+  memoCaretLabel: 'Il commento sarà aggiunto nella posizione del cursore.',
+  memoSaveHint: 'Ctrl+Invio per salvare',
+  memoCancel: 'Annulla',
+  memoErrNone:
+    'Non c’è un punto in cui aggiungere un commento. Seleziona del testo o posiziona il cursore.',
+  memoErrMultiParagraph: 'Un commento può essere aggiunto solo all’interno di un paragrafo.',
+  memoErrUnsupported: 'Non è possibile aggiungere commenti in intestazioni, piè di pagina o note.',
+  memoErrOverlap: 'Questo intervallo contiene già un commento.',
+  memoErrProtected: 'Non è possibile aggiungere commenti a un documento protetto da password.',
+  memoErrEmpty: 'Scrivi il testo del commento.',
+  memoErrSave: 'Non è stato possibile salvare il commento.',
+  memoErrDelete: 'Non è stato possibile eliminare il commento.',
+  memoErrTooLong: 'Il commento è troppo lungo. Può contenere fino a 100.000 caratteri.',
+  memoErrLoad: 'Non è stato possibile leggere l’elenco dei commenti.',
+  memoSaveBlocked: 'Salva o annulla prima il commento che stai scrivendo.',
+  memoRemoved: 'Commenti eliminati con il testo: {count}. Premi Ctrl+Z per annullare.',
+  memoNotCopied: 'Il commento non è stato copiato.',
+  memoLockedElsewhere:
+    'Un commento è in fase di scrittura in un’altra scheda. Attendi che venga salvato o annullato.',
+  memoContended:
+    'Anche in un’altra scheda è stata aperta una finestra di commento. Salva o annulla prima in una delle due.',
+  memoUnsupportedBuild: 'Questa versione non supporta i commenti.',
+  memoHwpxLost:
+    'Commenti non trasferiti nel file HWPX: {count}. Salva come HWP o controlla il file in Hancom Hangul.',
+  aiToolMemos: 'Commenti controllati: {count}',
+  aiMemoContext: 'Commenti: {count}',
+  aiMemoApprovalTitle: 'Questa modifica elimina {count} commento/i. Continuare?',
+  aiMemoApprovalKeep: 'Mantieni i commenti',
+  aiMemoApprovalRemove: 'Continua ed elimina',
 } satisfies Record<keyof typeof zh, string>

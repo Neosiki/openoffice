@@ -30,6 +30,7 @@ import {
 import type { MenuItemConstructorOptions, NativeImage, WebContents } from 'electron'
 import { atomicWriteFile } from './atomic-write'
 import { tabStripOverlay } from './title-bar-overlay'
+import { shellWindowBackground } from './window-background'
 import {
   applyUiScaleTo,
   applyUiScaleToAll,
@@ -275,6 +276,7 @@ import {
 } from '../../../markdown/src/main/markdown-main'
 import {
   configureHwpRuntime,
+  editorTakes,
   hwpFileRenamed,
   hwpReadText,
   requestHwpPrint,
@@ -538,6 +540,7 @@ import {
   takeTornTab,
 } from './detached-windows'
 import { applyUpdateChannel, checkForUpdatesNow, initAutoUpdater } from './updater'
+import { cancelUpdateRestart } from './update-restart'
 import { isUpdateChannel, type UpdateChannel } from '../shared/update-api'
 
 /**
@@ -880,6 +883,13 @@ function currentUpdateChannel(): UpdateChannel {
   const saved = readAppSettings(APP_SETTINGS_PATH()).updateChannel
   cachedUpdateChannel = isUpdateChannel(saved) ? saved : 'stable'
   return cachedUpdateChannel
+}
+
+let cachedAutoUpdateCheck: boolean | null = null
+
+function autoUpdateCheckEnabled(): boolean {
+  cachedAutoUpdateCheck ??= readAppSettings(APP_SETTINGS_PATH()).autoUpdateCheck !== false
+  return cachedAutoUpdateCheck
 }
 
 let cachedTheme: UiTheme | null = null
@@ -4581,6 +4591,23 @@ function installTabShortcuts(): void {
     contents.on('before-input-event', (event, input) => {
       const manager = tabManager
       if (!manager) return
+      // Ctrl+Tab in a Hangul table cell inserts a tab, as Hancom does; elsewhere the
+      // shell keeps it for cycling tabs. The editor answers from its own key map.
+      if (
+        input.type === 'keyDown' &&
+        input.key === 'Tab' &&
+        input.control &&
+        !input.alt &&
+        !input.shift &&
+        !input.meta &&
+        manager.describeWebContents(contents.id)?.kind === 'hwp'
+      ) {
+        event.preventDefault()
+        void editorTakes(contents, 'ctrl-tab').then((taken) => {
+          if (!taken) manager.cycleTab(1)
+        })
+        return
+      }
       const handled = handleTabShortcut(input, contents.id, {
         isShellContents: (id) =>
           !!shellWindow && !shellWindow.isDestroyed() && shellWindow.webContents.id === id,
@@ -4616,6 +4643,13 @@ function createShellWindow(): void {
     minWidth: SHELL_WINDOW_MIN_WIDTH,
     minHeight: SHELL_WINDOW_MIN_HEIGHT,
     title: productName(currentLang()),
+    // Paint the theme's surface before the renderer's first frame so the window
+    // does not flash white in dark mode. nativeTheme.themeSource is already set
+    // from the saved theme in app.whenReady, before this window is created.
+    // macOS uses vibrancy below, which must stay transparent.
+    ...(process.platform === 'darwin'
+      ? {}
+      : { backgroundColor: shellWindowBackground(nativeTheme.shouldUseDarkColors) }),
     // vibrancy: editor modules punch translucent regions (e.g. the slides
     // thumbnail pane) through to the desktop
     ...(process.platform === 'darwin'
@@ -4917,6 +4951,8 @@ function createShellWindow(): void {
     onVetoed: () => {
       appQuitting = false
       resetAppShuttingDown()
+      // a "Restart & Install" that met a cancelled prompt is off as well
+      cancelUpdateRestart()
       // tabs that answered "Don't Save" before another tab cancelled stay open
       // with their edits, so their recovery copies resume now (the PDF editor
       // also keeps a flag of its own)
@@ -5777,6 +5813,14 @@ function registerHomeIpc(): void {
     cachedUpdateChannel = channel
     writeAppSetting(APP_SETTINGS_PATH(), 'updateChannel', channel)
     applyUpdateChannel(channel)
+  })
+
+  ipcMain.handle(HOME_CHANNELS.getAutoUpdateCheck, () => autoUpdateCheckEnabled())
+
+  ipcMain.handle(HOME_CHANNELS.setAutoUpdateCheck, (_event, on: unknown) => {
+    if (typeof on !== 'boolean') return
+    writeAppSetting(APP_SETTINGS_PATH(), 'autoUpdateCheck', on)
+    cachedAutoUpdateCheck = on
   })
 
   ipcMain.handle(
@@ -8897,7 +8941,7 @@ app.whenReady().then(async () => {
   installDocumentLinkMenuItems()
   installDockMenu()
   setUpdateCheckInvoker(() => void checkForUpdatesNow())
-  initAutoUpdater(() => shellWindow, currentUpdateChannel())
+  initAutoUpdater(() => shellWindow, currentUpdateChannel(), autoUpdateCheckEnabled)
   // crash record on this PC (crash-log.jsonl in userData) and, outside
   // headless runs, a prompt when the renderer of an open document dies
   const crashMemory = () =>

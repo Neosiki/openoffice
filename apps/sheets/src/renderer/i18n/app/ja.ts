@@ -762,7 +762,6 @@ export const ja = {
   appRemoveLink: 'リンクの削除',
   // Ribbon common
   appNotAvailableYet: '現在利用できません',
-  appComingSoon: '近日提供予定',
   // Chart Design tab
   appGroupChartLayouts: 'グラフのレイアウト',
   appAddChartElement: 'グラフ要素を追加',
@@ -1497,6 +1496,16 @@ export const ja = {
   appTableFileUnnamed: 'このテーブルはファイル内に名前がないため、ここでは変更できません。',
   appTableRowsNotLoaded: 'テーブルの行をまだ読み込み中です。しばらくしてからやり直してください。',
   appTableTotalLabel: '集計',
+  appNotePicturesPaneTitle: 'メモの画像',
+  appNotePicturesClose: '閉じる',
+  appNotePicturesNone: 'このブックに画像を表示しているメモはありません。',
+  appNotePictureUnavailable: 'この画像は表示できません。',
+  appNotePicturesToggle: 'メモの画像',
+  appNoteInsertPicture: '画像を挿入',
+  appNotePictureInserted:
+    '{cell} のコメントに画像を追加しました。保存するとファイルに書き込まれます。',
+  appNotePictureRemoved: '{cell} のコメントから画像を取り除きました。',
+  appNotePictureRemove: '画像を削除',
   appCommentsPaneTitle: 'コメント',
   appThreadReply: '返信',
   appThreadReplyPlaceholder: '返信…',

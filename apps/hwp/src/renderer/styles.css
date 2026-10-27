@@ -14,6 +14,7 @@
   --hwp-shadow-soft: rgb(0 0 0 / 9%);
   --hwp-shimmer-base: #666666;
   --hwp-shimmer-hi: #d9d9d9;
+  --hwp-knob-dot: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -74,8 +75,68 @@ body {
 /* F5 presentation: the editor's own chrome is hidden through its chrome API;
    here the AI dock and notices leave the stage to the document. */
 .hwp-app.hwp-presenting .ai-dock,
+.hwp-app.hwp-presenting .hwp-topbar,
 .hwp-app.hwp-presenting .hwp-notice {
   display: none !important;
+}
+
+/* the editor has no ribbon: this thin row is the host's own chrome */
+.hwp-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 30px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--chrome-bg);
+}
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--hwp-knob-dot);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* body row: the AI dock and the editor */
@@ -108,6 +169,8 @@ body {
 
 .hwp-notice {
   position: absolute;
+  /* above the memo editor's backdrop: a save or close held back says why there */
+  z-index: 1300;
   /* clear of the editor's menus above and its status bar below */
   bottom: 44px;
   left: 50%;

@@ -2,7 +2,6 @@ import JSZip from 'jszip'
 import * as numfmt from 'numfmt'
 import {
   blankXlsxBuffer,
-  decodeCsvBuffer,
   isNumericCell,
   parseCsv,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
@@ -23,6 +22,7 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
 import { PRODUCT_NAME } from '@genoffice/i18n'
 import { EMPTY_PAYLOADS, type GatewayPayloads } from './xlsx-gateway-ops'
+import { decodeCsv } from './csv'
 import type { WorkbookStyleEdit } from '@genoffice/xlsx-gateway/shared/edit-schemas'
 import {
   echoStyleColor,
@@ -1025,7 +1025,7 @@ export async function blankWorkbook(sheetName = 'Sheet1'): Promise<Buffer> {
 /** CSV → table; numeric-looking cells become numbers like the app's importer. */
 export function csvTable(bytes: Uint8Array, name: string, opts: CsvTableOptions = {}): TableInput {
   const formats: Record<string, string> = {}
-  const rows = parseCsv(decodeCsvBuffer(bytes)).map((r, rowIndex) =>
+  const rows = parseCsv(decodeCsv(bytes)).map((r, rowIndex) =>
     r.map((v, columnIndex) => {
       if (opts.decimal === ',') {
         const n = commaDecimalNumber(v)

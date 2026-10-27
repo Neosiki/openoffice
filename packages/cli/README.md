@@ -45,7 +45,7 @@ ieumoffice create --type docx --from report.md --out report.docx      # or --fro
 ieumoffice convert notes.md --to docx|html
 ieumoffice convert report.docx --to html               # the Word editor's standalone-HTML export
 ieumoffice convert page.html --to docx                 # html2docx, same as the HTML app's Export as Word
-ieumoffice convert report.docx --to md                 # GFM via the markdown editor's serializer
+ieumoffice convert report.docx --to md                 # GFM via the markdown editor's serializer; nested tables become cell text with a nested_tables_flattened warning
 ieumoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as displayed, UTF-8 BOM, CRLF
 ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge docx (pdf/html: a temporary docx the app exports, always deleted)
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
@@ -57,6 +57,7 @@ ieumoffice media photo.jpg --ask "What text is in this picture?" --json
 ieumoffice docs read report.docx [--range 0-9] [--html] [--full] [--comments] [--revisions] [--header-footer] --json   # blocks (--full: whole text), comment threads, tracked changes, header/footer text
 ieumoffice docs apply report.docx --ops ops.json [--dry-run]           # apply_ops entries + insert_content / replace_blocks / insert_image / insert_chart / edit_chart / set_header_footer / reply_comment / resolve_comment
 ieumoffice docs check report.docx --json                               # fields without results, broken bookmark references, stale TOC, missing images, empty charts/headings, heading level skips, placeholder text, pending revisions, open comments; exit 0
+ieumoffice docs compare original.docx revised.docx --out redline.docx [--author name] [--date iso] [--granularity word|char] [--ignore formatting,case,whitespace]   # redline: the revised document with the differences marked as tracked insertions and deletions; --json reports the counts
 ieumoffice docs apply form.odt --ops ops.json         # an .odt is written back as .odt (narrow patch); --out keeps .odt; comment / tracked-change / TOC / equation / chart / text box / column / watermark ops → unsupported, locked cells and locked objects → op_rejected
 ieumoffice merge invoice-template.docx --data values.json --out invoice.docx [--force] [--strict]   # fill {{key}} placeholders in a docx/pptx/xlsx template; reports used, unused and unresolved keys (or --data '{"name":"Ada"}')
 ieumoffice pdf read scan.pdf [--page 3 | --range 1-5] [--full] --json     # text layer page by page (pages 1-20 by default, 4000 characters each) with page sizes and metadata; headless pdfium, no app process
@@ -111,8 +112,10 @@ ranges, available ids, sheet names, usage lines) come back as fields in
 
 `ieumoffice merge <template> --data <values> --out <file>` fills `{{key}}`
 placeholders in a `.docx`, `.pptx` or `.xlsx` template from a JSON object
-(a file, inline JSON or `-` for stdin). Nested objects flatten to dotted keys
-(`{{a.b}}`); arrays are not expanded and come back in `detail.ignored_keys`;
+(a file, inline JSON or `-` for stdin). UTF-8 files and stdin may carry one
+leading BOM; characters inside the JSON values are not removed. Nested objects flatten to dotted keys
+(`{{a.b}}`); keys may be in any script (`{{이름}}`), made of letters, digits, `_`, `.` and `-`;
+arrays are not expanded and come back in `detail.ignored_keys`;
 whitespace inside the braces is tolerated. The fill runs on the engines' own
 find/replace paths: `findReplace` in the docs editor (a table block with a placeholder that has a
 value goes through `replace_blocks` on its restricted HTML, since `findReplace`
@@ -128,7 +131,9 @@ element id, or sheet and cell). `reason: no_key` is a placeholder the data
 does not cover; `split_placeholder` is one Word or PowerPoint stored across
 runs with different formatting, which run-level replace cannot match (retype
 it in one run); `unreachable_nested` sits inside a nested pptx group or a
-table in a group, which deck-level `findReplace` does not reach (ungroup it). Unresolved placeholders stay in place and the result carries an
+table in a group, which deck-level `findReplace` does not reach (ungroup it);
+`formula_cell` is a placeholder inside an xlsx formula's text, which merge never
+rewrites (put it in a plain text cell). Unresolved placeholders stay in place and the result carries an
 `unresolved_placeholder` warning; `--strict` turns them into an error of the
 same name and writes nothing. The output is written atomically, an existing
 file needs `--force`, and the GUI-open check and `GENOFFICE_ALLOWED_ROOTS`

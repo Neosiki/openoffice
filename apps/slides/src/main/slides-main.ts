@@ -101,6 +101,7 @@ import {
   getRunLinks,
   readHeaderFooter,
   createBlankPptx,
+  setSlideSize,
   copySlide,
   type SlideBundle,
   listSlideLayouts,
@@ -153,7 +154,7 @@ import {
 import { DEFAULT_PICTURE_DPI, pictureFrame } from './picture-frame'
 import { refineComplexWidths, shapedMetricsReady } from './shaped-metrics'
 import { cfbKind, isCfbHeader } from './cfb-sniff'
-import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
+import { atomicWriteFile, atomicWriteVia } from '@genoffice/electron-utils/atomic-write'
 import {
   decryptOfficeFile,
   encryptOoxml,
@@ -221,6 +222,7 @@ import type {
   MasterEditFillOp,
   MasterEditStrokeOp,
   MasterDeleteElementOp,
+  MasterAddElementOp,
   MasterEnterResult,
   PrintSlidesOp,
   EditPictureOpacityOp,
@@ -699,7 +701,7 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
       session.password === undefined
         ? await recoveryStore.writeCopyStreamed(
             identity,
-            (tempPath) => writeDeckFile(session, tempPath),
+            (tempPath) => savePptxToFile(session.opened, tempPath),
             options,
           )
         : await recoveryStore.writeCopy(
@@ -1127,14 +1129,17 @@ function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
 }
 
 /**
- * Write the session's deck to `filePath`. A plain deck streams straight to
- * disk (savePptxToFile); an encrypted one has to be encrypted as one buffer,
- * so it is assembled in memory, encrypted, then written atomically — its
- * plaintext never touches the disk.
+ * Write the session's deck to `filePath`. A plain deck streams to disk
+ * (savePptxToFile) through a sibling temp; an encrypted one has to be
+ * encrypted as one buffer, so it is assembled in memory, encrypted, then
+ * written atomically — its plaintext never touches the disk.
  */
 async function writeDeckFile(session: Session, filePath: string): Promise<void> {
   if (session.password === undefined) {
-    await savePptxToFile(session.opened, filePath)
+    // savePptxToFile truncates the path it streams into, so the deck goes out
+    // through a sibling temp renamed over `filePath` once the stream finished:
+    // a save that dies mid-way leaves the previous deck on disk (genoffice#2123)
+    await atomicWriteVia(filePath, (tmp) => savePptxToFile(session.opened, tmp))
     return
   }
   await atomicWriteFile(filePath, deckFileBytes(session, await savePptx(session.opened)))
@@ -2388,17 +2393,25 @@ export function registerSlidesIpc(): void {
     },
   )
 
-  ipcMain.handle('slides:new-blank', async (e, fitWidthPx: number): Promise<OpenResult> => {
-    const opened = await openPptx(await createBlankPptx())
-    sessions.set(e.sender.id, { path: '', opened, fitWidthPx, undoStack: [], redoStack: [] })
-    scheduleHistoryNotify(sessions.get(e.sender.id)!)
-    return {
-      path: '',
-      slides: buildAllRenderSlides(opened, fitWidthPx),
-      size: { cx: opened.deck.size.cx, cy: opened.deck.size.cy },
-      defaultFont: deckDefaultFont(opened),
-    }
-  })
+  ipcMain.handle(
+    'slides:new-blank',
+    async (e, fitWidthPx: number, size?: unknown): Promise<OpenResult> => {
+      const opened = await openPptx(await createBlankPptx())
+      // the renderer's saved default size; anything a .pptx cannot store keeps the template
+      const side = (v: unknown): v is number =>
+        typeof v === 'number' && Number.isInteger(v) && v >= 914400 && v <= 51206400
+      const s = size as { cx?: unknown; cy?: unknown } | undefined
+      if (s && side(s.cx) && side(s.cy)) setSlideSize(opened, s.cx, s.cy)
+      sessions.set(e.sender.id, { path: '', opened, fitWidthPx, undoStack: [], redoStack: [] })
+      scheduleHistoryNotify(sessions.get(e.sender.id)!)
+      return {
+        path: '',
+        slides: buildAllRenderSlides(opened, fitWidthPx),
+        size: { cx: opened.deck.size.cx, cy: opened.deck.size.cy },
+        defaultFont: deckDefaultFont(opened),
+      }
+    },
+  )
 
   ipcMain.handle('slides:add-element', (e, op: AddElementOp) => {
     const session = sessions.get(e.sender.id)
@@ -3192,6 +3205,39 @@ export function registerSlidesIpc(): void {
     })
     if (!r) return null
     return masterEditDone(session)
+  })
+
+  // Insert a text box / preset shape / line onto the current master or layout
+  // part. Pixel geometry converts like slides:add-element; the op is the same
+  // part-addressed addElement the slide path runs, so undo/journal/save all
+  // behave like the other master edits.
+  ipcMain.handle('slides:master-add-element', (e, op: MasterAddElementOp) => {
+    const session = sessions.get(e.sender.id)
+    const me = session?.masterEdit
+    if (!session || !me) return null
+    const baseWidthPx = session.opened.deck.size.cx / EMU_PER_PX_96
+    const scale = op.fitWidthPx / baseWidthPx
+    const toEmu = (px: number) => Math.round((px / scale) * EMU_PER_PX_96)
+    const r = masterTxn(session, me, {
+      op: 'addElement',
+      target: { part: me.partPath },
+      kind: op.kind,
+      offset: { x: toEmu(op.xPx), y: toEmu(op.yPx), cx: toEmu(op.wPx), cy: toEmu(op.hPx) },
+      ...(op.paragraphs?.length ? { paragraphs: op.paragraphs as Paragraph[] } : {}),
+      ...(op.fillColor ? { fill: op.fillColor } : {}),
+      ...(op.stroke
+        ? {
+            stroke: {
+              color: op.stroke.color,
+              widthEmu: Math.round(op.stroke.widthPt * EMU_PER_PT),
+            },
+          }
+        : {}),
+      ...(op.bodyPr ? { bodyPr: op.bodyPr } : {}),
+    })
+    const sourceId = r?.records?.[0]?.created?.[0]
+    if (!r || !sourceId) return null
+    return { slide: masterEditDone(session), sourceId }
   })
 
   ipcMain.handle('slides:edit-picture-opacity', (e, op: EditPictureOpacityOp) => {

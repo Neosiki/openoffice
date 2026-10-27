@@ -590,4 +590,7 @@ export const nl = {
   appOdtLabelObject: 'Object (zichtbaar in Hancom)',
   appOdtLabelNotice:
     'Objecten die als gelabelde vakken zijn getekend, kunnen er anders uitzien dan in Hancom Office.',
+  appMergeSourceLoaded: '{name} geladen ({n} records)',
+  appMergeWritten: '{n} documenten geschreven',
+  appMergeNothingToWrite: 'Er is niets te schrijven',
 } satisfies Record<keyof typeof zh, string>

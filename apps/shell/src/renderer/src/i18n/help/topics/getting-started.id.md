@@ -38,7 +38,7 @@ File .odt (teks OpenDocument, format yang disimpan Hancom Office, LibreOffice, d
 ## Cara kerja penyimpanan
 
 - **Simpan manual**: ⌘S/ctrl+S, atau File ▸ Simpan / Simpan Sebagai. Penyimpanan pertama kali akan meminta lokasi dan nama.
-- **Simpan Otomatis** baru aktif setelah Anda menyimpan file secara manual setidaknya sekali — PDF yang hanya Anda baca tidak akan pernah diam-diam ditulis ulang. Simpan Otomatis berjalan sedikit setelah konten berubah.
+- **Simpan Otomatis** mengikuti tombol di setiap editor (dan nilai bawaan aplikasi). PDF yang hanya Anda baca tidak akan pernah diam-diam ditulis ulang, dan dokumen baru tanpa berkas sendiri mulai disimpan otomatis setelah penyimpanan pertamanya.
 - Menutup tab yang belum disimpan akan lebih dulu meminta Simpan / Buang / Batal.
 - Setiap penulisan bersifat atomik (file sementara + ganti nama), sehingga kalau listrik mati tidak akan tertinggal file yang hanya separuh.
 

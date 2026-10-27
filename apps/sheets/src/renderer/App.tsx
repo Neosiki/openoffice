@@ -33,6 +33,7 @@ import {
   noteSidecarCrash,
 } from './univer-sync'
 import { installGridGrowth } from './grid-growth'
+import { installAltEnterWrap } from './alt-enter-wrap'
 import {
   pollUntilReady,
   runHeadlessRendererExport,
@@ -385,6 +386,7 @@ import { sharedFormulaResolverFor } from './shared-formula-journal'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { installBorderOverflowExclusionFix } from './border-overflow-exclusion'
 import { installCfEmptySheetFastPath } from './cf-empty-fast-path'
+import { installStylesCacheReuse } from './styles-cache-reuse'
 import { installMergeBorderFix } from './merge-border-fix'
 import { installThickBorderFix } from './thick-border-fix'
 import { installCenterContinuousRender } from './center-continuous'
@@ -405,6 +407,7 @@ import { installFormulaStreamHold } from './formula-stream-hold'
 import { installRichTextBidiFix } from './rich-text-bidi-fix'
 import { installRtlTextDirectionFix } from './rtl-text-fix'
 import { installRtlGridMirror } from './rtl-grid-mirror'
+import { installVertAlignRender } from './vert-align-render'
 import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelJumpNav } from './excel-jump-nav'
 import { registerEditorWordJump } from './editor-word-jump'
@@ -436,6 +439,9 @@ import { installInvalidDataMarkerSuppression } from './data-validation-marker'
 import { installThreadedCommentAffordances, type ThreadHover } from './threaded-comment-marker'
 import { threadPane, threadStore } from './threaded-comments'
 import { ThreadHoverCard, ThreadedCommentsPane } from './ThreadedCommentsPane'
+import { NotePicturesPane } from './NotePicturesPane'
+import type { PendingNotePicture } from './note-pictures'
+import { handleRemoveNotePicture } from './note-picture-actions'
 import { installFormulaNullResultFix } from './formula-null-result'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installIfsEmptySetFix } from './ifs-empty-set'
@@ -2081,6 +2087,9 @@ export function App({
     installLoadAutoHeightGate()
     installBorderOverflowExclusionFix()
     installCfEmptySheetFastPath()
+    // Blit-only frames (a selection move over a clean viewport) must not
+    // re-run every visible cell through the interceptor chain.
+    installStylesCacheReuse()
     installCellClipAnchorFix()
     // Borders stored on a merged range's main cell must render their edge
     // segments like Excel; stock Univer drops them entirely.
@@ -2105,6 +2114,9 @@ export function App({
     // Paragraph-sized plain text cells: draw only the slice that can reach the
     // clip box instead of shaping the whole string every frame.
     installLongTextRender()
+    // A whole-cell superscript/subscript (Home ribbon, or <vertAlign> in the
+    // file) must draw raised/lowered; Univer's plain painter ignores `va`.
+    installVertAlignRender()
     installAutofitWrapBudget()
     // Wrapped auto rows must stack Excel's per-font row height, not the
     // canvas line box (Calibri 10: 12.75 pt per line, not ~10 pt).
@@ -2197,6 +2209,11 @@ export function App({
     // Arrows on a multi-cell selection collapse to the active cell first,
     // then move one step (Excel), instead of stepping past the range edge.
     const arrowCollapseDisposable = installArrowCollapse(runtime)
+    // Alt+Enter starts a new line inside the cell and, like Excel, turns on
+    // Wrap Text so the new line is visible after the edit commits.
+    const altEnterWrapDisposable = installAltEnterWrap(runtime, {
+      getState: () => lazyWorkbookRef.current,
+    })
     const sheetProtectionDisposable = installSheetProtectionGuard(runtime, {
       getState: () => lazyWorkbookRef.current,
       notify: (message) => {
@@ -3570,6 +3587,7 @@ export function App({
       sheetRenameFixDisposable.dispose()
       selectionWrapGuardDisposable.dispose()
       arrowCollapseDisposable.dispose()
+      altEnterWrapDisposable.dispose()
       sheetProtectionDisposable.dispose()
       ctrlDragFillDisposable.dispose()
       contextSubmenuReopenDisposable.dispose()
@@ -4222,6 +4240,21 @@ export function App({
     installPageBreakLayers(sheetId)
     setPageBreakPreviewSheets((sheets) => new Set(sheets).add(sheetId))
     setMessage(t('appPageBreakPreviewOn'))
+  }
+
+  /**
+   * The pictures put into notes this session, so the pane can show them
+   * before the save writes them into the file.
+   */
+  function pendingNotePictures(): PendingNotePicture[] {
+    const journal = lazyWorkbookRef.current?.editJournal
+    if (!journal) return []
+    return journal.notePictures.map((entry) => ({
+      sheetId: entry.sheetId,
+      row: entry.row,
+      column: entry.column,
+      dataUrl: entry.picture?.dataUrl ?? null,
+    }))
   }
 
   /** App-scope refs/state bundle for the extracted ribbon dispatcher (ribbon-actions.ts). */
@@ -5487,6 +5520,14 @@ export function App({
         </div>
       )}
       <ThreadedCommentsPane getRuntime={getRuntime} />
+      <NotePicturesPane
+        file={workbookFile}
+        pending={pendingNotePictures()}
+        onRemove={(sheetId, row, column) =>
+          handleRemoveNotePicture(ribbonContext(), sheetId, row, column)
+        }
+        getRuntime={getRuntime}
+      />
       <ThreadHoverCard hover={threadHover} />
       {findReplaceService && (
         <FindReplacePanel

@@ -28,7 +28,7 @@ Regole: l'estensione viene conservata automaticamente; i caratteri non ammessi, 
 - **⌘S / ctrl+S** salva il file corrente; un file senza titolo chiede prima percorso e nome.
 - **Salva con nome…** scrive un file nuovo e lascia intatto l'originale; le modifiche successive riguardano il file nuovo.
 - Ogni salvataggio è atomico (file temporaneo + rinomina); un'uscita a metà scrittura non può corrompere il file.
-- Il salvataggio automatico interviene solo dopo il primo salvataggio manuale (vedi [Avvio rapido](help://getting-started)).
+- Il salvataggio automatico segue l’interruttore di ogni editor; un nuovo documento senza file proprio inizia dopo il primo salvataggio (vedi [Avvio rapido](help://getting-started)).
 
 ## Esportazione in PDF
 

@@ -38,7 +38,7 @@ Soubory .odt (text OpenDocument, formát, který ukládají Hancom Office, Libre
 ## Model ukládání
 
 - **Ruční uložení**: ⌘S/ctrl+S, případně Soubor ▸ Uložit / Uložit jako… Při prvním uložení se zeptá na umístění a název.
-- **Automatické ukládání** se zapne teprve poté, co soubor uložíte ručně alespoň jednou — PDF, které jste si jen přečetli, se nikdy tiše nepřepíše. Automatické ukládání se spustí krátce po změně obsahu.
+- **Automatické ukládání** se řídí přepínačem v každém editoru (a výchozím nastavením aplikace). PDF, které jen čtete, se nikdy tiše nepřepíše a nový dokument bez vlastního souboru se začne automaticky ukládat až po prvním uložení.
 - Zavřete-li kartu s neuloženými změnami, nejdřív se zeptá, zda uložit, zahodit, nebo zrušit.
 - Každý zápis je atomický (dočasný soubor + přejmenování), takže výpadek napájení nenechá napůl zapsaný soubor.
 

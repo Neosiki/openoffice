@@ -50,6 +50,16 @@ export function resolveImageSrc(src: string, baseDir: string | null = imageBaseD
   return toAssetUrl(`${baseDir.replace(/\\/g, '/').replace(/\/$/, '')}/${src}`)
 }
 
+// A lone `%` (a file named `100%.png`) makes decodeURIComponent throw; such a
+// path is kept as it is.
+function decodePath(path: string): string {
+  try {
+    return decodeURIComponent(path)
+  } catch {
+    return path
+  }
+}
+
 /**
  * Reverse of {@link resolveImageSrc}: map a display URL (md-asset://) back to
  * the authored path so DOM-parsed content (copy/paste inside the editor) never
@@ -57,7 +67,10 @@ export function resolveImageSrc(src: string, baseDir: string | null = imageBaseD
  */
 export function unresolveImageSrc(src: string, baseDir: string | null = imageBaseDir): string {
   if (!src.startsWith('md-asset://')) return src
-  let path = decodeURIComponent(src.slice('md-asset://'.length))
+  // Reuse the guarded decoder: a lone `%` (e.g. in a file named `100%.png`)
+  // throws a URIError from decodeURIComponent, and parseHTML calls this for
+  // every md-asset img, so the throw would break paste/document load.
+  let path = decodePath(src.slice('md-asset://'.length))
   // Windows drive paths were prefixed with '/' to form a valid URL path
   if (/^\/[a-zA-Z]:\//.test(path)) path = path.slice(1)
   if (baseDir) {

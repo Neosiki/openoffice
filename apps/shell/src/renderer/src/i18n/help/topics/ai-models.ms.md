@@ -17,7 +17,7 @@ Segala yang memerlukan kunci berada di bawah **Lanjutan**, di bahagian bawah hal
 Untuk mereka yang lebih suka membayar terus kepada penyedia, atau menjalankan model sendiri.
 
 - Pilih **Penyedia**, masukkan **Kunci API** (dan **Base URL** jika penyedia itu memerlukannya), pilih **Model**, kemudian tekan **Simpan**. Senarai itu merangkumi pelayan yang serasi dengan OpenAI, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud dan lain-lain.
-- Senarai **Penyedia** di sini hanya menentukan medan penyedia mana yang dipaparkan pada skrin. Ia tidak mengubah AI yang sedang digunakan; itu sentiasa ditentukan oleh **AI yang digunakan**.
+- Senarai **Penyedia** di sini hanya menentukan medan penyedia mana yang dipaparkan pada skrin. Ia tidak mengubah AI yang sedang digunakan; itu sentiasa ditentukan oleh **AI yang digunakan**. Jika penyedia yang anda simpan bukan AI yang sedang digunakan, **Guna AI ini** muncul di bahagian atas; tekan untuk menjadikan penyedia itu **AI yang digunakan**.
 - Sembang melalui penyedia berasaskan kunci menggunakan kunci anda sendiri, dan penyedia itu mengenakan caj kepada anda.
 - Kunci disimpan dalam fail tetapan aplikasi pada mesin ini dan dihantar hanya dalam pengepala permintaan.
 - **Uji sambungan** menyemak ketercapaian titik akhir dan keterlihatan model sebelum disimpan.

@@ -17,7 +17,7 @@ Alles, wofür ein Schlüssel nötig ist, liegt unter **Erweitert** am unteren En
 Für alle, die lieber direkt bei einem Anbieter bezahlen oder ein eigenes Modell betreiben.
 
 - Wählen Sie einen **Anbieter**, tragen Sie dessen **API-Schlüssel** ein (und eine **Base URL**, wenn der Anbieter eine braucht), wählen Sie ein **Modell** und klicken Sie auf **Speichern**. Die Liste umfasst OpenAI-kompatible Server, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud und weitere.
-- Die Liste **Anbieter** legt hier nur fest, wessen Felder angezeigt werden. Welche KI verwendet wird, ändert sie nicht; das bestimmt immer **Verwendete KI**.
+- Die Liste **Anbieter** legt hier nur fest, wessen Felder angezeigt werden. Welche KI verwendet wird, ändert sie nicht; das bestimmt immer **Verwendete KI**. Ist ein gespeicherter Anbieter nicht die KI in Verwendung, erscheint oben **Diese KI verwenden**; ein Klick wählt ihn unter **Verwendete KI** aus.
 - Chats über einen Anbieter mit Schlüssel laufen über Ihren eigenen Schlüssel, und dieser Anbieter stellt sie Ihnen in Rechnung.
 - Schlüssel werden in der Einstellungsdatei der App auf diesem Rechner gespeichert und nur in den Anfrage-Headern gesendet.
 - **Verbindung testen**: prüft die Erreichbarkeit des Endpunkts und die Sichtbarkeit des Modells, bevor gespeichert wird.
