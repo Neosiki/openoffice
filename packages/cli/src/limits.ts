@@ -1,4 +1,4 @@
-import { closeSync, fstatSync, openSync, readSync } from 'node:fs'
+import { closeSync, fstatSync, openSync, readSync, statSync } from 'node:fs'
 import { DOCX_ZIP_LIMITS } from '@genoffice/docx-engine'
 import { PPTX_ZIP_LIMITS } from '@genoffice/pptx-engine'
 import { XLSX_ZIP_LIMITS } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
@@ -174,6 +174,28 @@ function unsafeName(name: string): boolean {
 
 function refuse(message: string, detail: Record<string, unknown>, suggestion: string): CliError {
   return new CliError(EXIT.file, message, detail, { reason: 'resource_limit', suggestion })
+}
+
+/**
+ * A zero-byte package is not a document. The editors open empty bytes as a
+ * new blank document on purpose (so Explorer's New → Word document works), but
+ * a command that writes a result from its input would turn that blank into a
+ * successful conversion. Called by the commands that derive an output from the
+ * input, not by the shared input check, so `open` keeps working on a new file.
+ * An empty input is an input problem (exit 2), not a failed conversion.
+ */
+export function assertNotEmptyPackage(path: string, ext: string): void {
+  if (!FAMILY[ext]) return
+  if (statSync(path).size > 0) return
+  throw new CliError(
+    EXIT.file,
+    `the .${ext} file is empty: ${path}`,
+    { bytes: 0 },
+    {
+      reason: 'invalid_argument',
+      suggestion: 'save the document once in the app so it has content, then convert it',
+    },
+  )
 }
 
 /**

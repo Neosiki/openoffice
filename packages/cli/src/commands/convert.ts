@@ -21,6 +21,7 @@ import {
   withStoredReadings,
 } from '../formats/pdf-structure'
 import { extension, readInput, resolveInput, resolveOutput, writeOutput } from '../fs'
+import { assertNotEmptyPackage } from '../limits'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
 
@@ -129,6 +130,7 @@ export const convertCommand: CommandDef = {
   async run(args, ctx) {
     const input = resolveInput(args.positionals[0], ctx)
     const from = extension(input)
+    assertNotEmptyPackage(input, from)
     const to = flagString(args, 'to')?.toLowerCase()
     if (!to)
       throw new CliError(EXIT.usage, 'missing --to <format>', undefined, {
