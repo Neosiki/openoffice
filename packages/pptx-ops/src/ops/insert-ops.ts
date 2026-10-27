@@ -230,37 +230,12 @@ register({
   },
 })
 
-// A record over the engine's own NewChartKind: adding a kind there fails the
-// typecheck here until it is listed, so the two lists cannot drift apart again
-// (the Slides ribbon sends barPercentStacked, bar3D and pie3D through this op).
-const CHART_KIND_LIST: Record<NewChartKind, true> = {
-  bar: true,
-  barStacked: true,
-  barPercentStacked: true,
-  line: true,
-  area: true,
-  pie: true,
-  doughnut: true,
-  scatter: true,
-  radar: true,
-  comboBarLine: true,
-  pie3D: true,
-  bar3D: true,
-}
-const CHART_KINDS: string[] = Object.keys(CHART_KIND_LIST)
-
 register({
   name: 'addChart',
   validate(op, ctx) {
     resolveSlide(ctx, op)
     reqRect(op)
     if (typeof op.kind !== 'string') throw new GuidedError('op "addChart" needs "kind".')
-    // an unknown kind used to fall back to a column chart without a word
-    if (!CHART_KINDS.includes(op.kind)) {
-      throw new GuidedError(
-        `op "addChart": unknown "kind" ${JSON.stringify(op.kind)}; use one of ${CHART_KINDS.join(', ')}.`,
-      )
-    }
     // The engine returns null on empty data, which reads as a generic
     // "could not be inserted" — reject with the actual reason instead
     if (!Array.isArray(op.categories) || op.categories.length === 0) {
@@ -273,33 +248,6 @@ register({
     ) {
       throw new GuidedError('op "addChart" needs "series": at least one {name, values[]}.')
     }
-    // Points that are not finite numbers are dropped from the chart, so a text
-    // value or a short list would show a chart that quietly lacks data
-    const categories = op.categories as unknown[]
-    categories.forEach((c, i) => {
-      if (typeof c !== 'string') {
-        throw new GuidedError(
-          `op "addChart": categories[${i}] must be text; write a number such as a year as a string ("2024").`,
-        )
-      }
-    })
-    ;(op.series as Array<{ name?: unknown; values: unknown[] }>).forEach((s, i) => {
-      if (typeof s.name !== 'string') {
-        throw new GuidedError(`op "addChart": series[${i}] needs "name": the series label.`)
-      }
-      if (s.values.length !== categories.length) {
-        throw new GuidedError(
-          `op "addChart": series[${i}] has ${s.values.length} values for ${categories.length} categories; give one value per category (null leaves a gap).`,
-        )
-      }
-      s.values.forEach((v, j) => {
-        if (v !== null && !(typeof v === 'number' && Number.isFinite(v))) {
-          throw new GuidedError(
-            `op "addChart": series[${i}].values[${j}] must be a number or null for a gap, got ${JSON.stringify(v)}.`,
-          )
-        }
-      })
-    })
     if (op.colorScheme !== undefined) {
       if (!Array.isArray(op.colorScheme) || op.colorScheme.length === 0) {
         throw new GuidedError(
