@@ -185,21 +185,6 @@
   animation: ieum-memo-dialog-in 180ms var(--ieum-dialog-ease) both;
 }
 
-.memo-modal::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: linear-gradient(
-    180deg,
-    var(--ieum-dialog-accent) 0%,
-    var(--ieum-dialog-accent) 58%,
-    color-mix(in srgb, var(--ieum-dialog-accent) 28%, transparent) 100%
-  );
-  pointer-events: none;
-}
-
 .memo-modal-head {
   display: flex;
   flex: 0 0 auto;
