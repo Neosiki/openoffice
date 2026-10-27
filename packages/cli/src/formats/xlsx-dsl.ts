@@ -274,6 +274,15 @@ export async function runWorkbookDsl(
         labels.push(sheetId ? label.replaceAll(sheetId, idByName_(live, sheetId)) : label)
         continue
       }
+      const clash = sheetNameClash(op, adapter.getSnapshot().sheets)
+      if (clash) {
+        throw new CliError(
+          EXIT.usage,
+          `ops[${index}] (${op.op}) rejected: ${clash}`,
+          pinned(index, op.op, clash),
+          OP_REJECTED,
+        )
+      }
       let plan: ChangePlan
       try {
         plan = adapter.plan({
@@ -1072,6 +1081,27 @@ function fillSpec(fill: FillPatch): FillSpec {
     fg: normalizeStyleColor(fill.fg),
     ...(fill.bg === undefined ? {} : { bg: normalizeStyleColor(fill.bg) }),
   }
+}
+
+/**
+ * Excel compares sheet names without regard to case, and a workbook holding "Data" and
+ * "data" opens with a repair prompt. The in-memory adapter compares exactly, so the
+ * case-only clash is refused here, with the adapter's own message. A sheet renamed
+ * to its own name in another case is still a rename.
+ */
+function sheetNameClash(
+  op: NormalizedOp,
+  sheets: readonly { id: string; name: string }[],
+): string | undefined {
+  if ((op.op !== 'add_sheet' && op.op !== 'rename_sheet') || typeof op.name !== 'string') {
+    return undefined
+  }
+  const wanted = op.name.toLowerCase()
+  const taken = sheets.some(
+    (sheet) =>
+      sheet.name.toLowerCase() === wanted && (op.op === 'add_sheet' || sheet.id !== op.sheetId),
+  )
+  return taken ? `A sheet named "${op.name}" already exists.` : undefined
 }
 
 function describeError(err: unknown): string {

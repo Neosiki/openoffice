@@ -369,13 +369,17 @@ export async function buildGatewayPayloads(input: GatewayBuildInput): Promise<Ga
         break
       case 'duplicate_sheet': {
         const source = name(op.sheetId)
-        const taken = new Set([
-          ...file.order,
-          ...after.sheets.map((s) => s.name),
-          ...tabs.duplicates.map((d) => d.name),
-        ])
+        // Excel compares sheet names without regard to case
+        const taken = new Set(
+          [
+            ...file.order,
+            ...after.sheets.map((s) => s.name),
+            ...tabs.duplicates.map((d) => d.name),
+          ].map((n) => n.toLowerCase()),
+        )
         const copy = op.name ?? copyName(source, taken)
-        if (taken.has(copy)) reject(i, op.op, `a sheet named "${copy}" already exists`)
+        if (taken.has(copy.toLowerCase()))
+          reject(i, op.op, `a sheet named "${copy}" already exists`)
         tabs.duplicates.push({ source, name: copy })
         break
       }
@@ -857,11 +861,12 @@ function linkTarget(target: string): string {
   return target.includes('!') ? `#${target}` : target
 }
 
+/** `taken` holds lower-cased names. */
 function copyName(source: string, taken: Set<string>): string {
   for (let n = 2; ; n++) {
     const suffix = ` (${n})`
     const candidate = `${source.slice(0, cutIndex(source, 0, 31 - suffix.length))}${suffix}`
-    if (!taken.has(candidate)) return candidate
+    if (!taken.has(candidate.toLowerCase())) return candidate
   }
 }
 
