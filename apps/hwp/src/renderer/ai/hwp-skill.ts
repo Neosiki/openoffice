@@ -1,4 +1,10 @@
-import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@genoffice/agent-core'
+import {
+  attachedImageNote,
+  type AgentSkill,
+  type AgentToolCall,
+  type AgentToolDef,
+  type ToolExecution,
+} from '@genoffice/agent-core'
 import { brandText, type Params } from '@genoffice/i18n'
 import type {
   AgentCellText,
@@ -85,6 +91,8 @@ export interface HwpSkillDeps {
    * paths exist, so a name the user did not attach has no path.
    */
   attachmentPath?: (name: string) => string | null
+  /** exact names of the image files in this chat, for the prompt */
+  attachmentNames?: () => string[]
 }
 
 export interface HwpSkill {
@@ -2815,7 +2823,12 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
       id: 'hwp',
       // the live predicate takes generate_image's sentence and tool out together
       get systemPrompt(): string {
-        return imageGenOn() ? SYSTEM_PROMPT : `${SYSTEM_PROMPT}${IMAGE_GEN_OFF_NOTE}`
+        const attached = attachedImageNote(
+          deps.attachmentNames?.() ?? [],
+          'call insert_image with attachment set to the name',
+        )
+        const base = SYSTEM_PROMPT + attached
+        return imageGenOn() ? base : `${base}${IMAGE_GEN_OFF_NOTE}`
       },
       get tools(): AgentToolDef[] {
         return imageGenOn() ? TOOLS : TOOLS.filter((tool) => tool.name !== 'generate_image')

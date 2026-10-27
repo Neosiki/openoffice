@@ -381,6 +381,13 @@ const addImageSchema = z.object({
   sheetId: z.string().min(1),
   /** absolute path on this machine (~/ allowed) or an http(s) image URL */
   path: z.string().min(1).max(2048),
+  /**
+   * The exact name of an image attached to this chat. The renderer resolves it against
+   * the attachments the panel shows and fills `path` before planning; the model never
+   * supplies a path for an attachment. Kept on the operation so the apply step reads the
+   * bytes through the attachment channel instead of the local-file channel.
+   */
+  attachment: z.string().min(1).max(255).optional(),
   anchorCell: cellAddressSchema,
 })
 

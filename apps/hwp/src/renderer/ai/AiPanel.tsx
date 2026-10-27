@@ -623,6 +623,11 @@ export function AiPanel({
       attachmentPath: (name) =>
         availableAttachmentsRef.current().find((attachment) => attachment.name === name)?.path ??
         null,
+      attachmentNames: () =>
+        availableAttachmentsRef
+          .current()
+          .filter((attachment) => ATTACHMENT_IMAGE_EXTS.has(attachment.ext))
+          .map((attachment) => attachment.name),
     })
 
   // The loop is built once; every mutable value goes through a ref getter

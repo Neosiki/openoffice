@@ -1553,6 +1553,10 @@ export function AiPanel({
           return { ok: false as const, error: `Failed to read attachment "${match.name}"` }
         }
       },
+      imageAttachmentNames: () =>
+        availableAttachments()
+          .filter((a) => ATTACHMENT_IMAGE_EXTS.has(a.ext))
+          .map((a) => a.name),
     }
     accessRef.current = access
     loopRef.current = new AgentLoop({

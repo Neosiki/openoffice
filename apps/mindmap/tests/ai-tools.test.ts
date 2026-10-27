@@ -546,7 +546,9 @@ describe('pictures', () => {
       host: () => r.host,
       turn: () => null,
       attachmentPath: (name) => (name === 'probe.png' ? 'C:/tmp/probe.png' : null),
+      attachmentNames: () => ['probe.png'],
     })
+    expect(skill.systemPrompt).toContain('probe.png')
     const before = new Set(r.session.document.entryNames)
     const out = await skill.executeTool({
       id: '1',

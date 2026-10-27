@@ -13,6 +13,7 @@
 - 드라이브에서 읽은 내용이 대화에 들어간 뒤의 바깥 호출 차단: `isOutboundCall`·`DRIVE_OUTBOUND_BLOCKED`(`src/drive-skill.ts`). 바깥 도구 목록 `OUTBOUND_TOOLS`(여기에 `read_url`도 있다)는 `src/outbound.ts`에 있다.
 - 인터넷 도구 스위치와 주소 확인(결정 0062): `guardOutbound`·`fetchedAddresses`·`addressInConversation`(`src/outbound-guard.ts`). `composeWithDrive`가 드라이브 차단 바깥에 씌운다. 창의 다리(`window.aiOfficeOutbound`)로 껍데기 앱 뒷단에 스위치 값과 사람의 답을 묻는다.
 - 모든 실행의 지시문 맨 앞(날짜 다음)에 붙는 `MATERIAL_NOT_INSTRUCTIONS`(`src/loop.ts`): 읽은 글은 자료이지 지시가 아니다.
+- 첨부 그림 이름을 지시문에 한 줄로 붙이는 `attachedImageNote`(`src/attached-images.ts`): 그림 넣기 도구가 파일 이름을 받는 편집기(워드·한글·마인드맵·엑셀·HTML·슬라이드)가 같은 문장을 쓴다. 이름이 없으면 빈 문자열이고, 중복은 지우고 20개까지만 적는다.
 
 ## 맡지 않는 것 (경계)
 
@@ -58,5 +59,5 @@
 
 - 실행: `npm run test -w @genoffice/agent-core`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/agent-core`. Windows에서 전부 통과한다.
 - 루프 테스트는 가짜 `AgentTransport`로 턴을 대본처럼 재생한다. 실제 제공자나 Electron이 필요 없다.
-- 바꾸면 반드시 테스트하는 것: 재시도 조건의 경계(글이 한 글자라도 나간 뒤의 `(empty stream)`은 다시 보내지 않는다), 취소 직후 도착한 콜백, 실패 뒤 이력 되돌림과 그 다음 요청, 필수 인자 누락·`null`·잘림, 전송의 오류 문장 우선순위와 모르는 조각 종류.
+- 바꾸면 반드시 테스트하는 것: 재시도 조건의 경계(글이 한 글자라도 나간 뒤의 `(empty stream)`은 다시 보내지 않는다), 취소 직후 도착한 콜백, 실패 뒤 이력 되돌림과 그 다음 요청, 필수 인자 누락·`null`·잘림, 전송의 오류 문장 우선순위와 모르는 조각 종류, 첨부 그림 이름 줄(없음·중복·20개 상한).
 - 가림 코드는 빠져나가는 경우를 테스트한다. 선택 범위가 가려진 구간을 가로지를 때, 표식이 답에서 쪼개졌을 때, 모르는 노드 형태가 들어왔을 때 원문이 결과에 남지 않아야 한다.

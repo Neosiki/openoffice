@@ -691,6 +691,10 @@ export function AiPanel({
           // the model names an attachment; only files the panel shows can be found
           attachmentPath: (name) =>
             availableAttachments().find((attachment) => attachment.name === name)?.path ?? null,
+          attachmentNames: () =>
+            availableAttachments()
+              .filter((attachment) => ATTACHMENT_IMAGE_EXTS.has(attachment.ext))
+              .map((attachment) => attachment.name),
         }),
         createSearchSkill(),
         createFilesSkill(availableAttachments),

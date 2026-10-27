@@ -101,6 +101,16 @@ describe('replace_image', () => {
   })
 })
 
+describe('attachment prompt', () => {
+  it('names the image files the chat carries and how to place one', () => {
+    const access = mkAccess()
+    access.imageAttachmentNames = () => ['logo.png', 'photo.jpg']
+    const skill = createSlidesSkill(access)
+    expect(skill.systemPrompt).toContain('logo.png, photo.jpg')
+    expect(skill.systemPrompt).toContain('attachment://')
+  })
+})
+
 describe('attachment:// references (r182 family: embed the original file, never redraw)', () => {
   const withResolver = (): DeckAccess => {
     const access = mkAccess()

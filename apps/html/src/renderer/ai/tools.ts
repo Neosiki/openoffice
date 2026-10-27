@@ -60,6 +60,8 @@ export interface HtmlDocAccess {
   ): Promise<{ ok: true; src: string } | { ok: false; error: string }>
   /** names of the attachments the model can reference; lets refs to names with spaces or parentheses match whole */
   listAttachmentNames?(): string[]
+  /** exact names of the image files in this chat, for the prompt */
+  listImageAttachmentNames?(): string[]
   /** lay the current text out on the paper it prints on and measure the pages; null when the preview cannot answer */
   measurePages?(): Promise<{ setup: PageSetup; measure: PageMeasure } | null>
 }

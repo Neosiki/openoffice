@@ -79,3 +79,4 @@
 | [0076](0076-codex-cli-image-generation.md)                    | Codex 구독 이미지 생성은 채팅과 분리한 `codex exec` 한 번으로 넣고, 로그인 파일은 읽지 않는다   | 2026-10-27 |
 | [0077](0077-update-in-installer-window.md)                    | 업데이트는 설치 진행 창으로 하고, 끝나면 앱과 문서를 다시 연다                                  | 2026-10-27 |
 | [0079](0079-hwp-edit-from-command-line.md)                    | 터미널 명령어로 한글 문서를 만들고 고친다. 연산은 편집기 AI의 도구를 그대로 쓴다                | 2026-10-27 |
+| [0080](0080-ai-pictures-everywhere.md)                        | AI 그림 넣기는 여섯 편집기에서 같고, 있던 그림은 건드리지 않는다                                | 2026-10-28 |
