@@ -230,17 +230,24 @@ register({
   },
 })
 
-const CHART_KINDS = [
-  'bar',
-  'barStacked',
-  'line',
-  'area',
-  'pie',
-  'doughnut',
-  'scatter',
-  'radar',
-  'comboBarLine',
-]
+// A record over the engine's own NewChartKind: adding a kind there fails the
+// typecheck here until it is listed, so the two lists cannot drift apart again
+// (the Slides ribbon sends barPercentStacked, bar3D and pie3D through this op).
+const CHART_KIND_LIST: Record<NewChartKind, true> = {
+  bar: true,
+  barStacked: true,
+  barPercentStacked: true,
+  line: true,
+  area: true,
+  pie: true,
+  doughnut: true,
+  scatter: true,
+  radar: true,
+  comboBarLine: true,
+  pie3D: true,
+  bar3D: true,
+}
+const CHART_KINDS: string[] = Object.keys(CHART_KIND_LIST)
 
 register({
   name: 'addChart',
