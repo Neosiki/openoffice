@@ -177,6 +177,28 @@ function refuse(message: string, detail: Record<string, unknown>, suggestion: st
 }
 
 /**
+ * A zero-byte package is not a document. The editors open empty bytes as a
+ * new blank document on purpose (so Explorer's New → Word document works), but
+ * a command that writes a result from its input would turn that blank into a
+ * successful conversion. Called by the commands that derive an output from the
+ * input, not by the shared input check, so `open` keeps working on a new file.
+ * An empty input is an input problem (exit 2), not a failed conversion.
+ */
+export function assertNotEmptyPackage(path: string, ext: string): void {
+  if (!FAMILY[ext]) return
+  if (statSync(path).size > 0) return
+  throw new CliError(
+    EXIT.file,
+    `the .${ext} file is empty: ${path}`,
+    { bytes: 0 },
+    {
+      reason: 'invalid_argument',
+      suggestion: 'save the document once in the app so it has content, then convert it',
+    },
+  )
+}
+
+/**
  * Refuse a package the engine would choke on before any part is inflated:
  * too many parts, oversized parts, absurd compression ratios or entry names
  * that escape the archive. Non-OOXML extensions and non-zip files pass.
@@ -184,13 +206,6 @@ function refuse(message: string, detail: Record<string, unknown>, suggestion: st
 export function assertPackageWithinLimits(path: string, ext: string): void {
   const family = FAMILY[ext]
   if (!family) return
-  // Some editor loaders treat empty bytes as a request for a new document.
-  // A CLI input must be an existing package, not a blank-document template.
-  if (statSync(path).size === 0) {
-    throw new CliError(EXIT.conversion, `cannot open an empty .${ext} package: ${path}`, {
-      bytes: 0,
-    })
-  }
   const limits = LIMITS[family]
   const dir = readZipDirectory(path, limits.maxParts)
   if (!dir) return
