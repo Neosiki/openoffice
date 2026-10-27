@@ -131,6 +131,7 @@ export const pt = {
   aiSumAnalyzeMediaDone: 'Mídia analisada',
   aiSumInsertImage: 'Inserir imagem',
   aiSumInsertWebImage: 'Imagem da web inserida',
+  aiSumInsertAttachedImage: 'Imagem anexada inserida',
   aiSumGenerateImage: 'Gerar imagem',
   aiSumInsertedGenImage: 'Imagem gerada por IA inserida',
   aiSumUnknownTool: 'Ferramenta desconhecida',

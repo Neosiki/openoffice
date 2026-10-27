@@ -1016,6 +1016,11 @@ export function AiPanel({
           () =>
             toolCapabilitiesRef.current?.imageAnalysis.available === true ||
             toolCapabilitiesRef.current?.videoAnalysis.available === true,
+          // the model names an attachment; only files the panel shows can be found
+          () => ({
+            pathOf: (name) =>
+              availableAttachments().find((attachment) => attachment.name === name)?.path ?? null,
+          }),
         ),
         createFilesSkill(availableAttachments),
         // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)

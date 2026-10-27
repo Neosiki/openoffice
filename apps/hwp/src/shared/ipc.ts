@@ -1,4 +1,5 @@
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
+import type { AiToolCapabilities } from '@genoffice/ai-search'
 import type { Lang } from '@genoffice/i18n'
 import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
@@ -47,6 +48,10 @@ export const HWP_CHANNELS = {
   filesAddPastedImage: 'hwp:files-add-pasted-image',
   filesRead: 'hwp:files-read',
   filesReadImage: 'hwp:files-read-image',
+  /** invoke({prompt, aspectRatio}) �� `{url?, error?, errorCode?}`: one AI picture */
+  aiGenerateImage: 'hwp:ai-generate-image',
+  /** invoke(url) �� `{base64, mime} | null`: a web image or a generated-store file */
+  fetchImage: 'hwp:fetch-image',
   // channels below are served once by the shell for every editor
   getLanguage: 'app:get-language',
   languageChanged: 'app:language-changed',
@@ -74,6 +79,9 @@ export const AI_CHANNELS = {
   streamChunk: 'ai:stream-chunk',
   streamCancel: 'ai:stream-cancel',
   readUrl: 'ai:read-url',
+  imageSearch: 'ai:image-search',
+  /** () �� `AiToolCapabilities | null`, registered by the docs main (shell mode only) */
+  toolCapabilities: 'ai:tool-capabilities',
 } as const
 
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -251,6 +259,14 @@ export interface AttachmentImageResult {
   error?: string
 }
 
+/** Image search results (the shared ai:image-search handler) */
+export interface ImageSearchResult {
+  images: Array<{ title?: string; imageUrl: string; width?: number; height?: number }>
+  method: string
+  /** failure reason when method === 'error' */
+  error?: string
+}
+
 /** One page of a web page read for the AI (the shared ai:read-url handler) */
 export type ReadUrlResult =
   | {
@@ -376,5 +392,17 @@ export interface HwpApi {
   aiStreamCancel(requestId: string): Promise<void>
   /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
   readUrl(url: string, offset?: number): Promise<ReadUrlResult>
+  /** Image search (the shared ai:image-search handler) */
+  imageSearch(query: string, maxResults?: number): Promise<ImageSearchResult>
+  /** AI image generation (hwp-owned channel; the main process picks the backend) */
+  generateImage(op: { prompt: string; aspectRatio?: string }): Promise<{
+    url?: string
+    error?: string
+    errorCode?: string
+  }>
+  /** Download an image URL (or a generated-store file) in the main process */
+  fetchImage(url: string): Promise<{ base64: string; mime: string } | null>
+  /** which search/media tools can run right now — gates generate_image */
+  aiToolCapabilities(): Promise<AiToolCapabilities | null>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
 }

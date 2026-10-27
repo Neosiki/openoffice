@@ -4,7 +4,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 
 ## 맡은 범위
 
-- 보안 관문: 외부로 여는 URL 검사 `safeExternalUrl`(`src/safe-external-url.ts`), 원격 주소 검사와 홉마다 재검사하는 `fetchWithSsrfGuard`(`src/safe-remote-url.ts`. `signal`로 요청을 끊고, `headersForHop`으로 홉마다 다른 머리글을 준다 — 비밀 토큰은 그 호스트 홉에만), 이미지 다운로드 `fetchRemoteImage`·`readBodyCapped`(`src/remote-image.ts`), 모든 webContents의 탐색 잠금 `installNavigationGuard`(`src/navigation-guard.ts`).
+- 보안 관문: 외부로 여는 URL 검사 `safeExternalUrl`(`src/safe-external-url.ts`), 원격 주소 검사와 홉마다 재검사하는 `fetchWithSsrfGuard`(`src/safe-remote-url.ts`. `signal`로 요청을 끊고, `headersForHop`으로 홉마다 다른 머리글을 준다 — 비밀 토큰은 그 호스트 홉에만), 이미지 다운로드 `fetchRemoteImage`·`readBodyCapped`(`src/remote-image.ts`)와 편집기의 AI 그림 삽입용 `fetchImageBytes`(`src/fetch-image-bytes.ts`, 하위 경로 `/fetch-image-bytes`: http(s)는 SSRF 관문을 거치고 생성 이미지 저장소의 `file://`만 연다. 호출자가 `^https?:` 검사를 앞에 두면 생성한 그림이 깨진 `file://` src가 된다), 모든 webContents의 탐색 잠금 `installNavigationGuard`(`src/navigation-guard.ts`).
 - 파일: 원자적 쓰기 `atomicWriteFile`·`writeJsonAtomic`과 흘려 쓴 임시 파일(`tempPathBeside`)을 제자리로 옮기는 `atomicMoveFile`(`src/atomic-write.ts`), 생성 이미지 임시 저장소(`src/generated-images.ts`), 사용자 글꼴 저장소(`src/font-store.ts`), 디자인 템플릿 글꼴 파일의 응답 `templateFontResponse`(`src/template-font-response.ts`, 하위 경로 `/template-font-response`. 목록에 있는 파일 이름만 글꼴 MIME과 CORS 머리글로 내준다. 워드 편집기의 미디어 프로토콜과 단독 실행한 시트가 함께 쓴다. `@genoffice/ui/template-fonts`를 import하지만 `@genoffice/i18n`처럼 `dependencies`에 적지 않고 workspace 호이스팅에 기댄다), 디자인 템플릿 글꼴 폴더의 위치 `templateFontsDir`(`src/template-fonts-dir.ts`, 하위 경로 `/template-fonts-dir`. 설치본은 `<resources>/template-fonts`, 개발 실행은 저장소의 `packages/ui/template-fonts`. fs도 Electron도 쓰지 않고 `app`의 값을 인자로 받는다), 이미지 저장(`src/save-image.ts`), 기본 저장 폴더(`src/default-save-dir.ts`), 마지막 폴더를 기억하는 열기·저장 대화 상자(`src/dialog-memory.ts`).
 - 창과 메뉴: 공용 메뉴 템플릿(`src/app-menu.ts`), 우클릭 메뉴(`src/context-menu.ts`), 저장소 주소 상수(`src/github-menu.ts`), 파일 끌어다 놓기 다리(`src/drop-open.ts`), 렌더러 스킴과 프로토콜(`src/renderer-scheme.ts`, `src/renderer-protocol.ts`).
 - 인쇄와 내보내기: `printHtmlToPdf`·`sanitizePrintableBody`(`src/print-html-pdf.ts`), 인쇄 대화 상자용 임시 창(`src/print-window.ts`), headless 내보내기의 인자 문법·종료 코드·출력 봉투(`src/headless-export.ts`), 프로세스 전역 headless 플래그(`src/headless-mode.ts`).
@@ -59,7 +59,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/electron-utils`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/electron-utils`.
-- 바꾸면 반드시 테스트하는 것: `safeExternalUrl`의 거절 목록(앞뒤 공백, 대소문자가 섞인 스킴), 차단 주소 판정(IPv4로 매핑된 IPv6, 정규화된 표기), 리다이렉트가 내부 주소로 향하는 경우, 본문이 상한을 넘는 응답과 `Content-Length`가 거짓인 응답, `readGeneratedImage`에 준 저장소 밖 경로, rename이 계속 실패할 때의 제자리 쓰기.
+- 바꾸면 반드시 테스트하는 것: `safeExternalUrl`의 거절 목록(앞뒤 공백, 대소문자가 섞인 스킴), 차단 주소 판정(IPv4로 매핑된 IPv6, 정규화된 표기), 리다이렉트가 내부 주소로 향하는 경우, 본문이 상한을 넘는 응답과 `Content-Length`가 거짓인 응답, `readGeneratedImage`에 준 저장소 밖 경로, rename이 계속 실패할 때의 제자리 쓰기, `fetchImageBytes`가 `file://`을 관문에 그대로 넘기고 png·gif·그 밖의 형식을 올바로 이름 붙이는지(`tests/fetch-image-bytes.test.ts`).
 - 바꾸면 반드시 테스트하는 것(복구 사본): 이전 세 편집기와 같은 경로 규칙, 원자적 쓰기와 흘려 쓰기, 지우기와 늦은 쓰기의 경쟁, 곁 정보에 내용이 없음, 종료 래치 동안의 거절, 30일 정리, 상태 셋의 바뀜, 문서별 물음의 Esc(`tests/recovery-store.test.ts`, `tests/recovery-prompt.test.ts`, `tests/recovery-contract.test.ts`).
 - 네트워크를 쓰는 함수는 `fetchImpl` 옵션으로 `fetch`를 주입받는다. 테스트는 가짜를 넘겨 요청이 실제로 나가지 않게 한다. 주소 검사는 호스트 이름을 실제로 조회하므로 `tests/remote-image.test.ts`처럼 이름을 쓰는 테스트는 DNS가 되는 환경이어야 한다.
 - Windows에서 변경과 무관하게 실패하는 테스트가 세 건 있다. `tests/dialog-memory.test.ts` 두 건은 기대값이 `/work`인데 Windows에서는 `\work`가 나오고, `tests/default-save-dir.test.ts`의 "쓰기 불가 폴더" 한 건은 `chmod`로 만든 읽기 전용 폴더가 Windows에서는 쓰기 가능으로 판정된다.

@@ -19,6 +19,7 @@ import {
   type AiHeaderFooterAccess,
   type FrozenSelection,
   type AiDocExtras,
+  type AiAttachmentAccess,
 } from './tools'
 import type { AiNotesAccess } from './note-ops'
 import type { AgentToolDef } from '../../shared/ipc'
@@ -52,6 +53,8 @@ export function createDocsSkill(
   getNotes?: () => AiNotesAccess | undefined,
   /** same as imageGenAvailable, for analyze_media (seeing pictures that are in the document) */
   mediaAnalysisAvailable?: () => boolean,
+  /** the files attached to this chat, so insert_image can take one the user made elsewhere */
+  getAttachments?: () => AiAttachmentAccess | undefined,
 ): AgentSkill {
   // Selection frozen per run: tools act on the range the prompt described,
   // not on wherever the user's live selection has wandered mid-run. The doc
@@ -115,6 +118,7 @@ export function createDocsSkill(
         getPageSetup?.(),
         getExtras?.(),
         getNotes?.(),
+        getAttachments?.(),
       ),
   }
 }

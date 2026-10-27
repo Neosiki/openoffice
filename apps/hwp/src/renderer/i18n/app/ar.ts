@@ -78,6 +78,8 @@ export const ar = {
   aiToolInsert: 'الفقرات المضافة: {count}',
   aiToolDelete: 'تم حذف فقرة · {text}',
   aiToolTable: 'تمت إضافة جدول · {rows} × {cols}',
+  aiToolImageSearchDone: 'البحث عن صور "{query}" ({count} صورة)',
+  aiToolInsertImage: 'تم إدراج الصورة {what}',
   aiToolFormat: 'تم تغيير التنسيق · {text}',
   aiFmtBold: 'غامق',
   aiFmtItalic: 'مائل',

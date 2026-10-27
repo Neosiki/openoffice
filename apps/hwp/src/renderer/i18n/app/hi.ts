@@ -80,6 +80,8 @@ export const hi = {
   aiToolInsert: 'जोड़े गए अनुच्छेद: {count}',
   aiToolDelete: 'अनुच्छेद हटाया गया · {text}',
   aiToolTable: 'तालिका जोड़ी गई · {rows} × {cols}',
+  aiToolImageSearchDone: '"{query}" की छवि खोज ({count} छवियाँ)',
+  aiToolInsertImage: 'छवि डाली गई {what}',
   aiToolFormat: 'स्वरूप बदला गया · {text}',
   aiFmtBold: 'बोल्ड',
   aiFmtItalic: 'इटैलिक',

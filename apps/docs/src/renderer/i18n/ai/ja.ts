@@ -128,6 +128,7 @@ export const ja = {
   aiSumAnalyzeMediaDone: 'メディアを解析しました',
   aiSumInsertImage: '画像を挿入',
   aiSumInsertWebImage: 'ウェブ画像を挿入',
+  aiSumInsertAttachedImage: '添付画像を挿入しました',
   aiSumGenerateImage: '画像を生成',
   aiSumInsertedGenImage: 'AI 生成画像を挿入',
   aiSumUnknownTool: '不明なツール',

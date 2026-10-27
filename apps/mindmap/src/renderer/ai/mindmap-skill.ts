@@ -21,9 +21,11 @@ import {
   type MapTurn,
   readMap,
   readTopic,
+  setTopicImage,
   WRITE_SHEET_LIMIT,
   writeMap,
 } from './map-tools'
+import { attachPicture, generateImage, imageSearch, pictureFromBase64 } from './image-tools'
 import { countSheetTopics } from '@genoffice/xmind-engine'
 
 export const MAP_TOOL_NAMES = {
@@ -31,7 +33,14 @@ export const MAP_TOOL_NAMES = {
   readTopic: 'read_topic',
   editMap: 'edit_map',
   writeMap: 'write_map',
+  imageSearch: 'image_search',
+  insertImage: 'insert_image',
+  generateImage: 'generate_image',
 } as const
+
+/** Hidden from the tool list while no image provider is reachable (see `createMindmapSkill`). */
+export const IMAGE_GEN_OFF_NOTE =
+  '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
 
 const SYSTEM_PROMPT = [
   'You are the assistant inside GenOffice Mind Map, an editor for mind maps saved as .xmind files. A map has one or more sheets; each sheet has one central topic with branches (subtopics) below it, any number of levels deep. A topic has a title and may carry labels, a note and a web link.',
@@ -60,6 +69,11 @@ const SYSTEM_PROMPT = [
   `- write_map never writes over a sheet that has content: it adds a new sheet (each "# " heading makes one, at most ${WRITE_SHEET_LIMIT}). Only on a new, empty map does it fill the empty sheet instead.`,
   '- Start with one "# " heading and exactly one top-level "- " item: the central topic. Prefer 3 to 7 branches per topic and up to 4 levels unless the user asks for more.',
   '- After write_map, call read_map when you need the ids of the new topics.',
+  '',
+  '## Pictures',
+  '- image_search finds real pictures on the web; pick one and put it on a topic with insert_image (topicId from read_map or the selected id in the context).',
+  '- generate_image draws an illustration and puts it on the topic itself — use it when the user asks for a generated/drawn picture or no real image fits.',
+  '- A picture is saved inside the .xmind file, so it travels with the map. Put one only where the user asked for it; a map without pictures is not a map to decorate.',
   '',
   '## Conversation',
   '- Answer questions about the map directly, without changing it.',
@@ -150,12 +164,69 @@ const TOOLS: AgentToolDef[] = [
       required: ['outline'],
     },
   },
+  {
+    name: MAP_TOOL_NAMES.imageSearch,
+    description:
+      'Search the web for pictures. Returns a numbered list of direct imageUrl entries with pixel sizes; put one on a topic with insert_image (url = the imageUrl). For illustration/diagram-style art that search cannot find, or when the user asks to generate/draw a picture, use generate_image instead.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'image search keywords (English works better)' },
+        maxResults: { type: 'integer', description: 'maximum number of results, default 8' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: MAP_TOOL_NAMES.insertImage,
+    description:
+      'Put a picture on one topic of the map, either from url (a direct https image, usually an image_search result) or from attachment (the exact name of an image file attached to this chat, e.g. one the user made with another tool). The picture is saved inside the .xmind file, so it travels with the map. The topic must be named by its id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'direct image URL (https)' },
+        attachment: {
+          type: 'string',
+          description: 'exact name of an image file attached to this chat',
+        },
+        topicId: { type: 'string', description: 'the topic to put the picture on' },
+        sheet: SHEET_PROPERTY,
+      },
+      required: ['topicId'],
+    },
+  },
+  {
+    name: MAP_TOOL_NAMES.generateImage,
+    description:
+      'Generate an illustration with AI from a text prompt and put it on one topic of the map (saved inside the .xmind file). For illustration/diagram-style art that image_search cannot find, or when the user asks to generate/draw a picture.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'detailed English description of the picture' },
+        topicId: { type: 'string', description: 'the topic to put the picture on' },
+        aspectRatio: {
+          type: 'string',
+          description: 'e.g. "1:1", "16:9", "4:3"; omit for the default',
+        },
+        sheet: SHEET_PROPERTY,
+      },
+      required: ['prompt', 'topicId'],
+    },
+  },
 ]
 
 export interface MindmapSkillDeps {
   host(): MapAiHost
   /** the undo point of the turn running now; null outside a run */
   turn(): MapTurn | null
+  /** live predicate: the main process says an image route can run; false hides generate_image */
+  imageGenAvailable?: () => boolean
+  /**
+   * The path on this PC of a file attached to this conversation, by the exact name the
+   * attachment list shows. The model names an attachment; only the panel decides which
+   * paths exist.
+   */
+  attachmentPath?: (name: string) => string | null
 }
 
 function summaryOf(name: string, result: MapToolResult): string {
@@ -173,6 +244,14 @@ function summaryOf(name: string, result: MapToolResult): string {
       return result.isError
         ? t('aiToolWriteMapFailed')
         : t('aiToolWriteMap', { count: detail.sheets ?? 1 })
+    case MAP_TOOL_NAMES.imageSearch:
+      return result.isError
+        ? t('aiToolImageSearch')
+        : t('aiToolImageSearchDone', { query: detail.query ?? '', count: detail.count ?? 0 })
+    case MAP_TOOL_NAMES.insertImage:
+      return result.isError ? t('aiToolInsertImage') : t('aiToolInsertImageDone')
+    case MAP_TOOL_NAMES.generateImage:
+      return result.isError ? t('aiToolGenImage') : t('aiToolGenImageDone')
   }
   return name
 }
@@ -200,13 +279,23 @@ function mapContext(host: MapAiHost): string {
 }
 
 export function createMindmapSkill(deps: MindmapSkillDeps): AgentSkill {
+  const imageGenOn = (): boolean => deps.imageGenAvailable?.() !== false
   return {
     id: 'mindmap',
-    // the prompt names the product: the upstream name is swapped for this product's
-    systemPrompt: brandText(SYSTEM_PROMPT, 'en'),
-    tools: TOOLS,
+    // the prompt names the product: the upstream name is swapped for this product's,
+    // and the live predicate takes generate_image's sentence out with the tool
+    get systemPrompt(): string {
+      const prompt = brandText(SYSTEM_PROMPT, 'en')
+      return imageGenOn() ? prompt : `${prompt}${IMAGE_GEN_OFF_NOTE}`
+    },
+    // live like the prompt: the loop re-reads the tool list before every request
+    get tools(): AgentToolDef[] {
+      return imageGenOn()
+        ? TOOLS
+        : TOOLS.filter((tool) => tool.name !== MAP_TOOL_NAMES.generateImage)
+    },
     buildContext: () => mapContext(deps.host()),
-    executeTool: async (call) => {
+    executeTool: async (call, signal) => {
       const host = deps.host()
       const input = call.input
       let result: MapToolResult
@@ -222,6 +311,62 @@ export function createMindmapSkill(deps: MindmapSkillDeps): AgentSkill {
           break
         case MAP_TOOL_NAMES.writeMap:
           result = await writeMap(host, input, deps.turn())
+          break
+        case MAP_TOOL_NAMES.imageSearch: {
+          const query = String(input.query ?? '').trim()
+          if (!query) {
+            result = { output: 'query must not be empty', isError: true }
+            break
+          }
+          result = await imageSearch(query, input.maxResults)
+          break
+        }
+        case MAP_TOOL_NAMES.insertImage: {
+          const attachment = String(input.attachment ?? '').trim()
+          if (attachment) {
+            const path = deps.attachmentPath?.(attachment) ?? null
+            if (!path) {
+              result = {
+                output: `there is no file named "${attachment}" attached to this chat. Attach the image first (or give a direct https image address as url).`,
+                isError: true,
+              }
+              break
+            }
+            const image = await window.mindmapApi.readAttachmentImage(path)
+            if (signal?.aborted) {
+              result = {
+                output: 'stopped by the user; the picture was not inserted',
+                isError: true,
+              }
+              break
+            }
+            const picture = image.ok && image.base64 ? pictureFromBase64(image.base64) : null
+            if (!picture) {
+              result = {
+                output:
+                  image.error ??
+                  'unsupported image format (only png/jpg/gif can be saved in the map)',
+                isError: true,
+              }
+              break
+            }
+            result = await setTopicImage(host, input, picture, deps.turn())
+            break
+          }
+          const url = String(input.url ?? '')
+          if (!/^https?:\/\//.test(url)) {
+            result = {
+              output:
+                'give either url (a direct https image address) or attachment (the exact name of an image attached to this chat)',
+              isError: true,
+            }
+            break
+          }
+          result = await attachPicture(host, input, url, deps.turn(), signal)
+          break
+        }
+        case MAP_TOOL_NAMES.generateImage:
+          result = await generateImage(host, input, deps.turn(), signal)
           break
         default:
           return { output: `unknown tool: ${call.name}`, isError: true, summary: call.name }

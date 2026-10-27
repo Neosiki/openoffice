@@ -1,8 +1,9 @@
 /**
- * Image generation through the Codex subscription is not part of this build:
- * loading this package's main entry registers no Codex generator and declares
- * nothing available. A ready Codex subscription therefore never becomes the
- * image route; the request goes to a key provider or ends in "unavailable".
+ * The package's main entry on its own registers no Codex image generator and
+ * declares nothing available. The app's docs main registers the CLI generator
+ * (`codex-image-cli.ts`) when it starts; a process that only loaded this package
+ * — a test, a tool that imports the search helpers — keeps Codex off the image
+ * route, so a stray registration is noticed here.
  */
 import { describe, expect, it } from 'vitest'
 import { codexImageGenerationAvailable, normalizeAiSettings } from '@genoffice/ai-provider'

@@ -42,6 +42,7 @@ export interface HwpChange {
     | 'insert'
     | 'delete'
     | 'table'
+    | 'image'
     | 'format'
     | 'cells'
     | 'lines'
@@ -76,6 +77,14 @@ export interface HwpSkillDeps {
    * one retried edit; the caller never keeps the answer.
    */
   confirmMemoRemoval(refusal: AgentMemoRemovalRefusal): Promise<boolean>
+  /** live predicate: the main process says an image route can run; false hides generate_image */
+  imageGenAvailable?: () => boolean
+  /**
+   * The path on this PC of a file attached to this conversation, by the exact name the
+   * attachment list shows. The model names an attachment; only the panel decides which
+   * paths exist, so a name the user did not attach has no path.
+   */
+  attachmentPath?: (name: string) => string | null
 }
 
 export interface HwpSkill {
@@ -92,6 +101,10 @@ export interface HwpSkill {
   setSelection(scope: HwpSelection | null): void
 }
 
+/** Hidden from the tool list while no image provider is reachable (see `createHwpSkill`). */
+export const IMAGE_GEN_OFF_NOTE =
+  '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
+
 const SYSTEM_PROMPT = [
   brandText(
     'You are the assistant inside the GenOffice editor for Hangul word processor documents (HWP / HWPX), the format most Korean public offices write in.',
@@ -105,6 +118,7 @@ const SYSTEM_PROMPT = [
   '- Replace a piece of text with another (replace_text, replace_all). The new text takes the formatting of the text it replaces.',
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
+  '- Add a picture in a new paragraph after or before an anchor paragraph, or at the end: a real picture found on the web (image_search, then insert_image with its address) or an illustration the app draws (generate_image). A picture is saved inside the document, so it travels with the file. Only insert pictures the user asked for.',
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), tick the choice boxes of a form (check_boxes), add or remove rows and columns (add_to_table, remove_from_table), and remove a whole table (delete_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour, highlight and the character style of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
   '- Work with the styles of the document: see what one looks like (read_style), add a paragraph or character style (create_style), and change a style: its name, the style that follows it and its look (edit_style).',
@@ -114,7 +128,7 @@ const SYSTEM_PROMPT = [
   '- Add footnotes and endnotes (각주, 미주) with their mark right after a piece of body text (insert_note), list the notes with their text (list_notes), and rewrite or remove one (edit_note, delete_note). The text of the document does not show the notes; list_notes does.',
   '',
   '## What they cannot do',
-  '- You cannot change numbering, borders or the page layout, and you cannot add or change pictures. A note cannot be put inside a table cell.',
+  '- You cannot change numbering, borders or the page layout, and you cannot move, resize, replace or remove a picture that is already in the document (the user does that in the editor). You can only add a new one. A note cannot be put inside a table cell.',
   "- A tick box that is a picture or a form control cannot be ticked: only a □ that is the paragraph's bullet or typed into the text can.",
   '- A table inside a cell of another table can be read, filled and removed, but its cells cannot be coloured, merged or split, it cannot get or lose rows and columns, and the alignment, spacing and paragraph style of its paragraphs cannot be changed. Its text can still be formatted, character styles included.',
   '- You cannot remove a style. The user can do that in the style dialog of the editor (F6).',
@@ -408,6 +422,69 @@ const TOOLS: AgentToolDef[] = [
         },
       },
       required: ['where', 'rows'],
+    },
+  },
+  {
+    name: 'image_search',
+    description:
+      'Search the web for pictures. Returns a numbered list of direct imageUrl entries with pixel sizes; put one into the document with insert_image (url = the imageUrl). For illustration/diagram-style art that search cannot find, or when the user asks to generate/draw a picture, use generate_image instead.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'image search keywords (English works better)' },
+        maxResults: { type: 'integer', description: 'maximum number of results, default 8' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'insert_image',
+    description:
+      'Add a picture in a new paragraph after or before the anchor paragraph, or at the end of the document. Give either url (a direct https image, usually an image_search result) or attachment (the exact name of an image file attached to this chat, e.g. one the user made with another tool). The picture is saved inside the document file. width_pt is the width on the page (default 240); the height follows the picture.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        where: { type: 'string', enum: ['after', 'before', 'end'] },
+        anchor: { type: 'string', description: 'exact text found in the paragraph to add next to' },
+        occurrence: { type: 'integer', minimum: 1 },
+        url: { type: 'string', description: 'direct image URL (https)' },
+        attachment: {
+          type: 'string',
+          description: 'exact name of an image file attached to this chat',
+        },
+        width_pt: {
+          type: 'number',
+          minimum: 24,
+          maximum: 600,
+          description: 'width on the page in points, default 240',
+        },
+      },
+      required: ['where'],
+    },
+  },
+  {
+    name: 'generate_image',
+    description:
+      'Generate an illustration with AI and add it in a new paragraph after or before the anchor paragraph, or at the end of the document (saved inside the document). width_pt is the width on the page (default 240); the height follows the picture.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        where: { type: 'string', enum: ['after', 'before', 'end'] },
+        anchor: { type: 'string', description: 'exact text found in the paragraph to add next to' },
+        occurrence: { type: 'integer', minimum: 1 },
+        prompt: { type: 'string', description: 'detailed English description of the picture' },
+        aspectRatio: {
+          type: 'string',
+          description: 'e.g. "1:1", "16:9", "4:3"; omit for the default',
+        },
+        width_pt: {
+          type: 'number',
+          minimum: 24,
+          maximum: 600,
+          description: 'width on the page in points, default 240',
+        },
+      },
+      required: ['where', 'prompt'],
     },
   },
   {
@@ -1153,6 +1230,52 @@ function textArg(call: AgentToolCall, key: string): string | null {
   return typeof value === 'string' ? value : null
 }
 
+/** The most a picture may weigh in the document; the plugin checks the same limit on its side. */
+const PICTURE_MAX_BYTES = 10 * 1024 * 1024
+
+/** The format the picture bytes really are; null for anything the document cannot hold. */
+function sniffPictureExt(base64: string): 'png' | 'jpg' | 'gif' | null {
+  let head: string
+  try {
+    head = atob(base64.slice(0, 12))
+  } catch {
+    return null
+  }
+  if (head.startsWith('\x89PNG')) return 'png'
+  if (head.startsWith('GIF8')) return 'gif'
+  if (head.charCodeAt(0) === 0xff && head.charCodeAt(1) === 0xd8) return 'jpg'
+  return null
+}
+
+/** The picture's own pixel size, for the aspect; null when this window cannot measure it. */
+async function pictureSize(
+  base64: string,
+  mime: string,
+): Promise<{ width: number; height: number } | null> {
+  if (typeof createImageBitmap !== 'function') return null
+  try {
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: mime }))
+    const size = { width: bitmap.width, height: bitmap.height }
+    bitmap.close()
+    return size
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The width to ask the plugin for, in points: the model's choice (default 240), pulled in so
+ * a tall picture does not run past a page. The plugin derives the height from the aspect.
+ */
+function pictureWidthPt(input: unknown, size: { width: number; height: number } | null): number {
+  const wanted = typeof input === 'number' && Number.isFinite(input) ? input : 240
+  const width = Math.min(Math.max(wanted, 24), 600)
+  if (!size || size.width <= 0 || size.height <= 0) return width
+  const height = (width * size.height) / size.width
+  return height > 600 ? Math.round((width * 600) / height) : width
+}
+
 /** The display name of a page in the model-facing text: its title, else its host. */
 function hostLabel(rawUrl: string): string {
   try {
@@ -1164,6 +1287,7 @@ function hostLabel(rawUrl: string): string {
 
 export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   const { bridge, label } = deps
+  const imageGenOn = (): boolean => deps.imageGenAvailable?.() !== false
   let context = ''
   /** the runs the user selected, as they stand now (a replacement moves them on) */
   let selection: AgentSegment[] | null = null
@@ -1250,7 +1374,79 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   const noteName = (kind: 'footnote' | 'endnote', number: number | null): string =>
     label(kind === 'endnote' ? 'aiNoteEndnote' : 'aiNoteFootnote', { number: number ?? '' }).trim()
 
-  const run = async (call: AgentToolCall): Promise<ToolExecution> => {
+  /**
+   * Downloads one picture (a search result or a generated file), measures it and adds it in a
+   * new paragraph through the plugin. The plugin makes the change one undo step and refuses to
+   * lose an object on the way; the bytes and the format were checked here as well.
+   */
+  /** Adds one picture from bytes the app already holds (a download, an attachment, a generation). */
+  const insertPictureBytes = async (
+    call: AgentToolCall,
+    base64: string,
+    mime: string,
+    what: string,
+    signal: AbortSignal | undefined,
+  ): Promise<ToolExecution> => {
+    const place = placeArgs(call)
+    if (!place) return bad(call, WHERE_HELP)
+    const ext = sniffPictureExt(base64)
+    if (!ext) {
+      return bad(
+        call,
+        'unsupported image format (only png/jpg/gif can be saved in the document) — pick another',
+      )
+    }
+    const bytes = Math.floor((base64.length * 3) / 4)
+    if (bytes > PICTURE_MAX_BYTES) return bad(call, 'the picture is too large for the document')
+    const size = await pictureSize(base64, mime)
+    const widthPt = pictureWidthPt(call.input.width_pt, size)
+    const apply = (options?: AgentChangeOptions) =>
+      bridge.insertPicture(
+        place.anchor,
+        place.occurrence,
+        place.where,
+        base64,
+        widthPt,
+        size?.width ?? 800,
+        size?.height ?? 600,
+        ext,
+        options,
+      )
+    const outcome = await changeWithMemoApproval(
+      () => apply(),
+      (options) => apply(options),
+    )
+    if (outcome.kind !== 'done')
+      return bad(call, memoRemovalDeclined(outcome.refusal, outcome.kind))
+    const result = outcome.result
+    if (!result.ok) return bad(call, placeRefusal(result))
+    deps.onChange({ kind: 'image', from: '', to: what, count: 1, place: result.place })
+    return {
+      output: `Added the picture (“${what.slice(0, 60)}”) in a new paragraph; it is saved inside the document.`,
+      mutated: true,
+      summary: label('aiToolInsertImage', { what: quote(what) }),
+    }
+  }
+
+  /** Downloads one address (a search result or a generated file) and adds it. */
+  const insertPictureFromUrl = async (
+    call: AgentToolCall,
+    url: string,
+    made: string | null,
+    signal: AbortSignal | undefined,
+  ): Promise<ToolExecution> => {
+    const fetched = await window.hwpApi.fetchImage(url)
+    if (signal?.aborted) return bad(call, 'stopped by the user; the picture was not inserted')
+    if (!fetched) {
+      return bad(
+        call,
+        'the image could not be downloaded; the address may have expired — search again or try another one',
+      )
+    }
+    return insertPictureBytes(call, fetched.base64, fetched.mime, made ?? hostLabel(url), signal)
+  }
+
+  const run = async (call: AgentToolCall, signal?: AbortSignal): Promise<ToolExecution> => {
     switch (call.name) {
       case 'read_document': {
         const text = await bridge.readText()
@@ -1522,6 +1718,65 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           mutated: true,
           summary: label('aiToolTable', { rows: result.rows, cols: result.cols }),
         }
+      }
+      case 'image_search': {
+        const query = textArg(call, 'query')?.trim() ?? ''
+        if (!query) return bad(call, 'query must be a non-empty string')
+        const r = await window.hwpApi.imageSearch(query, Number(call.input.maxResults) || 8)
+        // a backend failure must not read as an empty gallery: the model would make up choices
+        if (r.method === 'error') {
+          return bad(
+            call,
+            `image search failed (service error, not an empty result — you may retry): ${r.error ?? 'unknown error'}`,
+          )
+        }
+        const lines = r.images.map(
+          (image, index) =>
+            `${index + 1}. ${image.title || '(untitled)'} [${image.width ?? '?'}x${image.height ?? '?'}]\n   ${image.imageUrl}`,
+        )
+        return {
+          output: lines.join('\n') || '(no images)',
+          mutated: false,
+          summary: label('aiToolImageSearchDone', { query, count: r.images.length }),
+        }
+      }
+      case 'insert_image': {
+        const attachment = textArg(call, 'attachment')?.trim() ?? ''
+        if (attachment) {
+          const path = deps.attachmentPath?.(attachment) ?? null
+          if (!path) {
+            return bad(
+              call,
+              `there is no file named "${attachment}" attached to this chat. Attach the image first (or give a direct https image address as url).`,
+            )
+          }
+          const image = await window.hwpApi.readAttachmentImage(path)
+          if (signal?.aborted) return bad(call, 'stopped by the user; the picture was not inserted')
+          if (!image.ok || !image.base64 || !image.mime) {
+            return bad(call, image.error ?? 'the attached image could not be read')
+          }
+          return insertPictureBytes(call, image.base64, image.mime, attachment, signal)
+        }
+        const url = textArg(call, 'url')?.trim() ?? ''
+        if (!/^https?:\/\//.test(url)) {
+          return bad(
+            call,
+            'give either url (a direct https image address) or attachment (the exact name of an image attached to this chat)',
+          )
+        }
+        return insertPictureFromUrl(call, url, null, signal)
+      }
+      case 'generate_image': {
+        const prompt = textArg(call, 'prompt')?.trim() ?? ''
+        if (!prompt) return bad(call, 'prompt must be a non-empty string')
+        const aspectRatio = textArg(call, 'aspectRatio')?.trim() ?? ''
+        const generated = await window.hwpApi.generateImage({
+          prompt,
+          ...(aspectRatio ? { aspectRatio } : {}),
+        })
+        if (signal?.aborted) return bad(call, 'stopped by the user; the picture was not inserted')
+        if (!generated.url) return bad(call, generated.error ?? 'image generation failed')
+        return insertPictureFromUrl(call, generated.url, prompt, signal)
       }
       case 'format_text': {
         const find = textArg(call, 'find')
@@ -2558,12 +2813,17 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   return {
     skill: {
       id: 'hwp',
-      systemPrompt: SYSTEM_PROMPT,
-      tools: TOOLS,
+      // the live predicate takes generate_image's sentence and tool out together
+      get systemPrompt(): string {
+        return imageGenOn() ? SYSTEM_PROMPT : `${SYSTEM_PROMPT}${IMAGE_GEN_OFF_NOTE}`
+      },
+      get tools(): AgentToolDef[] {
+        return imageGenOn() ? TOOLS : TOOLS.filter((tool) => tool.name !== 'generate_image')
+      },
       buildContext: () => [context, selectionContext()].filter(Boolean).join('\n\n'),
-      executeTool: async (call) => {
+      executeTool: async (call, signal) => {
         try {
-          return await run(call)
+          return await run(call, signal)
         } catch (error) {
           // the editor refused or is gone: the model gets the cause and can say so
           return bad(call, error instanceof Error ? error.message : String(error))

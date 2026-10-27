@@ -77,6 +77,8 @@ export const he = {
   aiToolInsert: 'פסקאות שנוספו: {count}',
   aiToolDelete: 'פסקה נמחקה · {text}',
   aiToolTable: 'נוספה טבלה · {rows} × {cols}',
+  aiToolImageSearchDone: 'חיפוש תמונות "{query}" ({count} תמונות)',
+  aiToolInsertImage: 'התמונה נוספה {what}',
   aiToolFormat: 'העיצוב שונה · {text}',
   aiFmtBold: 'מודגש',
   aiFmtItalic: 'נטוי',

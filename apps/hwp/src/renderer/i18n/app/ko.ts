@@ -79,6 +79,8 @@ export const ko = {
   aiToolInsert: '문단 {count}개 넣음',
   aiToolDelete: '문단 지움 · {text}',
   aiToolTable: '표 넣음 · {rows}행 {cols}열',
+  aiToolImageSearchDone: '"{query}" 이미지 검색 ({count}장)',
+  aiToolInsertImage: '그림 넣기 {what}',
   aiToolFormat: '서식 바꿈 · {text}',
   aiFmtBold: '굵게',
   aiFmtItalic: '기울임',

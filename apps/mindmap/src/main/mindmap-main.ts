@@ -57,6 +57,7 @@ import type {
 import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
 import { openXmind } from '@genoffice/xmind-engine'
 import { registerMindmapAiIpc } from './ai-attachments'
+import { registerMindmapImageIpc } from './ai-image'
 import { atomicWriteFile } from './atomic-write'
 import { registerMindmapExportIpc } from './export-main'
 import { registerMindmapHandoffIpc } from './handoff-main'
@@ -696,6 +697,11 @@ function registerMindmapIpc(): void {
 
   // the AI panel's attachments and the provisional name of an untitled map (T12)
   registerMindmapAiIpc({ hasFile: (wcId) => savePathByWc.has(wcId) })
+  // the AI panel's pictures: search result or generated file → bytes for the renderer
+  registerMindmapImageIpc({
+    filePathOf: (wcId) => savePathByWc.get(wcId) ?? null,
+    pastedImageDir: join(app.getPath('temp'), 'genoffice-pasted'),
+  })
   registerMindmapExportIpc({ filePathOf: (wcId) => savePathByWc.get(wcId) })
   registerMindmapHandoffIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
   registerMindmapSeedIpc({ opensFile: (wcId) => openPathByWc.has(wcId) })
