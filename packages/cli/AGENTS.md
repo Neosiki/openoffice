@@ -56,6 +56,7 @@
 - 번역 PDF는 HarfBuzz의 `hb-subset.wasm`이 있어야 쓴다. 설치본에서는 `Resources/wasm/hb-subset.wasm`, 저장소에서는 `harfbuzzjs`의 것을 찾고, `GENOFFICE_HB_SUBSET_WASM`으로 바꿀 수 있다(`hbSubsetWasmPath`).
 - 패키징: `build.mjs`가 전체를 CommonJS 파일 하나로 묶고, 설치된 앱은 그것을 `ELECTRON_RUN_AS_NODE=1`로 자기 실행 파일에서 돌린다(`bin/ieumoffice.cmd`). `node_modules`는 함께 배포되지 않는다. 번들의 버전은 `GENOFFICE_APP_VERSION`으로 주입되어 앱 버전과 어긋나지 않는다.
 - 한글 엔진의 WASM은 번들에 들어가지 않는다. `rhwpWasmPath`(`src/resources.ts`)가 설치본의 `Resources/wasm`이나 체크아웃의 `node_modules`에서 찾아 `GENOFFICE_RHWP_WASM`으로 넘긴다. 번들 안에서는 `import.meta.url`이 비어서 읽는 쪽이 스스로 찾지 못한다.
+- 문서 명령의 DOM은 jsdom이 만든다(`src/dom.ts`). jsdom 28은 자기 undici 사본의 쿠키 모듈에서 `globalThis.Headers`를 읽는데, 그 전역은 Node 내장 undici와 그 wasm 파서를 그 자리에서 깨운다. 가상 메모리 상한(`ulimit -v`)이 낮은 환경에서는 그 순간 프로세스가 죽으므로 `withInertHeaders`가 jsdom을 불러오는 동안만 빈 클래스로 바꾸고 곧바로 되돌린다. 이 감싸기를 걷어내지 않는다.
 - MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 91KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
