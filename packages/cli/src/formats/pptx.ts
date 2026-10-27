@@ -25,8 +25,10 @@ import {
   slideDurableId,
   type AnimationEntry,
   type Op,
+  type OpFailure,
   type TxnResult,
 } from '@genoffice/pptx-ops'
+import { refuseChartOp } from './pptx-chart-checks'
 import { CliError, EXIT } from '../result'
 import { clipText } from '../preview'
 import { fromEmu, type ReadUnit } from '../length-units'
@@ -136,7 +138,39 @@ export interface ApplyOptions {
 }
 
 export function applyOps(opened: OpenedPptx, ops: Op[], opts: ApplyOptions): TxnResult {
-  return runTxn(opened, { ops, isolation: opts.isolation, dryRun: opts.dryRun })
+  // Chart data the builder would silently drop is refused here, before the op runs
+  const refused = new Map<number, string>()
+  ops.forEach((op, index) => {
+    const reason = refuseChartOp(op)
+    if (reason) refused.set(index, reason)
+  })
+  if (refused.size === 0)
+    return runTxn(opened, { ops, isolation: opts.isolation, dryRun: opts.dryRun })
+  const atomic = (opts.isolation ?? 'atomic') === 'atomic'
+  const own: OpFailure[] = [...refused].map(([index, error]) => ({
+    index,
+    op: ops[index]!,
+    error:
+      atomic && !opts.dryRun
+        ? `${error} Nothing was applied (atomic) — fix this op and resend the whole transaction.`
+        : error,
+  }))
+  if (atomic && !opts.dryRun) return { applied: false, failures: own }
+  // per_op and dry-run: the remaining ops go on, and their failures keep the caller's indexes
+  const kept = ops.map((_, index) => index).filter((index) => !refused.has(index))
+  const rest =
+    kept.length === 0
+      ? ({ applied: false } as TxnResult)
+      : runTxn(opened, {
+          ops: kept.map((index) => ops[index]!),
+          isolation: opts.isolation,
+          dryRun: opts.dryRun,
+        })
+  const failures = [
+    ...own,
+    ...(rest.failures ?? []).map((f) => ({ ...f, index: kept[f.index]! })),
+  ].sort((a, b) => a.index - b.index)
+  return { ...rest, failures }
 }
 
 /** Displayed style of the first run and the inheritance layer each value came from. */
