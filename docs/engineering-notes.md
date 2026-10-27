@@ -42,7 +42,7 @@
 
 - **`customEndpoint: ''`가 "없음"이다.** 예전 파일처럼 값이 아예 없을 때만 첫 서버를 고른다. 빈 문자열을 "첫 서버"로 읽으면 서버를 지운 뒤 다른 서버가 저절로 골라진다. → `resolveCustomEndpoints`가 빈 문자열을 유지하고 `providers.custom`도 비운다.
 - **Ollama의 `capabilities` 배열이 없으면 도구·이미지를 모르는 것으로 둔다.** 배열이 있는데 `tools`/`vision`이 빠져 있을 때만 `false`다. `/api/show`의 최대 문맥과 `/api/ps`의 실제 적재 문맥이 다를 수 있으므로, 프로필에는 실제 적재 값을 `contextLength`, 최대를 `maxContextLength`로 둔다.
-- **문맥 확인은 실행 단위다.** `AgentLoop`는 실행마다 새 `runId`를 만들고, PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥔다. 확인을 통로마다 새로 만들면 같은 작업에서 여러 번 묻는다. 거절은 `context-limit`이고 모델을 부르지 않는다.
+- **문맥 확인은 실행 단위다.** `AgentLoop`는 실행마다 새 `runId`를 만들고, PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥔다. 확인을 통로마다 새로 만들면 같은 작업에서 여러 번 묻는다. 거절은 `context-limit`이고 모델을 부르지 않는다. PPT 덱 만들기(`runLlmAttempt`)는 `ai:stream`을 바로 불러 전송부를 거치지 않으므로 `apps/slides/src/renderer/ai/deck-context-gate.ts`가 루프의 중단 신호를 실행 단위로 삼아 같은 확인을 한다.
 - **도구를 끈 모델이 도구 호출을 낼 수 있다.** `tools: false`면 요청에 도구를 싣지 않고, 모델이 그래도 호출을 내면 루프가 실행하지 않고 버린다. 버린 호출은 "전달된 것"으로 세어 같은 턴을 다시 보내지 않는다.
 
 ## 웹 읽기 (`read_url`)

@@ -91,3 +91,26 @@ describe('the document jobs share one confirmation per job', () => {
     expect(text).toMatch(/tools: \[\], runId/)
   })
 })
+
+describe('the deck generation calls confirm a large prompt', () => {
+  // runLlmAttempt goes straight to ai:stream, past the panel's transport
+  it('apps/slides/src/renderer/ai/AiPanel.tsx checks the deck gate before ai:stream', () => {
+    const text = source('apps/slides/src/renderer/ai/AiPanel.tsx')
+    expect(text).toMatch(/contextLimit: \(settings\) => localContextLimit\(settings\)/)
+    expect(text).toMatch(/confirm: \(warning\) => window\.confirm\(aiContextConfirmText\(/)
+    const attempt = text.slice(text.indexOf('const runLlmAttempt = ('))
+    const check = attempt.indexOf('deckContextGate.allows(settings, system, user, signal)')
+    const send = attempt.indexOf('.aiStream(')
+    expect(check).toBeGreaterThan(0)
+    expect(send).toBeGreaterThan(check)
+  })
+
+  it('apps/slides/src/renderer/ai/slides-skill.ts gives the page redo the run signal', () => {
+    const text = source('apps/slides/src/renderer/ai/slides-skill.ts')
+    const redo = text.slice(
+      text.indexOf("case 'regenerate_slide'"),
+      text.indexOf("case 'generate_deck'"),
+    )
+    expect(redo).toContain('...(signal ? { signal } : {})')
+  })
+})
