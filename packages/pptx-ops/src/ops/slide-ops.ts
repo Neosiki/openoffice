@@ -316,10 +316,6 @@ register({
   },
 })
 
-/** The smallest and largest page edge PowerPoint accepts, in EMU (1 and 56 inches). */
-const MIN_SLIDE_EMU = 914_400
-const MAX_SLIDE_EMU = 51_206_400
-
 register({
   name: 'setSlideSize',
   validate(op) {
@@ -332,18 +328,6 @@ register({
       op.cy <= 0
     ) {
       throw new GuidedError('op "setSlideSize" needs "cx"/"cy" (EMU).')
-    }
-    // ST_SlideSizeCoordinate: PowerPoint reports a deck outside 1-56 inches as
-    // damaged, and a fractional EMU value is not a valid attribute either
-    for (const [key, value] of [
-      ['cx', op.cx],
-      ['cy', op.cy],
-    ] as const) {
-      if (!Number.isInteger(value) || value < MIN_SLIDE_EMU || value > MAX_SLIDE_EMU) {
-        throw new GuidedError(
-          `op "setSlideSize": "${key}" must be a whole number of EMU from ${MIN_SLIDE_EMU} (1 inch) to ${MAX_SLIDE_EMU} (56 inches), got ${String(value)}.`,
-        )
-      }
     }
   },
   apply(op, ctx): OpRecord {
@@ -657,43 +641,11 @@ const sectionOp = (
 sectionOp(
   'setSections',
   (op, ctx) => {
-    const sections = op.sections as SectionInfo[]
-    const total = ctx.opened.deck.slides.length
-    for (const section of sections) {
-      for (const index of section.slideIndices) {
-        if (index >= total) {
-          throw new GuidedError(
-            `op "setSections": slide index ${index} is out of range (the deck has ${total} slides, 0-${total - 1}).`,
-          )
-        }
-      }
-    }
-    setSections(ctx.opened, sections)
+    setSections(ctx.opened, op.sections as SectionInfo[])
     return true
   },
   (op) => {
     if (!Array.isArray(op.sections)) throw new GuidedError('op "setSections" needs "sections".')
-    // A slide listed twice would be written to the file twice, which PowerPoint
-    // reports as damaged; a section without a slide list cannot be written at all.
-    const seen = new Set<number>()
-    for (const section of op.sections as SectionInfo[]) {
-      if (!section || typeof section !== 'object' || !Array.isArray(section.slideIndices)) {
-        throw new GuidedError('op "setSections": every section needs "slideIndices" (an array).')
-      }
-      for (const index of section.slideIndices) {
-        if (!Number.isInteger(index) || index < 0) {
-          throw new GuidedError(
-            `op "setSections": slide indices are whole numbers from 0, got ${String(index)}.`,
-          )
-        }
-        if (seen.has(index)) {
-          throw new GuidedError(
-            `op "setSections": slide ${index} is listed in more than one place; every slide belongs to exactly one section.`,
-          )
-        }
-        seen.add(index)
-      }
-    }
   },
 )
 sectionOp('addSection', (op, ctx) =>
