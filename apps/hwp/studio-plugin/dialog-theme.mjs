@@ -25,6 +25,12 @@
  *   else is neutral, so form fields stay easy to scan.
  * - the user's "oldschool" studio skin is respected: while that skin is on,
  *   this layer turns itself off.
+ * - the look wins, the layout does not: rhwp sizes some dialogs on their own
+ *   (`.pp-dialog .dialog-label`, `.cs-dialog .dialog-body`, hiding the footer
+ *   while a PDF is prepared). Rules that set a size, a margin, a scroll or
+ *   whether something shows go under `:where(:root[...])`, which weighs the
+ *   same as rhwp's own base rule. Ours comes later in <head>, so it replaces
+ *   the base rule and a dialog's own rule still beats it.
  */
 
 /** Bumped when the tokens or the skeleton changes in a way previews rely on. */
@@ -242,17 +248,21 @@ export const DIALOG_THEME_CSS = `
    ───────────────────────────────────────────────────────────── */
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-wrap .dialog-body {
   flex: 1 1 auto;
-  min-height: 0;
   padding: 18px 20px 16px;
-  overflow: auto;
   overscroll-behavior: contain;
 }
 
+/* The body scrolls inside the capped shell. Some dialogs keep a fixed body
+   height (character shape) or scroll their own panels (object properties). */
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* rhwp lays the footer out as a flex row and hides it while a PDF is being
+   prepared, so this rule leaves display alone. */
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-wrap .dialog-footer {
   flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   padding: 13px 20px 15px;
   background: var(--ieum-dialog-surface-sunken);
   border-top: 1px solid var(--ieum-dialog-line-soft);
@@ -278,8 +288,12 @@ export const DIALOG_THEME_CSS = `
 /* ─────────────────────────────────────────────────────────────
    7. Buttons
    ───────────────────────────────────────────────────────────── */
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-btn {
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-btn {
   min-width: 74px;
+  cursor: pointer;
+}
+
+:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-btn {
   height: 30px;
   padding: 0 16px;
   border: 1px solid var(--ieum-dialog-field-line);
@@ -290,7 +304,6 @@ export const DIALOG_THEME_CSS = `
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
-  cursor: pointer;
   box-shadow: var(--ieum-dialog-control-shadow);
   transition:
     background-color 120ms ease,
@@ -340,8 +353,13 @@ export const DIALOG_THEME_CSS = `
   border-color: var(--ieum-dialog-line-soft);
   color: var(--ieum-dialog-ink-disabled);
   box-shadow: none;
-  cursor: not-allowed;
   transform: none;
+}
+
+/* With the pointer cursor above, this stays below the compare dialog's own
+   wait cursor on its busy buttons. */
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-btn:disabled {
+  cursor: not-allowed;
 }
 
 /* The small segmented controls some dialogs use for alignment/direction. */
@@ -433,6 +451,22 @@ export const DIALOG_THEME_CSS = `
   border-color: var(--ieum-dialog-accent-line);
   background: var(--ieum-dialog-accent-soft);
   color: var(--ieum-dialog-ink);
+}
+
+/* The chosen diagonal line. Restyling the button above would otherwise hide
+   rhwp's own selected state. */
+:root[${DIALOG_THEME_ATTRIBUTE}] .tcp-diag-btn.active {
+  border-color: var(--ieum-dialog-accent);
+  background: var(--ieum-dialog-accent-soft);
+  color: var(--ieum-dialog-accent-strong);
+}
+
+:root[${DIALOG_THEME_ATTRIBUTE}] .tcp-diag-btn:disabled,
+:root[${DIALOG_THEME_ATTRIBUTE}] .tcp-diag-btn:disabled:hover {
+  border-color: var(--ieum-dialog-line-soft);
+  background: var(--ieum-dialog-surface-sunken);
+  color: var(--ieum-dialog-ink-disabled);
+  cursor: not-allowed;
 }
 
 :root[${DIALOG_THEME_ATTRIBUTE}] .tcp-border-preview-svg,
@@ -528,14 +562,6 @@ export const DIALOG_THEME_CSS = `
   display: none;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-tab-panel {
-  display: none;
-}
-
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-tab-panel.active {
-  display: block;
-}
-
 /* The editor's older goto dialog uses a private copy of the same tab shape. */
 :root[${DIALOG_THEME_ATTRIBUTE}] .goto-tab-bar {
   display: flex;
@@ -575,14 +601,18 @@ export const DIALOG_THEME_CSS = `
    9. Sections, rows and labels
    ───────────────────────────────────────────────────────────── */
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-section {
-  margin-bottom: 12px;
   padding: 12px 14px;
   border: 1px solid var(--ieum-dialog-line-soft);
   border-radius: 5px;
   background: var(--ieum-dialog-surface-sunken);
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-section:last-child {
+/* Page setup puts sections side by side with no bottom margin. */
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-section {
+  margin-bottom: 12px;
+}
+
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-section:last-child {
   margin-bottom: 0;
 }
 
@@ -606,17 +636,22 @@ export const DIALOG_THEME_CSS = `
   background: var(--ieum-dialog-accent-line);
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-row {
+/* Spacing and label widths are layout: several dialogs line their labels up
+   with a wider min-width of their own (object, equation, paragraph spacing). */
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-row {
   gap: 10px;
   margin-bottom: 8px;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-row:last-child {
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-row:last-child {
   margin-bottom: 0;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-label {
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-label {
   min-width: 44px;
+}
+
+:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-label {
   color: var(--ieum-dialog-ink-muted);
   font-size: 11px;
   font-weight: 500;
@@ -656,7 +691,7 @@ export const DIALOG_THEME_CSS = `
   padding: 0 8px;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-input {
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-input {
   width: 76px;
 }
 
@@ -664,7 +699,7 @@ export const DIALOG_THEME_CSS = `
   padding: 0 6px;
 }
 
-:root[${DIALOG_THEME_ATTRIBUTE}] .dialog-text-input {
+:where(:root[${DIALOG_THEME_ATTRIBUTE}]) .dialog-text-input {
   width: 140px;
 }
 
@@ -696,12 +731,14 @@ export const DIALOG_THEME_CSS = `
     var(--ieum-dialog-field-shadow);
 }
 
+/* Not .dialog-select: a <select> always matches :read-only, which would grey
+   out every drop-down. */
 :root[${DIALOG_THEME_ATTRIBUTE}] :where(
     .dialog-input,
-    .dialog-select,
     .dialog-text-input,
     .field-edit-input,
-    .field-edit-textarea
+    .field-edit-textarea,
+    .formula-input
   ):read-only {
   background: var(--ieum-dialog-surface-sunken);
   color: var(--ieum-dialog-ink-muted);
@@ -712,7 +749,9 @@ export const DIALOG_THEME_CSS = `
     .dialog-select,
     .dialog-text-input,
     .field-edit-input,
-    .field-edit-textarea
+    .field-edit-textarea,
+    .formula-input,
+    .formula-select
   ):disabled {
   background: var(--ieum-dialog-surface-sunken);
   border-color: var(--ieum-dialog-line-soft);
@@ -901,23 +940,21 @@ export const DIALOG_THEME_CSS = `
 /* ─────────────────────────────────────────────────────────────
    15. Narrow windows and reduced motion
    ───────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+/* rhwp turns dialogs into a bottom sheet below 768px (responsive.css). Follow
+   the same breakpoint, or the sheet keeps the card's padding and corners. */
+@media (max-width: 767px) {
   :root[${DIALOG_THEME_ATTRIBUTE}] .modal-overlay {
     padding: 0;
   }
 
   :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-wrap {
-    max-height: 92dvh;
+    max-height: 90dvh;
     border-radius: 12px 12px 0 0;
   }
 
   :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-title {
     min-height: 52px;
     padding-left: 16px;
-  }
-
-  :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-body > .dialog-tabs:first-child {
-    margin: -18px -20px 12px;
   }
 }
 
