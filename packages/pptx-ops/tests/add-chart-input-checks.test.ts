@@ -4,7 +4,12 @@
  * chart that quietly lacked data, and a non-text label threw a TypeError.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createBlankPptx, openPptx, type OpenedPptx } from '@genoffice/pptx-engine'
+import {
+  createBlankPptx,
+  openPptx,
+  type NewChartKind,
+  type OpenedPptx,
+} from '@genoffice/pptx-engine'
 import { runTxn } from '../src/ops/executor'
 import '../src/ops/index'
 
@@ -53,6 +58,28 @@ describe('addChart input checks', () => {
   it('rejects a category that is not text and a series without a name', () => {
     expect(failure({ categories: [2023, 2024] })).toMatch(/categories\[0\] must be text/)
     expect(failure({ series: [{ values: [1, 2] }] })).toMatch(/series\[0\] needs "name"/)
+  })
+
+  it('accepts every kind the engine can insert, including the ones the ribbon gallery sends', () => {
+    const kinds: NewChartKind[] = [
+      'bar',
+      'barStacked',
+      'barPercentStacked',
+      'line',
+      'area',
+      'pie',
+      'doughnut',
+      'scatter',
+      'radar',
+      'comboBarLine',
+      'pie3D',
+      'bar3D',
+    ]
+    for (const kind of kinds) {
+      const over = kind === 'scatter' ? { kind, categories: ['1', '2'] } : { kind }
+      const r = runTxn(opened, { ops: [chart(over)] })
+      expect(r.applied, `${kind}: ${r.failures?.[0]?.error ?? ''}`).toBe(true)
+    }
   })
 
   it('still accepts a gap, a stacked kind and a scatter chart', () => {
