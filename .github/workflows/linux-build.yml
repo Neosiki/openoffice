@@ -142,6 +142,35 @@ jobs:
             test -s "$work/$input.pdf"
           done
 
+      # Sandboxes that hand the command line to an agent often cap virtual
+      # memory (ulimit -v) far below what a WebAssembly memory reserves. Document
+      # commands must still run there, the ones that need the parser must answer
+      # resource_limit instead of aborting, and capabilities must say which is
+      # which before an agent plans work.
+      - name: The command line runs under a 2 GB virtual-memory cap
+        run: |
+          set -euo pipefail
+          cli="$PWD/apps/shell/release/linux-unpacked/resources/cli/genoffice.cjs"
+          work="$RUNNER_TEMP/cli-cap"
+          mkdir -p "$work"
+          printf '# Cap\n\n- one\n- two\n' > "$work/note.md"
+          limited() { bash -c 'ulimit -v 2097152; exec "$@"' _ "$@"; }
+          limited node "$cli" --version
+          limited node "$cli" create --type docx --from "$work/note.md" --out "$work/note.docx" --json
+          limited node "$cli" docs read "$work/note.docx" --json
+          limited node "$cli" capabilities --json > "$work/cap.json"
+          grep -q '"wasm":{"available":false' "$work/cap.json" || {
+            echo "capabilities should report wasm as unavailable under the cap"; cat "$work/cap.json"; exit 1;
+          }
+          set +e
+          limited node "$cli" pdf read "$RUNNER_TEMP/smoke/note.md.pdf" --json > "$work/pdf.json" 2>/dev/null
+          code=$?
+          set -e
+          [ "$code" -eq 3 ] || { echo "pdf read should answer 3 under the cap, got $code"; cat "$work/pdf.json"; exit 1; }
+          grep -q '"error":"resource_limit"' "$work/pdf.json" || {
+            echo "pdf read should answer resource_limit under the cap"; cat "$work/pdf.json"; exit 1;
+          }
+
       - name: List the release files
         run: ls -la apps/shell/release
 

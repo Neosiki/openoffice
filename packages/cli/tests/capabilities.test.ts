@@ -80,7 +80,7 @@ describe('genoffice capabilities', () => {
       command: 'capabilities',
       // a checkout finds its own development build; an installed command line may find no app
       summary: expect.stringMatching(
-        /^available: search, image_search(, app)?; unavailable: image_generation, image_analysis, video_analysis, pdf_ai_read, pdf_translation(, app)?$/,
+        /^available: search, image_search(, wasm)?(, app)?; unavailable: image_generation, image_analysis, video_analysis, pdf_ai_read, pdf_translation(, wasm)?(, app)?$/,
       ),
       detail: {
         search: { available: true, via: 'parallel', route: 'free' },
@@ -103,6 +103,8 @@ describe('genoffice capabilities', () => {
         },
         automatic_calls: { subscription_enabled: false },
         app: { available: expect.any(Boolean) },
+        // the machine's virtual-memory cap decides this, so the shape is pinned, not the value
+        wasm: expect.objectContaining({ available: expect.any(Boolean) }),
         settings_path: settings,
       },
     })
@@ -152,8 +154,8 @@ describe('genoffice capabilities', () => {
     expect(d.media_analysis).toEqual(d.image_analysis)
     expect(d.video_analysis).toEqual({ available: true, via: 'gemini', route: 'key' })
     expect(d.app.available).toBe(true)
-    expect(r.json().summary).toBe(
-      'available: search, image_search, image_generation, image_analysis, video_analysis, app; unavailable: pdf_ai_read, pdf_translation',
+    expect(r.json().summary).toMatch(
+      /^available: search, image_search, image_generation, image_analysis, video_analysis, (wasm, )?app; unavailable: pdf_ai_read, pdf_translation(, wasm)?$/,
     )
     expect(fakes.detect).not.toHaveBeenCalled()
   })

@@ -41,6 +41,7 @@ import {
 } from './result'
 import { didYouMean } from './suggest'
 import { branded } from './names'
+import { wasmMemoryFailure } from './wasm'
 
 declare const __GENOFFICE_VERSION__: string | undefined
 
@@ -199,9 +200,10 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
     return EXIT.ok
   } catch (err) {
     const error =
-      err instanceof CliError
+      wasmMemoryFailure(err) ??
+      (err instanceof CliError
         ? err
-        : new CliError(EXIT.conversion, err instanceof Error ? err.message : String(err))
+        : new CliError(EXIT.conversion, err instanceof Error ? err.message : String(err)))
     audit('error', error.code)
     return fail(error)
   }
