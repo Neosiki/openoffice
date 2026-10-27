@@ -61,6 +61,12 @@ const GUIDES: { uri: string; name: string; argv: string[]; description: string }
     description: 'every sheet_apply DSL op with its fields',
   },
   {
+    uri: 'ieumoffice://guide/hwp',
+    name: 'Hangul ops reference',
+    argv: ['guide', 'hwp'],
+    description: 'every hwp_apply / create_hwp op with its fields',
+  },
+  {
     uri: 'ieumoffice://guide/slides',
     name: 'PowerPoint ops reference',
     argv: ['guide', 'slides'],
