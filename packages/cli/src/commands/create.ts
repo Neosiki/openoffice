@@ -315,6 +315,25 @@ async function createXlsx(
     })
   }
   const tables = readTables(source, basename(source, extname(source)), { decimal })
+  // Validate every name before the first write, including --force and later worksheets.
+  for (const [index, table] of tables.entries()) {
+    for (const character of table.name) {
+      const code = character.codePointAt(0)!
+      const invalid =
+        (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) ||
+        (code >= 0xd800 && code <= 0xdfff) ||
+        code === 0xfffe ||
+        code === 0xffff
+      if (invalid) {
+        throw new CliError(
+          EXIT.usage,
+          `${source}: sheets[${index}].name contains a character that cannot be represented in XML 1.0: ${JSON.stringify(table.name)}`,
+          undefined,
+          { reason: 'invalid_argument' },
+        )
+      }
+    }
+  }
   const [first, ...rest] = tables
   if (!first)
     throw new CliError(EXIT.usage, `${from}: no sheets`, undefined, { reason: 'invalid_argument' })
