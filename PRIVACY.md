@@ -246,9 +246,12 @@ Nothing in this list is uploaded by the app.
 - **AI chat history**, kept in the app's data folder
   (`%APPDATA%\IeumOffice`).
 - **Your Google Drive sign-in**, if you connected Drive (`google-drive.json`
-  in the data folder), encrypted with Windows' own protection for your user
-  account. It is deleted when you disconnect. If this PC cannot encrypt it,
-  it is not saved and the connection lasts until the app closes.
+  in the data folder), encrypted with the system's protection for your user
+  account (Windows' own protection, the macOS keychain, or on Linux a desktop
+  keyring such as GNOME Keyring or KWallet). It is deleted when you
+  disconnect. If this PC cannot encrypt it (on Linux, also when no keyring
+  holds the key), it is not saved and the connection lasts until the app
+  closes.
 - **Drive files you attached to an AI chat**, in a temporary folder
   (`ieumoffice-drive-attach`), deleted after a week.
 - **Copies of the Drive files you opened** (`drive-cache` in the data
