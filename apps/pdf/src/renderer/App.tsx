@@ -11864,7 +11864,9 @@ export default function App() {
                         kind: 'link',
                         pageIndex: draft.pageIndex,
                         rect: draft.rect,
-                        ...target,
+                        ...('destPage' in target
+                          ? { destPage: (visList[target.destPage - 1] ?? target.destPage - 1) + 1 }
+                          : target),
                       },
                     },
                   ])
