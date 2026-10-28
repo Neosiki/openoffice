@@ -12,6 +12,10 @@
  * underline is part of the same path as the branch, so the two cannot come
  * apart; and the branch that leaves such a topic starts at the far end of its
  * underline, at the height the underline was drawn at.
+ *
+ * A tree and a timeline have their own lines: a trunk near the parent's left
+ * edge that turns toward each topic below it, and, between the steps of a
+ * timeline, a line from one main topic to the next with an arrowhead.
  */
 import type { ThemeBranchShape } from '@genoffice/xmind-engine'
 
@@ -55,6 +59,15 @@ export interface BranchGeometry {
 const DOWN = 'down'
 const LHS = 'lhs'
 
+/** How far in from a parent's left edge the trunk of a tree runs down. */
+export const TREE_TRUNK = 18
+/** How far right of a parent's left edge the topics below it begin in a tree. `map.css` indents by the same. */
+export const TREE_INDENT = 42
+/** The corner where a trunk turns toward a topic, for skeletons whose lines are curves. */
+const TREE_CURVE = 8
+/** The arrowhead at the end of a step of a timeline. */
+const ARROW = 6
+
 function n(value: number): string {
   return String(Math.round(value * 100) / 100)
 }
@@ -97,6 +110,14 @@ function fallingElbow(sx: number, sy: number, ex: number, ey: number, radius: nu
   return (
     `M ${n(sx)} ${n(sy)} V ${n(my - r)} Q ${n(sx)} ${n(my)} ${n(sx + side * r)} ${n(my)}` +
     ` H ${n(ex - side * r)} Q ${n(ex)} ${n(my)} ${n(ex)} ${n(my + r)} V ${n(ey)}`
+  )
+}
+
+/** Down from `(sx, sy)`, then across to `(ex, ey)`; the corner rounded. */
+function trunkElbow(sx: number, sy: number, ex: number, ey: number, radius: number): string {
+  const r = Math.max(0, Math.min(radius, Math.abs(ex - sx), Math.abs(ey - sy)))
+  return (
+    `M ${n(sx)} ${n(sy)} V ${n(ey - r)} Q ${n(sx)} ${n(ey)} ${n(sx + r)} ${n(ey)}` + ` H ${n(ex)}`
   )
 }
 
@@ -159,4 +180,57 @@ export function subBranchPath(geometry: BranchGeometry, box: BranchBoxes): strin
   return geometry.subShape === 'rounded-elbow'
     ? levelElbow(sx, sy, nearX, ey, geometry.cornerRadius)
     : levelCurve(sx, sy, nearX, ey, 0.55)
+}
+
+/** Which topic a branch of a tree leaves from: the boxes of the three levels are measured differently. */
+export type TreeParent = 'central' | 'main' | 'sub'
+
+/**
+ * A branch of a tree: down the trunk near the parent's left edge, then
+ * across to the topic's left edge. All the branches of one parent run down
+ * the same trunk, so together they draw it.
+ */
+export function treeBranchPath(
+  geometry: BranchGeometry,
+  box: BranchBoxes,
+  from: TreeParent,
+): string {
+  const { pT, pL, pW, pH, cT, cL, cW, cH } = box
+  // a topic below the main level has space around it inside its box; the others fill theirs
+  const padX = from === 'sub' ? geometry.subPadX : 0
+  const padY = from === 'sub' ? geometry.subPadY : 0
+  const sx = pL + padX + Math.min(TREE_TRUNK, (pW - 2 * padX) / 2)
+  const sy = from === 'central' ? pT + pH - geometry.centralInset : pT + pH - padY
+  const toMain = from === 'central'
+  const childPadX = toMain ? 0 : geometry.subPadX
+  const childPadY = toMain ? 0 : geometry.subPadY
+  const underline = toMain ? geometry.mainUnderline : geometry.subUnderline
+  const ex = cL + childPadX
+  const ey = underline === null ? cT + cH / 2 : underlineY(cT + cH - childPadY, underline)
+  const radius = geometry.subShape === 'rounded-elbow' ? geometry.cornerRadius : TREE_CURVE
+  const path = trunkElbow(sx, sy, ex, ey, radius)
+  return underline === null ? path : `${path} H ${n(cL + cW - childPadX)}`
+}
+
+/**
+ * A step of a timeline: from the right edge of the step before (the central
+ * topic for the first) to the left edge of this main topic, ending in an
+ * arrowhead.
+ */
+export function timelineStepPath(
+  geometry: BranchGeometry,
+  box: BranchBoxes,
+  fromCentral: boolean,
+): string {
+  const { pT, pL, pW, pH, cT, cL, cW, cH } = box
+  const underline = geometry.mainUnderline
+  const sx = fromCentral ? pL + pW - geometry.centralInset : pL + pW
+  const sy = fromCentral || underline === null ? pT + pH / 2 : underlineY(pT + pH, underline)
+  const ey = underline === null ? cT + cH / 2 : underlineY(cT + cH, underline)
+  const ex = cL - 2
+  const head =
+    ` M ${n(ex - ARROW)} ${n(ey - ARROW * 0.7)} L ${n(ex)} ${n(ey)}` +
+    ` L ${n(ex - ARROW)} ${n(ey + ARROW * 0.7)}`
+  const path = `${levelCurve(sx, sy, ex, ey)}${head}`
+  return underline === null ? path : `${path} M ${n(cL)} ${n(ey)} H ${n(cL + cW)}`
 }

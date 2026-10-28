@@ -27,7 +27,14 @@
 import type { MindElixirInstance, Topic } from 'mind-elixir'
 import { mixColors, type ThemeLook, type ViewImage } from '@genoffice/xmind-engine'
 import type { MapNodeMeta } from '../document/convert'
-import { type BranchBoxes, type BranchGeometry, mainBranchPath, subBranchPath } from './branches'
+import {
+  type BranchBoxes,
+  type BranchGeometry,
+  mainBranchPath,
+  subBranchPath,
+  timelineStepPath,
+  treeBranchPath,
+} from './branches'
 import { archivePictureEntry, pictureBox, type PictureStore } from './images'
 import {
   branchColor,
@@ -182,6 +189,13 @@ export class TopicDecorator {
     if (!centre) return
     const geometry = this.#geometry
     const lines = this.#mind.lines.children
+    // set by the controller when the map is drawn as a tree or a timeline
+    const structure = this.#mind.container.dataset.mmStructure
+    // below the main topics, a timeline lists its topics as a tree does
+    const subPath =
+      structure === 'tree' || structure === 'timeline'
+        ? (box: BranchBoxes) => treeBranchPath(geometry, box, box.isFirst ? 'main' : 'sub')
+        : (box: BranchBoxes) => subBranchPath(geometry, box)
 
     const boxes = (
       parent: DOMRect,
@@ -206,10 +220,19 @@ export class TopicDecorator {
       const topic = mainTopicOf(wrapper)
       const direction = wrapper.parentElement?.className ?? ''
       if (!topic) return
-      lines[at]?.setAttribute(
-        'd',
-        mainBranchPath(geometry, boxes(centre, topic.getBoundingClientRect(), frame, direction)),
-      )
+      const rect = topic.getBoundingClientRect()
+      let main: string
+      if (structure === 'tree') {
+        main = treeBranchPath(geometry, boxes(centre, rect, frame, direction), 'central')
+      } else if (structure === 'timeline') {
+        // each step leaves from the one before it, the first from the central topic
+        const before = at > 0 ? mainTopicOf(wrappers[at - 1]!) : null
+        const from = before?.getBoundingClientRect() ?? centre
+        main = timelineStepPath(geometry, boxes(from, rect, frame, direction), !before)
+      } else {
+        main = mainBranchPath(geometry, boxes(centre, rect, frame, direction))
+      }
+      lines[at]?.setAttribute('d', main)
       if (only && only !== wrapper) return
       const drawn = wrapper.lastElementChild
       if (!drawn || drawn.tagName.toLowerCase() !== 'svg') return
@@ -223,12 +246,7 @@ export class TopicDecorator {
         for (const child of below.children) {
           const to = child.firstElementChild
           if (!to) continue
-          paths.push(
-            subBranchPath(
-              geometry,
-              boxes(from, to.getBoundingClientRect(), origin, direction, isFirst),
-            ),
-          )
+          paths.push(subPath(boxes(from, to.getBoundingClientRect(), origin, direction, isFirst)))
           // the library draws below a topic only while its fold handle says it is open
           if ((to.children[1] as { expanded?: boolean } | undefined)?.expanded) walk(child, false)
         }

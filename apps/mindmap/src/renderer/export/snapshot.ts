@@ -238,7 +238,7 @@ export async function copyDrawing(source: SnapshotSource, box: DrawnBox): Promis
   for (const [name, value] of customProperties(mind.container.getAttribute('style'))) {
     container.style.setProperty(name, value)
   }
-  for (const name of ['mmSkeleton', 'mmVariant', 'mmTheme'] as const) {
+  for (const name of ['mmSkeleton', 'mmVariant', 'mmTheme', 'mmStructure'] as const) {
     const value = mind.container.dataset[name]
     if (value && /^[\w-]+$/.test(value)) container.dataset[name] = value
   }

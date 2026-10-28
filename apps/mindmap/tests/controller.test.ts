@@ -484,6 +484,81 @@ describe('summaries, relationships and the layout', () => {
     expect(controller.layout).toBe('right')
   })
 
+  it('a tree and a timeline are written as the classes of the format and marked on the map', async () => {
+    const { controller, mind, root } = await mount()
+    controller.setLayout('tree')
+    expect(root().structureClass).toBe('org.xmind.ui.tree.right')
+    expect(controller.layout).toBe('tree')
+    expect(mind.direction).toBe(1)
+    expect(mind.container.dataset.mmStructure).toBe('tree')
+
+    controller.setLayout('timeline')
+    expect(root().structureClass).toBe('org.xmind.ui.timeline.horizontal')
+    expect(controller.layout).toBe('timeline')
+    expect(mind.direction).toBe(3)
+    expect(mind.container.dataset.mmStructure).toBe('timeline')
+
+    // the same direction as a tree, drawn as it is
+    controller.setLayout('right')
+    expect(root().structureClass).toBe('org.xmind.ui.logic.right')
+    expect(controller.layout).toBe('right')
+    expect(mind.container.dataset.mmStructure).toBeUndefined()
+  })
+
+  it('in a timeline the arrow keys move the way the map looks, ahead of the library', async () => {
+    const { controller, mind } = await mount()
+    const selected = () => controller.selectedTopicIds()
+    controller.setLayout('timeline')
+    mind.selectNode(mind.findEle(IDS.a1))
+    // the topics below a main topic stand in a column
+    press(mind.container, 'ArrowDown')
+    expect(selected()).toEqual([IDS.a2])
+    press(mind.container, 'ArrowUp')
+    press(mind.container, 'ArrowUp')
+    expect(selected()).toEqual([IDS.a])
+    // the main topics stand in a row after the central topic
+    press(mind.container, 'ArrowRight')
+    expect(selected()).toEqual([IDS.b])
+    press(mind.container, 'ArrowLeft')
+    press(mind.container, 'ArrowLeft')
+    expect(selected()).toEqual([IDS.root])
+    press(mind.container, 'ArrowRight')
+    expect(selected()).toEqual([IDS.a])
+    press(mind.container, 'ArrowDown')
+    expect(selected()).toEqual([IDS.a1])
+    press(mind.container, 'ArrowLeft')
+    expect(selected()).toEqual([IDS.a])
+  })
+
+  it('outside a timeline the arrow keys are the library’s', async () => {
+    const { controller, mind } = await mount()
+    controller.setLayout('down')
+    mind.selectNode(mind.findEle(IDS.a1))
+    // the library's rule for the downward layout: down goes below, right to the next one
+    press(mind.container, 'ArrowRight')
+    expect(controller.selectedTopicIds()).toEqual([IDS.a2])
+    controller.setLayout('tree')
+    mind.selectNode(mind.findEle(IDS.a1))
+    press(mind.container, 'ArrowDown')
+    expect(controller.selectedTopicIds()).toEqual([IDS.a2])
+  })
+
+  it('a tree stays a tree through an edit and an undo', async () => {
+    const { controller, mind, root } = await mount()
+    controller.setLayout('tree')
+    controller.edit((top) => {
+      top.children![0]!.topic = 'Renamed'
+    })
+    await settle()
+    expect(controller.canUndo).toBe(true)
+    expect(controller.layout).toBe('tree')
+    expect(root().structureClass).toBe('org.xmind.ui.tree.right')
+    expect(controller.undo()).toBe(true)
+    expect(controller.layout).toBe('tree')
+    expect(root().structureClass).toBe('org.xmind.ui.tree.right')
+    expect(mind.container.dataset.mmStructure).toBe('tree')
+  })
+
   it('folding with the handle is written without becoming a history step', async () => {
     const { controller, mind, attached } = await mount()
     mind.expandNode(mind.findEle(IDS.a), false)

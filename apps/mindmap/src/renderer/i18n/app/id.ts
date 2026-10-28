@@ -46,6 +46,8 @@ export const id = {
   layoutRight: 'Kanan',
   layoutBoth: 'Kedua sisi',
   layoutDown: 'Ke bawah',
+  layoutTree: 'Pohon',
+  layoutTimeline: 'Linimasa',
   layoutStandIn:
     'Tata letak asli peta ini tidak dapat digambar di sini, sehingga ditampilkan dengan tata letak lain. Tata letak baru ditulis ke file saat Anda memilihnya.',
   sheetTabs: 'Lembar',

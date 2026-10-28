@@ -46,6 +46,8 @@ export const zhTW = {
   layoutRight: '向右',
   layoutBoth: '兩側',
   layoutDown: '向下',
+  layoutTree: '樹狀圖',
+  layoutTimeline: '時間軸',
   layoutStandIn:
     '此心智圖原有的版面配置無法在此繪製，因此以另一種配置顯示。選擇配置後才會寫入檔案。',
   sheetTabs: '工作表',

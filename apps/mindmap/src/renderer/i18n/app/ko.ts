@@ -46,6 +46,8 @@ export const ko = {
   layoutRight: '오른쪽',
   layoutBoth: '양쪽',
   layoutDown: '아래',
+  layoutTree: '트리',
+  layoutTimeline: '타임라인',
   layoutStandIn:
     '이 지도의 원래 배치는 여기서 그릴 수 없어 다른 배치로 보입니다. 배치를 고르면 그때 파일에 적습니다.',
   sheetTabs: '시트',

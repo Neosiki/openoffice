@@ -46,6 +46,8 @@ export const hi = {
   layoutRight: 'दाएँ',
   layoutBoth: 'दोनों ओर',
   layoutDown: 'नीचे की ओर',
+  layoutTree: 'ट्री',
+  layoutTimeline: 'टाइमलाइन',
   layoutStandIn:
     'इस मैप का अपना लेआउट यहाँ नहीं बनाया जा सकता, इसलिए दूसरा लेआउट दिखाया गया है। लेआउट फ़ाइल में तभी लिखा जाता है जब आप उसे चुनते हैं।',
   sheetTabs: 'शीट',

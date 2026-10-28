@@ -46,6 +46,8 @@ export const th = {
   layoutRight: 'ขวา',
   layoutBoth: 'สองด้าน',
   layoutDown: 'ลงล่าง',
+  layoutTree: 'แผนภูมิต้นไม้',
+  layoutTimeline: 'ไทม์ไลน์',
   layoutStandIn:
     'เค้าโครงเดิมของแผนที่นี้วาดที่นี่ไม่ได้ จึงแสดงด้วยเค้าโครงอื่น เมื่อเลือกเค้าโครงแล้วจึงจะเขียนลงไฟล์',
   sheetTabs: 'แผ่นงาน',
