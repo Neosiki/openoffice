@@ -178,17 +178,20 @@
 
 **`ieumoffice capabilities --json`** 은 모델을 부르지 않고, 위 세 명령이 지금 무엇을 할지 알려 준다. `detail`:
 
-| 항목                                                                                               | 값                                                                                             |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                           |
-| `pdf_ai_read`, `pdf_translation`                                                                   | 같은 모양. PDF의 AI 페이지 읽기와 문서 번역이 갈 길(대화에 쓰는 AI 제공자)                     |
-| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                           |
-| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`                   |
-| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                          |
-| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                           |
-| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있을 때만 `{ used, limit: null, remaining: null }`이 더해진다 |
-| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                               |
-| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                      |
+| 항목                                                                                               | 값                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                                                                                                                                                     |
+| `pdf_ai_read`, `pdf_translation`                                                                   | 같은 모양. PDF의 AI 페이지 읽기와 문서 번역이 갈 길(대화에 쓰는 AI 제공자)                                                                                                                                               |
+| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                                                                                                                                                     |
+| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`                                                                                                                                             |
+| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                                                                                                                                                    |
+| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                                                                                                                                                     |
+| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있을 때만 `{ used, limit: null, remaining: null }`이 더해진다                                                                                                                           |
+| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                                                                                                                                                         |
+| `wasm`                                                                                             | `{ available, reason?, limit_bytes? }`. PDF·한글 엔진과 네트워크 명령이 쓰는 WebAssembly 메모리를 지금 만들 수 있는지. 가상 메모리 상한(`ulimit -v`)에 걸리면 `reason: "virtual_memory"`와 그 상한(`limit_bytes`)이 온다 |
+| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                                                                                                                                                |
+
+- `wasm.available`이 거짓이면 `pdf read`·`hwp read`·`search`·`read-url`처럼 WebAssembly를 쓰는 명령은 그 환경에서 돌지 않는다. 그때 명령은 크래시 대신 종료 코드 3, `error: "resource_limit"`, `detail.reason: "virtual_memory"`와 `ulimit -v`를 올리라는 `suggestion`으로 답한다. DOCX·XLSX·PPTX·Markdown·HTML·CSV·ODT 문서 작업은 WebAssembly를 쓰지 않는다.
 
 - `media_analysis`는 예전 호출자를 위해 남긴 항목이다. `image_analysis`와 같고, 영상만 될 때는 `video_analysis`와 같다.
 - 웹·이미지 검색은 키 제공자를 고르지 않는 한 항상 `available`이고 `route`는 `free`다.

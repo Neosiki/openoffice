@@ -306,6 +306,21 @@ What differs on Linux:
   sign-in page asks you to paste a code, run `claude auth login` or
   `codex login` in a terminal yourself.
 
+To use only the terminal command without the desktop app (a server without a
+screen, or an AI agent's workspace), use the command-line archive
+`ieumoffice-cli_<version>_linux-x64.tar.gz` from the same release. The script
+below downloads the archive, checks its checksum, fetches Node 22 when no Node
+22 or newer is installed, and writes only under `~/.local`, without
+administrator rights.
+
+```sh
+curl -fsSL https://ieumoffice.com/cli/install.sh | sh
+```
+
+Exporting to PDF, HTML or PNG and `open` / `selection` need the app's renderer,
+so the archive does not offer them. See
+[packaging/cli/README.md](packaging/cli/README.md) for details.
+
 ## Updates
 
 The Windows app and the Linux `AppImage` look at this repository's GitHub

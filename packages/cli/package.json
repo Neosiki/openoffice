@@ -17,6 +17,7 @@
   },
   "scripts": {
     "build": "node build.mjs && node collect-deps.mjs",
+    "pack:tarball": "node pack-tarball.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

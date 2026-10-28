@@ -43,6 +43,7 @@
 - 구독 프로그램을 띄울 수 있는 프로세스는 끝날 때 그것을 끝낸다(`endSubscriptionChildrenWith`: `exit`와 `SIGHUP`·`SIGINT`·`SIGTERM`). 실제 요청을 실행하는 경우에는 강제 종료에 대비해 `dataDir`에 자식 기록도 남긴다. 앱의 다음 시작이 그 기록으로 정리한다.
 - 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량 허용은 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
 - 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다. `read-url`(`read_url`)도 기존 `ErrorReason`만 다시 쓴다(`missing_argument`, `invalid_argument`, `unsupported`, `resource_limit`, `app_unavailable`). 이유는 `detail.reason`(`blocked`, `no_text`), `detail.errorCode`(`network`, `timeout`, `http_error`, `auth`)와 `detail.status`·`detail.max_bytes`로 알린다.
+- WebAssembly 메모리를 만들 수 없는 환경(가상 메모리 상한 `ulimit -v`)에서는 PDF·한글·네트워크 엔진이 `RangeError`로 실패한다. `src/wasm.ts`의 `wasmMemoryFailure`가 `runCli`의 마지막 catch에서 그 실패를 종료 코드 3, `error: "resource_limit"`, `detail.reason: "virtual_memory"` 봉투로 바꾸고 `ulimit -v`를 올리라는 `suggestion`을 붙인다. `capabilities`의 `detail.wasm`은 `wasmAvailability`로 같은 판단을 미리 알린다. 이 두 곳에서만 판단하고 명령마다 따로 잡지 않는다.
 - 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다. rename이 잠금으로 끝내 막혀 제자리 덮어쓰기까지 실패하면 임시 파일을 지우지 않고, 오류(`conversion_failed`)의 `message`와 `detail.rescue_path`에 그 경로를 적는다.
 - 비밀 값은 감사 기록에 남기지 않는다. 기록은 실패해도 명령을 실패시키지 않는다.
 
@@ -56,6 +57,7 @@
 - 번역 PDF는 HarfBuzz의 `hb-subset.wasm`이 있어야 쓴다. 설치본에서는 `Resources/wasm/hb-subset.wasm`, 저장소에서는 `harfbuzzjs`의 것을 찾고, `GENOFFICE_HB_SUBSET_WASM`으로 바꿀 수 있다(`hbSubsetWasmPath`).
 - 패키징: `build.mjs`가 전체를 CommonJS 파일 하나로 묶고, 설치된 앱은 그것을 `ELECTRON_RUN_AS_NODE=1`로 자기 실행 파일에서 돌린다(`bin/ieumoffice.cmd`). `node_modules`는 함께 배포되지 않는다. 번들의 버전은 `GENOFFICE_APP_VERSION`으로 주입되어 앱 버전과 어긋나지 않는다.
 - 한글 엔진의 WASM은 번들에 들어가지 않는다. `rhwpWasmPath`(`src/resources.ts`)가 설치본의 `Resources/wasm`이나 체크아웃의 `node_modules`에서 찾아 `GENOFFICE_RHWP_WASM`으로 넘긴다. 번들 안에서는 `import.meta.url`이 비어서 읽는 쪽이 스스로 찾지 못한다.
+- 문서 명령의 DOM은 jsdom이 만든다(`src/dom.ts`). jsdom 28은 자기 undici 사본의 쿠키 모듈에서 `globalThis.Headers`를 읽는데, 그 전역은 Node 내장 undici와 그 wasm 파서를 그 자리에서 깨운다. 가상 메모리 상한(`ulimit -v`)이 낮은 환경에서는 그 순간 프로세스가 죽으므로 `withInertHeaders`가 jsdom을 불러오는 동안만 빈 클래스로 바꾸고 곧바로 되돌린다. 이 감싸기를 걷어내지 않는다.
 - MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 91KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.

@@ -294,6 +294,19 @@ Linux판에서 다른 점:
   넣어야 할 때는 터미널에서 `claude auth login` 또는 `codex login`을 직접
   실행합니다.
 
+데스크톱 앱 없이 터미널 명령어만 쓰려면(화면이 없는 서버, AI 에이전트의 작업
+공간) 같은 릴리스의 명령줄 묶음 `ieumoffice-cli_<버전>_linux-x64.tar.gz`를
+씁니다. 아래 설치 스크립트가 묶음을 받아 검사값을 확인하고, Node 22 이상이 없으면
+함께 받아 `~/.local` 아래에만 설치합니다. 관리자 권한은 쓰지 않습니다.
+
+```sh
+curl -fsSL https://ieumoffice.com/cli/install.sh | sh
+```
+
+PDF·HTML·PNG로 내보내기와 `open`·`selection`은 앱의 화면이 있어야 해서 이
+묶음에서는 쓸 수 없습니다. 자세한 내용은
+[packaging/cli/README.md](packaging/cli/README.md)(영어)에 있습니다.
+
 ## 업데이트
 
 Windows 설치본과 Linux `AppImage`는 켠 직후에 한 번, 그 뒤로는 4시간마다 이
