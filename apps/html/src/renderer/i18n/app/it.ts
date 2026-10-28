@@ -1,6 +1,36 @@
 import type { zh } from './zh'
 
 export const it = {
+  mathInsert: 'Inserisci equazione',
+  mathEdit: 'Modifica equazione',
+  mathHelp:
+    'Scrivi visivamente o modifica LaTeX. Il codice viene salvato nel file HTML per modificarlo in seguito.',
+  mathVisualInput: 'Inserimento visivo di equazioni',
+  mathSource: 'Codice LaTeX',
+  mathDisplay: 'Mostra su una riga separata',
+  mathPreview: 'Anteprima',
+  mathUnsupported:
+    'Impossibile comporre questa espressione. Il codice sarà conservato per correggerlo in seguito.',
+  mathTooLong: 'Usa al massimo {n} caratteri.',
+  mathStale: 'Il documento è cambiato. Copia la bozza, chiudi questa finestra e riapri la formula.',
+  mathShortcut: '⌘+Invio per applicare',
+  mathApply: 'Applica equazione',
+  mathKeyboard: 'Tastiera matematica',
+  mathFraction: 'Frazione',
+  mathRoot: 'Radice quadrata',
+  mathNthRoot: 'Radice n-esima',
+  mathPower: 'Potenza',
+  mathSubscript: 'Pedice',
+  mathSum: 'Somma',
+  mathProduct: 'Prodotto',
+  mathIntegral: 'Integrale',
+  mathLimit: 'Limite',
+  mathMatrix: 'Matrice',
+  mathVector: 'Vettore',
+  mathCases: 'Sistema',
+  mathPiecewise: 'Funzione a tratti',
+  mathBinomial: 'Coefficiente binomiale',
+
   redactMenuLabel: 'Nascondi la selezione all’IA',
   redactDialogDesc:
     'Le parole restano nel documento e nel file; il modello vede solo il segnaposto. Dai un nome perché sappia cosa rappresenta.',

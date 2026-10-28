@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const pl = {
+  mathInsert: 'Wstaw równanie',
+  mathEdit: 'Edytuj równanie',
+  mathHelp: 'Wpisuj wizualnie lub edytuj LaTeX. HTML zachowuje źródło do późniejszej edycji.',
+  mathVisualInput: 'Wizualne wprowadzanie równań',
+  mathSource: 'Źródło LaTeX',
+  mathDisplay: 'Wyświetl w osobnym wierszu',
+  mathPreview: 'Podgląd',
+  mathUnsupported:
+    'Nie można wyrenderować tego wyrażenia. Źródło zostanie zapisane do późniejszej korekty.',
+  mathTooLong: 'Użyj najwyżej {n} znaków.',
+  mathStale: 'Dokument się zmienił. Skopiuj szkic, zamknij to okno i ponownie otwórz równanie.',
+  mathShortcut: '⌘+Enter, aby zastosować',
+  mathApply: 'Zastosuj równanie',
+  mathKeyboard: 'Klawiatura matematyczna',
+  mathFraction: 'Ułamek',
+  mathRoot: 'Pierwiastek kwadratowy',
+  mathNthRoot: 'Pierwiastek n-tego stopnia',
+  mathPower: 'Potęga',
+  mathSubscript: 'Indeks dolny',
+  mathSum: 'Suma',
+  mathProduct: 'Iloczyn',
+  mathIntegral: 'Całka',
+  mathLimit: 'Granica',
+  mathMatrix: 'Macierz',
+  mathVector: 'Wektor',
+  mathCases: 'Układ równań',
+  mathPiecewise: 'Funkcja przedziałami',
+  mathBinomial: 'Współczynnik dwumianowy',
+
   redactMenuLabel: 'Ukryj zaznaczenie przed AI',
   redactDialogDesc:
     'Słowa zostają w dokumencie i w pliku; model widzi tylko symbol. Nadaj mu nazwę, by wiedział, co oznacza.',

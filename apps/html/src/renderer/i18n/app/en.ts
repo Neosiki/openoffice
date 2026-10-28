@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const en = {
+  mathInsert: 'Insert equation',
+  mathEdit: 'Edit equation',
+  mathHelp: 'Type visually or edit LaTeX. Saved HTML keeps the source for later editing.',
+  mathVisualInput: 'Visual equation input',
+  mathSource: 'LaTeX source',
+  mathDisplay: 'Display on a separate line',
+  mathPreview: 'Preview',
+  mathUnsupported:
+    'This expression cannot be typeset. Its source will be saved so you can fix it later.',
+  mathTooLong: 'Use at most {n} characters.',
+  mathStale: 'The document changed. Copy your draft, close this dialog and reopen the equation.',
+  mathShortcut: '⌘+Enter to apply',
+  mathApply: 'Apply equation',
+  mathKeyboard: 'Math keyboard',
+  mathFraction: 'Fraction',
+  mathRoot: 'Square root',
+  mathNthRoot: 'Nth root',
+  mathPower: 'Power',
+  mathSubscript: 'Subscript',
+  mathSum: 'Sum',
+  mathProduct: 'Product',
+  mathIntegral: 'Integral',
+  mathLimit: 'Limit',
+  mathMatrix: 'Matrix',
+  mathVector: 'Vector',
+  mathCases: 'System',
+  mathPiecewise: 'Piecewise',
+  mathBinomial: 'Binomial',
+
   redactMenuLabel: 'Hide the selection from AI',
   redactDialogDesc:
     'The words stay in the document and in the file; the model sees the placeholder below instead. Name it so the model knows what it stands for.',

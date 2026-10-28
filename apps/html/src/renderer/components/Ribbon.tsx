@@ -79,6 +79,7 @@ interface Props {
   canInsert: boolean
   /** images come from a picked file by default; `url` places a remote image instead; tables take the picker's rows × cols */
   onInsert: (kind: InsertKind, opts?: InsertOptions) => void
+  onMath?: () => void
   /** replace a still-blank page with the document skeleton, in the UI language */
   onInsertSkeleton: () => void
   /** false once the page has content: a skeleton would only duplicate the document */
@@ -369,6 +370,19 @@ export function Ribbon(p: Props) {
             <span className="rb-group-lead" aria-hidden="true">
               {t('ribbonGroupInsert')}
             </span>
+            {p.onMath && (
+              <button
+                type="button"
+                className="rb-btn"
+                disabled={insertOff}
+                onClick={p.onMath}
+                data-tip={t('mathInsert')}
+                aria-label={t('mathInsert')}
+              >
+                <span aria-hidden="true">∑</span>
+                <span>{t('mathInsert')}</span>
+              </button>
+            )}
             <button
               type="button"
               className="rb-btn rb-view"
