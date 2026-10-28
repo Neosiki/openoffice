@@ -75,6 +75,10 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 패널은 다른 에디터와 같은 부품으로 조립한다. 연결이 없으면 `AiConnectPrompt`, 구독 첫 사용이면 `AiFirstConnectionNotice`(Codex 진단 기록 문장 `codexKeepsHistory`와 페이지 그림·문서 전체 글 문장 `sendsWholeDocument`를 켠 채로), 문장은 `aiRunErrorText`다. 대기열의 메시지는 `admitQueued`를 지나고, 연결이 없으면 대기열을 멈춘다.
 - PDF.js의 CMap·표준 글꼴·wasm은 `electron.vite.config.ts`가 렌더러 출력에 복사한다. 임베드되지 않은 한중일 글꼴의 문서가 이것으로 그려진다. 복사 경로는 POSIX 구분자여야 한다(Windows에서 `join`은 깨진다).
 - OCR은 플랫폼 도우미 실행 파일을 쓴다(Windows는 `Windows.Media.Ocr`). 도우미가 없는 빌드에서는 엔진이 없는 것으로 풀리고 뷰어는 OCR 없이 동작한다.
+- 다음 넷은 원본에서 받은 기능이다(2026-10-28 받아오기). 원본 동작을 그대로 두고, 고칠 때는 원본의 다음 변경과 부딪히지 않게 좁게 고친다.
+  - **OCR 글자 층 저장**(`ocr-bake.ts`): 자동 인식한 쪽은 저장할 때 줄마다 보이지 않는 글자(render mode 3)를 쓴다. 이 대기 중인 굽기는 저장 안 됨 표시에 넣지 않지만(읽기만 한 스캔은 깨끗하게 남는다), 저장을 누르면 쓰인다. 저장 뒤 다시 읽으면 글자 층이 있어 자동 인식이 다시 돌지 않는다.
+  - **책갈피 편집**(`OutlinePanel.tsx`, `save-pdf.ts`의 `applyOutline`): 고친 저장만 `/Outlines`를 다시 쓰고, 고치지 않은 저장은 바이트 그대로다. 고친 책갈피는 `editsPayload`로 자동 저장과 복구 사본에도 실린다.
+  - **Bates 번호**와 **비교**(옆 칸 `compare`): 둘 다 이 PC 안에서만 돈다. 비교는 뒷단이 PDFium으로 글자만 읽어 넘긴다.
 - 문자열은 `src/renderer/i18n/strings.ts`(한 파일에 21개 언어, `zh`가 키 집합)와 `cert-sign-strings.ts`에 있다. 새 기능의 문자열은 언어별 조각으로 나뉘어 있다(`i18n/convert/`, `i18n/ai-read/`, `i18n/translate/`, 읽기 도우미의 `i18n/reading/`, `i18n/annot-panel/`, `i18n/ai-reading/`, `i18n/bilingual/`, `i18n/highlight/`, `i18n/notes/`, 각각 `zh`가 키 집합, 묶는 파일은 `strings-<기능>.ts`). 노트 저장 창의 문구는 메인의 `note-link.ts`에 있다. 구독 연결 문장과 AI 진입 이름은 `@genoffice/ui`의 것을 쓴다.
 - 문서 작업 엔진은 화면 프로세스에서 돈다. 페이지 그림은 화면이 자기 PDF.js 사본으로 그리고, 모델 호출은 AI 창과 같은 `ai:stream`으로 간다. 결과 쓰기는 `ipc-store.ts`를 거쳐 셸의 보관소로 간다. 셸은 그 창에 열린 파일에서 자기가 계산한 해시만 받아들인다.
 - `src/shared/ipc.ts`의 `structure*`·`store*` 채널 모양을 바꾸면 셸의 처리 코드(`apps/shell/src/main/pdf-structure/`)도 함께 고치고 셸을 다시 빌드한다.
