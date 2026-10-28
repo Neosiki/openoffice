@@ -1,5 +1,6 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import JSZip from 'jszip'
 import { describe, expect, it, vi } from 'vitest'
 import { run, tempDir } from './helpers'
 
@@ -19,6 +20,30 @@ describe('sheet apply without the xlsx engine', () => {
     writeFileSync(ops, JSON.stringify([{ op: 'set_cell', address: 'A1', value: 5 }]))
     const applied = await run(['sheet', 'apply', out, '--ops', ops, '--json'])
     expect(applied.code).toBe(0)
+    expect(JSON.stringify(applied.json())).toContain('dependent_formulas_not_refreshed')
+  })
+
+  it('still finds the formulas when the sheet relationship climbs out with ../', async () => {
+    const dir = tempDir()
+    const table = join(dir, 't.json')
+    writeFileSync(table, JSON.stringify([[2, '=A1*10']]))
+    const out = join(dir, 't.xlsx')
+    await run(['create', '--type', 'xlsx', '--from', table, '--out', out])
+    const zip = await JSZip.loadAsync(readFileSync(out))
+    const rels = 'xl/_rels/workbook.xml.rels'
+    zip.file(
+      rels,
+      (await zip.file(rels)!.async('string')).replace(
+        /Target="(?:\/xl\/|xl\/)?worksheets\/sheet1\.xml"/,
+        'Target="../xl/worksheets/sheet1.xml"',
+      ),
+    )
+    writeFileSync(out, await zip.generateAsync({ type: 'nodebuffer' }))
+    const ops = join(dir, 'ops.json')
+    writeFileSync(ops, JSON.stringify([{ op: 'set_cell', address: 'A1', value: 5 }]))
+    const applied = await run(['sheet', 'apply', out, '--ops', ops, '--json'])
+    expect(applied.code).toBe(0)
+    // the scan used to miss the sheet, find no formulas and answer cached_values: true in silence
     expect(JSON.stringify(applied.json())).toContain('dependent_formulas_not_refreshed')
   })
 
