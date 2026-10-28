@@ -435,7 +435,11 @@ anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
 IeumOffice is built with help from many people. See
 [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
 
+- [@CauchyRiemannEquations](https://github.com/CauchyRiemannEquations) — math editing in the HTML editor
+- [@dossamlab](https://github.com/dossamlab) — spreadsheet PDF export
+- [@hunkim](https://github.com/hunkim) — Upstage Solar provider, test fixes
 - [@Neosiki](https://github.com/Neosiki) — CLI, HWP and ODT fixes
+- [@thecodinglog](https://github.com/thecodinglog) — spreadsheet formula bar
 
 ## License and acknowledgement
 

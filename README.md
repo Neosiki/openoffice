@@ -410,7 +410,11 @@ Parallel과 DuckDuckGo로, 업데이트 확인은 GitHub로 갑니다. 편집기
 
 이 프로그램은 여러 분의 도움으로 만들어집니다. 전체 목록은 [CONTRIBUTORS.md](CONTRIBUTORS.md)에 있습니다.
 
+- [@CauchyRiemannEquations](https://github.com/CauchyRiemannEquations) — HTML 수식 편집
+- [@dossamlab](https://github.com/dossamlab) — 엑셀 PDF 내보내기
+- [@hunkim](https://github.com/hunkim) — Upstage Solar 연결, 시험 개선
 - [@Neosiki](https://github.com/Neosiki) — CLI·HWP·ODT 수정
+- [@thecodinglog](https://github.com/thecodinglog) — 엑셀 수식 입력줄
 
 ## 라이선스와 출처
 
