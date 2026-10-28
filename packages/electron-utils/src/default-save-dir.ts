@@ -105,9 +105,10 @@ export function resolveDefaultSaveDir(
     return configured
   }
   const fallbacks = typeof fallbackDir === 'string' ? [fallbackDir] : fallbackDir
+  const first = fallbacks[0]
   for (const dir of fallbacks) {
     if (!usableNow(dir)) continue
-    state.fallback = dir === fallbacks[0] ? null : { blocked: fallbacks[0], using: dir }
+    state.fallback = first === undefined || dir === first ? null : { blocked: first, using: dir }
     return dir
   }
   throw new Error(`default save dir not usable: ${fallbacks.join(', ')}`)
