@@ -1409,7 +1409,12 @@ async function saveOnce(
     rebaseOdtSession(reparsed)
     // Equal doc: skip the rewrite so undo history, caret and scroll survive.
     if (!unchanged) {
-      editor.commands.setContent(rebasedPm as never)
+      // Rebase saved anchors without recording the reload as a user edit.
+      editor
+        .chain()
+        .setMeta(TRACK_IGNORE, true)
+        .setContent(rebasedPm as never)
+        .run()
       resetEditorHistory(editor)
       const chain = editor
         .chain()
