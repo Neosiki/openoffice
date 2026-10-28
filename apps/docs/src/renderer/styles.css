@@ -13340,6 +13340,33 @@ tr > .page-gap-cut {
   width: auto;
 }
 
+/* `.modal label` and `.modal input` are meant for text fields and outrank the
+   rules above, which drew these check boxes and radios as 34px-tall boxes with
+   their names pushed below. Same reset as the mail merge radios. */
+.modal .table-dialog-check,
+.modal .table-dialog-radios label {
+  display: flex;
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.modal .equation-inline-toggle {
+  display: flex;
+  margin-bottom: 0;
+}
+
+.modal .table-dialog-check input,
+.modal .table-dialog-radios input,
+.modal .equation-inline-toggle input {
+  display: inline-block;
+  flex: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  outline: revert;
+}
+
 .table-properties-inline {
   display: flex;
   flex-wrap: wrap;
