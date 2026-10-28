@@ -2198,7 +2198,7 @@ export function App({
     // Formula bar shows harvested formula text on streamed workbooks whose
     // closure gave up; display-only, the engine never sees it.
     const formulaTextDisposable = installFormulaTextInterceptor(runtime, lazyWorkbookRef)
-    // The fx bar grows to fit a wrapped formula instead of clipping it.
+    // Keep the fx bar steady; scroll long content and resize only on request.
     const formulaBarAutosizeDisposable = installFormulaBarAutosize(runtime)
     const fxButtonDisposable = installFxButtonHook(runtime)
     // A file formula the engine re-computes into an error shows the file's
