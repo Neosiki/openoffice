@@ -98,9 +98,15 @@ async function loadJsdom(): Promise<typeof import('jsdom')> {
  * read — which is why `docs read` died while `sheet` and `slides` worked. jsdom
  * only brand-checks that global; nothing here ever hands it a real one, so an
  * empty class is enough to keep the parser out of the process.
+ *
+ * On Node 22 even reading or redefining that lazy property loads the built-in
+ * undici; asking whether it exists and deleting it do not. So the real Headers
+ * is not kept: afterwards an accessor fetches it through `Response` the first
+ * time something reads it, which loads the parser only when it is really used.
  */
 export async function withInertHeaders<T>(load: () => Promise<T>): Promise<T> {
-  const real = Object.getOwnPropertyDescriptor(globalThis, 'Headers')
+  const had = Object.hasOwn(globalThis, 'Headers')
+  delete (globalThis as { Headers?: unknown }).Headers
   Object.defineProperty(globalThis, 'Headers', {
     value: class Headers {},
     configurable: true,
@@ -109,7 +115,19 @@ export async function withInertHeaders<T>(load: () => Promise<T>): Promise<T> {
   try {
     return await load()
   } finally {
-    if (real) Object.defineProperty(globalThis, 'Headers', real)
+    if (had) Object.defineProperty(globalThis, 'Headers', lazyBuiltinHeaders())
     else delete (globalThis as { Headers?: unknown }).Headers
+  }
+}
+
+function lazyBuiltinHeaders(): PropertyDescriptor {
+  const settle = (value: unknown): unknown => {
+    Object.defineProperty(globalThis, 'Headers', { value, configurable: true, writable: true })
+    return value
+  }
+  return {
+    configurable: true,
+    get: () => settle(new Response().headers.constructor),
+    set: (value: unknown) => void settle(value),
   }
 }

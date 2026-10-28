@@ -8,8 +8,13 @@ import { withInertHeaders } from '../src/dom'
  * global for exactly the import (see withInertHeaders in src/dom.ts).
  */
 describe('loading jsdom without the built-in WebAssembly parser', () => {
+  // the built-in comes back on first read, through Response (see withInertHeaders)
+  function expectBuiltinHeaders(): void {
+    expect(globalThis.Headers).toBe(new Response().headers.constructor)
+    expect(new Headers({ a: '1' }).get('a')).toBe('1')
+  }
+
   it('replaces globalThis.Headers while the loader runs, then restores it', async () => {
-    const before = Object.getOwnPropertyDescriptor(globalThis, 'Headers')
     let during: PropertyDescriptor | undefined
     const answer = await withInertHeaders(async () => {
       during = Object.getOwnPropertyDescriptor(globalThis, 'Headers')
@@ -19,17 +24,16 @@ describe('loading jsdom without the built-in WebAssembly parser', () => {
     // a plain value, not Node's lazy accessor over its bundled undici
     expect(during?.value).toBeTypeOf('function')
     expect(during?.get).toBeUndefined()
-    expect(Object.getOwnPropertyDescriptor(globalThis, 'Headers')).toEqual(before)
+    expectBuiltinHeaders()
   })
 
-  it('restores the descriptor when the loader throws', async () => {
-    const before = Object.getOwnPropertyDescriptor(globalThis, 'Headers')
+  it('restores the built-in when the loader throws', async () => {
     await expect(
       withInertHeaders(async () => {
         throw new Error('jsdom refused to load')
       }),
     ).rejects.toThrow('jsdom refused to load')
-    expect(Object.getOwnPropertyDescriptor(globalThis, 'Headers')).toEqual(before)
+    expectBuiltinHeaders()
   })
 
   it('leaves no stub behind in a process that had no Headers', async () => {
