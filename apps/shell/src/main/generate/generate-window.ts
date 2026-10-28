@@ -18,7 +18,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
 import { productName, type Lang } from '@genoffice/i18n'
 import { safeExternalUrl } from '@genoffice/electron-utils'
@@ -36,6 +36,7 @@ import { convertSource, markdownRedactionNotice, type ConvertedDocument } from '
 import { inspectMaterial, SUPPORTED_MATERIAL_EXTS } from './materials'
 import { createOpenMaterials, type OpenMaterialsDeps } from './open-materials'
 import { GenerateSession, type MaterialRef } from './session'
+import { generateTitleBarOverlay } from './title-bar'
 
 export interface GenerateWindowDeps {
   /** the window the generate window sits above when the caller names none */
@@ -211,7 +212,17 @@ export function openGenerateWindow(init: {
     maximizable: false,
     fullscreenable: false,
     autoHideMenuBar: true,
+    backgroundColor: generateTitleBarOverlay(nativeTheme.shouldUseDarkColors).color,
     title: `${generateText(lang, 'windowTitle')} - ${productName(lang)}`,
+    // Windows paints a native frame light even under a dark app theme; draw the
+    // title band ourselves and let Electron theme only its caption buttons.
+    // macOS native frames follow `nativeTheme`, so they are left alone.
+    ...(process.platform === 'darwin'
+      ? {}
+      : {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: generateTitleBarOverlay(nativeTheme.shouldUseDarkColors),
+        }),
     webPreferences: {
       preload: join(__dirname, '../preload/generate.js'),
       contextIsolation: true,
@@ -221,6 +232,16 @@ export function openGenerateWindow(init: {
   })
   win = next
   next.removeMenu()
+  // follow a theme switch while the window is open (nativeTheme fires 'updated')
+  const refreshTitleBar = () => {
+    if (next.isDestroyed() || process.platform === 'darwin') return
+    try {
+      next.setTitleBarOverlay(generateTitleBarOverlay(nativeTheme.shouldUseDarkColors))
+    } catch {
+      // the window was torn down between the check and the call
+    }
+  }
+  nativeTheme.on('updated', refreshTitleBar)
   next.webContents.setWindowOpenHandler(({ url }) => {
     const target = safeExternalUrl(url)
     if (target) void shell.openExternal(target)
@@ -232,6 +253,7 @@ export function openGenerateWindow(init: {
     if (session === current) void current.refresh()
   })
   next.on('closed', () => {
+    nativeTheme.off('updated', refreshTitleBar)
     if (win === next) win = null
     if (session === current) session = null
   })
