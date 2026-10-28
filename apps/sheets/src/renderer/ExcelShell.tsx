@@ -3236,6 +3236,9 @@ function Ribbon({
               <i className="check-box">{pageLayout.showHeadings ? '✓' : ''}</i>
               {t('appHeadings')}
             </button>
+          </div>
+          {/* five rows overflow the band; three per column, as Page Layout does */}
+          <div className="check-column">
             <button
               className="check-item"
               data-tip={t('appRightToLeft')}
