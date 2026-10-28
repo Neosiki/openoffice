@@ -42,6 +42,7 @@ import type { WikiLinkOptions } from './wikilink'
 import type { SlashController, SlashItem } from './slashCommand'
 import { BlockLink } from './blockId'
 import type { BlockLinkOptions } from './blockId'
+import { WikiPasteLive } from './wikiPaste'
 import { FootnoteDefinition, FootnoteNav, FootnoteReference } from './footnote'
 import { t } from '../i18n/locale'
 
@@ -156,6 +157,8 @@ export function buildExtensions(options: BuildExtensionsOptions): AnyExtension[]
     WikiAliasDisplay,
     // `^id` block markers: written on demand, dimmed in the view, plain text in the file
     BlockLink.configure(options.blockLink ?? {}),
+    // pasted `[[links]]` take their live shape at once
+    WikiPasteLive,
     BlockDragHandle,
     BlockKeymap,
     AiHighlight,

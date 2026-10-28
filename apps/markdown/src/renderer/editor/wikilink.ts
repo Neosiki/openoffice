@@ -19,7 +19,7 @@ import type { WikiLinkResolved } from '../../shared/ipc'
  * The target may hold anything but a bracket, pipe or newline; the alias runs
  * to the closing brackets. `[[]]` carries no name and is not a link.
  */
-const WIKI_LINK_RE = /^\[\[([^[\]|\n]+?)(?:\|([^[\]\n]+))?\]\]/
+export const WIKI_LINK_RE = /^\[\[([^[\]|\n]+?)(?:\|([^[\]\n]+))?\]\]/
 
 /**
  * Index of the first unescaped `[[`. The stock link tokenizer opens on a
