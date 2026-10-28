@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const ko = {
+  mathInsert: '수식 삽입',
+  mathEdit: '수식 편집',
+  mathHelp:
+    '수식을 직접 입력하거나 LaTeX로 편집하세요. HTML에 원문이 저장되어 다시 수정할 수 있습니다.',
+  mathVisualInput: '수식 직접 입력',
+  mathSource: 'LaTeX 원문',
+  mathDisplay: '독립된 줄에 표시',
+  mathPreview: '미리보기',
+  mathUnsupported: '표시할 수 없는 수식입니다. 나중에 수정할 수 있도록 원문을 저장합니다.',
+  mathTooLong: '{n}자 이내로 입력하세요.',
+  mathStale: '문서가 바뀌었습니다. 작성한 식을 복사한 뒤 창을 닫고 수식을 다시 여세요.',
+  mathShortcut: '⌘+Enter로 적용',
+  mathApply: '수식 적용',
+  mathKeyboard: '수학 키보드',
+  mathFraction: '분수',
+  mathRoot: '제곱근',
+  mathNthRoot: 'n제곱근',
+  mathPower: '거듭제곱',
+  mathSubscript: '아래첨자',
+  mathSum: '합',
+  mathProduct: '곱',
+  mathIntegral: '적분',
+  mathLimit: '극한',
+  mathMatrix: '행렬',
+  mathVector: '벡터',
+  mathCases: '연립식',
+  mathPiecewise: '조각함수',
+  mathBinomial: '이항계수',
+
   redactMenuLabel: '선택한 부분을 AI에서 숨기기',
   redactDialogDesc:
     '문서는 그대로 두고 AI에게는 아래 자리표시자만 보냅니다. 이름을 붙이면 AI가 무엇을 뜻하는지 알 수 있습니다.',

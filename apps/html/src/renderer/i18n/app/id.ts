@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const id = {
+  mathInsert: 'Sisipkan persamaan',
+  mathEdit: 'Edit persamaan',
+  mathHelp: 'Ketik secara visual atau edit LaTeX. HTML menyimpan sumber untuk diedit kembali.',
+  mathVisualInput: 'Input persamaan visual',
+  mathSource: 'Sumber LaTeX',
+  mathDisplay: 'Tampilkan pada baris terpisah',
+  mathPreview: 'Pratinjau',
+  mathUnsupported:
+    'Ekspresi ini tidak dapat ditampilkan. Sumber akan disimpan untuk diperbaiki nanti.',
+  mathTooLong: 'Gunakan maksimal {n} karakter.',
+  mathStale: 'Dokumen berubah. Salin draf, tutup jendela ini, lalu buka kembali persamaan.',
+  mathShortcut: '⌘+Enter untuk menerapkan',
+  mathApply: 'Terapkan persamaan',
+  mathKeyboard: 'Papan ketik matematika',
+  mathFraction: 'Pecahan',
+  mathRoot: 'Akar kuadrat',
+  mathNthRoot: 'Akar ke-n',
+  mathPower: 'Pangkat',
+  mathSubscript: 'Subskrip',
+  mathSum: 'Jumlah',
+  mathProduct: 'Hasil kali',
+  mathIntegral: 'Integral',
+  mathLimit: 'Limit',
+  mathMatrix: 'Matriks',
+  mathVector: 'Vektor',
+  mathCases: 'Sistem',
+  mathPiecewise: 'Fungsi bertahap',
+  mathBinomial: 'Koefisien binomial',
+
   redactMenuLabel: 'Sembunyikan pilihan dari AI',
   redactDialogDesc:
     'Kata-kata tetap ada di dokumen dan berkas; model hanya melihat placeholder di bawah. Beri nama agar model tahu apa yang diwakili.',

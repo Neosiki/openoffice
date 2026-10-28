@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const ms = {
+  mathInsert: 'Sisip persamaan',
+  mathEdit: 'Sunting persamaan',
+  mathHelp: 'Taip secara visual atau sunting LaTeX. HTML menyimpan sumber untuk disunting semula.',
+  mathVisualInput: 'Input persamaan visual',
+  mathSource: 'Sumber LaTeX',
+  mathDisplay: 'Papar pada baris berasingan',
+  mathPreview: 'Pratonton',
+  mathUnsupported:
+    'Ungkapan ini tidak dapat dipaparkan. Sumber akan disimpan untuk pembetulan kemudian.',
+  mathTooLong: 'Gunakan maksimum {n} aksara.',
+  mathStale: 'Dokumen telah berubah. Salin draf, tutup tetingkap ini dan buka semula persamaan.',
+  mathShortcut: '⌘+Enter untuk guna',
+  mathApply: 'Gunakan persamaan',
+  mathKeyboard: 'Papan kekunci matematik',
+  mathFraction: 'Pecahan',
+  mathRoot: 'Punca kuasa dua',
+  mathNthRoot: 'Punca ke-n',
+  mathPower: 'Kuasa',
+  mathSubscript: 'Subskrip',
+  mathSum: 'Jumlah',
+  mathProduct: 'Hasil darab',
+  mathIntegral: 'Kamiran',
+  mathLimit: 'Had',
+  mathMatrix: 'Matriks',
+  mathVector: 'Vektor',
+  mathCases: 'Sistem',
+  mathPiecewise: 'Fungsi cebis demi cebis',
+  mathBinomial: 'Pekali binomial',
+
   redactMenuLabel: 'Sembunyikan pilihan daripada AI',
   redactDialogDesc:
     'Perkataan kekal dalam dokumen dan fail; model hanya melihat placeholder di bawah. Beri nama supaya model tahu apa yang diwakili.',

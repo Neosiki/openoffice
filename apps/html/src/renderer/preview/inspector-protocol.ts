@@ -95,6 +95,7 @@ export interface ElementFingerprint {
 export type FromInspector = { version: number } & FromInspectorBody
 
 export type FromInspectorBody =
+  | { type: 'gx:editMath'; sid: number }
   | { type: 'gx:ready'; title: string; docHeight: number }
   /** the window scrolled (coalesced per frame); the host hands it back after a reload */
   | { type: 'gx:scroll'; y: number }
@@ -163,6 +164,7 @@ export type FromInspectorBody =
 
 /** Message tags the instrumented inspector can emit; anything else is forged. */
 const KNOWN_FROM_INSPECTOR = new Set([
+  'gx:editMath',
   'gx:ready',
   'gx:scroll',
   'gx:hover',
