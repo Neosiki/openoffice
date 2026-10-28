@@ -138,4 +138,21 @@ export const ar = {
   actionCopyInfo: 'نسخ المعلومات لطلب المساعدة',
   copyInfoDone: 'تم النسخ',
   actionConnectHelp: 'شاهد كل خطوة على الشاشة (صفحة باللغة الكورية)',
+  guidePathChatGptBody:
+    'سجّل الدخول بحسابك في ChatGPT واستخدم خطتك. لا حاجة إلى تثبيت أي شيء. الخطة المجانية لا تتيح إلا استخدامًا قليلًا.',
+  guideUseCodex: 'هل تستخدم برنامج Codex على هذا الحاسوب بالفعل؟ اتصل عبر Codex',
+  guideUseDirect: 'اتصل مباشرةً من التطبيق، دون Codex',
+  chatgptLoginNote:
+    'ستُفتح صفحة تسجيل الدخول إلى ChatGPT في المتصفح. سجّل الدخول واسمح لهذا التطبيق باستخدام خطتك في ChatGPT، وسيكتمل الاتصال تلقائيًا.',
+  chatgptLoginUnfinishedNote:
+    'لم يكتمل تسجيل الدخول. اضغط مرة أخرى للبدء من جديد. لإتمام الاتصال يجب أن تسمح باستخدام خطتك في ChatGPT.',
+  chatgptSigningInNote:
+    'سجّل الدخول بحسابك في ChatGPT في المتصفح الذي فُتح، واسمح لهذا التطبيق باستخدام خطتك. سيكتمل الاتصال تلقائيًا.',
+  chatgptPlanNote:
+    'يعمل الذكاء الاصطناعي في هذا التطبيق ضمن خطتك في ChatGPT. قطع الاتصال يُنهيه في هذا التطبيق فقط، وتبقى البرامج الأخرى على هذا الحاسوب مسجّلة الدخول.',
+  actionContinueWithChatGpt: 'المتابعة باستخدام ChatGPT',
+  actionManageUsage: 'إدارة الاستخدام',
+  browserPageDoneBody: 'يمكنك إغلاق علامة التبويب هذه والعودة إلى التطبيق.',
+  browserPageFailedTitle: 'لم يكتمل الاتصال',
+  browserPageFailedBody: 'عُد إلى التطبيق وحاول مرة أخرى.',
 } satisfies Record<keyof typeof zh, string>

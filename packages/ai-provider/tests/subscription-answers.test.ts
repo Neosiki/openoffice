@@ -20,6 +20,12 @@ const CHECKING = {
   codex: { provider: 'codex', state: 'checking', meteredAccepted: false },
 }
 
+/** an answer that names the two CLIs alone: they are being checked, ChatGPT is not there */
+const ANSWERED_WITHOUT_CHATGPT = {
+  ...CHECKING,
+  chatgpt: { provider: 'chatgpt', state: 'signed-out', meteredAccepted: false },
+}
+
 describe('checkingSubscriptionStatuses', () => {
   it('lists both providers as checking, a fresh object every time', () => {
     expect(checkingSubscriptionStatuses()).toEqual(CHECKING)
@@ -99,11 +105,20 @@ describe('subscriptionStatusMapOf', () => {
       'claude-code': { provider: 'claude-code', state: 'connected', meteredAccepted: true },
       codex: { provider: 'codex', meteredAccepted: true },
     })
-    expect(map).toEqual(CHECKING)
+    expect(map).toEqual(ANSWERED_WITHOUT_CHATGPT)
   })
 
   it('reads an entry that is not an object as checking', () => {
-    expect(subscriptionStatusMapOf({ 'claude-code': 'ready', codex: ['ready'] })).toEqual(CHECKING)
+    expect(subscriptionStatusMapOf({ 'claude-code': 'ready', codex: ['ready'] })).toEqual(
+      ANSWERED_WITHOUT_CHATGPT,
+    )
+    expect(subscriptionStatusMapOf({ chatgpt: 'ready' }).chatgpt.state).toBe('checking')
+  })
+
+  it('reads an answer without a ChatGPT status as one from an app without that connection', () => {
+    expect(subscriptionStatusMapOf({}).chatgpt.state).toBe('signed-out')
+    // no answer at all is still "checking", for every provider
+    expect(subscriptionStatusMapOf(undefined)).toEqual(CHECKING)
   })
 
   it('names each entry after its key, whatever the entry claims', () => {

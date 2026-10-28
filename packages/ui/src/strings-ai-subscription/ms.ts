@@ -147,4 +147,21 @@ export const ms = {
   actionCopyInfo: 'Salin maklumat untuk bantuan',
   copyInfoDone: 'Disalin',
   actionConnectHelp: 'Lihat setiap langkah pada skrin (halaman dalam bahasa Korea)',
+  guidePathChatGptBody:
+    'Log masuk dengan akaun ChatGPT anda dan gunakan pelan anda. Tiada apa-apa perlu dipasang. Pelan percuma hanya membenarkan sedikit penggunaan.',
+  guideUseCodex: 'Sudah menggunakan program Codex pada PC ini? Sambung dengan Codex',
+  guideUseDirect: 'Sambung terus dalam aplikasi, tanpa Codex',
+  chatgptLoginNote:
+    'Halaman log masuk ChatGPT akan dibuka dalam pelayar anda. Log masuk dan benarkan aplikasi ini menggunakan pelan ChatGPT anda; sambungan akan dibuat sendiri.',
+  chatgptLoginUnfinishedNote:
+    'Log masuk tidak selesai. Tekan sekali lagi untuk bermula semula. Untuk menyambung, anda perlu membenarkan penggunaan pelan ChatGPT anda.',
+  chatgptSigningInNote:
+    'Log masuk dengan akaun ChatGPT anda dalam pelayar yang dibuka, kemudian benarkan aplikasi ini menggunakan pelan anda. Sambungan akan dibuat sendiri.',
+  chatgptPlanNote:
+    'AI dalam aplikasi ini berjalan pada pelan ChatGPT anda. Memutuskan sambungan hanya menamatkannya untuk aplikasi ini; program lain pada PC ini kekal log masuk.',
+  actionContinueWithChatGpt: 'Teruskan dengan ChatGPT',
+  actionManageUsage: 'Urus penggunaan',
+  browserPageDoneBody: 'Anda boleh menutup tab ini dan kembali ke aplikasi.',
+  browserPageFailedTitle: 'Sambungan tidak berjaya',
+  browserPageFailedBody: 'Kembali ke aplikasi dan cuba lagi.',
 } satisfies Record<keyof typeof zh, string>

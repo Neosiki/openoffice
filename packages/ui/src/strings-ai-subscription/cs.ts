@@ -142,4 +142,21 @@ export const cs = {
   actionCopyInfo: 'Kopírovat informace pro pomoc',
   copyInfoDone: 'Zkopírováno',
   actionConnectHelp: 'Zobrazit každý krok na obrazovce (stránka v korejštině)',
+  guidePathChatGptBody:
+    'Přihlaste se účtem ChatGPT a používejte svůj tarif. Nic není třeba instalovat. Bezplatný tarif umožňuje jen malé využití.',
+  guideUseCodex: 'Už na tomto počítači používáte program Codex? Připojit přes Codex',
+  guideUseDirect: 'Připojit přímo v aplikaci, bez programu Codex',
+  chatgptLoginNote:
+    'V prohlížeči se otevře přihlašovací stránka ChatGPT. Přihlaste se a povolte této aplikaci používat váš tarif ChatGPT; připojení se pak dokončí samo.',
+  chatgptLoginUnfinishedNote:
+    'Přihlášení se nedokončilo. Stiskněte tlačítko znovu a začněte od začátku. K připojení je nutné povolit používání vašeho tarifu ChatGPT.',
+  chatgptSigningInNote:
+    'V otevřeném prohlížeči se přihlaste účtem ChatGPT a povolte této aplikaci používat váš tarif. Připojení se dokončí samo.',
+  chatgptPlanNote:
+    'AI v této aplikaci běží v rámci vašeho tarifu ChatGPT. Odpojení platí jen pro tuto aplikaci; ostatní programy na tomto počítači zůstanou přihlášené.',
+  actionContinueWithChatGpt: 'Pokračovat s ChatGPT',
+  actionManageUsage: 'Spravovat využití',
+  browserPageDoneBody: 'Tuto kartu můžete zavřít a vrátit se do aplikace.',
+  browserPageFailedTitle: 'Připojení se nezdařilo',
+  browserPageFailedBody: 'Vraťte se do aplikace a zkuste to znovu.',
 } satisfies Record<keyof typeof zh, string>

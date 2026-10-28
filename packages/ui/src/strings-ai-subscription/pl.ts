@@ -147,4 +147,21 @@ export const pl = {
   actionCopyInfo: 'Kopiuj informacje dla pomocy',
   copyInfoDone: 'Skopiowano',
   actionConnectHelp: 'Zobacz każdy krok na ekranie (strona po koreańsku)',
+  guidePathChatGptBody:
+    'Zaloguj się kontem ChatGPT i korzystaj ze swojego planu. Nie trzeba nic instalować. Darmowy plan pozwala tylko na niewielkie użycie.',
+  guideUseCodex: 'Używasz już programu Codex na tym komputerze? Połącz przez Codex',
+  guideUseDirect: 'Połącz bezpośrednio w aplikacji, bez programu Codex',
+  chatgptLoginNote:
+    'W przeglądarce otworzy się strona logowania ChatGPT. Zaloguj się i zezwól tej aplikacji na korzystanie z Twojego planu ChatGPT; połączenie nastąpi samo.',
+  chatgptLoginUnfinishedNote:
+    'Logowanie nie zostało ukończone. Naciśnij ponownie, aby zacząć od nowa. Do połączenia potrzebna jest Twoja zgoda na korzystanie z planu ChatGPT.',
+  chatgptSigningInNote:
+    'Zaloguj się kontem ChatGPT w otwartej przeglądarce i zezwól tej aplikacji na korzystanie z Twojego planu. Połączenie nastąpi samo.',
+  chatgptPlanNote:
+    'AI w tej aplikacji działa w ramach Twojego planu ChatGPT. Rozłączenie dotyczy tylko tej aplikacji; inne programy na tym komputerze pozostają zalogowane.',
+  actionContinueWithChatGpt: 'Kontynuuj z ChatGPT',
+  actionManageUsage: 'Zarządzaj użyciem',
+  browserPageDoneBody: 'Możesz zamknąć tę kartę i wrócić do aplikacji.',
+  browserPageFailedTitle: 'Nie udało się połączyć',
+  browserPageFailedBody: 'Wróć do aplikacji i spróbuj ponownie.',
 } satisfies Record<keyof typeof zh, string>

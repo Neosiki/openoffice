@@ -3,7 +3,7 @@
  * tools in a project folder the user chose, instead of answering one turn with
  * no tools. These are the shapes the session runners and the app share.
  */
-import type { AiRunErrorKind, AiSubscriptionProviderId } from '../types'
+import type { AiRunErrorKind, AiSubscriptionCliId } from '../types'
 
 /**
  * When the app asks the person before the program acts.
@@ -71,7 +71,7 @@ export interface AgentAction {
 /** A request shown to the person; `id` is answered with `AgentPermissionAnswer` */
 export interface AgentPermissionRequest extends AgentAction {
   id: string
-  provider: AiSubscriptionProviderId
+  provider: AiSubscriptionCliId
 }
 
 /**
@@ -112,7 +112,7 @@ export type AgentSessionEvent =
   /** the program reported what it runs with; the session checked it */
   | {
       type: 'started'
-      provider: AiSubscriptionProviderId
+      provider: AiSubscriptionCliId
       model?: string | undefined
       skills: string[]
     }
@@ -155,7 +155,7 @@ export interface AgentSessionOptions {
 }
 
 export interface AgentSession {
-  readonly provider: AiSubscriptionProviderId
+  readonly provider: AiSubscriptionCliId
   /** send the person's next message; resolves when the program accepted it */
   send(text: string): Promise<void>
   /** answer a pending permission request */

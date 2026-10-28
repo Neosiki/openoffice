@@ -30,8 +30,6 @@ import type { FetchLike } from './oauth'
 
 export const CHATGPT_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 export const CHATGPT_MODELS_URL = 'https://api.openai.com/v1/models'
-/** where users see and limit what apps use of their plan */
-export const CHATGPT_USAGE_SETTINGS_URL = 'https://chatgpt.com/#settings/Usage'
 
 const PROVIDER = 'chatgpt'
 const EMPTY_STREAM_MARK = '(empty stream)'

@@ -13,6 +13,7 @@ import {
   isSubscriptionProvider,
   selectAiProvider,
   subscriptionConnection,
+  subscriptionStateOf,
 } from '../src/provider-selection'
 import { defaultAiSettings } from '../src/providers'
 import type {
@@ -140,6 +141,18 @@ describe('selectAiProvider with auto', () => {
         statuses('signed-out', 'ready', { chatgpt: 'checking' }),
       ),
     ).toMatchObject({ connected: false, selection: 'auto', reason: 'no-subscription' })
+  })
+
+  it('reads a ChatGPT status that is missing (not one still checking) as signed out', () => {
+    // a map from where the direct connection does not exist lists the two CLIs alone
+    expect(
+      selectAiProvider(settingsWith('auto'), {
+        'claude-code': status('claude-code', 'signed-out'),
+        codex: status('codex', 'ready'),
+      }),
+    ).toEqual({ connected: true, provider: 'codex', metered: false })
+    expect(subscriptionStateOf({}, 'chatgpt')).toBe('signed-out')
+    expect(subscriptionStateOf({}, 'claude-code')).toBe('checking')
   })
 
   it('skips an accepted metered Claude login and picks the ready Codex', () => {

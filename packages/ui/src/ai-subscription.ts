@@ -8,9 +8,11 @@
 import {
   AI_PROVIDERS,
   AI_SUBSCRIPTION_PROVIDERS,
+  SUBSCRIPTION_CHATGPT_USAGE_URL,
   isSubscriptionProvider,
   subscriptionConnection,
   subscriptionNeedsUpdate,
+  subscriptionStateOf,
   subscriptionStatusErrorKind,
   type AiProviderChoice,
   type AiProviderId,
@@ -32,17 +34,24 @@ import { aiContextText } from './strings-ai-context'
 const SUBSCRIPTION_NAMES: Record<AiSubscriptionProviderId, string> = {
   'claude-code': 'Claude',
   codex: 'Codex',
+  chatgpt: 'ChatGPT',
 }
 
 const SUBSCRIPTION_VENDORS: Record<AiSubscriptionProviderId, string> = {
   'claude-code': 'Anthropic',
   codex: 'OpenAI',
+  chatgpt: 'OpenAI',
 }
 
-/** The vendor's own install instructions, opened when the install command cannot run */
+/**
+ * The vendor's own instructions, opened when the install command cannot run.
+ * ChatGPT installs nothing: its entry is where the user sees and limits the
+ * app's use of the plan ("manage usage").
+ */
 export const AI_SUBSCRIPTION_INSTALL_HELP_URLS: Record<AiSubscriptionProviderId, string> = {
   'claude-code': 'https://code.claude.com/docs/en/setup',
   codex: 'https://developers.openai.com/codex/cli',
+  chatgpt: SUBSCRIPTION_CHATGPT_USAGE_URL,
 }
 
 /** Usage at or above this share of a window is shown; below it the panel stays quiet */
@@ -79,6 +88,7 @@ export type AiSubscriptionCardAction =
   | 'recheck'
   | 'switch-account'
   | 'logout'
+  | 'manage-usage'
 
 /**
  * The two actions on the account of a signed-in CLI: sign in with another
@@ -114,6 +124,8 @@ export interface AiSubscriptionCardOptions {
   readonly update?: boolean | undefined
   /** the host can end a login the app started: the signing-in card offers "cancel" */
   readonly cancelLogin?: boolean | undefined
+  /** the host can open ChatGPT's usage settings: the connected ChatGPT card links there */
+  readonly manageUsage?: boolean | undefined
   /**
    * a browser sign-in has gone on for `AI_SIGNING_IN_STALLED_MS` without an
    * answer: the way to the CLI's window becomes a button, with why to press it
@@ -180,6 +192,7 @@ const LINK_ACTIONS: readonly AiSubscriptionCardAction[] = [
   'login-code',
   'login-browser',
   'cancel-login',
+  'manage-usage',
 ]
 
 function linksOf(actions: readonly AiSubscriptionCardAction[]): AiSubscriptionCardAction[] {
@@ -201,6 +214,8 @@ export function aiSubscriptionCardView(
   status: AiSubscriptionStatus,
   options: AiSubscriptionCardOptions = {},
 ): AiSubscriptionCardView {
+  // ChatGPT reached directly has no program: no install, no update, no window of its own
+  if (status.provider === 'chatgpt') return chatGptCardView(status, options)
   const terminalWindows = options.terminalWindows !== false
   if (status.signingIn) return signingInCardView(status, terminalWindows, options)
   const view = connectionCardView(status, terminalWindows)
@@ -233,6 +248,80 @@ export function aiSubscriptionCardView(
     actions: options.accountActions
       ? [...view.actions, ...AI_SUBSCRIPTION_ACCOUNT_ACTIONS]
       : view.actions,
+  }
+}
+
+/**
+ * The ChatGPT card (decision 0081): the app signs in itself, in the browser,
+ * so the card has one way in ("continue with ChatGPT") and nothing about a
+ * program. Connected, the Settings card says the use comes out of the ChatGPT
+ * plan and links to where the user limits it.
+ */
+function chatGptCardView(
+  status: AiSubscriptionStatus,
+  options: AiSubscriptionCardOptions,
+): AiSubscriptionCardView {
+  const base = { provider: status.provider, state: status.state }
+  if (status.signingIn) {
+    const actions: AiSubscriptionCardAction[] = options.cancelLogin ? ['cancel-login'] : []
+    return {
+      ...base,
+      tone: 'neutral',
+      statusKey: 'cardSigningIn',
+      noteKeys: ['chatgptSigningInNote'],
+      actions,
+      links: linksOf(actions),
+    }
+  }
+  switch (status.state) {
+    case 'ready': {
+      const account = options.account ? status.account?.trim() || undefined : undefined
+      const actions: AiSubscriptionCardAction[] = [
+        ...(options.manageUsage && options.account ? (['manage-usage'] as const) : []),
+        ...(options.accountActions ? AI_SUBSCRIPTION_ACCOUNT_ACTIONS : []),
+      ]
+      return {
+        ...base,
+        tone: 'ok',
+        statusKey: 'cardReady',
+        ...(account ? { account } : {}),
+        noteKeys: options.account ? ['chatgptPlanNote'] : [],
+        actions,
+        links: linksOf(actions),
+      }
+    }
+    case 'error':
+      return {
+        ...base,
+        tone: 'error',
+        statusKey: 'cardError',
+        noteKeys: [],
+        detailKey: 'cardErrFailed',
+        actions: ['recheck'],
+        links: [],
+      }
+    case 'checking':
+      return {
+        ...base,
+        tone: 'neutral',
+        statusKey: 'cardChecking',
+        noteKeys: [],
+        actions: [],
+        links: [],
+      }
+    default:
+      // signed out (the only other state this provider reports)
+      return {
+        ...base,
+        tone: 'neutral',
+        statusKey: 'cardSignedOut',
+        noteKeys:
+          status.loginUnfinished === true
+            ? ['chatgptLoginUnfinishedNote', 'loginNote']
+            : ['chatgptLoginNote', 'loginNote'],
+        actions: ['login'],
+        links: [],
+      }
   }
 }
 
@@ -371,12 +460,22 @@ function connectionCardParts(
   }
 }
 
-/** A provider whose check has not reported yet reads as `checking` */
+/**
+ * A provider whose check has not reported yet reads as `checking`; a missing
+ * ChatGPT status reads as signed out, the way the choice of provider reads it
+ * (`subscriptionStateOf`)
+ */
 export function aiSubscriptionStatusOf(
   statuses: AiSubscriptionStatuses,
   provider: AiSubscriptionProviderId,
 ): AiSubscriptionStatus {
-  return statuses[provider] ?? { provider, state: 'checking', meteredAccepted: false }
+  return (
+    statuses[provider] ?? {
+      provider,
+      state: subscriptionStateOf(statuses, provider),
+      meteredAccepted: false,
+    }
+  )
 }
 
 // ---- not-connected prompt ----

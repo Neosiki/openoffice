@@ -100,7 +100,10 @@ import {
   setUiLang,
 } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
-import { aiSubscriptionLoginWindowText } from '@genoffice/ui/ai-subscription-login-window'
+import {
+  aiChatGptSignInPages,
+  aiSubscriptionLoginWindowText,
+} from '@genoffice/ui/ai-subscription-login-window'
 
 import {
   isAiOverloadedError,
@@ -4279,6 +4282,18 @@ export function registerSheetsAiIpc(): void {
         if (!wc.isDestroyed()) wc.send(channel, payload)
     },
     loginWindowText: (provider) => aiSubscriptionLoginWindowText(getUiLang(), provider),
+    // the ChatGPT sign-in is the app's own (decision 0081): OpenAI's page in the system browser
+    chatGptSignIn: {
+      openBrowser: async (url) => {
+        const target = safeExternalUrl(url)
+        if (!target) return false
+        return shell.openExternal(target).then(
+          () => true,
+          () => false,
+        )
+      },
+      pages: () => aiChatGptSignInPages(getUiLang()),
+    },
   })
 
   ipcMain.handle(IPC_CHANNELS.aiGetSettings, (event): AiSettings => {

@@ -182,7 +182,7 @@ describe('home settings entry', () => {
     await click(entry())
     const active = host.querySelector('.set-nav-item.active')
     expect(active?.textContent).toContain('AI')
-    expect(host.querySelectorAll('.set-sub-cards .ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.set-sub-cards .ai-sub-card')).toHaveLength(3)
 
     await click(host.querySelector('.set-close'))
     expect(host.querySelector('.set-sub-cards')).toBeNull()
@@ -270,10 +270,12 @@ describe('ask panel without a connection', () => {
     ).map((el) => [el.dataset.path, el.querySelector('.ai-sub-guide-badge')?.textContent ?? null])
     expect(badges).toEqual([
       ['claude-code', null],
-      ['codex', aiSubscriptionText('en', 'guideBadgeInstalled')],
+      ['chatgpt', null],
       ['free', null],
     ])
-    await click(host.querySelector('.kb-ask .ai-sub-prompt [data-path="codex"]'))
+    // the Codex program is a way within the one ChatGPT answer
+    await click(host.querySelector('.kb-ask .ai-sub-prompt [data-path="chatgpt"]'))
+    await click(host.querySelector('.kb-ask .ai-sub-prompt [data-action="guide-alternate"]'))
     const cards = Array.from(
       host.querySelectorAll<HTMLElement>('.kb-ask .ai-sub-prompt .ai-sub-card'),
     )

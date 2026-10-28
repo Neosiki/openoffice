@@ -183,6 +183,12 @@ export const SUBSCRIPTION_INSTALL_URLS = {
   codex: 'https://developers.openai.com/codex/cli',
 } as const satisfies Record<AiSubscriptionCliId, string>
 
+/**
+ * Where ChatGPT shows, and lets the user limit, what an app uses of the plan.
+ * ChatGPT has nothing to install: this is the page its card links to.
+ */
+export const SUBSCRIPTION_CHATGPT_USAGE_URL = 'https://chatgpt.com/#settings/Usage'
+
 /** The status of a provider nothing is known about yet */
 export function checkingSubscriptionStatus(
   provider: AiSubscriptionProviderId,
@@ -392,6 +398,10 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
   const raw = isRecord(result) ? result : {}
   const statusOf = (provider: AiSubscriptionProviderId): AiSubscriptionStatus => {
     const status = raw[provider]
+    // a main process that answered without a ChatGPT status has no such connection (an older app)
+    if (isRecord(result) && status === undefined && provider === 'chatgpt') {
+      return { provider, state: 'signed-out', meteredAccepted: false }
+    }
     if (!isRecord(status) || !SUBSCRIPTION_STATES.includes(status.state as AiSubscriptionState)) {
       return checkingSubscriptionStatus(provider)
     }

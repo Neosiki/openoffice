@@ -199,11 +199,10 @@ describe('Onboarding', () => {
       Array.from(step.querySelectorAll<HTMLElement>('.ai-sub-guide-path')).map(
         (el) => el.dataset.path,
       ),
-    ).toEqual(['claude-code', 'codex', 'free'])
+    ).toEqual(['claude-code', 'chatgpt', 'free'])
     expect(cards()).toEqual([])
-    expect(step.querySelector('.ai-sub-codex')!.textContent).toBe(
-      aiSubscriptionText('en', 'codexNotice'),
-    )
+    // the ChatGPT answer connects directly: the line about Codex belongs to the Codex way alone
+    expect(step.querySelector('.ai-sub-codex')).toBeNull()
 
     await click('.onb-slide[data-step="connect"] [data-path="claude-code"]')
     expect(cards()).toEqual([['claude-code', 'not-installed']])
@@ -212,8 +211,12 @@ describe('Onboarding', () => {
     )
     expect(connection.install).toHaveBeenCalledWith('claude-code')
     await click('.onb-slide[data-step="connect"] [data-action="guide-back"]')
-    await click('.onb-slide[data-step="connect"] [data-path="codex"]')
+    await click('.onb-slide[data-step="connect"] [data-path="chatgpt"]')
+    await click('.onb-slide[data-step="connect"] [data-action="guide-alternate"]')
     expect(cards()).toEqual([['codex', 'signed-out']])
+    expect(step.querySelector('.ai-sub-codex')!.textContent).toBe(
+      aiSubscriptionText('en', 'codexNotice'),
+    )
     await click('.onb-slide[data-step="connect"] [data-provider="codex"] [data-action="login"]')
     expect(connection.login).toHaveBeenCalledWith('codex')
   })
@@ -226,7 +229,8 @@ describe('Onboarding', () => {
     })
     await click('.onb-next')
     expect(host.querySelector('.onb-connect-failed')).toBeNull()
-    await click('.onb-slide[data-step="connect"] [data-path="codex"]')
+    await click('.onb-slide[data-step="connect"] [data-path="chatgpt"]')
+    await click('.onb-slide[data-step="connect"] [data-action="guide-alternate"]')
     const failed = host.querySelector<HTMLElement>('.onb-connect-failed')!
     expect(failed.dataset.provider).toBe('codex')
     expect(failed.textContent).toBe(strings.en.setSubLoginFailed)
