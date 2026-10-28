@@ -1288,7 +1288,7 @@ export async function writeWorkbook(
 const STALE_NOTE = {
   code: 'dependent_formulas_not_refreshed',
   message:
-    'the workbook has more formulas than a write refreshes cached results for, so formulas that read the edited cells may show an old result until the file is opened in Excel',
+    'some formulas that read the edited cells use a function or reference the engine cannot evaluate, so they may show an old result until the file is opened in Excel',
 }
 
 const unreadableNote = (sheets: readonly string[]) => ({
@@ -1458,7 +1458,7 @@ async function evaluateFormulas(
   values: SheetFormulaValues[]
   uncached: string[]
   unparsed: string[]
-  /** some untouched formulas were left as they were: too many, too scattered, or not evaluated by the engine */
+  /** some untouched formulas were left as they were: the engine could not evaluate them */
   leftStale: boolean
 }> {
   // edits carry the file's original sheet names; the written file has the renamed ones
@@ -1473,7 +1473,7 @@ async function evaluateFormulas(
     let leftUnrefreshed = false
     // formulas no edit wrote but whose inputs an edit may have changed: their
     // cached <v> is refreshed too, and kept as it is when the engine cannot tell
-    const { cells: untouched, leftStale } = untouchedFormulaCells(inFile, wanted, originalName)
+    const untouched = untouchedFormulaCells(inFile, wanted, originalName)
     // group by sheet by pushing: copying the array per formula made the refresh
     // quadratic (about 9 s for 50,000 formulas)
     const bySheet = new Map<string, { row: number; column: number }[]>()
@@ -1543,52 +1543,34 @@ async function evaluateFormulas(
       // the refresh is keyed like the edits, by the file's original sheet name
       if (values.length) out.push({ sheetName: sheet, cells: values })
     }
-    return { values: out, uncached, unparsed, leftStale: leftStale || leftUnrefreshed }
+    return { values: out, uncached, unparsed, leftStale: leftUnrefreshed }
   })
 }
 
-/** More formulas than this and the cached values of the untouched ones are left to Excel. */
-const UNTOUCHED_FORMULA_CAP = 100_000
-/** The rectangle the untouched formulas of one sheet may span before they are left to Excel. */
-const UNTOUCHED_BOX_CAP = 1_000_000
-
 /**
  * Formula cells of the file that `edited` ("sheet row column" keys) did not
- * write, named by the file's original sheet names. Past the caps it answers
- * with none: a refresh of part of them would only mix fresh and stale.
+ * write, named by the file's original sheet names. There is no cap: the scan
+ * is linear in the formulas, and so is the grouping that follows.
  */
 function untouchedFormulaCells(
   inFile: ReadonlyMap<string, readonly FormulaCell[]>,
   edited: ReadonlySet<string>,
   originalName: (written: string) => string,
-): {
-  cells: { sheetName: string; row: number; column: number; boolean?: true }[]
-  leftStale: boolean
-} {
+): { sheetName: string; row: number; column: number; boolean?: true }[] {
   const found: { sheetName: string; row: number; column: number; boolean?: true }[] = []
-  let leftStale = false
   for (const [written, cells] of inFile) {
     const sheetName = originalName(written)
-    const all = cells
-      .filter((c) => !edited.has(`${sheetName} ${c.row} ${c.column}`))
-      .map((c) => ({
+    for (const c of cells) {
+      if (edited.has(`${sheetName} ${c.row} ${c.column}`)) continue
+      found.push({
         sheetName,
         row: c.row,
         column: c.column,
         ...(c.boolean ? { boolean: true as const } : {}),
-      }))
-    if (found.length + all.length > UNTOUCHED_FORMULA_CAP) return { cells: [], leftStale: true }
-    if (all.length === 0) continue
-    const box = boundingBox(all)
-    const area = (box.endRow - box.startRow + 1) * (box.endColumn - box.startColumn + 1)
-    if (area > UNTOUCHED_BOX_CAP) {
-      leftStale = true
-      continue
+      })
     }
-    // a loop, not push(...all): a spread of this many arguments can overflow the stack
-    for (const c of all) found.push(c)
   }
-  return { cells: found, leftStale }
+  return found
 }
 
 interface Bounds {
