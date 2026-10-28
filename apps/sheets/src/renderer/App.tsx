@@ -530,6 +530,7 @@ import { SymbolDialog } from './SymbolDialog'
 import {
   calculateNow,
   calculateSheet,
+  isManualCalculation,
   resetCalculationMode,
   setManualCalculation,
 } from './calc-options'
@@ -539,6 +540,7 @@ import {
   awaitFormulaValues,
   clearVerifiedFormulaValues,
   formulaTargetsFromOps,
+  hasUncomputedFormulaCells,
   rememberFormulaValue,
 } from './formula-values'
 import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPanel'
@@ -1081,6 +1083,23 @@ export function App({
             'workbook never finished loading',
             { timeoutMs: 540_000, pollMs: 500 },
           )
+          // Plain-arithmetic formulas recompute on open instead of showing the
+          // file's cached value, so the layout must wait for the engine's first
+          // cycle to fill them in. Manual calculation never runs that cycle; a
+          // workbook too slow for the budget prints as it stands, as before.
+          await pollUntilReady(
+            () => {
+              const runtime = univerRef.current
+              const sheet = runtime?.univerAPI.getActiveWorkbook()?.getActiveSheet()
+              return (
+                !sheet ||
+                isManualCalculation(runtime) ||
+                !hasUncomputedFormulaCells(sheet.getSheet().getCellMatrix())
+              )
+            },
+            'formulas never finished computing',
+            { timeoutMs: 30_000, pollMs: 100 },
+          ).catch(() => undefined)
         },
         (target) => handleExportPdfImpl(pageLayoutContext(), target),
       )
