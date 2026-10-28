@@ -550,6 +550,7 @@ describe('AiConnectPrompt', () => {
   it('renders nothing once a provider can run', () => {
     render(defaultAiSettings(), {
       'claude-code': status('claude-code', 'signed-out'),
+      chatgpt: status('chatgpt', 'signed-out'),
       codex: status('codex', 'ready'),
     })
     expect(host.innerHTML).toBe('')
@@ -577,7 +578,7 @@ describe('AiConnectPrompt', () => {
     // what is already there shows next to each answer
     expect(paths()).toEqual([
       ['claude-code', en.guideBadgeInstalled],
-      ['codex', null],
+      ['chatgpt', null],
       ['free', null],
     ])
     expect(host.textContent).toContain(en.guidePathCodexTitle)
@@ -598,10 +599,44 @@ describe('AiConnectPrompt', () => {
     // another way: back to the question, then the other subscription
     click('[data-action="guide-back"]')
     expect(cards()).toEqual([])
-    click('[data-path="codex"]')
+    // ChatGPT connects directly: no program, so sign in and connected are all the steps
+    click('[data-path="chatgpt"]')
+    expect(host.querySelector('.ai-sub-guide-need')!.textContent).toBe(en.guidePathChatGptBody)
+    expect(steps()).toEqual(['login:current', 'ready'])
+    expect(cards()).toEqual([['chatgpt', 'signed-out']])
+    // the Codex program is a way within the same answer
+    expect(host.querySelector('[data-action="guide-alternate"]')!.textContent).toBe(
+      en.guideUseCodex,
+    )
+    click('[data-action="guide-alternate"]')
     expect(steps()).toEqual(['install:current', 'login', 'ready'])
     click('[data-provider="codex"] [data-action="install"]')
     expect(actions.onInstall).toHaveBeenCalledExactlyOnceWith('codex')
+    // and back to the direct way
+    expect(host.querySelector('[data-action="guide-alternate"]')!.textContent).toBe(
+      en.guideUseDirect,
+    )
+    click('[data-action="guide-alternate"]')
+    expect(cards()).toEqual([['chatgpt', 'signed-out']])
+  })
+
+  it('signs in to ChatGPT with its own button, and no window for a pasted code', () => {
+    const actions = render(defaultAiSettings(), {
+      'claude-code': status('claude-code', 'not-installed'),
+      chatgpt: status('chatgpt', 'signed-out'),
+      codex: status('codex', 'not-installed'),
+    })
+    click('[data-path="chatgpt"]')
+    const login = host.querySelector<HTMLButtonElement>(
+      '[data-provider="chatgpt"] [data-action="login"]',
+    )!
+    expect(login.textContent).toBe(en.actionContinueWithChatGpt)
+    expect(host.querySelector('[data-provider="chatgpt"] [data-action="login-code"]')).toBeNull()
+    expect(
+      host.querySelector('[data-provider="chatgpt"] [data-note="chatgptLoginNote"]'),
+    ).not.toBeNull()
+    click('[data-provider="chatgpt"] [data-action="login"]')
+    expect(actions.onLogin).toHaveBeenCalledExactlyOnceWith('chatgpt')
   })
 
   it('a sign-in under way opens its own path, and "another way" still asks again', () => {
@@ -613,7 +648,8 @@ describe('AiConnectPrompt', () => {
     expect(steps()).toEqual(['install:done', 'login:current', 'ready'])
     click('[data-action="guide-back"]')
     expect(host.querySelector('.ai-sub-guide-question')).not.toBeNull()
-    expect(paths()[1]).toEqual(['codex', en.cardSigningIn])
+    // a Codex sign-in shows on the one ChatGPT answer
+    expect(paths()[1]).toEqual(['chatgpt', en.cardSigningIn])
   })
 
   it('the free path points to the free connections in Settings', () => {
@@ -669,9 +705,9 @@ describe('AiConnectPrompt', () => {
     )
     click('[data-action="connect-help"]')
     expect(onOpenConnectHelp).toHaveBeenLastCalledWith(null)
-    click('[data-path="codex"]')
+    click('[data-path="chatgpt"]')
     click('[data-action="connect-help"]')
-    expect(onOpenConnectHelp).toHaveBeenLastCalledWith('codex')
+    expect(onOpenConnectHelp).toHaveBeenLastCalledWith('chatgpt')
     // a host that cannot open it gets no link
     render(defaultAiSettings(), statuses)
     expect(host.querySelector('[data-action="connect-help"]')).toBeNull()
@@ -692,11 +728,11 @@ describe('AiConnectPrompt', () => {
     render(defaultAiSettings(), {})
     expect(paths()).toEqual([
       ['claude-code', null],
-      ['codex', null],
+      ['chatgpt', null],
       ['free', null],
     ])
-    click('[data-path="codex"]')
-    expect(cards()).toEqual([['codex', 'checking']])
+    click('[data-path="claude-code"]')
+    expect(cards()).toEqual([['claude-code', 'checking']])
     // no step is the current one until the state is known
     expect(steps()).toEqual(['install', 'login', 'ready'])
   })

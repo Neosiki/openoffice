@@ -80,4 +80,5 @@
 | [0077](0077-update-in-installer-window.md)                    | 업데이트는 설치 진행 창으로 하고, 끝나면 앱과 문서를 다시 연다                                  | 2026-10-27 |
 | [0079](0079-hwp-edit-from-command-line.md)                    | 터미널 명령어로 한글 문서를 만들고 고친다. 연산은 편집기 AI의 도구를 그대로 쓴다                | 2026-10-27 |
 | [0080](0080-ai-pictures-everywhere.md)                        | AI 그림 넣기는 여섯 편집기에서 같고, 있던 그림은 건드리지 않는다                                | 2026-10-28 |
-| [0081](0081-claude-structured-output-tool.md)                 | Claude의 문서 편집 차례는 응답 형식을 프로그램에 맡기고, 그 도구 하나만 허용한다                | 2026-10-28 |
+| [0081](0081-chatgpt-direct-connection.md)                     | ChatGPT는 앱이 직접 로그인해 요금제로 연결하고, Codex 프로그램은 그 안의 다른 길로 남긴다       | 2026-10-28 |
+| [0082](0082-claude-structured-output-tool.md)                 | Claude의 문서 편집 차례는 응답 형식을 프로그램에 맡기고, 그 도구 하나만 허용한다                | 2026-10-28 |

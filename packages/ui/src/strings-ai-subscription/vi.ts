@@ -144,4 +144,21 @@ export const vi = {
   actionCopyInfo: 'Sao chép thông tin để nhờ hỗ trợ',
   copyInfoDone: 'Đã sao chép',
   actionConnectHelp: 'Xem từng bước trên màn hình (trang tiếng Hàn)',
+  guidePathChatGptBody:
+    'Đăng nhập bằng tài khoản ChatGPT và dùng gói của bạn. Không cần cài đặt gì. Gói miễn phí chỉ cho dùng một ít.',
+  guideUseCodex: 'Đã dùng chương trình Codex trên máy tính này? Kết nối bằng Codex',
+  guideUseDirect: 'Kết nối trực tiếp trong ứng dụng, không cần Codex',
+  chatgptLoginNote:
+    'Trang đăng nhập ChatGPT sẽ mở trong trình duyệt. Hãy đăng nhập và cho phép ứng dụng này dùng gói ChatGPT của bạn; kết nối sẽ tự hoàn tất.',
+  chatgptLoginUnfinishedNote:
+    'Quá trình đăng nhập chưa hoàn tất. Nhấn lại để bắt đầu lại từ đầu. Bạn cần cho phép dùng gói ChatGPT của mình thì mới kết nối được.',
+  chatgptSigningInNote:
+    'Đăng nhập bằng tài khoản ChatGPT trong trình duyệt vừa mở và cho phép ứng dụng này dùng gói của bạn. Kết nối sẽ tự hoàn tất.',
+  chatgptPlanNote:
+    'AI trong ứng dụng này chạy bằng gói ChatGPT của bạn. Ngắt kết nối chỉ có tác dụng với ứng dụng này; các chương trình khác trên máy tính này vẫn giữ trạng thái đăng nhập.',
+  actionContinueWithChatGpt: 'Tiếp tục với ChatGPT',
+  actionManageUsage: 'Quản lý mức sử dụng',
+  browserPageDoneBody: 'Bạn có thể đóng thẻ này và quay lại ứng dụng.',
+  browserPageFailedTitle: 'Không kết nối được',
+  browserPageFailedBody: 'Hãy quay lại ứng dụng và thử lại.',
 } satisfies Record<keyof typeof zh, string>

@@ -10,7 +10,7 @@ import { access, open, readdir, realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, delimiter, dirname, extname, isAbsolute, join, resolve, sep } from 'node:path'
 import { AiRunError } from '../run-error'
-import type { AiSubscriptionProviderId } from '../types'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../types'
 
 export type SubscriptionProgramSource =
   /** the path the user set */
@@ -27,7 +27,7 @@ export type SubscriptionProgramSource =
 
 /** A CLI resolved to something `spawn` can start directly */
 export interface SubscriptionProgram {
-  provider: AiSubscriptionProviderId
+  provider: AiSubscriptionCliId
   /** absolute path of the file to start; never a `.cmd` shim */
   command: string
   /** arguments that go before the CLI's own (the JS entry, when `command` is a Node runtime) */
@@ -63,7 +63,7 @@ export interface SubscriptionLocateOptions {
 }
 
 export type SubscriptionLocator = (
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   options?: SubscriptionLocateOptions,
 ) => Promise<SubscriptionProgram | null>
 
@@ -76,7 +76,7 @@ interface ProviderLayout {
   npmEntry: string[]
 }
 
-const LAYOUTS: Record<AiSubscriptionProviderId, ProviderLayout> = {
+const LAYOUTS: Record<AiSubscriptionCliId, ProviderLayout> = {
   'claude-code': {
     name: 'claude',
     npmPackage: ['@anthropic-ai', 'claude-code'],
@@ -103,7 +103,7 @@ async function wingetLinkTarget(file: string): Promise<string> {
 }
 
 interface Context {
-  provider: AiSubscriptionProviderId
+  provider: AiSubscriptionCliId
   layout: ProviderLayout
   env: NodeJS.ProcessEnv
   platform: NodeJS.Platform
@@ -580,7 +580,7 @@ async function searchByName(
  * carry a release hash) or no longer exists is treated as automatic.
  */
 export async function locateSubscriptionProgram(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   options: SubscriptionLocateOptions = {},
 ): Promise<SubscriptionProgram | null> {
   const platform = options.platform ?? process.platform
@@ -646,6 +646,7 @@ export async function locateSubscriptionProgram(
 const PROVIDER_LABELS: Record<AiSubscriptionProviderId, string> = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
+  chatgpt: 'ChatGPT',
 }
 
 /** Display name of a subscription provider, for messages */
@@ -655,7 +656,7 @@ export function subscriptionProviderLabel(provider: AiSubscriptionProviderId): s
 
 /** `locateSubscriptionProgram`, with a missing program reported as the `not-installed` run error */
 export async function resolveSubscriptionProgram(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   options: SubscriptionLocateOptions = {},
 ): Promise<SubscriptionProgram> {
   const program = await locateSubscriptionProgram(provider, options)

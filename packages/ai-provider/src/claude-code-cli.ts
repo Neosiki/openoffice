@@ -13,7 +13,7 @@
  * which holds nothing but the app's tool names.
  *
  * A structured turn passes the schema to the CLI's own `--json-schema`
- * (decision 0081). Told in words to answer with JSON, the model kept slipping
+ * (decision 0082). Told in words to answer with JSON, the model kept slipping
  * into its own tool-call markup and runaway repetition; with the option, it
  * answers through the CLI's `StructuredOutput` tool, which the CLI validates
  * against the schema and answers itself. That tool is the only one a
@@ -343,7 +343,7 @@ export function buildClaudeCodeInput(
 // ── Reading the structured turn ──
 
 /** The answer does not follow the response schema; the run hands it to the loop's replay path */
-class ClaudeCodeStructureError extends Error {}
+export class ClaudeCodeStructureError extends Error {}
 
 /**
  * Parse the model's answer into text and tool calls. A call to a tool that is
@@ -354,6 +354,7 @@ class ClaudeCodeStructureError extends Error {}
 export function parseClaudeCodeTurn(
   raw: string,
   tools: AgentToolDef[],
+  idPrefix = 'claude',
 ): { text: string; toolCalls: AgentToolCall[] } {
   const trimmed = raw
     .trim()
@@ -394,7 +395,7 @@ export function parseClaudeCodeTurn(
       throw new ClaudeCodeStructureError('a tool call has no name')
     }
     // ids are the bridge's own: every turn is a fresh CLI session, so the model cannot keep them unique
-    const id = `claude-${randomUUID()}`
+    const id = `${idPrefix}-${randomUUID()}`
     if (!names.has(call.name)) {
       const name = call.name.slice(0, 200)
       return {
@@ -438,7 +439,7 @@ function isHighSurrogate(code: number): boolean {
  * opens with the `text` property is followed; anything else is delivered once
  * the whole answer has been parsed.
  */
-class TurnTextScanner {
+export class TurnTextScanner {
   private pending = ''
   private state: 'opening' | 'text' | 'complete' | 'off' = 'opening'
 

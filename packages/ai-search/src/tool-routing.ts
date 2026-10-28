@@ -67,10 +67,10 @@ function routingStatuses(settings: AiSettings, context: AiToolCallContext): AiSu
   const statuses = context.statuses ?? {}
   if (!headlessSubscriptionBlocked(settings, context)) return statuses
   const visible: AiSubscriptionStatuses = {}
-  if (statuses['claude-code'] && statuses['claude-code'].state !== 'ready') {
-    visible['claude-code'] = statuses['claude-code']
+  for (const id of ['claude-code', 'chatgpt', 'codex'] as const) {
+    const status = statuses[id]
+    if (status && status.state !== 'ready') visible[id] = status
   }
-  if (statuses.codex && statuses.codex.state !== 'ready') visible.codex = statuses.codex
   return visible
 }
 

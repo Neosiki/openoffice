@@ -37,7 +37,7 @@ import {
   type SubscriptionProgram,
   type SubscriptionRunner,
 } from '../src/subscription'
-import type { AiSubscriptionProviderId } from '../src/types'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../src/types'
 
 /** Pieces of the fake identities used below, including how a slug of them would look */
 const IDENTIFIERS = [
@@ -58,12 +58,12 @@ function expectNoIdentity(value: unknown): void {
   for (const identifier of IDENTIFIERS) expect(text).not.toContain(identifier)
 }
 
-function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
+function program(provider: AiSubscriptionCliId): SubscriptionProgram {
   const command = provider === 'codex' ? '/fake/codex' : '/fake/claude'
   return { provider, command, prefixArgs: [], env: {}, entry: command, source: 'path' }
 }
 
-const found = async (provider: AiSubscriptionProviderId) => program(provider)
+const found = async (provider: AiSubscriptionCliId) => program(provider)
 
 function cli(status: SubscriptionCommandResult | Error, version: string): SubscriptionRunner {
   return async (_program, args) => {
@@ -408,6 +408,7 @@ describe('accepting a metered login of an unrecognised kind', () => {
         error: 'failed: spawn',
         programPath: path,
       },
+      chatgpt: { provider: 'chatgpt', state: 'error', error: 'failed: read', programPath: path },
     }
     const service = createSubscriptionStatusService({
       getSettings: () => defaultAiSettings(),
@@ -615,6 +616,11 @@ describe('the account shown on the Settings card', () => {
         meteredAccepted: false,
       },
       codex: { provider: 'codex' as const, state: 'signed-out' as const, meteredAccepted: false },
+      chatgpt: {
+        provider: 'chatgpt' as const,
+        state: 'signed-out' as const,
+        meteredAccepted: false,
+      },
     }
     const handlers = new Map<string, (event: unknown, payload?: unknown) => unknown>()
     ensureSubscriptionIpc(

@@ -26,6 +26,8 @@ vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
 const READY: Record<string, SubscriptionDetection> = {
   'claude-code': { provider: 'claude-code', state: 'ready', loginMethod: 'subscription' },
   codex: { provider: 'codex', state: 'ready', loginMethod: 'subscription' },
+  // the terminal command has no ChatGPT connection of its own
+  chatgpt: { provider: 'chatgpt', state: 'signed-out' },
 }
 
 const IMAGE_GENERATION_HINT =
@@ -214,7 +216,12 @@ describe('genoffice capabilities', () => {
       limit: null,
       remaining: null,
     })
-    expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual(['claude-code', 'codex'])
+    // the ChatGPT check reads no program: it answers signed out at once here
+    expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual([
+      'chatgpt',
+      'claude-code',
+      'codex',
+    ])
 
     // past what used to be the hourly cap of 20
     for (let i = 0; i < 21; i++) {

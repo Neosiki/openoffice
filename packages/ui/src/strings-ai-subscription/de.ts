@@ -151,4 +151,21 @@ export const de = {
   actionCopyInfo: 'Infos für Hilfe kopieren',
   copyInfoDone: 'Kopiert',
   actionConnectHelp: 'Jeden Schritt am Bildschirm ansehen (Seite auf Koreanisch)',
+  guidePathChatGptBody:
+    'Melden Sie sich mit Ihrem ChatGPT-Konto an und nutzen Sie Ihren Tarif. Keine Installation nötig. Der kostenlose Tarif erlaubt nur wenig Nutzung.',
+  guideUseCodex: 'Nutzen Sie das Codex-Programm bereits auf diesem PC? Über Codex verbinden',
+  guideUseDirect: 'Direkt in der App verbinden, ohne Codex',
+  chatgptLoginNote:
+    'Im Browser öffnet sich eine ChatGPT-Anmeldeseite. Melden Sie sich an und erlauben Sie dieser App, Ihren ChatGPT-Tarif zu nutzen; die Verbindung wird dann von selbst hergestellt.',
+  chatgptLoginUnfinishedNote:
+    'Die Anmeldung wurde nicht abgeschlossen. Drücken Sie erneut, um von vorn zu beginnen. Für die Verbindung müssen Sie die Nutzung Ihres ChatGPT-Tarifs erlauben.',
+  chatgptSigningInNote:
+    'Melden Sie sich im geöffneten Browser mit Ihrem ChatGPT-Konto an und erlauben Sie dieser App, Ihren Tarif zu nutzen. Die Verbindung wird von selbst hergestellt.',
+  chatgptPlanNote:
+    'Die KI in dieser App läuft über Ihren ChatGPT-Tarif. Wenn Sie die Verbindung trennen, gilt das nur für diese App; andere Programme auf diesem PC bleiben angemeldet.',
+  actionContinueWithChatGpt: 'Mit ChatGPT fortfahren',
+  actionManageUsage: 'Nutzung verwalten',
+  browserPageDoneBody: 'Sie können diesen Tab schließen und zur App zurückkehren.',
+  browserPageFailedTitle: 'Die Verbindung wurde nicht hergestellt',
+  browserPageFailedBody: 'Kehren Sie zur App zurück und versuchen Sie es erneut.',
 } satisfies Record<keyof typeof zh, string>

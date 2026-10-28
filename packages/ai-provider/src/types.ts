@@ -8,6 +8,7 @@ import type {
 export type AiProviderId =
   | 'codex'
   | 'claude-code'
+  | 'chatgpt'
   | 'anthropic'
   | 'gemini'
   | 'deepseek'
@@ -34,8 +35,15 @@ export type AiProviderId =
   | 'opencode-go'
   | 'custom'
 
-/** Providers reached through the locally installed, already signed-in vendor CLI (a subscription, not a key) */
-export type AiSubscriptionProviderId = 'claude-code' | 'codex'
+/**
+ * Providers that run on the user's own subscription, never on a key: the two
+ * locally installed, already signed-in vendor CLIs, and the ChatGPT plan
+ * reached directly with the app's own sign-in (decision 0081)
+ */
+export type AiSubscriptionProviderId = 'claude-code' | 'codex' | 'chatgpt'
+
+/** The subscription providers behind a vendor CLI: found, installed, updated and signed in through the program */
+export type AiSubscriptionCliId = 'claude-code' | 'codex'
 
 /** What the provider setting holds: `auto` (first ready subscription) or one provider id */
 export type AiProviderSelection = 'auto' | AiProviderId

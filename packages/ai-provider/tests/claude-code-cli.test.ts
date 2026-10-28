@@ -788,7 +788,7 @@ describe('Claude Code bridge: the structured turn', () => {
   })
 
   it('never takes prose written beside the call as the answer', async () => {
-    // seen live before decision 0081: tool calls written as text in the model's own markup
+    // seen live before decision 0082: tool calls written as text in the model's own markup
     const prose =
       '먼저 표를 읽겠습니다.\n\n<invoke name="read_table">\n<parameter name="table">1</parameter>\n</invoke>'
     const record = harness({

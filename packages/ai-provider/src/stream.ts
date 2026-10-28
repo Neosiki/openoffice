@@ -5,6 +5,7 @@ import { streamGemini } from './protocols/gemini'
 import { streamOpenAiCompatible } from './protocols/openai-compatible'
 import { streamCodexAppServer } from './codex-app-server'
 import { streamClaudeCodeCli } from './claude-code-cli'
+import { streamChatGpt } from './chatgpt/responses'
 import type { StreamCallbacks } from './protocols/shared'
 import { getProviderAdapter, type AiProtocol } from './registry'
 import type { AiProviderConfig, AiProviderSelection } from './types'
@@ -47,7 +48,13 @@ export async function streamForProvider(
   if (endpoint.protocol === 'claude-code-cli') {
     return streamClaudeCodeCli(config, system, messages, tools, maxTokens, cb)
   }
-  const protocol: Exclude<AiProtocol, 'codex-app-server' | 'claude-code-cli'> = endpoint.protocol
+  if (endpoint.protocol === 'chatgpt-responses') {
+    return streamChatGpt(config, system, messages, tools, maxTokens, cb)
+  }
+  const protocol: Exclude<
+    AiProtocol,
+    'codex-app-server' | 'claude-code-cli' | 'chatgpt-responses'
+  > = endpoint.protocol
   return withOutputCapFallback(baseUrl, config.model, maxTokens, (cap) => {
     switch (protocol) {
       case 'anthropic':

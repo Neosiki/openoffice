@@ -5,6 +5,7 @@
  * types only, so preload and renderer bundles can use it as is.
  */
 import type {
+  AiSubscriptionCliId,
   AiSubscriptionModel,
   AiSubscriptionProviderId,
   AiSubscriptionState,
@@ -137,7 +138,7 @@ export interface SubscriptionIpcContract {
 export const SUBSCRIPTION_INSTALL_COMMANDS = {
   'claude-code': 'irm https://claude.ai/install.ps1 | iex',
   codex: 'winget install OpenAI.Codex',
-} as const satisfies Record<AiSubscriptionProviderId, string>
+} as const satisfies Record<AiSubscriptionCliId, string>
 
 /**
  * Oldest CLI version the app works with; an older one is reported as "needs
@@ -151,6 +152,8 @@ export const SUBSCRIPTION_INSTALL_COMMANDS = {
 export const SUBSCRIPTION_MIN_VERSIONS: Record<AiSubscriptionProviderId, string | null> = {
   'claude-code': '2.1.248',
   codex: null,
+  // no program
+  chatgpt: null,
 }
 
 /**
@@ -160,6 +163,7 @@ export const SUBSCRIPTION_MIN_VERSIONS: Record<AiSubscriptionProviderId, string 
 export const SUBSCRIPTION_UPDATE_COMMANDS: Record<AiSubscriptionProviderId, string | null> = {
   'claude-code': 'claude update',
   codex: null,
+  chatgpt: null,
 }
 
 /** Whether a dotted version number is at least `minimum` */
@@ -177,7 +181,13 @@ export function subscriptionVersionAtLeast(version: string, minimum: string): bo
 export const SUBSCRIPTION_INSTALL_URLS = {
   'claude-code': 'https://code.claude.com/docs/en/setup',
   codex: 'https://developers.openai.com/codex/cli',
-} as const satisfies Record<AiSubscriptionProviderId, string>
+} as const satisfies Record<AiSubscriptionCliId, string>
+
+/**
+ * Where ChatGPT shows, and lets the user limit, what an app uses of the plan.
+ * ChatGPT has nothing to install: this is the page its card links to.
+ */
+export const SUBSCRIPTION_CHATGPT_USAGE_URL = 'https://chatgpt.com/#settings/Usage'
 
 /** The status of a provider nothing is known about yet */
 export function checkingSubscriptionStatus(
@@ -256,7 +266,11 @@ export function subscriptionProgramPathOf(value: unknown): string | undefined {
 // ---------------------------------------------------------------------------
 
 /** Listed here (not imported) so this file keeps importing types only */
-const SUBSCRIPTION_PROVIDER_IDS: readonly AiSubscriptionProviderId[] = ['claude-code', 'codex']
+const SUBSCRIPTION_PROVIDER_IDS: readonly AiSubscriptionProviderId[] = [
+  'claude-code',
+  'chatgpt',
+  'codex',
+]
 
 const SUBSCRIPTION_STATES: readonly AiSubscriptionState[] = [
   'checking',
@@ -278,10 +292,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-/** Both providers `checking`: what is shown while nothing has answered */
+/** Every provider `checking`: what is shown while nothing has answered */
 export function checkingSubscriptionStatuses(): SubscriptionStatusMap {
   return {
     'claude-code': checkingSubscriptionStatus('claude-code'),
+    chatgpt: checkingSubscriptionStatus('chatgpt'),
     codex: checkingSubscriptionStatus('codex'),
   }
 }
@@ -374,7 +389,7 @@ export function subscriptionModelsOf(value: unknown): AiSubscriptionModel[] | un
 }
 
 /**
- * An IPC answer as a status map with both providers present. A provider whose
+ * An IPC answer as a status map with every provider present. A provider whose
  * entry is missing or malformed reads as `checking`, so a renderer never has
  * to guard against a half-filled answer. The account and the model list pass
  * only when they have their shape, and only on a state that names a login.
@@ -383,6 +398,10 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
   const raw = isRecord(result) ? result : {}
   const statusOf = (provider: AiSubscriptionProviderId): AiSubscriptionStatus => {
     const status = raw[provider]
+    // a main process that answered without a ChatGPT status has no such connection (an older app)
+    if (isRecord(result) && status === undefined && provider === 'chatgpt') {
+      return { provider, state: 'signed-out', meteredAccepted: false }
+    }
     if (!isRecord(status) || !SUBSCRIPTION_STATES.includes(status.state as AiSubscriptionState)) {
       return checkingSubscriptionStatus(provider)
     }
@@ -415,7 +434,11 @@ export function subscriptionStatusMapOf(result: unknown): SubscriptionStatusMap 
     }
     return read
   }
-  return { 'claude-code': statusOf('claude-code'), codex: statusOf('codex') }
+  return {
+    'claude-code': statusOf('claude-code'),
+    chatgpt: statusOf('chatgpt'),
+    codex: statusOf('codex'),
+  }
 }
 
 /**

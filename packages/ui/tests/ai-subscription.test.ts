@@ -67,6 +67,50 @@ describe('provider names', () => {
   })
 })
 
+describe('the ChatGPT card (decision 0081)', () => {
+  const chatgpt = (state: AiSubscriptionState, extra: Partial<AiSubscriptionStatus> = {}) =>
+    status('chatgpt', state, extra)
+
+  it('signs in with one button and never offers a program window', () => {
+    const view = aiSubscriptionCardView(chatgpt('signed-out'), { terminalWindows: true })
+    expect(view.actions).toEqual(['login'])
+    expect(view.links).toEqual([])
+    expect(view.noteKeys).toEqual(['chatgptLoginNote', 'loginNote'])
+    expect(
+      aiSubscriptionCardView(chatgpt('signed-out', { loginUnfinished: true })).noteKeys,
+    ).toEqual(['chatgptLoginUnfinishedNote', 'loginNote'])
+  })
+
+  it('while signing in, offers only to call it off', () => {
+    const view = aiSubscriptionCardView(chatgpt('signed-out', { signingIn: 'browser' }), {
+      terminalWindows: true,
+      cancelLogin: true,
+      signingInStalled: true,
+    })
+    expect(view.statusKey).toBe('cardSigningIn')
+    expect(view.noteKeys).toEqual(['chatgptSigningInNote'])
+    expect(view.actions).toEqual(['cancel-login'])
+  })
+
+  it('in Settings, names the account, says the plan pays, and links to the usage page', () => {
+    const view = aiSubscriptionCardView(chatgpt('ready', { account: 'me@example.com' }), {
+      account: true,
+      accountActions: true,
+      manageUsage: true,
+    })
+    expect(view.tone).toBe('ok')
+    expect(view.account).toBe('me@example.com')
+    expect(view.noteKeys).toEqual(['chatgptPlanNote'])
+    expect(view.actions).toEqual(['manage-usage', 'switch-account', 'logout'])
+    expect(view.links).toEqual(['manage-usage'])
+    // an AI panel's card stays quiet
+    expect(aiSubscriptionCardView(chatgpt('ready', { account: 'me@example.com' }))).toMatchObject({
+      noteKeys: [],
+      actions: [],
+    })
+  })
+})
+
 describe('aiSubscriptionCardView', () => {
   it('checking: only says so', () => {
     expect(aiSubscriptionCardView(status('claude-code', 'checking'))).toEqual({
@@ -464,6 +508,7 @@ describe('aiConnectPromptView', () => {
   it('is absent while a provider can run', () => {
     const choice = selectAiProvider(defaultAiSettings(), {
       'claude-code': status('claude-code', 'signed-out'),
+      chatgpt: status('chatgpt', 'signed-out'),
       codex: status('codex', 'ready'),
     })
     expect(aiConnectPromptView(choice)).toBeNull()
@@ -473,7 +518,7 @@ describe('aiConnectPromptView', () => {
     expect(aiConnectPromptView(selectAiProvider(defaultAiSettings(), {}))).toEqual({
       titleKey: 'connectTitle',
       bodyKey: 'connectBody',
-      providers: ['claude-code', 'codex'],
+      providers: ['claude-code', 'chatgpt', 'codex'],
       settings: false,
       // with nothing connected, the free connections are the other way in
       free: true,

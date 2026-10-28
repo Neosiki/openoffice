@@ -149,4 +149,21 @@ export const it = {
   actionCopyInfo: 'Copia i dati per l’assistenza',
   copyInfoDone: 'Copiato',
   actionConnectHelp: 'Guarda ogni passaggio sullo schermo (pagina in coreano)',
+  guidePathChatGptBody:
+    'Accedi con il tuo account ChatGPT e usa il tuo piano. Non c’è nulla da installare. Il piano gratuito consente solo un uso limitato.',
+  guideUseCodex: 'Usi già il programma Codex su questo PC? Collegati con Codex',
+  guideUseDirect: 'Collegati direttamente nell’app, senza Codex',
+  chatgptLoginNote:
+    'Nel browser si apre una pagina di accesso a ChatGPT. Accedi e consenti a questa app di usare il tuo piano ChatGPT; la connessione si completa da sola.',
+  chatgptLoginUnfinishedNote:
+    'L’accesso non è terminato. Premi di nuovo per ricominciare. Per collegarti devi consentire l’uso del tuo piano ChatGPT.',
+  chatgptSigningInNote:
+    'Accedi con il tuo account ChatGPT nel browser che si è aperto e consenti a questa app di usare il tuo piano. La connessione si completa da sola.',
+  chatgptPlanNote:
+    'L’IA di questa app funziona con il tuo piano ChatGPT. Scollegandoti la interrompi solo per questa app; gli altri programmi su questo PC restano connessi.',
+  actionContinueWithChatGpt: 'Continua con ChatGPT',
+  actionManageUsage: 'Gestisci utilizzo',
+  browserPageDoneBody: "Puoi chiudere questa scheda e tornare all'app.",
+  browserPageFailedTitle: 'Connessione non riuscita',
+  browserPageFailedBody: "Torna all'app e riprova.",
 } satisfies Record<keyof typeof zh, string>

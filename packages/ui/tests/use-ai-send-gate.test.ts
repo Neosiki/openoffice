@@ -38,6 +38,8 @@ const statuses = (
   codex: AiSubscriptionState,
 ): AiSubscriptionStatuses => ({
   'claude-code': status('claude-code', claude),
+  // the direct ChatGPT connection answers at once and is signed out here
+  chatgpt: status('chatgpt', 'signed-out'),
   codex: status('codex', codex),
 })
 

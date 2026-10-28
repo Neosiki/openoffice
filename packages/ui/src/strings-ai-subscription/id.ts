@@ -142,4 +142,21 @@ export const id = {
   actionCopyInfo: 'Salin info untuk bantuan',
   copyInfoDone: 'Disalin',
   actionConnectHelp: 'Lihat setiap langkah di layar (halaman berbahasa Korea)',
+  guidePathChatGptBody:
+    'Masuk dengan akun ChatGPT Anda dan gunakan paket Anda. Tidak perlu memasang apa pun. Paket gratis hanya memberi sedikit pemakaian.',
+  guideUseCodex: 'Sudah memakai program Codex di PC ini? Hubungkan dengan Codex',
+  guideUseDirect: 'Hubungkan langsung di aplikasi, tanpa Codex',
+  chatgptLoginNote:
+    'Halaman masuk ChatGPT akan terbuka di browser Anda. Masuk lalu izinkan aplikasi ini memakai paket ChatGPT Anda; koneksi akan tersambung sendiri.',
+  chatgptLoginUnfinishedNote:
+    'Proses masuk belum selesai. Tekan lagi untuk memulai dari awal. Koneksi memerlukan izin Anda untuk memakai paket ChatGPT.',
+  chatgptSigningInNote:
+    'Masuk dengan akun ChatGPT Anda di browser yang terbuka, lalu izinkan aplikasi ini memakai paket Anda. Koneksi akan tersambung sendiri.',
+  chatgptPlanNote:
+    'AI di aplikasi ini berjalan dengan paket ChatGPT Anda. Memutus koneksi hanya berlaku untuk aplikasi ini; program lain di PC ini tetap dalam keadaan masuk.',
+  actionContinueWithChatGpt: 'Lanjutkan dengan ChatGPT',
+  actionManageUsage: 'Kelola pemakaian',
+  browserPageDoneBody: 'Anda dapat menutup tab ini dan kembali ke aplikasi.',
+  browserPageFailedTitle: 'Koneksi tidak berhasil',
+  browserPageFailedBody: 'Kembali ke aplikasi dan coba lagi.',
 } satisfies Record<keyof typeof zh, string>

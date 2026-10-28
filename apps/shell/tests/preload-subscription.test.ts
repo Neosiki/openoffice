@@ -37,6 +37,7 @@ const api = electronMocks.exposed.get('aiOfficeSubscription') as SubscriptionApi
 
 const READY = {
   'claude-code': { provider: 'claude-code', state: 'ready', meteredAccepted: false },
+  chatgpt: { provider: 'chatgpt', state: 'signed-out', meteredAccepted: false },
   codex: { provider: 'codex', state: 'signed-out', meteredAccepted: false },
 }
 
@@ -56,6 +57,8 @@ describe('subscription preload API', () => {
     electronMocks.invoke.mockResolvedValue({ 'claude-code': READY['claude-code'] })
     await expect(api.statuses()).resolves.toEqual({
       'claude-code': READY['claude-code'],
+      // an answer without it comes from an app that has no ChatGPT connection
+      chatgpt: READY.chatgpt,
       codex: checkingSubscriptionStatuses().codex,
     })
     expect(electronMocks.invoke).toHaveBeenLastCalledWith(SUBSCRIPTION_IPC_CHANNELS.statuses)

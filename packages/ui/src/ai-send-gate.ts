@@ -17,6 +17,7 @@ import {
   AI_SUBSCRIPTION_PROVIDERS,
   isSubscriptionProvider,
   selectAiProvider,
+  subscriptionStateOf,
   type AiProviderChoice,
   type AiSettings,
   type AiSubscriptionProviderId,
@@ -54,7 +55,7 @@ export type AiSendGate =
 /**
  * A status check that has not reported yet may still turn "not connected" into
  * "connected": the selected subscription is being checked, or under `auto` one
- * of the two is (a missing status reads as `checking`). An unfinished key
+ * of them is (a missing CLI status reads as `checking`). An unfinished key
  * provider waits for no check.
  */
 function connectionStillChecking(
@@ -63,7 +64,7 @@ function connectionStillChecking(
 ): boolean {
   if (choice.reason === 'checking') return true
   if (choice.reason !== 'no-subscription') return false
-  return AI_SUBSCRIPTION_PROVIDERS.some((id) => (statuses[id]?.state ?? 'checking') === 'checking')
+  return AI_SUBSCRIPTION_PROVIDERS.some((id) => subscriptionStateOf(statuses, id) === 'checking')
 }
 
 /** The gate for the current settings and statuses; either one still unread is `checking` */

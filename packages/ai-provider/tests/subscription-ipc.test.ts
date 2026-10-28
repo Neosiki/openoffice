@@ -59,6 +59,7 @@ const READY: SubscriptionStatusMap = {
     meteredAccepted: false,
   },
   codex: { provider: 'codex', state: 'signed-out', version: '0.159.2', meteredAccepted: false },
+  chatgpt: { provider: 'chatgpt', state: 'signed-out', meteredAccepted: false },
 }
 
 function setup(): {
@@ -280,6 +281,7 @@ describe('registerSubscriptionIpc', () => {
     const unchecked: SubscriptionStatusMap = {
       'claude-code': checkingSubscriptionStatus('claude-code'),
       codex: READY.codex,
+      chatgpt: READY.chatgpt,
     }
     deps.service.getStatuses = () => unchecked
     registerSubscriptionIpc(ipc, deps)
@@ -455,7 +457,7 @@ describe('registerSubscriptionIpc', () => {
   })
 
   it('the provider ids in the payload types are the subscription ids', () => {
-    const providers: AiSubscriptionProviderId[] = ['claude-code', 'codex']
+    const providers: AiSubscriptionProviderId[] = ['claude-code', 'chatgpt', 'codex']
     expect(Object.keys(READY).sort()).toEqual(providers.sort())
   })
 })

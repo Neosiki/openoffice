@@ -146,4 +146,21 @@ export const ja = {
   actionCopyInfo: 'サポート用の情報をコピー',
   copyInfoDone: 'コピーしました',
   actionConnectHelp: '手順を画面で見る（韓国語のページ）',
+  guidePathChatGptBody:
+    'ChatGPT のアカウントでログインし、そのプランの範囲で使います。インストールは不要です。無料プランで使える量はわずかです。',
+  guideUseCodex: 'この PC で Codex プログラムをすでに使っていますか？Codex で接続',
+  guideUseDirect: 'Codex を使わず、アプリで直接接続',
+  chatgptLoginNote:
+    'ブラウザーで ChatGPT のログイン画面が開きます。ログインして、このアプリが ChatGPT のプランを使うことを許可すると、自動で接続されます。',
+  chatgptLoginUnfinishedNote:
+    'ログインが完了していません。もう一度押すと最初からやり直します。接続するには、ChatGPT のプランの使用を許可する必要があります。',
+  chatgptSigningInNote:
+    '開いたブラウザーで ChatGPT のアカウントにログインし、このアプリがプランを使うことを許可してください。終わると自動で接続されます。',
+  chatgptPlanNote:
+    'このアプリの AI は ChatGPT のプランの範囲で動きます。接続を解除しても切れるのはこのアプリだけで、この PC のほかのプログラムはログインしたままです。',
+  actionContinueWithChatGpt: 'ChatGPT で続行',
+  actionManageUsage: '使用量を管理',
+  browserPageDoneBody: 'このタブを閉じてアプリに戻ってください。',
+  browserPageFailedTitle: '接続できませんでした',
+  browserPageFailedBody: 'アプリに戻ってもう一度お試しください。',
 } satisfies Record<keyof typeof zh, string>

@@ -265,7 +265,9 @@ describe('AI panel without a connection', () => {
     await settle()
     expect(main.subscription.login).toHaveBeenCalledWith('claude-code')
     pick('[data-action="guide-back"]')
-    pick('[data-path="codex"]')
+    // the Codex program is a way within the one ChatGPT answer
+    pick('[data-path="chatgpt"]')
+    pick('[data-action="guide-alternate"]')
     act(() => card('codex').querySelector<HTMLButtonElement>('[data-action="install"]')!.click())
     await settle()
     expect(main.subscription.install).toHaveBeenCalledWith('codex')
