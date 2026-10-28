@@ -446,7 +446,7 @@ export const strings = {
     onbTitle1: '欢迎使用 GenOffice',
     onbWelcomeSubtitle: '开源办公套件',
     onbWelcomeBody:
-      '打开并编辑 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文档。AI 通过你已有的 Claude 或 Codex 订阅运行，也可以通过免费 AI 连接运行。',
+      '打开并编辑 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文档。AI 通过你已有的 Claude 或 ChatGPT 订阅运行，也可以通过免费 AI 连接运行。',
     onbSkip: '跳过',
     onbNext: '下一步',
     onbStart: '开始使用',
@@ -1020,7 +1020,7 @@ export const strings = {
     onbTitle1: 'Welcome to GenOffice',
     onbWelcomeSubtitle: 'An open-source office suite',
     onbWelcomeBody:
-      'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or Codex subscription you already have, or through a free AI connection.',
+      'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or ChatGPT subscription you already have, or through a free AI connection.',
     onbSkip: 'Skip',
     onbNext: 'Next',
     onbStart: 'Get started',
@@ -1604,7 +1604,7 @@ export const strings = {
     onbTitle1: 'Chào mừng đến với GenOffice',
     onbWelcomeSubtitle: 'Bộ ứng dụng văn phòng mã nguồn mở',
     onbWelcomeBody:
-      'Mở và chỉnh sửa tài liệu Word, Excel, PowerPoint, PDF, Markdown và HTML. AI hoạt động qua gói đăng ký Claude hoặc Codex mà bạn đã có, hoặc qua kết nối AI miễn phí.',
+      'Mở và chỉnh sửa tài liệu Word, Excel, PowerPoint, PDF, Markdown và HTML. AI hoạt động qua gói đăng ký Claude hoặc ChatGPT mà bạn đã có, hoặc qua kết nối AI miễn phí.',
     onbSkip: 'Bỏ qua',
     onbNext: 'Tiếp theo',
     onbStart: 'Bắt đầu',
@@ -2201,7 +2201,7 @@ export const strings = {
     onbTitle1: 'GenOffice へようこそ',
     onbWelcomeSubtitle: 'オープンソースのオフィススイート',
     onbWelcomeBody:
-      'Word、Excel、PowerPoint、PDF、Markdown、HTML の文書を開いて編集できます。AI は、すでにお持ちの Claude または Codex のサブスクリプション、または無料の AI 接続で動作します。',
+      'Word、Excel、PowerPoint、PDF、Markdown、HTML の文書を開いて編集できます。AI は、すでにお持ちの Claude または ChatGPT のサブスクリプション、または無料の AI 接続で動作します。',
     onbSkip: 'スキップ',
     onbNext: '次へ',
     onbStart: 'はじめる',
@@ -2789,7 +2789,7 @@ export const strings = {
     onbTitle1: 'GenOffice에 오신 것을 환영합니다',
     onbWelcomeSubtitle: '오픈소스 오피스 제품군',
     onbWelcomeBody:
-      'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude·Codex 구독이나 무료 AI 연결로 동작합니다.',
+      'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude·ChatGPT 구독이나 무료 AI 연결로 동작합니다.',
     onbSkip: '건너뛰기',
     onbNext: '다음',
     onbStart: '시작하기',
@@ -3389,7 +3389,7 @@ export const strings = {
     onbTitle1: 'Bienvenue dans GenOffice',
     onbWelcomeSubtitle: 'Une suite bureautique open source',
     onbWelcomeBody:
-      'Ouvrez et modifiez des documents Word, Excel, PowerPoint, PDF, Markdown et HTML. L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà, ou avec une connexion à une IA gratuite.',
+      'Ouvrez et modifiez des documents Word, Excel, PowerPoint, PDF, Markdown et HTML. L’IA fonctionne avec l’abonnement Claude ou ChatGPT que vous avez déjà, ou avec une connexion à une IA gratuite.',
     onbSkip: 'Passer',
     onbNext: 'Suivant',
     onbStart: 'Commencer',
@@ -3997,7 +3997,7 @@ export const strings = {
     onbTitle1: 'Willkommen bei GenOffice',
     onbWelcomeSubtitle: 'Eine quelloffene Office-Suite',
     onbWelcomeBody:
-      'Öffnen und bearbeiten Sie Word-, Excel-, PowerPoint-, PDF-, Markdown- und HTML-Dokumente. Die KI läuft über das Claude- oder Codex-Abonnement, das Sie bereits haben, oder über eine kostenlose KI-Verbindung.',
+      'Öffnen und bearbeiten Sie Word-, Excel-, PowerPoint-, PDF-, Markdown- und HTML-Dokumente. Die KI läuft über das Claude- oder ChatGPT-Abonnement, das Sie bereits haben, oder über eine kostenlose KI-Verbindung.',
     onbSkip: 'Überspringen',
     onbNext: 'Weiter',
     onbStart: 'Loslegen',
@@ -4605,7 +4605,7 @@ export const strings = {
     onbTitle1: 'Bienvenido a GenOffice',
     onbWelcomeSubtitle: 'Una suite ofimática de código abierto',
     onbWelcomeBody:
-      'Abre y edita documentos de Word, Excel, PowerPoint, PDF, Markdown y HTML. La IA funciona con la suscripción de Claude o Codex que ya tienes, o con una conexión a una IA gratuita.',
+      'Abre y edita documentos de Word, Excel, PowerPoint, PDF, Markdown y HTML. La IA funciona con la suscripción de Claude o ChatGPT que ya tienes, o con una conexión a una IA gratuita.',
     onbSkip: 'Omitir',
     onbNext: 'Siguiente',
     onbStart: 'Empezar',
@@ -5189,7 +5189,7 @@ export const strings = {
     onbTitle1: 'ยินดีต้อนรับสู่ GenOffice',
     onbWelcomeSubtitle: 'ชุดโปรแกรมออฟฟิศโอเพนซอร์ส',
     onbWelcomeBody:
-      'เปิดและแก้ไขเอกสาร Word, Excel, PowerPoint, PDF, Markdown และ HTML โดย AI ทำงานผ่านการสมัครสมาชิก Claude หรือ Codex ที่คุณมีอยู่แล้ว หรือผ่านการเชื่อมต่อ AI ฟรี',
+      'เปิดและแก้ไขเอกสาร Word, Excel, PowerPoint, PDF, Markdown และ HTML โดย AI ทำงานผ่านการสมัครสมาชิก Claude หรือ ChatGPT ที่คุณมีอยู่แล้ว หรือผ่านการเชื่อมต่อ AI ฟรี',
     onbSkip: 'ข้าม',
     onbNext: 'ถัดไป',
     onbStart: 'เริ่มใช้งาน',
@@ -5783,7 +5783,7 @@ export const strings = {
     onbTitle1: 'Selamat datang di GenOffice',
     onbWelcomeSubtitle: 'Suite office open source',
     onbWelcomeBody:
-      'Buka dan edit dokumen Word, Excel, PowerPoint, PDF, Markdown, dan HTML. AI berjalan melalui langganan Claude atau Codex yang sudah Anda miliki, atau melalui koneksi AI gratis.',
+      'Buka dan edit dokumen Word, Excel, PowerPoint, PDF, Markdown, dan HTML. AI berjalan melalui langganan Claude atau ChatGPT yang sudah Anda miliki, atau melalui koneksi AI gratis.',
     onbSkip: 'Lewati',
     onbNext: 'Berikutnya',
     onbStart: 'Mulai',
@@ -6383,7 +6383,7 @@ export const strings = {
     onbTitle1: 'Добро пожаловать в GenOffice',
     onbWelcomeSubtitle: 'Офисный пакет с открытым исходным кодом',
     onbWelcomeBody:
-      'Открывайте и редактируйте документы Word, Excel, PowerPoint, PDF, Markdown и HTML. ИИ работает через уже имеющуюся у вас подписку Claude или Codex либо через бесплатное подключение к ИИ.',
+      'Открывайте и редактируйте документы Word, Excel, PowerPoint, PDF, Markdown и HTML. ИИ работает через уже имеющуюся у вас подписку Claude или ChatGPT либо через бесплатное подключение к ИИ.',
     onbSkip: 'Пропустить',
     onbNext: 'Далее',
     onbStart: 'Начать',
@@ -6970,7 +6970,7 @@ export const strings = {
     onbTitle1: 'مرحبًا بك في GenOffice',
     onbWelcomeSubtitle: 'حزمة مكتبية مفتوحة المصدر',
     onbWelcomeBody:
-      'افتح مستندات Word وExcel وPowerPoint وPDF وMarkdown وHTML وحرّرها. يعمل الذكاء الاصطناعي عبر اشتراك Claude أو Codex الذي لديك بالفعل، أو عبر اتصال مجاني بذكاء اصطناعي.',
+      'افتح مستندات Word وExcel وPowerPoint وPDF وMarkdown وHTML وحرّرها. يعمل الذكاء الاصطناعي عبر اشتراك Claude أو ChatGPT الذي لديك بالفعل، أو عبر اتصال مجاني بذكاء اصطناعي.',
     onbSkip: 'تخطي',
     onbNext: 'التالي',
     onbStart: 'ابدأ الآن',
@@ -7561,7 +7561,7 @@ export const strings = {
     onbTitle1: 'Bem-vindo ao GenOffice',
     onbWelcomeSubtitle: 'Uma suíte de escritório de código aberto',
     onbWelcomeBody:
-      'Abra e edite documentos do Word, Excel, PowerPoint, PDF, Markdown e HTML. A IA funciona com a assinatura do Claude ou do Codex que você já tem, ou com uma conexão de IA gratuita.',
+      'Abra e edite documentos do Word, Excel, PowerPoint, PDF, Markdown e HTML. A IA funciona com a assinatura do Claude ou do ChatGPT que você já tem, ou com uma conexão de IA gratuita.',
     onbSkip: 'Pular',
     onbNext: 'Avançar',
     onbStart: 'Começar',
@@ -8153,7 +8153,7 @@ export const strings = {
     onbTitle1: 'Benvenuto in GenOffice',
     onbWelcomeSubtitle: 'Una suite per ufficio open source',
     onbWelcomeBody:
-      'Apri e modifica documenti Word, Excel, PowerPoint, PDF, Markdown e HTML. L’IA funziona con l’abbonamento Claude o Codex che hai già, oppure con un collegamento a un’IA gratuita.',
+      'Apri e modifica documenti Word, Excel, PowerPoint, PDF, Markdown e HTML. L’IA funziona con l’abbonamento Claude o ChatGPT che hai già, oppure con un collegamento a un’IA gratuita.',
     onbSkip: 'Salta',
     onbNext: 'Avanti',
     onbStart: 'Inizia',
@@ -8743,7 +8743,7 @@ export const strings = {
     onbTitle1: 'Witamy w GenOffice',
     onbWelcomeSubtitle: 'Otwartoźródłowy pakiet biurowy',
     onbWelcomeBody:
-      'Otwieraj i edytuj dokumenty Word, Excel, PowerPoint, PDF, Markdown i HTML. AI działa w ramach subskrypcji Claude lub Codex, którą już masz, albo przez darmowe połączenie z AI.',
+      'Otwieraj i edytuj dokumenty Word, Excel, PowerPoint, PDF, Markdown i HTML. AI działa w ramach subskrypcji Claude lub ChatGPT, którą już masz, albo przez darmowe połączenie z AI.',
     onbSkip: 'Pomiń',
     onbNext: 'Dalej',
     onbStart: 'Rozpocznij',
@@ -9281,7 +9281,7 @@ export const strings = {
     onbTitle1: 'Vítejte v GenOffice',
     onbWelcomeSubtitle: 'Kancelářský balík s otevřeným zdrojovým kódem',
     onbWelcomeBody:
-      'Otevírejte a upravujte dokumenty Word, Excel, PowerPoint, PDF, Markdown a HTML. AI funguje přes předplatné Claude nebo Codex, které už máte, nebo přes bezplatné připojení k AI.',
+      'Otevírejte a upravujte dokumenty Word, Excel, PowerPoint, PDF, Markdown a HTML. AI funguje přes předplatné Claude nebo ChatGPT, které už máte, nebo přes bezplatné připojení k AI.',
     onbSkip: 'Přeskočit',
     onbNext: 'Další',
     onbStart: 'Začít',
@@ -9916,7 +9916,7 @@ export const strings = {
     onbTitle1: 'Welkom bij GenOffice',
     onbWelcomeSubtitle: 'Een opensource-officesuite',
     onbWelcomeBody:
-      'Open en bewerk Word-, Excel-, PowerPoint-, PDF-, Markdown- en HTML-documenten. AI werkt via het Claude- of Codex-abonnement dat je al hebt, of via een gratis AI-verbinding.',
+      'Open en bewerk Word-, Excel-, PowerPoint-, PDF-, Markdown- en HTML-documenten. AI werkt via het Claude- of ChatGPT-abonnement dat je al hebt, of via een gratis AI-verbinding.',
     onbSkip: 'Overslaan',
     onbNext: 'Volgende',
     onbStart: 'Aan de slag',
@@ -10509,7 +10509,7 @@ export const strings = {
     onbTitle1: 'Selamat datang ke GenOffice',
     onbWelcomeSubtitle: 'Suite pejabat sumber terbuka',
     onbWelcomeBody:
-      'Buka dan sunting dokumen Word, Excel, PowerPoint, PDF, Markdown dan HTML. AI berfungsi melalui langganan Claude atau Codex yang sudah anda miliki, atau melalui sambungan AI percuma.',
+      'Buka dan sunting dokumen Word, Excel, PowerPoint, PDF, Markdown dan HTML. AI berfungsi melalui langganan Claude atau ChatGPT yang sudah anda miliki, atau melalui sambungan AI percuma.',
     onbSkip: 'Langkau',
     onbNext: 'Seterusnya',
     onbStart: 'Mula',
@@ -11082,7 +11082,7 @@ export const strings = {
     onbTitle1: 'ברוכים הבאים ל-GenOffice',
     onbWelcomeSubtitle: 'חבילת משרד בקוד פתוח',
     onbWelcomeBody:
-      'פתחו וערכו מסמכי Word, Excel, PowerPoint, PDF, Markdown ו-HTML. ה-AI פועל דרך מינוי Claude או Codex שכבר יש לכם, או דרך חיבור ל-AI בחינם.',
+      'פתחו וערכו מסמכי Word, Excel, PowerPoint, PDF, Markdown ו-HTML. ה-AI פועל דרך מינוי Claude או ChatGPT שכבר יש לכם, או דרך חיבור ל-AI בחינם.',
     onbSkip: 'דילוג',
     onbNext: 'הבא',
     onbStart: 'להתחיל',
@@ -11660,7 +11660,7 @@ export const strings = {
     onbTitle1: 'GenOffice में आपका स्वागत है',
     onbWelcomeSubtitle: 'ओपन-सोर्स ऑफ़िस सुइट',
     onbWelcomeBody:
-      'Word, Excel, PowerPoint, PDF, Markdown और HTML दस्तावेज़ खोलें और संपादित करें। AI आपकी मौजूदा Claude या Codex सदस्यता के ज़रिए, या मुफ़्त AI कनेक्शन के ज़रिए काम करता है।',
+      'Word, Excel, PowerPoint, PDF, Markdown और HTML दस्तावेज़ खोलें और संपादित करें। AI आपकी मौजूदा Claude या ChatGPT सदस्यता के ज़रिए, या मुफ़्त AI कनेक्शन के ज़रिए काम करता है।',
     onbSkip: 'छोड़ें',
     onbNext: 'आगे',
     onbStart: 'शुरू करें',
@@ -12221,7 +12221,7 @@ export const strings = {
     onbTitle1: '歡迎使用 GenOffice',
     onbWelcomeSubtitle: '開源辦公套件',
     onbWelcomeBody:
-      '開啟並編輯 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文件。AI 透過你已有的 Claude 或 Codex 訂閱運作，也可以透過免費 AI 連線運作。',
+      '開啟並編輯 Word、Excel、PowerPoint、PDF、Markdown 和 HTML 文件。AI 透過你已有的 Claude 或 ChatGPT 訂閱運作，也可以透過免費 AI 連線運作。',
     onbSkip: '略過',
     onbNext: '下一步',
     onbStart: '開始使用',

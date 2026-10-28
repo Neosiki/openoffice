@@ -41,7 +41,7 @@ export const ko = {
   meteredMeaning:
     'API 키나 종량제 계정으로 로그인되어 있거나, 로그인 방식을 확인하지 못한 상태입니다. "그래도 사용"을 누르면 이 연결로 AI를 쓰게 되고, 요청할 때마다 그 계정에 요금이 청구됩니다.',
   connectTitle: 'AI를 쓰려면 먼저 연결하세요',
-  connectBody: '이미 쓰고 있는 Claude 또는 Codex 구독으로 AI를 씁니다. API 키는 필요 없습니다.',
+  connectBody: '이미 쓰고 있는 Claude 또는 ChatGPT 구독으로 AI를 씁니다. API 키는 필요 없습니다.',
   connectProviderTitle: '{provider} 연결을 지금 쓸 수 없습니다',
   connectKeyBody:
     '{provider} 설정이 아직 끝나지 않았습니다. 설정에서 마무리하거나 다른 AI를 선택하세요.',

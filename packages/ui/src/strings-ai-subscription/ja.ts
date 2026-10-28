@@ -44,7 +44,7 @@ export const ja = {
     'API キーまたは従量課金のアカウントでログインしているか、ログイン方法を確認できませんでした。「それでも使用」を選ぶと AI がこの接続で動作し、リクエストのたびにそのアカウントへ課金されます。',
   connectTitle: 'AI を接続して始めましょう',
   connectBody:
-    'お持ちの Claude または Codex のサブスクリプションで AI を利用します。API キーは不要です。',
+    'お持ちの Claude または ChatGPT のサブスクリプションで AI を利用します。API キーは不要です。',
   connectProviderTitle: '{provider} の接続は現在使用できません',
   connectKeyBody:
     '{provider} の設定がまだ完了していません。設定で完了するか、別の AI を選んでください。',

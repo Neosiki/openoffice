@@ -38,7 +38,7 @@ export const zh = {
   meteredMeaning:
     '当前登录使用的是 API 密钥或按量付费账户，或者无法确认登录方式。选择“仍然使用”后，AI 将通过此连接运行，每次请求都会向该账户计费。',
   connectTitle: '连接 AI 即可开始使用',
-  connectBody: 'AI 使用你已有的 Claude 或 Codex 订阅运行，无需 API 密钥。',
+  connectBody: 'AI 使用你已有的 Claude 或 ChatGPT 订阅运行，无需 API 密钥。',
   connectProviderTitle: '{provider} 连接目前无法使用',
   connectKeyBody: '{provider} 的设置尚未完成。请在设置中完成配置，或选择其他 AI。',
   errNotConnected: '尚未连接任何 AI。请先连接 Claude 或 Codex 订阅，或连接免费 AI。',

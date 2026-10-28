@@ -42,7 +42,7 @@ export const en = {
     'This login is an API key or a pay-as-you-go account, or its type could not be confirmed. "Use anyway" lets AI run on this connection, and every request is billed to that account.',
   connectTitle: 'Connect an AI to get started',
   connectBody:
-    'AI runs on the Claude or Codex subscription you already have. No API key is needed.',
+    'AI runs on the Claude or ChatGPT subscription you already have. No API key is needed.',
   connectProviderTitle: 'The {provider} connection cannot be used right now',
   connectKeyBody:
     'The {provider} setup is not finished. Complete it in Settings, or choose another AI.',

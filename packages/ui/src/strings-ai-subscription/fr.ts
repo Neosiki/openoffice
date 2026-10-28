@@ -46,7 +46,7 @@ export const fr = {
     'Cette connexion utilise une clé API ou un compte facturé à l’usage, ou son type n’a pas pu être confirmé. « Utiliser quand même » permet à l’IA de fonctionner avec cette connexion, et chaque requête est facturée à ce compte.',
   connectTitle: 'Connectez une IA pour commencer',
   connectBody:
-    'L’IA fonctionne avec l’abonnement Claude ou Codex que vous avez déjà. Aucune clé API n’est nécessaire.',
+    'L’IA fonctionne avec l’abonnement Claude ou ChatGPT que vous avez déjà. Aucune clé API n’est nécessaire.',
   connectProviderTitle: 'La connexion {provider} n’est pas utilisable pour le moment',
   connectKeyBody:
     'La configuration de {provider} n’est pas terminée. Terminez-la dans les paramètres ou choisissez une autre IA.',
