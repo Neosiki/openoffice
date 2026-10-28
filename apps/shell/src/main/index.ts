@@ -62,6 +62,7 @@ import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoff
 import { DEV_USER_DATA_DIR_NAME, PRODUCT_CONTACT_EMAIL, productName } from '@genoffice/i18n'
 import {
   DEFAULT_SAVE_DIR_KEY,
+  defaultSaveDirFallback,
   DROP_OPEN_CHANNEL,
   GITHUB_REPO_URL,
   appMenuLabels,
@@ -1099,6 +1100,9 @@ const tMain = createI18n({
     pdfDocxLocalCorruptDetail: '文件已损坏或不是有效的 PDF，无法转换。',
     dlgPickSaveDir: '选择默认保存位置',
     errSaveDirUnusable: '所选文件夹不可写，无法用作默认保存位置',
+    saveDirFallbackMsg: '无法保存到"文档"文件夹',
+    saveDirFallbackDetail:
+      '无法创建或写入 {blocked}，新文件将保存到 {using}。如果是 Windows 安全中心的"受控文件夹访问"阻止了它，请在"允许应用通过受控文件夹访问"中添加 GenOffice，然后重新启动应用。也可以在 设置 → 通用 → 默认保存位置 中选择其他文件夹。',
   },
   en: {
     menuTabSave: 'Save',
@@ -1250,6 +1254,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Choose Default Save Location',
     errSaveDirUnusable:
       'The selected folder is not writable and cannot be used as the default save location',
+    saveDirFallbackMsg: "Can't save to the Documents folder",
+    saveDirFallbackDetail:
+      'GenOffice could not create or write {blocked}, so new files are saved in {using}. If Windows Security\'s "Controlled folder access" blocked it, add GenOffice under "Allow an app through Controlled folder access" and restart the app. You can also pick another folder in Settings → General → Save Location.',
   },
   vi: {
     menuTabSave: 'Lưu',
@@ -1401,6 +1408,9 @@ const tMain = createI18n({
       'Tệp bị hỏng hoặc không phải là tệp PDF hợp lệ và không thể chuyển đổi.',
     dlgPickSaveDir: 'Chọn vị trí lưu mặc định',
     errSaveDirUnusable: 'Thư mục đã chọn không thể ghi và không thể dùng làm vị trí lưu mặc định',
+    saveDirFallbackMsg: 'Không thể lưu vào thư mục Tài liệu',
+    saveDirFallbackDetail:
+      'Không thể tạo hoặc ghi vào {blocked}, nên tệp mới sẽ được lưu vào {using}. Nếu "Quyền truy cập thư mục được kiểm soát" của Bảo mật Windows đã chặn, hãy thêm GenOffice vào "Cho phép ứng dụng thông qua quyền truy cập thư mục được kiểm soát" rồi khởi động lại ứng dụng. Bạn cũng có thể chọn thư mục khác trong Cài đặt → Chung → Vị trí lưu.',
   },
   ja: {
     menuTabSave: '保存',
@@ -1554,6 +1564,9 @@ const tMain = createI18n({
     dlgPickSaveDir: '既定の保存先を選択',
     errSaveDirUnusable:
       '選択したフォルダーは書き込みできないため、既定の保存先として使用できません',
+    saveDirFallbackMsg: 'ドキュメント フォルダーに保存できません',
+    saveDirFallbackDetail:
+      '{blocked} を作成または書き込みできなかったため、新しいファイルは {using} に保存します。Windows セキュリティの「コントロールされたフォルダー アクセス」がブロックしている場合は、「コントロールされたフォルダー アクセスによるアプリの許可」に GenOffice を追加してからアプリを再起動してください。設定 → 一般 → 保存先 で別のフォルダーを選ぶこともできます。',
   },
   ko: {
     menuTabSave: '저장',
@@ -1705,6 +1718,9 @@ const tMain = createI18n({
     pdfDocxLocalCorruptDetail: '파일이 손상되었거나 유효한 PDF가 아니어서 변환할 수 없습니다.',
     dlgPickSaveDir: '기본 저장 위치 선택',
     errSaveDirUnusable: '선택한 폴더에 쓸 수 없어 기본 저장 위치로 사용할 수 없습니다',
+    saveDirFallbackMsg: '문서 폴더에 저장할 수 없습니다',
+    saveDirFallbackDetail:
+      '{blocked} 폴더를 만들거나 쓰지 못해서, 새 파일은 {using}에 저장합니다. Windows 보안의 "제어된 폴더 액세스"가 막은 것이라면 "제어된 폴더 액세스를 통해 앱 허용"에 GenOffice를 추가한 뒤 앱을 다시 시작하세요. 설정 → 일반 → 저장 위치에서 다른 폴더를 고를 수도 있습니다.',
   },
   fr: {
     menuTabSave: 'Enregistrer',
@@ -1859,6 +1875,9 @@ const tMain = createI18n({
     dlgPickSaveDir: "Choisir l'emplacement d'enregistrement par défaut",
     errSaveDirUnusable:
       "Le dossier sélectionné n'est pas accessible en écriture et ne peut pas servir d'emplacement d'enregistrement par défaut",
+    saveDirFallbackMsg: "Impossible d'enregistrer dans le dossier Documents",
+    saveDirFallbackDetail:
+      "Impossible de créer ou d'écrire {blocked} ; les nouveaux fichiers sont enregistrés dans {using}. Si l'« Accès contrôlé aux dossiers » de la Sécurité Windows l'a bloqué, ajoutez GenOffice dans « Autoriser une application via l'accès contrôlé aux dossiers », puis redémarrez l'application. Vous pouvez aussi choisir un autre dossier dans Paramètres → Général → Emplacement d'enregistrement.",
   },
   de: {
     menuTabSave: 'Speichern',
@@ -2013,6 +2032,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Standard-Speicherort auswählen',
     errSaveDirUnusable:
       'Der ausgewählte Ordner ist nicht beschreibbar und kann nicht als Standard-Speicherort verwendet werden',
+    saveDirFallbackMsg: 'Speichern im Ordner „Dokumente“ nicht möglich',
+    saveDirFallbackDetail:
+      '{blocked} konnte nicht erstellt oder beschrieben werden, daher werden neue Dateien in {using} gespeichert. Falls der „Überwachte Ordnerzugriff“ der Windows-Sicherheit dies blockiert, fügen Sie GenOffice unter „App durch überwachten Ordnerzugriff zulassen“ hinzu und starten Sie die App neu. Sie können auch unter Einstellungen → Allgemein → Speicherort einen anderen Ordner wählen.',
   },
   es: {
     menuTabSave: 'Guardar',
@@ -2167,6 +2189,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Elegir ubicación de guardado predeterminada',
     errSaveDirUnusable:
       'La carpeta seleccionada no admite escritura y no puede usarse como ubicación de guardado predeterminada',
+    saveDirFallbackMsg: 'No se puede guardar en la carpeta Documentos',
+    saveDirFallbackDetail:
+      'No se pudo crear ni escribir en {blocked}, así que los archivos nuevos se guardan en {using}. Si lo bloqueó el «Acceso controlado a carpetas» de Seguridad de Windows, agregue GenOffice en «Permitir una aplicación a través del acceso controlado a carpetas» y reinicie la aplicación. También puede elegir otra carpeta en Configuración → General → Ubicación de guardado.',
   },
   th: {
     menuTabSave: 'บันทึก',
@@ -2315,6 +2340,9 @@ const tMain = createI18n({
     pdfDocxLocalCorruptDetail: 'ไฟล์เสียหายหรือไม่ใช่ PDF ที่ถูกต้อง จึงไม่สามารถแปลงได้',
     dlgPickSaveDir: 'เลือกตำแหน่งบันทึกเริ่มต้น',
     errSaveDirUnusable: 'โฟลเดอร์ที่เลือกไม่สามารถเขียนได้ จึงใช้เป็นตำแหน่งบันทึกเริ่มต้นไม่ได้',
+    saveDirFallbackMsg: 'บันทึกลงในโฟลเดอร์เอกสารไม่ได้',
+    saveDirFallbackDetail:
+      'สร้างหรือเขียน {blocked} ไม่ได้ ไฟล์ใหม่จึงจะบันทึกไว้ที่ {using} หาก "การเข้าถึงโฟลเดอร์ที่มีการควบคุม" ของความปลอดภัยของ Windows เป็นตัวบล็อก ให้เพิ่ม GenOffice ใน "อนุญาตแอปผ่านการเข้าถึงโฟลเดอร์ที่มีการควบคุม" แล้วเริ่มแอปใหม่ หรือเลือกโฟลเดอร์อื่นได้ที่ การตั้งค่า → ทั่วไป → ตำแหน่งบันทึก',
   },
   id: {
     menuTabSave: 'Simpan',
@@ -2468,6 +2496,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Pilih Lokasi Penyimpanan Default',
     errSaveDirUnusable:
       'Folder yang dipilih tidak dapat ditulis dan tidak bisa digunakan sebagai lokasi penyimpanan default',
+    saveDirFallbackMsg: 'Tidak dapat menyimpan ke folder Dokumen',
+    saveDirFallbackDetail:
+      '{blocked} tidak dapat dibuat atau ditulisi, jadi file baru disimpan di {using}. Jika "Akses folder terkontrol" di Keamanan Windows yang memblokirnya, tambahkan GenOffice di "Izinkan aplikasi melalui Akses folder terkontrol", lalu mulai ulang aplikasi. Anda juga dapat memilih folder lain di Pengaturan → Umum → Lokasi penyimpanan.',
   },
   ru: {
     menuTabSave: 'Сохранить',
@@ -2621,6 +2652,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Выбрать папку сохранения по умолчанию',
     errSaveDirUnusable:
       'Выбранная папка недоступна для записи и не может использоваться как папка сохранения по умолчанию',
+    saveDirFallbackMsg: 'Не удаётся сохранить в папку «Документы»',
+    saveDirFallbackDetail:
+      'Не удалось создать папку {blocked} или записать в неё, поэтому новые файлы сохраняются в {using}. Если это заблокировал «Контролируемый доступ к папкам» в Безопасности Windows, добавьте GenOffice в «Разрешить работу приложения через контролируемый доступ к папкам» и перезапустите приложение. Можно также выбрать другую папку в разделе Настройки → Общие → Папка сохранения.',
   },
   ar: {
     menuTabSave: 'حفظ',
@@ -2769,6 +2803,9 @@ const tMain = createI18n({
     pdfDocxLocalCorruptDetail: 'الملف تالف أو ليس ملف PDF صالحًا ولا يمكن تحويله.',
     dlgPickSaveDir: 'اختيار موقع الحفظ الافتراضي',
     errSaveDirUnusable: 'المجلد المحدد غير قابل للكتابة ولا يمكن استخدامه كموقع حفظ افتراضي',
+    saveDirFallbackMsg: 'تعذّر الحفظ في مجلد المستندات',
+    saveDirFallbackDetail:
+      'تعذّر إنشاء {blocked} أو الكتابة فيه، لذا تُحفظ الملفات الجديدة في {using}. إذا كان "الوصول إلى المجلدات الخاضعة للتحكم" في أمان Windows هو ما منعه، فأضف GenOffice في "السماح لتطبيق عبر الوصول إلى المجلدات الخاضعة للتحكم" ثم أعد تشغيل التطبيق. يمكنك أيضًا اختيار مجلد آخر من الإعدادات ← عام ← موقع الحفظ.',
   },
   pt: {
     menuTabSave: 'Salvar',
@@ -2922,6 +2959,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Escolher local de salvamento padrão',
     errSaveDirUnusable:
       'A pasta selecionada não permite gravação e não pode ser usada como local de salvamento padrão',
+    saveDirFallbackMsg: 'Não é possível salvar na pasta Documentos',
+    saveDirFallbackDetail:
+      'Não foi possível criar ou gravar em {blocked}, por isso os novos arquivos são salvos em {using}. Se o "Acesso controlado a pastas" da Segurança do Windows bloqueou, adicione o GenOffice em "Permitir um aplicativo pelo Acesso controlado a pastas" e reinicie o aplicativo. Você também pode escolher outra pasta em Configurações → Geral → Local de salvamento.',
   },
   it: {
     menuTabSave: 'Salva',
@@ -3075,6 +3115,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Scegli la posizione di salvataggio predefinita',
     errSaveDirUnusable:
       'La cartella selezionata non è scrivibile e non può essere usata come posizione di salvataggio predefinita',
+    saveDirFallbackMsg: 'Impossibile salvare nella cartella Documenti',
+    saveDirFallbackDetail:
+      'Impossibile creare o scrivere {blocked}, quindi i nuovi file vengono salvati in {using}. Se lo ha bloccato l\'"Accesso alle cartelle controllato" di Sicurezza di Windows, aggiungi GenOffice in "Consenti app tramite Accesso alle cartelle controllato" e riavvia l\'app. Puoi anche scegliere un\'altra cartella in Impostazioni → Generale → Posizione di salvataggio.',
   },
   pl: {
     menuTabSave: 'Zapisz',
@@ -3228,6 +3271,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Wybierz domyślną lokalizację zapisu',
     errSaveDirUnusable:
       'Wybrany folder nie pozwala na zapis i nie może być domyślną lokalizacją zapisu',
+    saveDirFallbackMsg: 'Nie można zapisać w folderze Dokumenty',
+    saveDirFallbackDetail:
+      'Nie udało się utworzyć folderu {blocked} ani w nim zapisać, więc nowe pliki są zapisywane w {using}. Jeśli zablokował to „Dostęp kontrolowany do folderów” w Zabezpieczeniach Windows, dodaj GenOffice w „Zezwalaj aplikacji na dostęp kontrolowany do folderów” i uruchom aplikację ponownie. Możesz też wybrać inny folder w Ustawienia → Ogólne → Lokalizacja zapisu.',
   },
   cs: {
     menuTabSave: 'Uložit',
@@ -3378,6 +3424,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Zvolte výchozí umístění pro ukládání',
     errSaveDirUnusable:
       'Do vybrané složky nelze zapisovat a nelze ji použít jako výchozí umístění pro ukládání',
+    saveDirFallbackMsg: 'Do složky Dokumenty nelze ukládat',
+    saveDirFallbackDetail:
+      'Složku {blocked} se nepodařilo vytvořit ani do ní zapisovat, proto se nové soubory ukládají do {using}. Pokud to zablokoval „Řízený přístup ke složkám“ v Zabezpečení Windows, přidejte GenOffice do „Povolit aplikaci přes řízený přístup ke složkám“ a aplikaci restartujte. Jinou složku můžete zvolit také v Nastavení → Obecné → Umístění pro ukládání.',
   },
   nl: {
     menuTabSave: 'Opslaan',
@@ -3532,6 +3581,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Standaard opslaglocatie kiezen',
     errSaveDirUnusable:
       'De geselecteerde map is niet beschrijfbaar en kan niet als standaard opslaglocatie worden gebruikt',
+    saveDirFallbackMsg: 'Kan niet opslaan in de map Documenten',
+    saveDirFallbackDetail:
+      '{blocked} kon niet worden gemaakt of beschreven, dus nieuwe bestanden worden opgeslagen in {using}. Als "Beheerde maptoegang" van Windows-beveiliging dit blokkeerde, voeg GenOffice dan toe bij "Een app toestaan via beheerde maptoegang" en start de app opnieuw. U kunt ook een andere map kiezen via Instellingen → Algemeen → Opslaglocatie.',
   },
   ms: {
     menuTabSave: 'Simpan',
@@ -3684,6 +3736,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'Pilih Lokasi Simpanan Lalai',
     errSaveDirUnusable:
       'Folder yang dipilih tidak boleh ditulis dan tidak dapat digunakan sebagai lokasi simpanan lalai',
+    saveDirFallbackMsg: 'Tidak dapat menyimpan ke folder Dokumen',
+    saveDirFallbackDetail:
+      '{blocked} tidak dapat dicipta atau ditulis, jadi fail baharu disimpan dalam {using}. Jika "Akses folder terkawal" dalam Keselamatan Windows yang menyekatnya, tambah GenOffice dalam "Benarkan apl melalui Akses folder terkawal", kemudian mulakan semula apl. Anda juga boleh memilih folder lain dalam Tetapan → Umum → Lokasi simpanan.',
   },
   he: {
     menuTabSave: 'שמירה',
@@ -3833,6 +3888,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'בחירת מיקום שמירה כברירת מחדל',
     errSaveDirUnusable:
       'התיקייה שנבחרה אינה ניתנת לכתיבה ולא ניתן להשתמש בה כמיקום שמירה כברירת מחדל',
+    saveDirFallbackMsg: 'לא ניתן לשמור בתיקייה "מסמכים"',
+    saveDirFallbackDetail:
+      'לא ניתן היה ליצור את {blocked} או לכתוב אליה, ולכן קבצים חדשים נשמרים ב-{using}. אם "גישה מבוקרת לתיקיות" באבטחת Windows חסמה זאת, הוסיפו את GenOffice תחת "התר לאפליקציה דרך גישה מבוקרת לתיקיות" והפעילו מחדש את האפליקציה. אפשר גם לבחור תיקייה אחרת בהגדרות ← כללי ← מיקום שמירה.',
   },
   hi: {
     menuTabSave: 'सहेजें',
@@ -3986,6 +4044,9 @@ const tMain = createI18n({
     dlgPickSaveDir: 'डिफ़ॉल्ट सहेजने का स्थान चुनें',
     errSaveDirUnusable:
       'चयनित फ़ोल्डर में लिखा नहीं जा सकता, इसलिए इसे डिफ़ॉल्ट सहेजने के स्थान के रूप में उपयोग नहीं किया जा सकता',
+    saveDirFallbackMsg: 'दस्तावेज़ फ़ोल्डर में सहेजा नहीं जा सकता',
+    saveDirFallbackDetail:
+      '{blocked} बनाया या उसमें लिखा नहीं जा सका, इसलिए नई फ़ाइलें {using} में सहेजी जाएँगी। अगर Windows सुरक्षा के "नियंत्रित फ़ोल्डर पहुँच" ने इसे रोका है, तो "नियंत्रित फ़ोल्डर पहुँच के ज़रिए किसी ऐप को अनुमति दें" में GenOffice जोड़ें और ऐप को फिर से शुरू करें। आप सेटिंग्स → सामान्य → सहेजने का स्थान में कोई दूसरा फ़ोल्डर भी चुन सकते हैं।',
   },
   'zh-TW': {
     menuTabSave: '儲存',
@@ -4129,11 +4190,29 @@ const tMain = createI18n({
     pdfDocxLocalCorruptDetail: '檔案已損壞或不是有效的 PDF，無法轉換。',
     dlgPickSaveDir: '選擇預設儲存位置',
     errSaveDirUnusable: '所選資料夾無法寫入，無法作為預設儲存位置',
+    saveDirFallbackMsg: '無法儲存到「文件」資料夾',
+    saveDirFallbackDetail:
+      '無法建立或寫入 {blocked}，新檔案將儲存到 {using}。如果是 Windows 安全性的「受控資料夾存取」封鎖了它，請在「允許應用程式通過受控資料夾存取」中加入 GenOffice，然後重新啟動應用程式。也可以在 設定 → 一般 → 預設儲存位置 中選擇其他資料夾。',
   },
 })
 
 const tm = (key: Parameters<typeof tMain>[1], params?: Parameters<typeof tMain>[2]) =>
   tMain(currentLang(), key, params)
+
+let saveDirFallbackNoticed = false
+
+/** once per run: tell the user new files land outside <Documents>/<product>, and why */
+function noticeSaveDirFallback(): void {
+  const fallback = defaultSaveDirFallback()
+  if (!fallback || saveDirFallbackNoticed) return
+  saveDirFallbackNoticed = true
+  const options = {
+    type: 'warning' as const,
+    message: tm('saveDirFallbackMsg'),
+    detail: tm('saveDirFallbackDetail', fallback),
+  }
+  void (shellWindow ? dialog.showMessageBox(shellWindow, options) : dialog.showMessageBox(options))
+}
 
 // ---- the shell window + its tab manager (recreated if the user closes it on macOS) ----
 
@@ -6003,6 +6082,7 @@ function registerHomeIpc(): void {
     // describeRoot creates a missing save folder, so its watcher has something to attach to
     const roots = [describeRoot(defaultSaveDir()), ...extraFolderRoots().map(describeExtraRoot)]
     ensureFolderWatchers()
+    noticeSaveDirFallback()
     return roots
   })
 

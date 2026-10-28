@@ -78,6 +78,7 @@
 | [0075](0075-xmind-picture-entries.md)                         | 마인드맵 AI의 그림은 파일 안 `resources/` 항목으로 넣고, 그때만 manifest에 적는다               | 2026-10-27 |
 | [0076](0076-codex-cli-image-generation.md)                    | Codex 구독 이미지 생성은 채팅과 분리한 `codex exec` 한 번으로 넣고, 로그인 파일은 읽지 않는다   | 2026-10-27 |
 | [0077](0077-update-in-installer-window.md)                    | 업데이트는 설치 진행 창으로 하고, 끝나면 앱과 문서를 다시 연다                                  | 2026-10-27 |
+| [0078](0078-save-dir-when-documents-is-blocked.md)            | 문서 폴더를 쓸 수 없으면 홈 폴더 아래로 내려가고 한 번 알린다                                   | 2026-10-27 |
 | [0079](0079-hwp-edit-from-command-line.md)                    | 터미널 명령어로 한글 문서를 만들고 고친다. 연산은 편집기 AI의 도구를 그대로 쓴다                | 2026-10-27 |
 | [0080](0080-ai-pictures-everywhere.md)                        | AI 그림 넣기는 여섯 편집기에서 같고, 있던 그림은 건드리지 않는다                                | 2026-10-28 |
 | [0081](0081-chatgpt-direct-connection.md)                     | ChatGPT는 앱이 직접 로그인해 요금제로 연결하고, Codex 프로그램은 그 안의 다른 길로 남긴다       | 2026-10-28 |
