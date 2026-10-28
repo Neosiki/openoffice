@@ -40,6 +40,73 @@
   margin-inline-start: 10px;
 }
 
+/*
+ * ---- tree and timeline: drawn on top of the library's direction to the right
+ * and downward (data-mm-structure, set by map/controller.ts). The topics below
+ * a parent are listed under it, indented; their lines run down a trunk near the
+ * parent's left edge (map/branches.ts: TREE_TRUNK, TREE_INDENT = 42px).
+ */
+
+.mm-card .map-container[data-mm-structure='tree'] me-nodes {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mm-card .map-container[data-mm-structure='tree'] me-root {
+  margin: 0;
+}
+
+.mm-card .map-container[data-mm-structure='tree'] me-main {
+  margin-inline-start: 42px;
+}
+
+.mm-card .map-container[data-mm-structure='tree'] me-main > me-wrapper {
+  margin: var(--main-gap-y) 0 0;
+}
+
+.mm-card .map-container[data-mm-structure] me-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mm-card .map-container[data-mm-structure] me-nodes me-children {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin: 0;
+  margin-inline-start: 42px;
+}
+
+/* a main topic fills its box; the topics below it have the row's space on their left */
+.mm-card .map-container[data-mm-structure] me-nodes me-main > me-wrapper > me-children {
+  margin-inline-start: calc(42px - var(--node-gap-x));
+}
+
+/* a timeline: the central topic, then the main topics in a row, each with its topics below */
+.mm-card .map-container[data-mm-structure='timeline'] me-nodes.down {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.mm-card .map-container[data-mm-structure='timeline'] me-root {
+  margin: 0;
+}
+
+.mm-card .map-container[data-mm-structure='timeline'] me-nodes.down me-main {
+  justify-content: flex-start;
+}
+
+/* room for the step line and its arrowhead between two main topics */
+.mm-card .map-container[data-mm-structure='timeline'] me-nodes.down > me-main > me-wrapper {
+  margin: 0 0 0 48px;
+}
+
+.mm-card .map-container[data-mm-structure='timeline'] me-nodes.down me-children me-parent {
+  padding: var(--mm-row-pad) var(--node-gap-x);
+}
+
 /* ---- the three levels: centre, main branches, everything below ---- */
 
 .mm-card .map-container me-tpc {

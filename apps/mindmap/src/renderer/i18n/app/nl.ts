@@ -46,6 +46,8 @@ export const nl = {
   layoutRight: 'Rechts',
   layoutBoth: 'Beide kanten',
   layoutDown: 'Omlaag',
+  layoutTree: 'Boom',
+  layoutTimeline: 'Tijdlijn',
   layoutStandIn:
     'De eigen indeling van deze mindmap kan hier niet worden getekend, daarom wordt een andere getoond. Pas wanneer u een indeling kiest, wordt die in het bestand geschreven.',
   sheetTabs: 'Bladen',

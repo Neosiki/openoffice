@@ -46,6 +46,8 @@ export const he = {
   layoutRight: 'ימינה',
   layoutBoth: 'שני הצדדים',
   layoutDown: 'כלפי מטה',
+  layoutTree: 'עץ',
+  layoutTimeline: 'ציר זמן',
   layoutStandIn:
     'לא ניתן לצייר כאן את הפריסה המקורית של המפה, ולכן מוצגת פריסה אחרת. הפריסה נכתבת לקובץ רק כשבוחרים בה.',
   sheetTabs: 'גיליונות',

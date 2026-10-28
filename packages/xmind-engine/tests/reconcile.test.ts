@@ -564,6 +564,21 @@ describe('reconcileSheet: layout', () => {
     expect(expectApplied(result).view).toMatchObject({ layout: 'down', layoutExact: true })
   })
 
+  it('writes the tree and the timeline as the classes of the format', async () => {
+    const cases = [
+      ['tree', 'org.xmind.ui.tree.right'],
+      ['timeline', 'org.xmind.ui.timeline.horizontal'],
+    ] as const
+    for (const [layout, structureClass] of cases) {
+      const { sheet, result } = await edit((view) => {
+        view.layout = layout
+        view.layoutExact = true
+      }, fishbone())
+      expect(sheet.rootTopic.structureClass, layout).toBe(structureClass)
+      expect(expectApplied(result).view).toMatchObject({ layout, layoutExact: true })
+    }
+  })
+
   it('writes the stand-in layout too once the user picks it', async () => {
     const { sheet } = await edit((view) => {
       view.layoutExact = true

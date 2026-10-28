@@ -46,6 +46,8 @@ export const vi = {
   layoutRight: 'Phải',
   layoutBoth: 'Hai bên',
   layoutDown: 'Xuống dưới',
+  layoutTree: 'Dạng cây',
+  layoutTimeline: 'Dòng thời gian',
   layoutStandIn:
     'Bố cục gốc của sơ đồ này không vẽ được ở đây nên được hiển thị bằng bố cục khác. Chỉ khi bạn chọn một bố cục thì bố cục đó mới được ghi vào tệp.',
   sheetTabs: 'Trang',

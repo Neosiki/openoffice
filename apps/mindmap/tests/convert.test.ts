@@ -3,9 +3,11 @@ import type { MindElixirData, NodeObj } from 'mind-elixir'
 import { reconcileSheet, sheetToView, type ViewSheet } from '@genoffice/xmind-engine'
 import {
   cleanPastedNode,
+  layoutOfDirection,
   LINK_CHIP_CLASS,
   mindToState,
   NOTE_CHIP_CLASS,
+  structureOfLayout,
   viewToMind,
   type MapNode,
   type StateBase,
@@ -94,6 +96,28 @@ describe('view data to library data', () => {
       (layout) => viewToMind({ ...view, layout }).direction,
     )
     expect(directions).toEqual([0, 1, 2, 3])
+  })
+
+  it('draws a tree on the direction to the right and a timeline on the one downward', () => {
+    const directions = (['tree', 'timeline'] as const).map(
+      (layout) => viewToMind({ ...view, layout }).direction,
+    )
+    expect(directions).toEqual([1, 3])
+  })
+
+  it('reads a direction back as the structure it is drawn as, and only on its own direction', () => {
+    expect(layoutOfDirection(1, 'tree')).toBe('tree')
+    expect(layoutOfDirection(3, 'timeline')).toBe('timeline')
+    expect(layoutOfDirection(1)).toBe('right')
+    expect(layoutOfDirection(3, 'map')).toBe('down')
+    // a structure that does not sit on the direction shown is not what the screen draws
+    expect(layoutOfDirection(0, 'tree')).toBe('left')
+    expect(layoutOfDirection(1, 'timeline')).toBe('right')
+    expect(structureOfLayout('tree')).toBe('tree')
+    expect(structureOfLayout('timeline')).toBe('timeline')
+    for (const layout of ['left', 'right', 'both', 'down'] as const) {
+      expect(structureOfLayout(layout), layout).toBe('map')
+    }
   })
 })
 
@@ -280,6 +304,41 @@ describe('library data to the state for reconciling', () => {
     const same = await edit(() => {})
     expect(same.root.structureClass).toBe(FISHBONE)
     expect(same.result.changed).toBe(false)
+  })
+
+  it('a picked tree or timeline is written as the class of the format', async () => {
+    const tree = await edit(
+      (data) => {
+        data.direction = 1
+      },
+      { layoutPicked: true, structure: 'tree' },
+    )
+    expect(tree.root.structureClass).toBe('org.xmind.ui.tree.right')
+    expect(tree.result.view).toMatchObject({ layout: 'tree', layoutExact: true })
+
+    const timeline = await edit(
+      (data) => {
+        data.direction = 3
+      },
+      { layoutPicked: true, structure: 'timeline' },
+    )
+    expect(timeline.root.structureClass).toBe('org.xmind.ui.timeline.horizontal')
+  })
+
+  it('an opened tree or timeline reconciles to "nothing changed"', async () => {
+    for (const structureClass of ['org.xmind.ui.tree.right', 'org.xmind.ui.timeline.horizontal']) {
+      const sheet = richSheet()
+      sheet.rootTopic.structureClass = structureClass
+      const document = await documentOf(sheet)
+      const view = sheetToView(document.sheets[0]!, 0)
+      expect(view.layoutExact, structureClass).toBe(true)
+      const state = mindToState(roundTrip(viewToMind(view)), base(view))
+      expect(state.layout, structureClass).toBe(view.layout)
+      expect(reconcileSheet(document, 0, state), structureClass).toMatchObject({
+        ok: true,
+        changed: false,
+      })
+    }
   })
 
   it('a deleted branch takes its relationship with it without a refusal', async () => {
