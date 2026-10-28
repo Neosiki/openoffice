@@ -24,7 +24,7 @@ Mỗi trình soạn thảo có tổ hợp phím riêng, và chỉ vài tổ hợ
 
 ## Chế độ trình bày
 
-- **Bắt đầu**: F5 trong Word, PDF, Mindmap, HTML và Markdown. Trong bảng tính, Ctrl+F5 (từ A1) hoặc Shift+F5 (từ ô hiện tại).
+- **Bắt đầu**: F5 trong Word, PDF, Mindmap, HTML và Markdown. Trong bảng tính, Ctrl+F5 (từ A1) hoặc Shift+F5 (từ ô hiện tại). Trong tài liệu HWP, Ctrl+F5 (ở đó F5 chọn ô bảng).
 - **Lối vào khác**: trong Word, Ctrl+F5 và Shift+F5 mở chế độ đọc không toàn màn hình; trong PDF bắt đầu từ trang hiện tại; trong HTML trình bày trong thẻ.
 - **Kết thúc**: Esc hoặc F5. F11 là toàn màn hình của cửa sổ và không đổi chế độ xem tài liệu.
 

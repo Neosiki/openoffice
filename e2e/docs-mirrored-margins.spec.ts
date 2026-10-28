@@ -161,9 +161,16 @@ test.describe('docs mirrored margins', () => {
         .locator('.doc-page')
         .first()
         .evaluate((el) => el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth)
-      const alphaLeft = (await alpha.boundingBox())!.x
-      const betaLeft = (await beta.boundingBox())!.x
-      expect(betaLeft - alphaLeft).toBeCloseTo(-24 * zoom, 0)
+      // the shift is a translate the layout applies after --col-dx lands, and
+      // the page re-renders while it settles: read the geometry until it holds
+      // instead of once, as the strip checks below do
+      await expect
+        .poll(async () => {
+          const a = await alpha.boundingBox()
+          const b = await beta.boundingBox()
+          return a && b ? b.x - a.x : Number.NaN
+        })
+        .toBeCloseTo(-24 * zoom, 0)
 
       // header/footer strips sit on their page's own margin: 1.25in on page 1, 1in on page 2
       await expect

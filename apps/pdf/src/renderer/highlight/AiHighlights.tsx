@@ -220,6 +220,8 @@ export const AiHighlights = forwardRef<AiHighlightsHandle, AiHighlightsProps>(
       const ask = createModelCall({
         settings: () => route.settings,
         lang: () => propsRef.current.lang,
+        // the run's own id: every page of it shares one confirmation
+        runId: run.runId,
         guard: async () => {
           const statuses = await attemptSubscription((s) => s.statuses())
           const current = await window.pdfApi?.getAiSettings().catch(() => null)

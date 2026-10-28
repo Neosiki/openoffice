@@ -2,6 +2,7 @@ import type { AiPanelPrefs } from '@genoffice/ui'
 import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
 import type { Lang } from '@genoffice/i18n'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
+import type { AiToolCapabilities } from '@genoffice/ai-search'
 import type { HtmlSubscriptionApi } from './subscription-api'
 
 export const HTML_CHANNELS = {
@@ -147,6 +148,8 @@ export const AI_CHANNELS = {
   webSearch: 'ai:web-search',
   readUrl: 'ai:read-url',
   imageSearch: 'ai:image-search',
+  /** () → AiToolCapabilities, registered by the docs main (shell mode only) */
+  toolCapabilities: 'ai:tool-capabilities',
 } as const
 
 export interface WebSearchResult {
@@ -377,6 +380,8 @@ export interface HtmlApi {
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResult>
   /** Download an image URL in the main process (CORS-free, scheme/target validated) */
   fetchImage(url: string): Promise<ImageData | null>
+  /** which search/media tools can run right now — gates generate_image (rejects while no handler answers) */
+  aiToolCapabilities(): Promise<AiToolCapabilities | null>
   /** AI image generation (html-owned channel; the main process picks the backend) */
   aiGenerateImage(op: { prompt: string; aspectRatio?: string }): Promise<{
     url?: string

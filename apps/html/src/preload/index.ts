@@ -37,9 +37,12 @@ const subscription: HtmlSubscriptionApi = {
         providers ? { providers } : undefined,
       ),
     ),
-  login: async (provider) =>
+  login: async (provider, mode) =>
     subscriptionLaunchResultOf(
-      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.login,
+        mode ? { provider, mode } : { provider },
+      ),
     ),
   install: async (provider) =>
     subscriptionLaunchResultOf(
@@ -193,6 +196,7 @@ const api: HtmlApi = {
   imageSearch: (query, maxResults) =>
     ipcRenderer.invoke(AI_CHANNELS.imageSearch, query, maxResults),
   fetchImage: (url) => ipcRenderer.invoke(HTML_CHANNELS.fetchImage, url),
+  aiToolCapabilities: () => ipcRenderer.invoke(AI_CHANNELS.toolCapabilities),
   aiGenerateImage: (op) => ipcRenderer.invoke(HTML_CHANNELS.aiGenerateImage, op),
   // the generate hand-off (8.5): no handler (standalone, older shell) rejects; the panel reads that as "nothing"
   takeGenerateHandoff: () => ipcRenderer.invoke(HTML_HANDOFF_CHANNELS.take),

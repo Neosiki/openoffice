@@ -25,6 +25,7 @@ export const en = {
   trConfirmCalls: 'AI calls: {calls} ({blocks} blocks, sent in batches)',
   trConfirmDone: '{done} of {total} blocks are already translated and are not sent again',
   trConfirmSends: 'The text of the chosen pages is sent to this AI.',
+  trRightsNotice: 'Translate only documents you have the rights to.',
   trProviderChange:
     'The stored translation was made with {stored}. Continuing with {next} mixes two AIs in one translation.',
   trProviderUnknown: 'an unknown AI',

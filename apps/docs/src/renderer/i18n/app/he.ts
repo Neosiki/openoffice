@@ -569,4 +569,7 @@ export const he = {
   appOdtLabelObject: 'אובייקט (מוצג ב-Hancom)',
   appOdtLabelNotice:
     'אובייקטים שצוירו כתיבות עם תווית עשויים להיראות שונה מהאופן שבו Hancom Office מציג אותם.',
+  appMergeSourceLoaded: '{name} נטען ({n} רשומות)',
+  appMergeWritten: 'נכתבו {n} מסמכים',
+  appMergeNothingToWrite: 'אין מה לכתוב',
 } satisfies Record<keyof typeof zh, string>

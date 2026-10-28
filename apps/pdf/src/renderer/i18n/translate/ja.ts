@@ -26,6 +26,7 @@ export const ja = {
   trConfirmCalls: 'AI の呼び出し：{calls} 回（{blocks} 個のブロックをまとめて送信）',
   trConfirmDone: '全 {total} ブロックのうち {done} 個は翻訳済みのため、再送しません',
   trConfirmSends: '選んだページの文章がこの AI に送られます。',
+  trRightsNotice: '権利を有する文書だけを翻訳してください。',
   trProviderChange:
     '保存されている訳文は {stored} で作成されました。{next} で続けると、1 つの訳文に 2 つの AI の翻訳が混ざります。',
   trProviderUnknown: '不明な AI',

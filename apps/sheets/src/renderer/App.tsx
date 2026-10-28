@@ -164,6 +164,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
 } from '@genoffice/ai-provider/browser'
+import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import { type WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import {
   columnLabel,
@@ -406,6 +407,7 @@ import { installFormulaStreamHold } from './formula-stream-hold'
 import { installRichTextBidiFix } from './rich-text-bidi-fix'
 import { installRtlTextDirectionFix } from './rtl-text-fix'
 import { installRtlGridMirror } from './rtl-grid-mirror'
+import { installVertAlignRender } from './vert-align-render'
 import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelJumpNav } from './excel-jump-nav'
 import { registerEditorWordJump } from './editor-word-jump'
@@ -437,6 +439,9 @@ import { installInvalidDataMarkerSuppression } from './data-validation-marker'
 import { installThreadedCommentAffordances, type ThreadHover } from './threaded-comment-marker'
 import { threadPane, threadStore } from './threaded-comments'
 import { ThreadHoverCard, ThreadedCommentsPane } from './ThreadedCommentsPane'
+import { NotePicturesPane } from './NotePicturesPane'
+import type { PendingNotePicture } from './note-pictures'
+import { handleRemoveNotePicture } from './note-picture-actions'
 import { installFormulaNullResultFix } from './formula-null-result'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installIfsEmptySetFix } from './ifs-empty-set'
@@ -457,7 +462,12 @@ import {
 import { handleExportCsv as handleExportCsvImpl, type CsvExportContext } from './csv-export'
 import { effectivePageBreaks, installPageBreakPreview } from './page-break-preview'
 import { mapProtectedRanges } from './protected-ranges'
-import { handleSave as handleSaveImpl, type SaveContext, type SaveOutcome } from './save-actions'
+import {
+  handleSave as handleSaveImpl,
+  stripIpcErrorWrapper,
+  type SaveContext,
+  type SaveOutcome,
+} from './save-actions'
 import {
   applyChartEdit as applyChartEditImpl,
   applyShapeEdit as applyShapeEditImpl,
@@ -1276,6 +1286,11 @@ export function App({
       seen.has(a.path) ? false : (seen.add(a.path), true),
     )
   }
+  /** the path of an image the chat shows, by its exact chip name; nothing else resolves */
+  const imageAttachmentPath = (name: string): string | null => {
+    const attachment = availableAttachments().find((candidate) => candidate.name === name)
+    return attachment && ATTACHMENT_IMAGE_EXTS.has(attachment.ext) ? attachment.path : null
+  }
   /** Synchronous re-entrancy guard between runAgent trigger and loop.run
    * (loop.busy is still false while attachment images load asynchronously) */
   const runStartingRef = useRef(false)
@@ -1564,6 +1579,11 @@ export function App({
         onInputTruncated: () => setInputTruncated(true),
       }),
       systemSuffix: aiLangDirective,
+      // a local model that reported no tool support answers in text only
+      toolsAllowed: () =>
+        aiSettingsRef.current
+          ? localModelCapabilities(aiSettingsRef.current).tools !== false
+          : true,
       skill: composeWithDrive('sheets+files', '', () => agentLoopRef.current?.messages ?? [], [
         createWorkbookSkill(sheetsSkillDeps()),
         createFilesSkill(availableAttachments),
@@ -1576,7 +1596,10 @@ export function App({
           },
         }),
         createSearchSkill(),
-        createImageSkill(() => imageGenRef.current),
+        createImageSkill(
+          () => imageGenRef.current,
+          () => availableAttachments(),
+        ),
         // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
         ...panelUserSkills({
           lang: getLang,
@@ -1937,6 +1960,7 @@ export function App({
       traceDependents: (sheetId, address) =>
         traceWorkbookDependents(readContext(), sheetId, address),
       proposeOperations,
+      attachmentPathOf: imageAttachmentPath,
       createDocument: (request) => createAiDocument({ univerRef, lazyWorkbookRef }, request),
     }
   }
@@ -2104,6 +2128,9 @@ export function App({
     // Paragraph-sized plain text cells: draw only the slice that can reach the
     // clip box instead of shaping the whole string every frame.
     installLongTextRender()
+    // A whole-cell superscript/subscript (Home ribbon, or <vertAlign> in the
+    // file) must draw raised/lowered; Univer's plain painter ignores `va`.
+    installVertAlignRender()
     installAutofitWrapBudget()
     // Wrapped auto rows must stack Excel's per-font row height, not the
     // canvas line box (Calibri 10: 12.75 pt per line, not ~10 pt).
@@ -4229,6 +4256,21 @@ export function App({
     setMessage(t('appPageBreakPreviewOn'))
   }
 
+  /**
+   * The pictures put into notes this session, so the pane can show them
+   * before the save writes them into the file.
+   */
+  function pendingNotePictures(): PendingNotePicture[] {
+    const journal = lazyWorkbookRef.current?.editJournal
+    if (!journal) return []
+    return journal.notePictures.map((entry) => ({
+      sheetId: entry.sheetId,
+      row: entry.row,
+      column: entry.column,
+      dataUrl: entry.picture?.dataUrl ?? null,
+    }))
+  }
+
   /** App-scope refs/state bundle for the extracted ribbon dispatcher (ribbon-actions.ts). */
   function ribbonContext(): RibbonCommandContext {
     return {
@@ -4898,7 +4940,7 @@ export function App({
       setEmptyCsvNotice(selected.emptyCsv === true)
       setMessage(selected.emptyCsv ? '' : t('appOpened', { name: selected.name }))
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : t('appOpenFailed'))
+      setMessage(error instanceof Error ? stripIpcErrorWrapper(error.message) : t('appOpenFailed'))
       finishOpening()
     }
   }
@@ -5492,6 +5534,14 @@ export function App({
         </div>
       )}
       <ThreadedCommentsPane getRuntime={getRuntime} />
+      <NotePicturesPane
+        file={workbookFile}
+        pending={pendingNotePictures()}
+        onRemove={(sheetId, row, column) =>
+          handleRemoveNotePicture(ribbonContext(), sheetId, row, column)
+        }
+        getRuntime={getRuntime}
+      />
       <ThreadHoverCard hover={threadHover} />
       {findReplaceService && (
         <FindReplacePanel

@@ -72,9 +72,10 @@ body {
   height: 100%;
 }
 
-/* F5 presentation: the editor's own chrome is hidden through its chrome API;
-   here the AI dock and notices leave the stage to the document. */
+/* Ctrl+F5 presentation: the editor's own chrome is hidden through its chrome API;
+   here the AI dock, the memo column and notices leave the stage to the document. */
 .hwp-app.hwp-presenting .ai-dock,
+.hwp-app.hwp-presenting .memo-side,
 .hwp-app.hwp-presenting .hwp-topbar,
 .hwp-app.hwp-presenting .hwp-notice {
   display: none !important;
@@ -90,6 +91,38 @@ body {
   padding: 0 12px;
   border-bottom: 1px solid var(--border-strong);
   background: var(--chrome-bg);
+}
+
+/* the memo column's button, at the start of the row; the autosave toggle keeps the end */
+.memo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  margin-inline-end: auto;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.memo-toggle:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.memo-toggle.on {
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.memo-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .autosave-toggle {
@@ -139,7 +172,7 @@ body {
   white-space: nowrap;
 }
 
-/* body row: the AI dock and the editor */
+/* body row: the AI dock, the memo column and the editor */
 .app-main {
   display: flex;
   flex: 1;
@@ -169,6 +202,8 @@ body {
 
 .hwp-notice {
   position: absolute;
+  /* above the memo editor's backdrop: a save or close held back says why there */
+  z-index: 1300;
   /* clear of the editor's menus above and its status bar below */
   bottom: 44px;
   left: 50%;

@@ -563,4 +563,7 @@ export const zhTW = {
   appOdtLabelRevision: '修訂（在 Hancom 中顯示）',
   appOdtLabelObject: '物件（在 Hancom 中顯示）',
   appOdtLabelNotice: '以標籤方塊繪製的物件，可能與 Hancom Office 中的顯示方式不同。',
+  appMergeSourceLoaded: '已載入資料來源 {name}（{n} 筆記錄）',
+  appMergeWritten: '已寫出 {n} 個文件',
+  appMergeNothingToWrite: '沒有可寫出的文件',
 } satisfies Record<keyof typeof zh, string>

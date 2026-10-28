@@ -1,6 +1,8 @@
 /** Browser-safe settings surface. Keep Node-backed transports out of renderer bundles. */
 export type {
   AiCustomEndpoint,
+  AiLocalModelProfile,
+  AiLocalValueSource,
   AiProviderConfig,
   AiProviderId,
   AiProviderMeta,
@@ -70,6 +72,8 @@ export type {
   SubscriptionIpcContract,
   SubscriptionLaunchFailure,
   SubscriptionLaunchResult,
+  SubscriptionLoginMode,
+  SubscriptionLoginRequest,
   SubscriptionMeteredRequest,
   SubscriptionMeteredResult,
   SubscriptionProviderRequest,
@@ -95,6 +99,49 @@ export {
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from './custom-endpoints'
+export type { RemoveCustomEndpointOptions } from './custom-endpoints'
+export {
+  DEFAULT_LOCAL_CONTEXT_TOKENS,
+  DEFAULT_LOCAL_TIMEOUT_MS,
+  MAX_LOCAL_CONTEXT_TOKENS,
+  MAX_LOCAL_MODEL_ID_LENGTH,
+  MAX_LOCAL_MODEL_PROFILES,
+  MAX_LOCAL_NOTES_LENGTH,
+  MAX_LOCAL_TIMEOUT_MS,
+  MIN_LOCAL_TIMEOUT_MS,
+  localContextLimit,
+  localContextTokensOf,
+  localEndpointFieldsOf,
+  localEndpointTimeoutMs,
+  localModelCapabilities,
+  localModelProfileOf,
+  localModelProfilesOf,
+  localTimeoutMsOf,
+  localValueSourceOf,
+  mergeLocalModelProfile,
+} from './local-profile'
+export type {
+  AiLocalContextLimit,
+  AiLocalEndpointFields,
+  AiLocalModelCapabilities,
+} from './local-profile'
+export type {
+  AiLocalDiscoveryErrorCode,
+  AiLocalDiscoveryRequest,
+  AiLocalDiscoveryResult,
+  AiLocalInspection,
+  AiLocalInspectionRequest,
+  AiLocalInspectionResult,
+  AiLocalModelSummary,
+  AiLocalServerKind,
+} from './local-models'
+export type {
+  AiLocalCheck,
+  AiLocalCheckCode,
+  AiLocalCheckStatus,
+  AiLocalTestInput,
+  AiLocalTestResult,
+} from './local-test'
 export { getProviderAdapter, modelLacksVision } from './registry'
 export {
   FREE_AI_IPC_CHANNELS,

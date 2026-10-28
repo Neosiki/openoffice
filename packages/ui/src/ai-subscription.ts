@@ -26,6 +26,7 @@ import {
 } from '@genoffice/ai-provider/browser'
 import { htmlLang, type Lang } from '@genoffice/i18n'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
+import { aiContextText } from './strings-ai-context'
 
 /** Subscription providers are named in plain text only: no vendor mark, no CLI product name */
 const SUBSCRIPTION_NAMES: Record<AiSubscriptionProviderId, string> = {
@@ -70,6 +71,8 @@ export type AiSubscriptionCardAction =
   | 'install-help'
   | 'login'
   | 'login-window'
+  | 'login-code'
+  | 'login-browser'
   | 'cancel-login'
   | 'update'
   | 'accept-metered'
@@ -174,6 +177,8 @@ export interface AiSubscriptionCardView {
 const LINK_ACTIONS: readonly AiSubscriptionCardAction[] = [
   'install-help',
   'login-window',
+  'login-code',
+  'login-browser',
   'cancel-login',
 ]
 
@@ -198,7 +203,7 @@ export function aiSubscriptionCardView(
 ): AiSubscriptionCardView {
   const terminalWindows = options.terminalWindows !== false
   if (status.signingIn) return signingInCardView(status, terminalWindows, options)
-  const view = connectionCardView(status)
+  const view = connectionCardView(status, terminalWindows)
   if (status.state === 'not-installed' && !terminalWindows) {
     return { ...view, noteKeys: [], actions: ['install-help'], links: ['install-help'] }
   }
@@ -263,12 +268,25 @@ function signingInCardView(
   }
 }
 
-function connectionCardView(status: AiSubscriptionStatus): AiSubscriptionCardView {
-  const view = connectionCardParts(status)
-  return { ...view, links: linksOf(view.actions) }
+function connectionCardView(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): AiSubscriptionCardView {
+  const view = connectionCardParts(status, terminalWindows)
+  const links = linksOf(view.actions)
+  // a sign-in that ended without one starts in the CLI's window: that is the step
+  // itself, and the one that opens in the browser is the way out of it
+  return {
+    ...view,
+    links:
+      status.loginUnfinished === true ? links.filter((action) => action !== 'login-code') : links,
+  }
 }
 
-function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionCardView, 'links'> {
+function connectionCardParts(
+  status: AiSubscriptionStatus,
+  terminalWindows: boolean,
+): Omit<AiSubscriptionCardView, 'links'> {
   const base = { provider: status.provider, state: status.state }
   switch (status.state) {
     case 'checking':
@@ -281,14 +299,28 @@ function connectionCardParts(status: AiSubscriptionStatus): Omit<AiSubscriptionC
         noteKeys: ['installNote', 'installReturnNote'],
         actions: ['install', 'install-help'],
       }
-    case 'signed-out':
+    case 'signed-out': {
+      // the browser hands back a code, not the sign-in, when it cannot reach the
+      // CLI; the CLI's own window is where that code is pasted (Windows alone)
+      const withCode = terminalWindows ? (['login-code'] as const) : []
+      // only where a window can be opened is it the way on; elsewhere the browser is all there is
+      if (status.loginUnfinished === true && terminalWindows) {
+        return {
+          ...base,
+          tone: 'neutral',
+          statusKey: 'cardSignedOut',
+          noteKeys: ['loginUnfinishedNote', 'loginNote'],
+          actions: [...withCode, 'login-browser'],
+        }
+      }
       return {
         ...base,
         tone: 'neutral',
         statusKey: 'cardSignedOut',
         noteKeys: ['loginHowNote', 'loginNote'],
-        actions: ['login'],
+        actions: ['login', ...withCode],
       }
+    }
     case 'ready': {
       const planName = status.planName?.trim() || undefined
       return {
@@ -476,10 +508,11 @@ export function formatAiResetTime(lang: Lang, resetsAt: number, now: number = Da
 }
 
 /**
- * The localized message for a run error of the subscription contract, so every
- * editor words it the same way. Returns undefined for the kinds each editor
- * already words itself (`timeout`, `credits`, `network`, `overloaded`), which
- * makes it usable directly as the transport's `errorText` option.
+ * The localized message for a run error of the subscription contract or the
+ * context gate, so every editor words it the same way. Returns undefined for
+ * the kinds each editor already words itself (`timeout`, `credits`, `network`,
+ * `overloaded`), which makes it usable directly as the transport's `errorText`
+ * option.
  */
 export function aiRunErrorText(
   lang: Lang,
@@ -517,6 +550,8 @@ export function aiRunErrorText(
       return hasTime
         ? aiSubscriptionText(lang, 'errFreeLimitReset', { time })
         : aiSubscriptionText(lang, 'errFreeLimit')
+    case 'context-limit':
+      return aiContextText(lang, 'errContextLimit')
     default:
       return undefined
   }

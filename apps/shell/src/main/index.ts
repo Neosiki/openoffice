@@ -30,6 +30,7 @@ import {
 import type { MenuItemConstructorOptions, NativeImage, WebContents } from 'electron'
 import { atomicWriteFile } from './atomic-write'
 import { tabStripOverlay } from './title-bar-overlay'
+import { shellWindowBackground } from './window-background'
 import {
   applyUiScaleTo,
   applyUiScaleToAll,
@@ -488,9 +489,11 @@ import {
 } from './window-bounds'
 import { installShellCloseGuard } from './window-close-guard'
 import {
+  holdSessionTabsForUpdateRestart,
   markSessionCleanExit,
   markSessionClosedToTray,
   markSessionOsEnd,
+  markSessionUpdateRestart,
   noteSessionChanged,
   sessionRecorder,
 } from './session-record'
@@ -539,7 +542,7 @@ import {
   takeTornTab,
 } from './detached-windows'
 import { applyUpdateChannel, checkForUpdatesNow, initAutoUpdater } from './updater'
-import { cancelUpdateRestart } from './update-restart'
+import { cancelUpdateRestart, reopenedByInstaller, updateRestartRequested } from './update-restart'
 import { isUpdateChannel, type UpdateChannel } from '../shared/update-api'
 
 /**
@@ -882,6 +885,13 @@ function currentUpdateChannel(): UpdateChannel {
   const saved = readAppSettings(APP_SETTINGS_PATH()).updateChannel
   cachedUpdateChannel = isUpdateChannel(saved) ? saved : 'stable'
   return cachedUpdateChannel
+}
+
+let cachedAutoUpdateCheck: boolean | null = null
+
+function autoUpdateCheckEnabled(): boolean {
+  cachedAutoUpdateCheck ??= readAppSettings(APP_SETTINGS_PATH()).autoUpdateCheck !== false
+  return cachedAutoUpdateCheck
 }
 
 let cachedTheme: UiTheme | null = null
@@ -4635,6 +4645,13 @@ function createShellWindow(): void {
     minWidth: SHELL_WINDOW_MIN_WIDTH,
     minHeight: SHELL_WINDOW_MIN_HEIGHT,
     title: productName(currentLang()),
+    // Paint the theme's surface before the renderer's first frame so the window
+    // does not flash white in dark mode. nativeTheme.themeSource is already set
+    // from the saved theme in app.whenReady, before this window is created.
+    // macOS uses vibrancy below, which must stay transparent.
+    ...(process.platform === 'darwin'
+      ? {}
+      : { backgroundColor: shellWindowBackground(nativeTheme.shouldUseDarkColors) }),
     // vibrancy: editor modules punch translucent regions (e.g. the slides
     // thumbnail pane) through to the desktop
     ...(process.platform === 'darwin'
@@ -5798,6 +5815,14 @@ function registerHomeIpc(): void {
     cachedUpdateChannel = channel
     writeAppSetting(APP_SETTINGS_PATH(), 'updateChannel', channel)
     applyUpdateChannel(channel)
+  })
+
+  ipcMain.handle(HOME_CHANNELS.getAutoUpdateCheck, () => autoUpdateCheckEnabled())
+
+  ipcMain.handle(HOME_CHANNELS.setAutoUpdateCheck, (_event, on: unknown) => {
+    if (typeof on !== 'boolean') return
+    writeAppSetting(APP_SETTINGS_PATH(), 'autoUpdateCheck', on)
+    cachedAutoUpdateCheck = on
   })
 
   ipcMain.handle(
@@ -8918,7 +8943,7 @@ app.whenReady().then(async () => {
   installDocumentLinkMenuItems()
   installDockMenu()
   setUpdateCheckInvoker(() => void checkForUpdatesNow())
-  initAutoUpdater(() => shellWindow, currentUpdateChannel())
+  initAutoUpdater(() => shellWindow, currentUpdateChannel(), autoUpdateCheckEnabled)
   // crash record on this PC (crash-log.jsonl in userData) and, outside
   // headless runs, a prompt when the renderer of an open document dies
   const crashMemory = () =>
@@ -9004,6 +9029,7 @@ app.whenReady().then(async () => {
     restoreSplitMemoryOrHome,
     afterSheetsOpen: restoredTabDeps.afterSheetsOpen,
     sessionChanged: noteLiveSession,
+    reopenedByInstaller: reopenedByInstaller(),
     settled: () => {
       const paths = deferredLaunchPaths
       deferredLaunchPaths = []
@@ -9049,6 +9075,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  // "Restart & Install": the tabs as they are now come back after the update,
+  // whatever the closing windows report on the way out
+  if (updateRestartRequested()) holdSessionTabsForUpdateRestart()
   // No close prompt may fall through to "Save" during shutdown, and from here
   // on no editor clean-up may delete a recovery copy (a vetoed close resets both)
   appQuitting = true
@@ -9063,8 +9092,12 @@ app.on('before-quit', () => {
 // after every window has closed, so the shell window's own 'closed' republish cannot revive the file
 app.on('will-quit', () => {
   // the quit path completed: the next launch is a normal one (a no-op in a
-  // second instance or a headless export, which never started a record)
-  markSessionCleanExit()
+  // second instance or a headless export, which never started a record),
+  // unless it is the restart into an update, which brings the tabs back.
+  // This runs before the updater's own will-quit (registered later), which
+  // reads the same request to start the installer.
+  if (updateRestartRequested()) markSessionUpdateRestart()
+  else markSessionCleanExit()
   releaseAppResources()
 })
 

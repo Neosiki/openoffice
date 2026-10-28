@@ -1,5 +1,8 @@
 import type {
   AiChatResponse,
+  AiLocalDiscoveryResult,
+  AiLocalInspectionResult,
+  AiLocalTestResult,
   AiMediaProviderConfig,
   AiMediaProviderId,
   AiMediaProviderMeta,
@@ -313,6 +316,9 @@ export interface HomeApi {
   getUpdateChannel(): Promise<UpdateChannel>
   /** switch + persist the update channel; triggers an immediate update check */
   setUpdateChannel(channel: UpdateChannel): Promise<void>
+  /** whether the launch and periodic background update checks run (default on) */
+  getAutoUpdateCheck(): Promise<boolean>
+  setAutoUpdateCheck(on: boolean): Promise<void>
   /** a tab asked for the settings modal (composer model chip → AI Model section) */
   onOpenSettings(handler: (target: { section: string }) => void): () => void
   /** app version (from package.json / electron app.getVersion) */
@@ -396,6 +402,28 @@ export interface HomeApi {
   getCodexModels(cliPath?: string): Promise<CodexModelCatalog>
   /** live model list advertised by a user-hosted OpenAI-compatible endpoint; empty when it cannot answer */
   getCustomModels(baseUrl: string, apiKey?: string): Promise<CodexModelCatalog>
+  /** models a local AI server advertises (Ollama's own API or OpenAI-compatible `/models`) */
+  getLocalModels(input: { baseUrl: string; apiKey?: string }): Promise<AiLocalDiscoveryResult>
+  /** what one model on a local server reports about itself (context window, tools, vision) */
+  inspectLocalModel(input: {
+    baseUrl: string
+    apiKey?: string
+    model: string
+    server?: 'ollama' | 'openai-compatible'
+  }): Promise<AiLocalInspectionResult>
+  /** the four-step connection test of one model on a local server */
+  testLocalModel(input: {
+    baseUrl: string
+    apiKey?: string
+    model: string
+    /** true when the user typed the id instead of picking a listed model */
+    typed?: boolean
+    timeoutMs?: number
+    /** the handle `cancelLocalTest` aborts this test by (letters, digits, `_`, `-`; up to 128) */
+    testId?: string
+  }): Promise<AiLocalTestResult>
+  /** abort the connection test started with this id in the main process; true when one was running */
+  cancelLocalTest(testId: string): Promise<boolean>
   /** one-shot round trip against the given (possibly unsaved) settings — the settings-UI connection test */
   testAiSettings(settings: AiSettings): Promise<AiChatResponse>
   /** image generation / media analysis provider catalog */
@@ -547,6 +575,8 @@ export const HOME_CHANNELS = {
   setLanguage: 'home:set-language',
   getUpdateChannel: 'home:get-update-channel',
   setUpdateChannel: 'home:set-update-channel',
+  getAutoUpdateCheck: 'home:get-auto-update-check',
+  setAutoUpdateCheck: 'home:set-auto-update-check',
   openSettings: 'home:open-settings',
   getAppVersion: 'home:get-app-version',
   onboardingSeen: 'home:onboarding-seen',

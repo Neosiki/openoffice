@@ -24,6 +24,7 @@ export const th = {
   trConfirmCalls: 'การเรียก AI: {calls} ครั้ง ({blocks} บล็อก ส่งเป็นชุด)',
   trConfirmDone: 'จาก {total} บล็อก มี {done} บล็อกที่แปลแล้วและจะไม่ส่งซ้ำ',
   trConfirmSends: 'ข้อความในหน้าที่เลือกจะถูกส่งไปยัง AI นี้',
+  trRightsNotice: 'แปลเฉพาะเอกสารที่คุณมีสิทธิ์เท่านั้น',
   trProviderChange:
     'คำแปลที่เก็บไว้ทำด้วย {stored} หากแปลต่อด้วย {next} คำแปลเดียวกันจะมีงานของ AI สองตัวปนกัน',
   trProviderUnknown: 'AI ที่ไม่ทราบชื่อ',

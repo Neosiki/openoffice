@@ -108,6 +108,14 @@ export interface SubscriptionStatusService {
     provider: AiSubscriptionProviderId,
     signingIn: AiSubscriptionSigningIn | undefined,
   ): void
+  /**
+   * Mark the last login the app started as one that ended without signing the
+   * CLI in (it exited, or ran past the limit for a browser sign-in nobody
+   * finished), or take the mark back. Like `signingIn` it rides on the statuses
+   * and changes nothing that was detected; a check that finds a sign-in clears
+   * it, and so does a new login.
+   */
+  setLoginUnfinished(provider: AiSubscriptionProviderId, unfinished: boolean): void
 }
 
 /** A login is known for these states: the account belongs to them alone */
@@ -178,10 +186,17 @@ export function createSubscriptionStatusService(
 
   /** logins the app started that are under way, laid over the detected statuses */
   const signingIn = new Map<AiSubscriptionProviderId, AiSubscriptionSigningIn>()
+  /** logins the app started that ended without one, laid over the detected statuses */
+  const loginUnfinished = new Set<AiSubscriptionProviderId>()
   const snapshot = (): SubscriptionStatusMap => {
     const current = { ...statuses }
     for (const [provider, mode] of signingIn) {
       current[provider] = { ...current[provider], signingIn: mode }
+    }
+    for (const provider of loginUnfinished) {
+      // a login that is under way is not an unfinished one
+      if (signingIn.has(provider)) continue
+      current[provider] = { ...current[provider], loginUnfinished: true }
     }
     return current
   }
@@ -226,6 +241,8 @@ export function createSubscriptionStatusService(
         accepted = false
       }
       detections.set(provider, detection)
+      // a login was found: whatever the last one the app started did, it is over
+      if (signedIn(detection)) loginUnfinished.delete(provider)
       if (detection.state === 'signed-out' || detection.state === 'not-installed') {
         // whoever signs in next gets a list of their own
         models.delete(provider)
@@ -360,6 +377,12 @@ export function createSubscriptionStatusService(
       if (signingIn.get(provider) === mode) return
       if (mode) signingIn.set(provider, mode)
       else signingIn.delete(provider)
+      announce()
+    },
+    setLoginUnfinished(provider, unfinished) {
+      if (loginUnfinished.has(provider) === unfinished) return
+      if (unfinished) loginUnfinished.add(provider)
+      else loginUnfinished.delete(provider)
       announce()
     },
   }

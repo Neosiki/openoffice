@@ -41,6 +41,7 @@ export const ja = {
   btConfirmChecking: 'AI の接続を確認しています…',
   btConfirmProvider: '使用する AI：{provider}',
   btConfirmSends: '選んだ章のテキストがこの AI に送信されます。',
+  btRightsNotice: '権利を有する文書だけを翻訳してください。',
   btConfirmPaid: '{provider} で料金が発生します',
   btProviderChange:
     '保存済みの翻訳は別の AI（{stored}）で作られました。残りは {next} で翻訳します。',

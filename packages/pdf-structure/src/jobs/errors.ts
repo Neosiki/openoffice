@@ -12,7 +12,9 @@ import type { JobKind, JobProgress } from '../store/store'
  * are aborted. Mirrors packages/ui AI_BLOCKED_RUN_KINDS (the connection
  * cannot go on), plus two kinds a retry cannot fix either: 'credits' (a key
  * provider out of credit) and 'headless-limit' (no longer raised, kept so an
- * older runner cannot make the job spin on it).
+ * older runner cannot make the job spin on it). 'context-limit' is the person
+ * declining a prompt close to the model's window: asking again for the next
+ * batch would ignore that answer.
  */
 export const JOB_STOP_KINDS: readonly string[] = [
   'rate-limit',
@@ -24,6 +26,7 @@ export const JOB_STOP_KINDS: readonly string[] = [
   'not-connected',
   'credits',
   'headless-limit',
+  'context-limit',
 ]
 
 export function isJobStopKind(kind: string | undefined): boolean {

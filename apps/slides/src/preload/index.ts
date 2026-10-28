@@ -94,6 +94,7 @@ import type {
   MasterEditFillOp,
   MasterEditStrokeOp,
   MasterDeleteElementOp,
+  MasterAddElementOp,
   ExportImagesOp,
   SavePictureOp,
   ExportPdfOp,
@@ -127,9 +128,12 @@ const subscriptionApi: SubscriptionApi = {
       ),
     )
   },
-  async login(provider) {
+  async login(provider, mode) {
     return subscriptionLaunchResultOf(
-      await ipcRenderer.invoke(SUBSCRIPTION_IPC_CHANNELS.login, { provider }),
+      await ipcRenderer.invoke(
+        SUBSCRIPTION_IPC_CHANNELS.login,
+        mode ? { provider, mode } : { provider },
+      ),
     )
   },
   async install(provider) {
@@ -215,7 +219,7 @@ const api: SlidesApi = {
   consumeHeadlessExport: () => ipcRenderer.invoke('slides:consume-headless-export'),
   headlessExportDone: (result: { ok: boolean; error?: string }) =>
     ipcRenderer.send('slides:headless-export-done', result),
-  newBlank: (fitWidthPx) => ipcRenderer.invoke('slides:new-blank', fitWidthPx),
+  newBlank: (fitWidthPx, size) => ipcRenderer.invoke('slides:new-blank', fitWidthPx, size),
   landGeneratedPages: (
     pageMarkers: string[],
     fitWidthPx: number,
@@ -304,6 +308,7 @@ const api: SlidesApi = {
   masterEditStroke: (op: MasterEditStrokeOp) => ipcRenderer.invoke('slides:master-edit-stroke', op),
   masterDeleteElement: (op: MasterDeleteElementOp) =>
     ipcRenderer.invoke('slides:master-delete-element', op),
+  masterAddElement: (op: MasterAddElementOp) => ipcRenderer.invoke('slides:master-add-element', op),
   editFill: (op: EditFillOp) => ipcRenderer.invoke('slides:edit-fill', op),
   editStroke: (op: EditStrokeOp) => ipcRenderer.invoke('slides:edit-stroke', op),
   flipElements: (op: FlipElementOp) => ipcRenderer.invoke('slides:flip-elements', op),

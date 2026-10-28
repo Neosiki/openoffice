@@ -639,3 +639,76 @@ describe('form fields in the real engine', () => {
     expect(editor.steps()).toBe(steps)
   })
 })
+
+describe('adding a picture', () => {
+  // a 1×1 PNG, the smallest picture the engine takes
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  )
+
+  const controls = (editor: ReturnType<typeof openEditor>) =>
+    (JSON.parse(editor.doc().getControls()) as { ctrlId: string }[]).length
+
+  it('puts it in a new paragraph after the anchor, as one step, and the text is unchanged', () => {
+    const editor = openEditor()
+    const paragraphs = editor.lines()
+    const before = editor.plugin.foreignChanges()
+    const objects = controls(editor)
+    const result = editor.plugin.insertPicture(
+      '첫째 문단',
+      null,
+      'after',
+      PNG.toString('base64'),
+      240,
+      1,
+      1,
+      'png',
+    )
+    expect(result).toMatchObject({ ok: true, inTable: false })
+    expect(editor.steps()).toBe(1)
+    expect(editor.lines()).toEqual(paragraphs)
+    // the engine really made one more object, and it survives a save and a reopen
+    expect(controls(editor)).toBe(objects + 1)
+    expect(editor.reopened()).toEqual(paragraphs)
+    expect(editor.plugin.undo(1, before)).toMatchObject({ ok: true, undone: 1 })
+  })
+
+  it('can put it inside a table cell, where the engine addresses the cell paragraph', () => {
+    const editor = openEditor()
+    const paragraphs = editor.lines()
+    const objects = controls(editor)
+    const result = editor.plugin.insertPicture(
+      '구분',
+      null,
+      'after',
+      PNG.toString('base64'),
+      60,
+      1,
+      1,
+      'png',
+    )
+    expect(result).toMatchObject({ ok: true, inTable: true })
+    expect(controls(editor)).toBe(objects + 1)
+    expect(editor.lines()).toEqual(paragraphs)
+    expect(editor.reopened()).toEqual(paragraphs)
+  })
+
+  it('refuses bytes that are not the picture the extension names', () => {
+    const editor = openEditor()
+    const steps = editor.steps()
+    expect(() =>
+      editor.plugin.insertPicture(
+        '첫째 문단',
+        null,
+        'after',
+        Buffer.from('not a png').toString('base64'),
+        240,
+        1,
+        1,
+        'png',
+      ),
+    ).toThrow(/not a PNG/)
+    expect(editor.steps()).toBe(steps)
+  })
+})

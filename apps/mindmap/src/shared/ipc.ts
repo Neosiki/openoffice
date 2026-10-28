@@ -12,6 +12,7 @@
 import type { AiPanelPrefs } from '@genoffice/ui'
 import type { Lang } from '@genoffice/i18n'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
+import type { AiToolCapabilities } from '@genoffice/ai-search'
 import type { MindmapSubscriptionApi } from './subscription-api'
 
 export const MINDMAP_CHANNELS = {
@@ -68,6 +69,10 @@ export const MINDMAP_CHANNELS = {
   filesReadImage: 'mindmap:files-read-image',
   /** renderer → main(title): name an untitled map's tab from the first AI request. T12 */
   provisionalTitle: 'mindmap:provisional-title',
+  /** invoke({prompt, aspectRatio}) → `{url?, error?, errorCode?}`: one AI picture */
+  aiGenerateImage: 'mindmap:ai-generate-image',
+  /** invoke(url) → `{base64, mime} | null`: a web image or a file of the generated-image store */
+  fetchImage: 'mindmap:fetch-image',
 
   // ---- questions from the in-app MCP server (T13 sends them; the renderer already answers) ----
   /** main → renderer: "give me the current outline" */
@@ -131,6 +136,8 @@ export const AI_CHANNELS = {
   webSearch: 'ai:web-search',
   readUrl: 'ai:read-url',
   imageSearch: 'ai:image-search',
+  /** () → `AiToolCapabilities | null`, registered by the docs main (shell mode only) */
+  toolCapabilities: 'ai:tool-capabilities',
 } as const
 
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -421,6 +428,16 @@ export interface MindmapAiApi {
   /** Read one web page as text (the shared ai:read-url handler), paged by character offset */
   readUrl(url: string, offset?: number): Promise<ReadUrlResult>
   imageSearch(query: string, maxResults?: number): Promise<ImageSearchResult>
+  /** AI image generation (mindmap-owned channel; the main process picks the backend) */
+  generateImage(op: { prompt: string; aspectRatio?: string }): Promise<{
+    url?: string
+    error?: string
+    errorCode?: string
+  }>
+  /** Download an image URL (or a file of the generated-image store) in the main process */
+  fetchImage(url: string): Promise<{ base64: string; mime: string } | null>
+  /** which search/media tools can run right now — gates generate_image */
+  aiToolCapabilities(): Promise<AiToolCapabilities | null>
 }
 
 /** Answers to the in-app MCP server. The renderer answers already; T13 asks from the main process. */

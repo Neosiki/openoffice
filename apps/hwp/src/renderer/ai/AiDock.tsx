@@ -7,6 +7,9 @@
  * rail. A click on the rail asks the shell to focus this pane and remembers
  * the panel as open, so it appears once focus arrives. The panel itself stays
  * mounted while collapsed, so a run and its chat survive.
+ *
+ * The memo panel is not in this dock: it has its own column beside the document
+ * (MemoSide.tsx), so the two can be out at once, as the PDF editor's notes are.
  */
 import type { ReactElement } from 'react'
 import {

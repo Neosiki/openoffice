@@ -21,6 +21,7 @@ import {
   withStoredReadings,
 } from '../formats/pdf-structure'
 import { extension, readInput, resolveInput, resolveOutput, writeOutput } from '../fs'
+import { assertNotEmptyPackage } from '../limits'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
 
@@ -129,6 +130,7 @@ export const convertCommand: CommandDef = {
   async run(args, ctx) {
     const input = resolveInput(args.positionals[0], ctx)
     const from = extension(input)
+    assertNotEmptyPackage(input, from)
     const to = flagString(args, 'to')?.toLowerCase()
     if (!to)
       throw new CliError(EXIT.usage, 'missing --to <format>', undefined, {
@@ -239,6 +241,13 @@ async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Pr
   try {
     const exported = documentHtml(doc)
     const markdown = await htmlToMarkdown(exported.html)
+    if (exported.nestedTablesAsText > 0) {
+      ctx.warn({
+        code: 'nested_tables_flattened',
+        message: `${exported.nestedTablesAsText} nested table(s) were kept as cell text because Markdown cannot nest tables`,
+        suggestion: 'keep the DOCX when nested table layout matters',
+      })
+    }
     if (exported.skipped.images > 0) {
       ctx.warn({
         code: 'images_dropped',
@@ -252,6 +261,9 @@ async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Pr
         blocks: doc.editor.state.doc.childCount,
         skipped: exported.skipped,
         formulas_as_text: exported.formulasAsText,
+        ...(exported.nestedTablesAsText > 0
+          ? { nested_tables_as_text: exported.nestedTablesAsText }
+          : {}),
       },
     }
   } finally {

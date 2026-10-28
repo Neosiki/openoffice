@@ -36,6 +36,8 @@ Nel secondo passaggio delle schermate di benvenuto al primo avvio, e nel pannell
 
 La connessione viene verificata all'avvio dell'app, quando apri Impostazioni e quando torni alla finestra dopo aver avviato un'installazione o un accesso.
 
+Se la scheda indica che un accesso non è terminato, scegli **Apri la finestra di accesso**. Un codice mostrato dal browser va incollato in quella finestra; un codice mostrato prima non è più valido.
+
 ## Senza abbonamento: un'IA gratuita
 
 Non hai un abbonamento a Claude o a ChatGPT? In Impostazioni ▸ IA, **Usa gratis** collega invece un'IA gratuita. Scegliendo **Nessuno dei due, per ora** nel secondo passaggio delle schermate di benvenuto compaiono le stesse schede, e scegliendolo nel pannello IA quando non c'è niente di collegato viene proposto **Collega un’IA gratuita**.

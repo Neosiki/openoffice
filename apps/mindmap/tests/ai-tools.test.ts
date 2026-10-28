@@ -5,6 +5,7 @@
  * No model is involved; the tools are called the way the agent loop calls them.
  */
 import { afterEach, describe, expect, it } from 'vitest'
+import type { AgentToolCall } from '@genoffice/agent-core'
 import type { XmindSheet, XmindTopic } from '@genoffice/xmind-engine'
 import { DocumentSession } from '../src/renderer/document/session'
 import { newMap } from '../src/renderer/document/open'
@@ -20,7 +21,9 @@ import {
   writeMap,
   revertTurn,
   blankNewMapSheet,
+  setTopicImage,
 } from '../src/renderer/ai/map-tools'
+import { createMindmapSkill, IMAGE_GEN_OFF_NOTE } from '../src/renderer/ai/mindmap-skill'
 import { copyOf, documentOf, IDS, plainSheet, richSheet, topic } from './helpers/fixtures'
 
 const mounted: MapController[] = []
@@ -99,6 +102,16 @@ async function rigOf(...sheets: XmindSheet[]): Promise<Rig> {
 
 const attached = (topicOf: XmindTopic): XmindTopic[] => topicOf.children?.attached ?? []
 const titles = (topicOf: XmindTopic): string[] => attached(topicOf).map((each) => each.title ?? '')
+
+/** The topic with this id anywhere in the source tree. */
+function findTopic(topicOf: XmindTopic, id: string): XmindTopic | null {
+  if (topicOf.id === id) return topicOf
+  for (const child of attached(topicOf)) {
+    const hit = findTopic(child, id)
+    if (hit) return hit
+  }
+  return null
+}
 
 /** A sheet of 1 + 6 + 36 + 216 + 1296 topics: five levels, six branches each. */
 function largeSheet(): XmindSheet {
@@ -480,5 +493,87 @@ describe('one AI turn', () => {
     expect(r.session.tabs()).toHaveLength(4)
     await revertTurn(r.host, turn)
     expect(r.session.tabs().map((tab) => tab.title)).toEqual(['Plain', 'Other'])
+  })
+})
+
+describe('pictures', () => {
+  const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1])
+  const PNG_BASE64 = btoa(String.fromCharCode(...png))
+  afterEach(() => {
+    delete (window as unknown as { mindmapApi?: unknown }).mindmapApi
+  })
+
+  it('saves the bytes in the map file and puts the reference on the topic as one step', async () => {
+    const r = await rigOf(richSheet())
+    const turn = new MapTurn()
+    const entryBefore = new Set(r.session.document.entryNames)
+    const out = await setTopicImage(r.host, { topicId: IDS.a1 }, { bytes: png, ext: 'png' }, turn)
+    expect(out.isError).toBeFalsy()
+    const entry = r.session.document.entryNames.find((name) => !entryBefore.has(name))
+    expect(entry).toMatch(/^resources\/[0-9a-f-]+\.png$/)
+
+    const written = findTopic(r.sheet(1).rootTopic, IDS.a1)!
+    expect(written.image).toEqual({ src: `xap:${entry}` })
+    expect((await r.session.document.readEntry(entry!))?.byteLength).toBe(png.byteLength)
+
+    // one undo step: the picture reference comes back off, the entry stays (the
+    // archive's bytes are not part of the sheet history)
+    expect(r.controller().undo()).toBe(true)
+    expect(findTopic(r.sheet(1).rootTopic, IDS.a1)!.image).toBeUndefined()
+  })
+
+  it('takes the entry back out when the topic does not exist', async () => {
+    const r = await rigOf(richSheet())
+    const before = [...r.session.document.entryNames]
+    const out = await setTopicImage(
+      r.host,
+      { topicId: '00000000-0000-4000-8000-000000000000' },
+      { bytes: png, ext: 'png' },
+      null,
+    )
+    expect(out.isError).toBe(true)
+    expect(out.output).toContain('there is no topic')
+    expect(r.session.document.entryNames).toEqual(before)
+  })
+
+  it('inserts an image attached to the chat, by the name the panel showed', async () => {
+    const r = await rigOf(richSheet())
+    const bridge = {
+      readAttachmentImage: async () => ({ ok: true, base64: PNG_BASE64, mime: 'image/png' }),
+    }
+    ;(window as unknown as { mindmapApi: unknown }).mindmapApi = bridge
+    const skill = createMindmapSkill({
+      host: () => r.host,
+      turn: () => null,
+      attachmentPath: (name) => (name === 'probe.png' ? 'C:/tmp/probe.png' : null),
+      attachmentNames: () => ['probe.png'],
+    })
+    expect(skill.systemPrompt).toContain('probe.png')
+    const before = new Set(r.session.document.entryNames)
+    const out = await skill.executeTool({
+      id: '1',
+      name: 'insert_image',
+      input: { topicId: IDS.a1, attachment: 'probe.png' },
+    } satisfies AgentToolCall)
+    expect(out.isError).toBeFalsy()
+    const entry = r.session.document.entryNames.find((name) => !before.has(name))
+    expect(entry).toMatch(/^resources\/.*\.png$/)
+    expect(findTopic(r.sheet(1).rootTopic, IDS.a1)!.image).toEqual({ src: `xap:${entry}` })
+  })
+
+  it('offers generate_image only while the main process reports an image route', () => {
+    const deps = {
+      host: () => ({}) as MapAiHost,
+      turn: () => null,
+    }
+    const off = createMindmapSkill({ ...deps, imageGenAvailable: () => false })
+    expect(off.tools.map((tool) => tool.name)).not.toContain('generate_image')
+    expect(off.tools.map((tool) => tool.name)).toContain('image_search')
+    expect(off.tools.map((tool) => tool.name)).toContain('insert_image')
+    expect(off.systemPrompt).toContain(IMAGE_GEN_OFF_NOTE)
+
+    const on = createMindmapSkill({ ...deps, imageGenAvailable: () => true })
+    expect(on.tools.map((tool) => tool.name)).toContain('generate_image')
+    expect(on.systemPrompt).not.toContain(IMAGE_GEN_OFF_NOTE)
   })
 })

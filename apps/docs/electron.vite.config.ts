@@ -34,6 +34,8 @@ export default defineConfig({
           '@genoffice/odt-engine',
           // the template font list the media scheme serves from
           '@genoffice/ui',
+          // the mail merge's CSV and workbook readers
+          '@genoffice/xlsx-gateway',
         ],
       }),
     ],

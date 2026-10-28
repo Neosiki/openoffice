@@ -130,6 +130,7 @@ export const nl = {
   aiSumAnalyzeMediaDone: 'Media geanalyseerd',
   aiSumInsertImage: 'Afbeelding invoegen',
   aiSumInsertWebImage: 'Webafbeelding ingevoegd',
+  aiSumInsertAttachedImage: 'Bijgevoegde afbeelding ingevoegd',
   aiSumGenerateImage: 'Afbeelding genereren',
   aiSumInsertedGenImage: 'Door AI gegenereerde afbeelding ingevoegd',
   aiSumUnknownTool: 'Onbekend hulpmiddel',

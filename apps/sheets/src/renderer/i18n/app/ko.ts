@@ -737,7 +737,6 @@ export const ko = {
   appRemoveLink: '링크 제거',
   // Ribbon common
   appNotAvailableYet: '아직 사용할 수 없음',
-  appComingSoon: '곧 제공 예정',
   // Chart Design tab
   appGroupChartLayouts: '차트 레이아웃',
   appAddChartElement: '차트 요소 추가',
@@ -1469,6 +1468,15 @@ export const ko = {
   appTableFileUnnamed: '이 표는 파일에 이름이 없어 여기서 변경할 수 없습니다.',
   appTableRowsNotLoaded: '표 행을 아직 불러오는 중입니다. 잠시 후 다시 시도하세요.',
   appTableTotalLabel: '요약',
+  appNotePicturesPaneTitle: '노트 이미지',
+  appNotePicturesClose: '닫기',
+  appNotePicturesNone: '이 통합 문서의 노트 중 이미지가 표시된 노트가 없습니다.',
+  appNotePictureUnavailable: '이 이미지를 표시할 수 없습니다.',
+  appNotePicturesToggle: '노트 이미지',
+  appNoteInsertPicture: '이미지 삽입',
+  appNotePictureInserted: '{cell} 메모에 이미지를 추가했습니다. 저장하면 파일에 기록됩니다.',
+  appNotePictureRemoved: '{cell} 메모에서 이미지를 제거했습니다.',
+  appNotePictureRemove: '이미지 제거',
   appCommentsPaneTitle: '메모',
   appThreadReply: '회신',
   appThreadReplyPlaceholder: '회신…',

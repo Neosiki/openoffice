@@ -578,4 +578,7 @@ export const hi = {
   appOdtLabelObject: 'ऑब्जेक्ट (Hancom में दिखता है)',
   appOdtLabelNotice:
     'लेबल वाले बॉक्स के रूप में बनाए गए ऑब्जेक्ट Hancom Office में दिखने के तरीके से अलग दिख सकते हैं।',
+  appMergeSourceLoaded: '{name} लोड हुई ({n} रिकॉर्ड)',
+  appMergeWritten: '{n} दस्तावेज़ लिखे गए',
+  appMergeNothingToWrite: 'लिखने के लिए कुछ नहीं है',
 } satisfies Record<keyof typeof zh, string>

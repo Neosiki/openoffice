@@ -17,7 +17,7 @@
 
 ## 맡지 않는 것 (경계)
 
-- 문서 형식의 해석과 저장은 이 모듈의 범위가 아니다. `packages/docx-engine`, `packages/pptx-engine`·`pptx-ops`·`pptx-render`, `packages/xlsx-gateway`와 xlsx 사이드카, `packages/pdf2docx`, `packages/pdf-structure`가 한다. 여기 `src/formats/`는 얇은 어댑터다. 한글 문서는 `packages/file-parse`의 `hwpToText`로 읽기만 한다(`hwp read`, `info`). 만들거나 고치지 않는다. PDF 문서 작업의 호출 순서·멈춤·이어하기·보관소도 `pdf-structure`의 작업 엔진과 보관소가 맡는다. EPUB 책의 열기·번역 단위·결과 책은 `packages/epub-engine`이 맡는다. 명령어는 EPUB을 고치지 않고 번역 결과를 새 파일로 쓸 뿐이다.
+- 문서 형식의 해석과 저장은 이 모듈의 범위가 아니다. `packages/docx-engine`, `packages/pptx-engine`·`pptx-ops`·`pptx-render`, `packages/xlsx-gateway`와 xlsx 사이드카, `packages/pdf2docx`, `packages/pdf-structure`가 한다. 여기 `src/formats/`는 얇은 어댑터다. 한글 문서는 `packages/file-parse`의 `hwpToText`로 읽고(`hwp read`, `info`), 만들고 고치는 일(`hwp apply`, `create --type hwp|hwpx`)은 `apps/hwp`의 AI 도구·편집기 플러그인·저장 바로잡기를 그대로 부른다(`src/formats/hwp-edit.ts`, 결정 0079). 한글 문서의 해석과 편집 동작은 여기서 만들지 않는다. PDF 문서 작업의 호출 순서·멈춤·이어하기·보관소도 `pdf-structure`의 작업 엔진과 보관소가 맡는다. EPUB 책의 열기·번역 단위·결과 책은 `packages/epub-engine`이 맡는다. 명령어는 EPUB을 고치지 않고 번역 결과를 새 파일로 쓸 뿐이다.
 - 어느 경로(무료·키·구독)로 갈지, 구독 요청의 차례를 어떻게 지키는지는 `packages/ai-search`의 범위다. 이 모듈은 "자동 호출 경로다"라는 사실과 `dataDir`, 연결 상태를 넘길 뿐이다. 구독 프로그램의 시작·종료는 `packages/ai-provider`의 범위다.
 - 앱 안의 MCP 서버(`apps/shell/src/main/mcp`)와 설정 화면의 통합 탭은 shell의 범위다. shell은 이 패키지를 프로세스로 실행하거나 하위 진입점(`/install`, `/agent-skills`, `/mcp-launch`, `/control-protocol`)을 import한다.
 - 렌더러가 필요한 변환(PDF 내보내기 등)은 앱 실행 파일의 `--headless-export`가 한다. 이 모듈은 그것을 찾아 실행하고 결과 봉투를 읽는다.
@@ -43,7 +43,7 @@
 - 구독 프로그램을 띄울 수 있는 프로세스는 끝날 때 그것을 끝낸다(`endSubscriptionChildrenWith`: `exit`와 `SIGHUP`·`SIGINT`·`SIGTERM`). 실제 요청을 실행하는 경우에는 강제 종료에 대비해 `dataDir`에 자식 기록도 남긴다. 앱의 다음 시작이 그 기록으로 정리한다.
 - 로그인 정보를 다루지 않는다. 명령줄에는 자체 로그인이 없고 자격 증명을 저장하지 않는다. 종량 허용은 앱의 기록을 읽기만 하고(`write`는 아무것도 하지 않는다) 맞지 않는 동의는 "동의 안 됨"으로 보고 앱이 지우게 둔다.
 - 결과 계약을 지킨다. 표준 출력의 JSON 봉투(`status`, `command`, `summary`, `output_path`, `detail`)와 종료 코드 0~4, 오류의 `error` 값(`ErrorReason`)은 프로그램이 분기하는 값이다. 이름을 바꾸지 않고 함부로 늘리지 않는다. 검색·이미지·미디어 실패는 종료 코드 4, `error: "app_unavailable"`, 원인은 `detail.errorCode`, 한도가 풀리는 시각은 `detail.resetsAt`이다. `read-url`(`read_url`)도 기존 `ErrorReason`만 다시 쓴다(`missing_argument`, `invalid_argument`, `unsupported`, `resource_limit`, `app_unavailable`). 이유는 `detail.reason`(`blocked`, `no_text`), `detail.errorCode`(`network`, `timeout`, `http_error`, `auth`)와 `detail.status`·`detail.max_bytes`로 알린다.
-- 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다.
+- 쓰기는 한 곳을 거친다. 출력 경로는 `src/fs.ts`에서 풀고, `GENOFFICE_ALLOWED_ROOTS`를 symlink를 푼 뒤 검사하고, 앱이 탭으로 열어 둔 파일은 `--force` 없이는 덮어쓰지 않는다. 파일은 같은 폴더의 임시 파일에 쓴 뒤 rename한다. rename이 잠금으로 끝내 막혀 제자리 덮어쓰기까지 실패하면 임시 파일을 지우지 않고, 오류(`conversion_failed`)의 `message`와 `detail.rescue_path`에 그 경로를 적는다.
 - 비밀 값은 감사 기록에 남기지 않는다. 기록은 실패해도 명령을 실패시키지 않는다.
 
 ## 이 모듈의 방식
@@ -59,6 +59,7 @@
 - MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 91KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
 - 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
+- 한글 문서 고치기(`src/formats/hwp-edit.ts`, 결정 0079): 연산 하나는 `{ "op": <도구 이름>, ...입력 }`이고, `apps/hwp/src/renderer/ai/hwp-skill.ts`의 `createHwpSkill`이 `apps/hwp/studio-plugin/agent-plugin.mjs`를 부르는 길을 그대로 탄다. 편집기 대신 `headlessHost`가 플러그인의 호스트가 된다: 변경 하나는 엔진 스냅숏 하나이고(`saveSnapshot`, 던지면 `restoreSnapshot`), 끝날 때마다 `document-changed`를 알려 플러그인이 기억한 글자를 버리게 한다. 이 호스트를 바꾸지 않는다: 편집기의 변경 묶음과 같아야 플러그인의 "개체를 잃으면 되돌린다"가 여기서도 선다. 메모를 지울 변경은 물어볼 사람이 없으니 거절한다(`confirmMemoRemoval`이 거짓). 화면·네트워크·모델이 필요한 도구(`NOT_HEADLESS`)는 `unsupported`로 거절한다. 저장(`saveHwpSession`)은 앱의 저장 순서와 같다: `.hwp`는 `exportHwpVerify`의 쪽수가 같을 때만, 새 탭은 플러그인의 `measureTabs`로 재고, `applySaveFixes`, 컨테이너 형식 확인, HWPX는 메모 유실 수. 열 때(`openHwpForEdit`)는 앱의 열기처럼 변경 추적을 빼고 구역 뒤 목록과 필드 종류를 간직한다. 그래서 `apps/hwp`의 도구 정의·플러그인·`src/main`의 저장 모듈을 고치면 명령어도 바뀐다. 그쪽 테스트와 함께 `tests/hwp-apply.test.ts`를 돌린다. 연산 목록(`guide hwp`, MCP `hwp-ops` 형식)은 도구 정의에서 만들므로 엔진을 띄우지 않는다.
 - ODT(`src/formats/odt.ts`): `.odt`는 `odtToDocx`의 다리 docx로 열고(`openDocumentFile`이 `OpenDocument.odt`에 원본·다리 지도·보고를 둔다) `saveDocument`가 `saveOdt`로 원본에 좁게 되돌려 쓴다. 엔진 패키지(`@genoffice/odt-engine`)는 공개 API만 쓰고 고치지 않는다.
   - 꺼 둔 기능의 작업 목록은 `odtDisabledFeature` 한 곳에 있다(메모, 변경 내용, 목차, 수식 `<formula>`, 차트, 글상자, 워터마크, 다단 `set_page_setup.columns`, 그림 번호·상호 참조·인용 `insertField`). 거절 이유는 `unsupported`다. `--track`과 확장자가 다른 `--out`은 `docs apply`가 작업 전에 거절한다.
   - `OdtEditGuard`는 작업마다 앞뒤를 비교한다. 잠긴 칸(`isProtectedCell`, 셀 안 표는 바깥 칸)과 `odt-keep:` 자리 표시가 바뀌면 편집기 상태와 곁 상태를 되돌리고 `op_rejected`로 거절한다. 자리 표시를 통째로 지우는 것과 잠긴 칸 둘레의 행 추가는 된다. 격자 모양이 그대로면(칸 합치기·나누기 포함) 같은 자리에서 비교한다. 행만 또는 열만 바뀌었으면 앞뒤 행(열)을 맞춰 잠긴 칸이 옮겨 간 자리에서 비교한다(`movedLockedCell`). 둘 다 바뀌었을 때만 칸 지문의 개수로 본다.

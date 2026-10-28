@@ -102,9 +102,15 @@ import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/driver
 import {
   AI_MEDIA_PROVIDERS,
   AI_SEARCH_PROVIDERS,
+  activeCustomEndpoint,
+  inspectLocalModelForIpc,
   isAiOverloadedError,
   chatForProvider,
+  listLocalModelsForIpc,
+  localEndpointTimeoutMs,
   normalizeAiSettings,
+  testLocalModelForIpc,
+  cancelLocalTestForIpc,
   testMediaProvider,
   type AiMediaProviderConfig,
   type AiMediaProviderId,
@@ -113,6 +119,7 @@ import {
   sanitizeAiSettings,
   sanitizeCliPath,
   setAiUserAgent,
+  setCodexImageGenerationAvailable,
   setRescueFetch,
   streamForProvider,
   type AiChatRequest,
@@ -133,7 +140,9 @@ import {
 import {
   abortMediaCalls,
   aiToolCapabilities,
+  createCodexImageCliGenerator,
   generateImageTool,
+  registerCodexImageGenerator,
   testSearchProvider,
   webSearchTool,
   imageSearchTool,
@@ -157,11 +166,14 @@ import type {
   DocsTabInfo,
   MarkdownImage,
   MenuCommand,
+  MergeOutputRequest,
   OpenDocxResult,
   OpenFileResult,
   SpellLanguages,
 } from '../shared/ipc'
 import { MARKDOWN_MEDIA_DIR_TOKEN } from '../shared/ipc'
+import { MERGE_DATA_SOURCE_EXTENSIONS, readMergeDataSource } from './merge-data-source'
+import { mergeOutputFileName, mergeOutputPath } from './merge-output'
 import { ClickClaims } from '../shared/context-menu-claims'
 import { findDocxPath } from '../shared/open-file'
 import {
@@ -173,6 +185,7 @@ import {
   type AiRunTexts,
 } from './ai-run'
 import { createChunkCoalescer } from './stream-coalesce'
+import { startFirstChunkKeepalive } from './ai-keepalive'
 import { atomicWriteFile } from './atomic-write'
 import { createDocsRecovery } from './docs-recovery'
 import {
@@ -258,6 +271,8 @@ const tMain = createI18n({
     btnOverwrite: '覆盖',
     dlgInsertImage: '插入图片',
     filterImages: '图片',
+    dlgMergeDataSource: '选择收件人列表',
+    filterMergeDataSource: 'Excel 或 CSV',
     dlgAddAttachment: '添加附件',
     filterSupported: '支持的文件',
     filterAll: '所有文件',
@@ -386,6 +401,8 @@ const tMain = createI18n({
     btnOverwrite: 'Overwrite',
     dlgInsertImage: 'Insert Image',
     filterImages: 'Images',
+    dlgMergeDataSource: 'Select Recipient List',
+    filterMergeDataSource: 'Excel or CSV',
     dlgAddAttachment: 'Add Attachments',
     filterSupported: 'Supported Files',
     filterAll: 'All Files',
@@ -514,6 +531,8 @@ const tMain = createI18n({
     btnOverwrite: 'Ghi đè',
     dlgInsertImage: 'Chèn hình ảnh',
     filterImages: 'Hình ảnh',
+    dlgMergeDataSource: 'Chọn danh sách người nhận',
+    filterMergeDataSource: 'Excel hoặc CSV',
     dlgAddAttachment: 'Thêm tệp đính kèm',
     filterSupported: 'Các tệp được hỗ trợ',
     filterAll: 'Tất cả các tệp',
@@ -643,6 +662,8 @@ const tMain = createI18n({
     btnOverwrite: '上書き',
     dlgInsertImage: '画像の挿入',
     filterImages: '画像',
+    dlgMergeDataSource: '受信者リストを選択',
+    filterMergeDataSource: 'Excel または CSV',
     dlgAddAttachment: '添付ファイルの追加',
     filterSupported: 'サポートされているファイル',
     filterAll: 'すべてのファイル',
@@ -772,6 +793,8 @@ const tMain = createI18n({
     btnOverwrite: '덮어쓰기',
     dlgInsertImage: '그림 삽입',
     filterImages: '그림',
+    dlgMergeDataSource: '받는 사람 목록 선택',
+    filterMergeDataSource: 'Excel 또는 CSV',
     dlgAddAttachment: '첨부 파일 추가',
     filterSupported: '지원되는 파일',
     filterAll: '모든 파일',
@@ -902,6 +925,8 @@ const tMain = createI18n({
     btnOverwrite: 'Écraser',
     dlgInsertImage: 'Insérer une image',
     filterImages: 'Images',
+    dlgMergeDataSource: 'Sélectionner une liste de destinataires',
+    filterMergeDataSource: 'Excel ou CSV',
     dlgAddAttachment: 'Ajouter des pièces jointes',
     filterSupported: 'Fichiers pris en charge',
     filterAll: 'Tous les fichiers',
@@ -1032,6 +1057,8 @@ const tMain = createI18n({
     btnOverwrite: 'Überschreiben',
     dlgInsertImage: 'Bild einfügen',
     filterImages: 'Bilder',
+    dlgMergeDataSource: 'Empfängerliste auswählen',
+    filterMergeDataSource: 'Excel oder CSV',
     dlgAddAttachment: 'Anlagen hinzufügen',
     filterSupported: 'Unterstützte Dateien',
     filterAll: 'Alle Dateien',
@@ -1161,6 +1188,8 @@ const tMain = createI18n({
     btnOverwrite: 'Sobrescribir',
     dlgInsertImage: 'Insertar imagen',
     filterImages: 'Imágenes',
+    dlgMergeDataSource: 'Seleccionar lista de destinatarios',
+    filterMergeDataSource: 'Excel o CSV',
     dlgAddAttachment: 'Agregar datos adjuntos',
     filterSupported: 'Archivos compatibles',
     filterAll: 'Todos los archivos',
@@ -1291,6 +1320,8 @@ const tMain = createI18n({
     btnOverwrite: 'เขียนทับ',
     dlgInsertImage: 'แทรกรูปภาพ',
     filterImages: 'รูปภาพ',
+    dlgMergeDataSource: 'เลือกรายชื่อผู้รับ',
+    filterMergeDataSource: 'Excel หรือ CSV',
     dlgAddAttachment: 'เพิ่มสิ่งที่แนบ',
     filterSupported: 'ไฟล์ที่รองรับ',
     filterAll: 'ไฟล์ทั้งหมด',
@@ -1420,6 +1451,8 @@ const tMain = createI18n({
     btnOverwrite: 'Timpa',
     dlgInsertImage: 'Sisipkan Gambar',
     filterImages: 'Gambar',
+    dlgMergeDataSource: 'Pilih daftar penerima',
+    filterMergeDataSource: 'Excel atau CSV',
     dlgAddAttachment: 'Tambahkan Lampiran',
     filterSupported: 'File yang Didukung',
     filterAll: 'Semua File',
@@ -1549,6 +1582,8 @@ const tMain = createI18n({
     btnOverwrite: 'Перезаписать',
     dlgInsertImage: 'Вставить рисунок',
     filterImages: 'Изображения',
+    dlgMergeDataSource: 'Выбрать список получателей',
+    filterMergeDataSource: 'Excel или CSV',
     dlgAddAttachment: 'Добавить вложения',
     filterSupported: 'Поддерживаемые файлы',
     filterAll: 'Все файлы',
@@ -1678,6 +1713,8 @@ const tMain = createI18n({
     btnOverwrite: 'استبدال',
     dlgInsertImage: 'إدراج صورة',
     filterImages: 'الصور',
+    dlgMergeDataSource: 'اختيار قائمة المستلمين',
+    filterMergeDataSource: 'Excel أو CSV',
     dlgAddAttachment: 'إضافة مرفقات',
     filterSupported: 'الملفات المدعومة',
     filterAll: 'كل الملفات',
@@ -1807,6 +1844,8 @@ const tMain = createI18n({
     btnOverwrite: 'Sobrescrever',
     dlgInsertImage: 'Inserir Imagem',
     filterImages: 'Imagens',
+    dlgMergeDataSource: 'Selecionar lista de destinatários',
+    filterMergeDataSource: 'Excel ou CSV',
     dlgAddAttachment: 'Adicionar Anexos',
     filterSupported: 'Arquivos Compatíveis',
     filterAll: 'Todos os Arquivos',
@@ -1936,6 +1975,8 @@ const tMain = createI18n({
     btnOverwrite: 'Sovrascrivi',
     dlgInsertImage: 'Inserisci immagine',
     filterImages: 'Immagini',
+    dlgMergeDataSource: 'Seleziona elenco destinatari',
+    filterMergeDataSource: 'Excel o CSV',
     dlgAddAttachment: 'Aggiungi allegati',
     filterSupported: 'File supportati',
     filterAll: 'Tutti i file',
@@ -2065,6 +2106,8 @@ const tMain = createI18n({
     btnOverwrite: 'Nadpisz',
     dlgInsertImage: 'Wstaw obraz',
     filterImages: 'Obrazy',
+    dlgMergeDataSource: 'Wybierz listę odbiorców',
+    filterMergeDataSource: 'Excel lub CSV',
     dlgAddAttachment: 'Dodaj załączniki',
     filterSupported: 'Obsługiwane pliki',
     filterAll: 'Wszystkie pliki',
@@ -2194,6 +2237,8 @@ const tMain = createI18n({
     btnOverwrite: 'Přepsat',
     dlgInsertImage: 'Vložit obrázek',
     filterImages: 'Obrázky',
+    dlgMergeDataSource: 'Vybrat seznam příjemců',
+    filterMergeDataSource: 'Excel nebo CSV',
     dlgAddAttachment: 'Přidat přílohy',
     filterSupported: 'Podporované soubory',
     filterAll: 'Všechny soubory',
@@ -2323,6 +2368,8 @@ const tMain = createI18n({
     btnOverwrite: 'Overschrijven',
     dlgInsertImage: 'Afbeelding invoegen',
     filterImages: 'Afbeeldingen',
+    dlgMergeDataSource: 'Ontvangerslijst selecteren',
+    filterMergeDataSource: 'Excel of CSV',
     dlgAddAttachment: 'Bijlagen toevoegen',
     filterSupported: 'Ondersteunde bestanden',
     filterAll: 'Alle bestanden',
@@ -2452,6 +2499,8 @@ const tMain = createI18n({
     btnOverwrite: 'Tulis Ganti',
     dlgInsertImage: 'Sisipkan Imej',
     filterImages: 'Imej',
+    dlgMergeDataSource: 'Pilih senarai penerima',
+    filterMergeDataSource: 'Excel atau CSV',
     dlgAddAttachment: 'Tambah Lampiran',
     filterSupported: 'Fail yang Disokong',
     filterAll: 'Semua Fail',
@@ -2581,6 +2630,8 @@ const tMain = createI18n({
     btnOverwrite: 'דרוס',
     dlgInsertImage: 'הוספת תמונה',
     filterImages: 'תמונות',
+    dlgMergeDataSource: 'בחירת רשימת נמענים',
+    filterMergeDataSource: 'Excel או CSV',
     dlgAddAttachment: 'הוספת קבצים מצורפים',
     filterSupported: 'קבצים נתמכים',
     filterAll: 'כל הקבצים',
@@ -2710,6 +2761,8 @@ const tMain = createI18n({
     btnOverwrite: 'अधिलेखित करें',
     dlgInsertImage: 'छवि सम्मिलित करें',
     filterImages: 'छवियाँ',
+    dlgMergeDataSource: 'प्राप्तकर्ता सूची चुनें',
+    filterMergeDataSource: 'Excel या CSV',
     dlgAddAttachment: 'अनुलग्नक जोड़ें',
     filterSupported: 'समर्थित फ़ाइलें',
     filterAll: 'सभी फ़ाइलें',
@@ -2839,6 +2892,8 @@ const tMain = createI18n({
     btnOverwrite: '覆寫',
     dlgInsertImage: '插入圖片',
     filterImages: '圖片',
+    dlgMergeDataSource: '選擇收件人清單',
+    filterMergeDataSource: 'Excel 或 CSV',
     dlgAddAttachment: '新增附件',
     filterSupported: '支援的檔案',
     filterAll: '所有檔案',
@@ -3908,7 +3963,29 @@ const AI_RUN_TEXTS: AiRunTexts = {
   noModel: () => tm('errNoModel'),
 }
 
+let codexImageRegistered = false
+
+/**
+ * Codex image generation through the official CLI (the path the `codex-image` skill
+ * documents): one `codex exec` per image, with the account's OAuth login and the built-in
+ * image_gen tool, in a throw-away folder. The chat loop keeps every built-in tool off; this
+ * is a separate call, so nothing of a conversation goes through it. Registered once per
+ * process, before the capability report can be asked.
+ */
+function registerCodexImageBackend(): void {
+  if (codexImageRegistered) return
+  codexImageRegistered = true
+  registerCodexImageGenerator(
+    createCodexImageCliGenerator({
+      settingsPath: SETTINGS_PATH,
+      tempRoot: () => app.getPath('temp'),
+    }),
+  )
+  setCodexImageGenerationAvailable(true)
+}
+
 export function registerAiIpc(): void {
+  registerCodexImageBackend()
   app.once('before-quit', shutdownCodexAppServers)
   // the subscription channels (statuses, recheck, login, install, metered) exist once per
   // process: whichever editor main asks first registers them and starts the first check
@@ -3970,6 +4047,29 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('ai:custom-models', (_event, input: unknown) => listCustomModelsForIpc(input))
 
+  // local AI card: discovery, one model's server-reported profile, and the
+  // four-step connection test. Payload validation lives in @genoffice/ai-provider
+  // (local-ipc.ts), so a malformed payload answers shape and sends nothing.
+  ipcMain.handle('ai:local-models', (_event, input: unknown) => listLocalModelsForIpc(input))
+  ipcMain.handle('ai:local-inspect', (_event, input: unknown) => inspectLocalModelForIpc(input))
+  ipcMain.handle('ai:local-test', async (event, input: unknown) => {
+    // the requests end here, not only in the renderer: on a cancel by test id
+    // (from the same window) and when the window that asked is closed
+    const controller = new AbortController()
+    const unwatchSender = abortOnDestroyed(event.sender, controller)
+    try {
+      return await testLocalModelForIpc(input, {
+        owner: event.sender.id,
+        signal: controller.signal,
+      })
+    } finally {
+      unwatchSender()
+    }
+  })
+  ipcMain.handle('ai:local-test-cancel', (event, input: unknown) =>
+    cancelLocalTestForIpc(input, event.sender.id),
+  )
+
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
     // per-request settings get the same schema check as the persisted ones: a
     // compromised renderer could otherwise hand cliPath/baseUrl straight to
@@ -3988,6 +4088,14 @@ export function registerAiIpc(): void {
     const { settings, provider, config } = target
     const tools = request.tools ?? []
     const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
+    // A local server loads the model on its first request, so this endpoint's
+    // own first-response limit (default 300s) replaces the protocol default,
+    // and a timer keeps the renderer informed while nothing has arrived yet.
+    // Other providers get neither: their watchdog and silence budget stay as
+    // they were.
+    const localEndpoint = provider === 'custom' ? activeCustomEndpoint(settings) : undefined
+    const localTimeoutMs =
+      localEndpoint?.kind === 'local' ? localEndpointTimeoutMs(localEndpoint) : undefined
     const controller = new AbortController()
     activeAiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)
@@ -4001,21 +4109,50 @@ export function registerAiIpc(): void {
       lastPing = now
       out.push({ requestId, type: 'ping' })
     }
+    const keepalive = localTimeoutMs === undefined ? undefined : startFirstChunkKeepalive(ping)
+    let answerSeen = false
+    const answerStarted = () => {
+      if (answerSeen) return
+      answerSeen = true
+      keepalive?.firstChunk()
+    }
     try {
       let stopReason: string | undefined
-      await streamForProvider(provider, config, system, messages, tools, maxTokens, {
-        ...(request.sessionId ? { sessionId: request.sessionId } : {}),
-        signal: controller.signal,
-        onDelta: (text) => out.push({ requestId, type: 'delta', text }),
-        onReasoningDelta: (text) => out.push({ requestId, type: 'reasoning', text }),
-        onToolCall: (toolCall) => out.push({ requestId, type: 'tool-call', toolCall }),
-        onActivity: ping,
-        onStopReason: (reason) => {
-          stopReason = reason
+      await streamForProvider(
+        provider,
+        config,
+        system,
+        messages,
+        tools,
+        maxTokens,
+        {
+          ...(request.sessionId ? { sessionId: request.sessionId } : {}),
+          signal: controller.signal,
+          onDelta: (text) => {
+            answerStarted()
+            out.push({ requestId, type: 'delta', text })
+          },
+          onReasoningDelta: (text) => {
+            answerStarted()
+            out.push({ requestId, type: 'reasoning', text })
+          },
+          onToolCall: (toolCall) => {
+            answerStarted()
+            out.push({ requestId, type: 'tool-call', toolCall })
+          },
+          onActivity: () => {
+            // Headers are not an answer: a local server may send them while it is
+            // still loading the model. Keep pinging until the first real chunk.
+            if (!answerSeen) ping()
+          },
+          onStopReason: (reason) => {
+            stopReason = reason
+          },
+          onUsage: (usage) => out.push({ requestId, type: 'usage', usage }),
+          ...subscriptionStreamCallbacks(requestId, out.push),
         },
-        onUsage: (usage) => out.push({ requestId, type: 'usage', usage }),
-        ...subscriptionStreamCallbacks(requestId, out.push),
-      })
+        localTimeoutMs === undefined ? undefined : { timeoutMs: localTimeoutMs },
+      )
       out.push({ requestId, type: 'done', stopReason })
     } catch (err) {
       if (controller.signal.aborted) {
@@ -4024,6 +4161,8 @@ export function registerAiIpc(): void {
         out.push(aiStreamErrorChunk(requestId, err))
       }
     } finally {
+      // success, error and cancel all leave through here: the timer never survives the turn
+      keepalive?.stop()
       out.flush()
       unwatchSender()
       activeAiStreams.delete(requestId)
@@ -5174,6 +5313,68 @@ export function registerDocsIpc(): void {
       base64: readFileSync(filePath).toString('base64'),
       mime,
       name: basename(filePath),
+    }
+  })
+
+  // Mailings tab: pick a local recipient list and read it as a data source.
+  // The file is read here, in the main process, where the file system is.
+  ipcMain.handle('docs:merge-data-source', async (event) => {
+    const result = await openDialog(event, {
+      title: tm('dlgMergeDataSource'),
+      filters: [
+        {
+          name: tm('filterMergeDataSource'),
+          extensions: [...MERGE_DATA_SOURCE_EXTENSIONS],
+        },
+      ],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    try {
+      return { ok: true, source: await readMergeDataSource(result.filePaths[0]) }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // Mailings tab: write the merged documents. One file for the whole merge
+  // goes where the user says; one file per record goes into a folder they
+  // pick, every name kept unique so two records of the same name do not
+  // overwrite each other. The bytes carry the document's lazily served
+  // pictures, so they are materialized first — the merged file is a document
+  // of its own, not a view of the open one.
+  ipcMain.handle('docs:merge-output', async (event, request: MergeOutputRequest) => {
+    const files = Array.isArray(request?.files) ? request.files : []
+    if (files.length === 0) return { ok: false, error: 'nothing to write' }
+    const write = async (path: string, data: ArrayBuffer): Promise<void> => {
+      const { bytes } = await materializeLazyDocx(Buffer.from(data))
+      await writeFile(path, bytes)
+    }
+    try {
+      if (request.mode === 'single') {
+        const file = files[0]!
+        const name = mergeOutputFileName(file.name)
+        const result = await saveDialog(event, {
+          title: tm('dlgSaveAs'),
+          defaultPath: name,
+          filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+        })
+        if (result.canceled || !result.filePath) return { ok: false, canceled: true }
+        await write(result.filePath, file.data)
+        return { ok: true, path: result.filePath, count: 1 }
+      }
+      const result = await openDialog(event, {
+        title: tm('dlgPickExportDir'),
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true }
+      const folder = result.filePaths[0]!
+      for (const file of files) {
+        await write(mergeOutputPath(folder, file.name), file.data)
+      }
+      return { ok: true, folder, count: files.length }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
 

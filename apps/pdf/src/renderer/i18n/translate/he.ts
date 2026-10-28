@@ -24,6 +24,7 @@ export const he = {
   trConfirmCalls: 'קריאות ל-AI: {calls} (בלוקים: {blocks}, נשלחים בקבוצות)',
   trConfirmDone: '{done} מתוך {total} בלוקים כבר תורגמו ולא יישלחו שוב',
   trConfirmSends: 'הטקסט של העמודים שנבחרו יישלח ל-AI הזה.',
+  trRightsNotice: 'תרגם רק מסמכים שיש לך זכויות עליהם.',
   trProviderChange: 'התרגום השמור נוצר בעזרת {stored}. המשך בעזרת {next} יערבב שני AI בתרגום אחד.',
   trProviderUnknown: 'AI לא ידוע',
   trConfirmNothing:

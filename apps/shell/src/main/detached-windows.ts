@@ -22,7 +22,7 @@ import {
 } from '../../../slides/src/main/slides-main'
 import { pdfCloseCancelled, pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import { markdownIsDirty, requestMarkdownClose } from '../../../markdown/src/main/markdown-main'
-import { hwpIsDirty, requestHwpClose } from '../../../hwp/src/main/hwp-main'
+import { hwpIsDirty, hwpMemoModalOpen, requestHwpClose } from '../../../hwp/src/main/hwp-main'
 import { htmlIsDirty, requestHtmlClose } from '../../../html/src/main/html-main'
 import { mindmapIsDirty, requestMindmapClose } from '../../../mindmap/src/main/mindmap-main'
 import { epubIsDirty, requestEpubClose } from '../../../epub/src/main/epub-main'
@@ -233,6 +233,10 @@ export function detachedWebContentsFor(id: string): WebContents | undefined {
 export function closeDetachedWithoutPrompt(id: string): boolean {
   const rec = recordById(id)
   if (!rec) return false
+  // a memo editor's text is not in the document yet, and a promptless close
+  // (an agent's close) must not drop it
+  const wc = rec.view.webContents
+  if (rec.kind === 'hwp' && !wc.isDestroyed() && hwpMemoModalOpen(wc.id)) return false
   rec.closeWithoutPrompt()
   return true
 }
@@ -268,7 +272,9 @@ async function detachedIsDirty(rec: DetachedRecord): Promise<boolean> {
 /** run the family's save/don't-save/cancel prompt when the document is dirty;
  *  true when the window may close (same helpers as the tab close path) */
 async function confirmDetachedClose(rec: DetachedRecord): Promise<boolean> {
-  if (!(await detachedIsDirty(rec))) return true
+  // an open memo editor holds text that is not in the document yet, even when the document is clean
+  const memoOpen = rec.kind === 'hwp' && hwpMemoModalOpen(rec.view.webContents.id)
+  if (!memoOpen && !(await detachedIsDirty(rec))) return true
   const wc = rec.view.webContents
   const win = rec.window
   switch (rec.kind) {

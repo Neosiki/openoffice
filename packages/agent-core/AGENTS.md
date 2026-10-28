@@ -13,6 +13,7 @@
 - 드라이브에서 읽은 내용이 대화에 들어간 뒤의 바깥 호출 차단: `isOutboundCall`·`DRIVE_OUTBOUND_BLOCKED`(`src/drive-skill.ts`). 바깥 도구 목록 `OUTBOUND_TOOLS`(여기에 `read_url`도 있다)는 `src/outbound.ts`에 있다.
 - 인터넷 도구 스위치와 주소 확인(결정 0062): `guardOutbound`·`fetchedAddresses`·`addressInConversation`(`src/outbound-guard.ts`). `composeWithDrive`가 드라이브 차단 바깥에 씌운다. 창의 다리(`window.aiOfficeOutbound`)로 껍데기 앱 뒷단에 스위치 값과 사람의 답을 묻는다.
 - 모든 실행의 지시문 맨 앞(날짜 다음)에 붙는 `MATERIAL_NOT_INSTRUCTIONS`(`src/loop.ts`): 읽은 글은 자료이지 지시가 아니다.
+- 첨부 그림 이름을 지시문에 한 줄로 붙이는 `attachedImageNote`(`src/attached-images.ts`): 그림 넣기 도구가 파일 이름을 받는 편집기(워드·한글·마인드맵·엑셀·HTML·슬라이드)가 같은 문장을 쓴다. 이름이 없으면 빈 문자열이고, 중복은 지우고 20개까지만 적는다.
 
 ## 맡지 않는 것 (경계)
 
@@ -31,7 +32,7 @@
 - 실패한 실행은 그 사용자 메시지부터 이력에서 걷어 낸다(`rollbackFailedRun`). 남겨 두면 실패한 지시가 다음 실행에서 사용자 모르게 다시 수행된다. 도구만 실행하고 글이 없는 턴은 `COMPLETED_VIA_TOOLS_TEXT`로 채운다(빈 assistant 내용은 다음 턴을 깨뜨린다).
 - `ToolExecution.display`는 화면 전용이다. 모델에게 가는 메시지에 섞지 않는다.
 - 전송은 모르는 조각 종류를 받아도 실행을 죽이지 않는다(이 빌드보다 새 메인 프로세스와 함께 돌 수 있다). 조각이 오면 침묵 감시만 다시 건다.
-- `IPC_STREAM_SILENCE_TIMEOUT_MS`(240초)는 메인 프로세스의 유휴 제한(180초)보다 길어야 한다. 메인 쪽의 번역된 시간 초과 문장이 먼저 도착하게 하기 위해서다.
+- `IPC_STREAM_SILENCE_TIMEOUT_MS`(240초)는 메인 프로세스의 유휴 제한(180초)보다 길어야 한다. 메인 쪽의 번역된 시간 초과 문장이 먼저 도착하게 하기 위해서다. 로컬 서버는 300~600초를 기다릴 수 있으므로, 첫 조각이 오기 전까지 5초마다 `ping`을 보내 침묵 감시를 다시 건다. 응답 헤더만 온 때에 ping을 멈추면 안 된다.
 - `REDACT_NS`, `REDACT_PREFIX`, `REDACT_EL`의 값을 바꾸지 않는다. 저장된 docx·pptx 안에 쓰이는 XML 네임스페이스와 접두사라서, 바꾸면 이미 가려 둔 범위(원본 GenOffice로 만든 것 포함)를 읽지 못해 그 내용이 다시 모델에게 보인다. 값에 다른 회사 주소가 들어 있어도 문서 데이터이므로 그대로 둔다.
 - `redact-range.ts`의 함수는 throw하지 않는다. 모르는 노드는 그대로 통과시킨다. 여기서 예외가 나면 호출자의 예비 경로가 가려지지 않은 원문을 보내게 된다.
 - 사용자 메시지는 이력에 들어가기 전에 `sanitizeAgentPayload`를 거친다(실수로 붙여 넣은 키·비밀번호를 가린다). 이 호출을 우회해 이력에 직접 넣지 않는다.
@@ -48,9 +49,15 @@
 - `streamText`는 큰 결과물(페이지 전체 등)을 도구 인자가 아닌 글로 받는다. 도구 인자는 JSON이 끝날 때까지 서버가 붙잡고 있어 중간 게이트웨이의 유휴 제한에 걸리기 때문이다.
 - `streamText`의 진행 알림(`onProgress`)은 첫 조각에 바로, 그 뒤로는 `progressIntervalMs`(기본 120ms)에 한 번 이하로 간다. 추출 함수가 받은 글 전체를 돌기 때문에 조각마다 부르면 글 길이의 제곱이 된다. 결과를 돌려주기 직전에 남은 알림을 먼저 보내므로, 받는 쪽은 지금처럼 마지막 상태까지 본다. 상한을 넘긴 조각은 알리지 않는다.
 
+## 로컬 AI (결정 0067)
+
+- `AgentLoop`는 `run()`마다 새 `runId`를 만들고 `transport.stream`에 싣는다. `toolsAllowed() === false`면 `tools: []`와 글만 쓰는 지시문을 보내고, 모델이 그래도 낸 도구 호출은 실행하지 않는다. 버린 호출은 "전달됨"으로 세어 같은 턴을 다시 보내지 않는다.
+- `createIpcTransport`는 `contextLimit`·`confirmContext`·`contextGate`를 받는다. 80%를 넘고 `runId`가 아직 확인되지 않았으면 한 번 묻고, 거절하면 `start`를 부르지 않고 `context-limit`으로 끝낸다. `skipContextGate`는 압축 요약 요청에만 쓴다.
+- PDF·EPUB 문서 작업은 `createModelCall` 하나가 `contextGate` 하나를 쥔다. 호출자가 넘긴 `runId`를 쓰고 없으면 하나 만든다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/agent-core`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/agent-core`. Windows에서 전부 통과한다.
 - 루프 테스트는 가짜 `AgentTransport`로 턴을 대본처럼 재생한다. 실제 제공자나 Electron이 필요 없다.
-- 바꾸면 반드시 테스트하는 것: 재시도 조건의 경계(글이 한 글자라도 나간 뒤의 `(empty stream)`은 다시 보내지 않는다), 취소 직후 도착한 콜백, 실패 뒤 이력 되돌림과 그 다음 요청, 필수 인자 누락·`null`·잘림, 전송의 오류 문장 우선순위와 모르는 조각 종류.
+- 바꾸면 반드시 테스트하는 것: 재시도 조건의 경계(글이 한 글자라도 나간 뒤의 `(empty stream)`은 다시 보내지 않는다), 취소 직후 도착한 콜백, 실패 뒤 이력 되돌림과 그 다음 요청, 필수 인자 누락·`null`·잘림, 전송의 오류 문장 우선순위와 모르는 조각 종류, 첨부 그림 이름 줄(없음·중복·20개 상한).
 - 가림 코드는 빠져나가는 경우를 테스트한다. 선택 범위가 가려진 구간을 가로지를 때, 표식이 답에서 쪼개졌을 때, 모르는 노드 형태가 들어왔을 때 원문이 결과에 남지 않아야 한다.

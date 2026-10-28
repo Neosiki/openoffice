@@ -585,4 +585,7 @@ export const es = {
   appOdtLabelObject: 'Objeto (visible en Hancom)',
   appOdtLabelNotice:
     'Los objetos dibujados como cuadros con etiqueta pueden verse distintos de como los muestra Hancom Office.',
+  appMergeSourceLoaded: '{name} cargado ({n} registros)',
+  appMergeWritten: '{n} documentos escritos',
+  appMergeNothingToWrite: 'No hay nada que escribir',
 } satisfies Record<keyof typeof zh, string>

@@ -193,8 +193,19 @@ export async function prefetchOpImages(
     if (op.op !== 'add_image' || imageData.has(op.path)) continue
     let dataUrl: string
     let mediaType: string
-    // file:// = a BYOK-generated image in the local store (fetchImage resolves it)
-    if (/^(https?|file):\/\//i.test(op.path)) {
+    if (op.attachment) {
+      // An attachment the user put in the chat: the path came from the panel's own list
+      // (resolveAttachmentImageOps), so it is not subject to the workbook-folder media
+      // roots. Trust the bytes, not the extension the file happens to carry.
+      const image = await window.desktopApi.readAttachmentImage(op.path)
+      if (!image.ok || !image.base64) throw new Error(image.error ?? t('appCannotReadImage'))
+      const sniffed = sniffImageMime(image.base64)
+      if (!sniffed) {
+        throw new Error('The attached image is not PNG/JPEG/GIF — attach another image.')
+      }
+      dataUrl = `data:${sniffed};base64,${image.base64}`
+      mediaType = sniffed
+    } else if (/^(https?|file):\/\//i.test(op.path)) {
       const fetched = await window.desktopApi.fetchImage(op.path)
       if (!fetched) throw new Error(t('appCannotReadImage'))
       // Trust the bytes, not the Content-Type header the handler echoed

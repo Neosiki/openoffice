@@ -7,6 +7,7 @@ import type {
   AiSubscriptionProviderId,
   SubscriptionConnectHelpPath,
   SubscriptionLaunchResult,
+  SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
@@ -27,7 +28,10 @@ export interface MindmapSubscriptionApi {
   /** look again (both providers when none is named) and answer when done */
   recheck(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
   /** open the program's own sign-in */
-  login(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  login(
+    provider: AiSubscriptionProviderId,
+    mode?: SubscriptionLoginMode,
+  ): Promise<SubscriptionLaunchResult>
   /** run the vendor's official install command in a visible terminal window */
   install(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   /** run the official update of a program below the app's floor, in a terminal window */

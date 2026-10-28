@@ -80,6 +80,8 @@ export const nl = {
   aiToolInsert: 'Alinea’s toegevoegd: {count}',
   aiToolDelete: 'Alinea verwijderd · {text}',
   aiToolTable: 'Tabel toegevoegd · {rows} × {cols}',
+  aiToolImageSearchDone: 'Afbeeldingen zoeken "{query}" ({count} afbeeldingen)',
+  aiToolInsertImage: 'Afbeelding ingevoegd {what}',
   aiToolFormat: 'Opmaak gewijzigd · {text}',
   aiFmtBold: 'Vet',
   aiFmtItalic: 'Cursief',
@@ -143,4 +145,59 @@ export const nl = {
   aiReverted: 'Wijzigingen ongedaan gemaakt',
   aiRevertRefused:
     'Deze wijzigingen konden niet in één keer ongedaan worden gemaakt. Is het document daarna bewerkt, gebruik dan Ongedaan maken van de editor (Ctrl+Z).',
+  memoTitle: 'Opmerkingen',
+  memoOpen: 'Opmerkingen',
+  memoAdd: 'Opmerking toevoegen',
+  memoEmpty: 'Geen opmerkingen.',
+  memoNoBody: 'Geen tekst',
+  memoPage: 'blz. {page}',
+  memoUnknownAuthor: 'Onbekend',
+  memoReadOnly: 'Alleen-lezen',
+  memoReadOnlyFormatted:
+    'Deze opmerking mengt opmaak, dus de tekst kan hier niet worden gewijzigd.',
+  memoReadOnlyObject:
+    'Deze opmerking bevat een tabel, afbeelding of ander object, dus de tekst kan hier niet worden gewijzigd.',
+  memoReadOnlyPlace:
+    'Opmerkingen in kopteksten, voetteksten of noten kunnen hier niet worden gewijzigd.',
+  memoReadOnlyProtected:
+    'Opmerkingen in een met wachtwoord beveiligd document kunnen hier niet worden gewijzigd.',
+  memoEdit: 'Bewerken',
+  memoDelete: 'Verwijderen',
+  memoNewTitle: 'Opmerking toevoegen',
+  memoEditTitle: 'Opmerking bewerken',
+  memoAuthor: 'Auteur',
+  memoBody: 'Opmerking',
+  memoBodyPlaceholder: 'Schrijf een opmerking…',
+  memoSelectionLabel: 'Geselecteerde tekst: {text}',
+  memoCaretLabel: 'De opmerking wordt op de cursorpositie toegevoegd.',
+  memoSaveHint: 'Ctrl+Enter om op te slaan',
+  memoCancel: 'Annuleren',
+  memoErrNone:
+    'Er is geen plek om een opmerking toe te voegen. Selecteer tekst of plaats de cursor.',
+  memoErrMultiParagraph: 'Een opmerking kan alleen binnen één alinea worden toegevoegd.',
+  memoErrUnsupported:
+    'In kopteksten, voetteksten of noten kunnen geen opmerkingen worden toegevoegd.',
+  memoErrOverlap: 'Dit bereik heeft al een opmerking.',
+  memoErrProtected:
+    'Aan een met wachtwoord beveiligd document kunnen geen opmerkingen worden toegevoegd.',
+  memoErrEmpty: 'Schrijf iets in de opmerking.',
+  memoErrSave: 'De opmerking kon niet worden opgeslagen.',
+  memoErrDelete: 'De opmerking kon niet worden verwijderd.',
+  memoErrTooLong: 'De opmerking is te lang. Er passen maximaal 100.000 tekens in.',
+  memoErrLoad: 'De opmerkingenlijst kon niet worden gelezen.',
+  memoSaveBlocked: 'Sla de opmerking die u schrijft eerst op of annuleer die.',
+  memoRemoved: 'Opmerkingen met de tekst verwijderd: {count}. Druk op Ctrl+Z om ongedaan te maken.',
+  memoNotCopied: 'De opmerking is niet gekopieerd.',
+  memoLockedElsewhere:
+    'In een ander tabblad wordt een opmerking geschreven. Wacht tot die is opgeslagen of geannuleerd.',
+  memoContended:
+    'In een ander tabblad is ook een opmerkingenvenster geopend. Sla eerst op of annuleer in een van beide.',
+  memoUnsupportedBuild: 'Deze versie ondersteunt geen opmerkingen.',
+  memoHwpxLost:
+    'Niet naar het HWPX-bestand overgebrachte opmerkingen: {count}. Sla op als HWP of controleer het bestand in Hancom Hangul.',
+  aiToolMemos: 'Opmerkingen gecontroleerd: {count}',
+  aiMemoContext: 'Opmerkingen: {count}',
+  aiMemoApprovalTitle: 'Deze bewerking verwijdert {count} opmerking(en). Doorgaan?',
+  aiMemoApprovalKeep: 'Opmerkingen behouden',
+  aiMemoApprovalRemove: 'Doorgaan en verwijderen',
 } satisfies Record<keyof typeof zh, string>

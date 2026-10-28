@@ -35,6 +35,7 @@ import {
   snapshotRanges,
 } from './reconcile-ranges'
 import { readState, Refusal, refuse, type StateSheet, type StateTopic } from './reconcile-state'
+import { isResourceEntry } from './resource-entry'
 import { checkContentStructure } from './structure-check'
 import {
   everyTopic,
@@ -61,6 +62,8 @@ export interface TreeContext {
   idsInUse: () => Set<string>
   /** ids of relationships whose curve the user moved */
   reshaped?: readonly string[]
+  /** whether the archive holds this entry (a picture added since the last save included) */
+  entryExists?: (name: string) => boolean
 }
 
 export type TreeOutcome =
@@ -99,6 +102,8 @@ interface Run {
   /** every topic id of the sheet before anything changed */
   idsBefore: Set<string>
   ids: ReconcileIds
+  /** whether the archive holds an entry; absent means "do not check" */
+  entryExists?: (name: string) => boolean
   newId: (given: string) => string
   /** every topic of the state with the topic of the tree that now stands for it */
   pairs: { topic: XmindTopic; want: StateTopic }[]
@@ -116,6 +121,7 @@ function apply(sheet: XmindSheet, want: StateSheet, context: TreeContext): Recon
     shown: shownParts(sheet),
     idsBefore: topicIds(sheet),
     ids: { topics: new Map(), relationships: new Map() },
+    ...(context.entryExists ? { entryExists: context.entryExists } : {}),
     newId: idAllocator(context.idsInUse),
     pairs: [],
     ends: new Set(),
@@ -150,7 +156,7 @@ function settleTopics(run: Run): void {
     const topic = run.shown.topics.get(want.id) ?? createTopic(run, want)
     run.pairs.push({ topic, want })
     run.ends.add(topic.id)
-    writeValues(topic, want)
+    writeValues(topic, want, run)
     writeBranches(topic, want.children.map(settle))
     return topic
   }
@@ -169,7 +175,7 @@ function createTopic(run: Run, want: StateTopic): XmindTopic {
 }
 
 /** The values the editor edits, each written only when the state differs from what the view shows. */
-function writeValues(topic: XmindTopic, want: StateTopic): void {
+function writeValues(topic: XmindTopic, want: StateTopic, run: Run): void {
   if (text(topic.title) !== want.title) topic.title = want.title
   if ((topic.branch === 'folded') !== want.folded) {
     if (want.folded) topic.branch = 'folded'
@@ -194,6 +200,45 @@ function writeValues(topic: XmindTopic, want: StateTopic): void {
     if (want.link === null) delete topic.href
     else topic.href = want.link
   }
+  writeImage(topic, want, run)
+}
+
+/**
+ * The one picture a state may set: an entry under `resources/` that the archive
+ * holds. A state that still shows a web address or a path is left alone — the
+ * editor never loaded it, so it is not a change of the picture — and a
+ * reference to an entry the file does not have is refused rather than written
+ * as a picture nothing can show. Removing a picture is not a state either: the
+ * editor shows no way to do it, so an empty state value never deletes one.
+ */
+function writeImage(topic: XmindTopic, want: StateTopic, run: Run): void {
+  const image = want.image
+  const entry = image?.entryName
+  if (!image || !entry) return
+  const current = isRecord(topic.image) ? topic.image : null
+  const currentEntry =
+    current && typeof current.src === 'string' && current.src.startsWith('xap:')
+      ? current.src.slice('xap:'.length)
+      : null
+  if (
+    currentEntry === entry &&
+    (current?.width ?? null) === image.width &&
+    (current?.height ?? null) === image.height
+  ) {
+    // the reference is the one the file already had: nothing to write, even if
+    // the archive lacks the entry (a file another program left incomplete is
+    // not made worse by a state that shows it as it is)
+    return
+  }
+  if (!isResourceEntry(entry)) refuse(`the picture ${entry} is not an entry of the map file`)
+  // A file that lost the entry (or never had it) is not made worse by a state
+  // that names it: the picture is simply not applied, and the redraw from the
+  // view shows the topic without it.
+  if (run.entryExists && !run.entryExists(entry)) return
+  const next: JsonRecord = { src: `xap:${entry}` }
+  if (image.width !== null) next.width = image.width
+  if (image.height !== null) next.height = image.height
+  topic.image = next
 }
 
 function writeBranches(topic: XmindTopic, branches: XmindTopic[]): void {

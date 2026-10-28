@@ -25,6 +25,8 @@ export const de = {
   actionInstall: 'Installieren',
   actionLogin: 'Anmelden',
   actionLoginWindow: 'Browser nicht geöffnet?',
+  actionLoginWithCode: 'Zeigt der Browser einen Code?',
+  actionLoginBrowser: 'Stattdessen im Browser anmelden',
   actionRecheck: 'Erneut prüfen',
   actionAcceptMetered: 'Trotzdem verwenden',
   actionInstallHelp: 'Offizielle Installationsanleitung',
@@ -125,6 +127,8 @@ export const de = {
   signingInStalledNote:
     'Hat sich im Browser keine Anmeldeseite geöffnet, öffnen Sie mit der Schaltfläche unten das Anmeldefenster. Sind Sie im Browser noch bei der Anmeldung, schließen Sie sie besser dort ab: Die Schaltfläche bricht diese Anmeldung ab und beginnt von vorn.',
   actionLoginWindowOpen: 'Anmeldefenster öffnen',
+  loginUnfinishedNote:
+    'Die Anmeldung wurde nicht abgeschlossen. Wenn der Browser einen Code zeigt, muss er in das Anmeldefenster eingefügt werden: Öffnen Sie das Fenster und melden Sie sich dort erneut an. Ein zuvor angezeigter Code gilt nicht mehr.',
   loginWindowTitle: 'Anmeldung bei {provider}',
   loginWindowIntro:
     'Dies ist das Anmeldefenster des Programms {provider}. Der englische Text darunter stammt vom Programm {provider}.',

@@ -578,4 +578,7 @@ export const cs = {
   appOdtLabelObject: 'Objekt (zobrazí se v Hancom)',
   appOdtLabelNotice:
     'Objekty nakreslené jako popsané rámečky mohou vypadat jinak než v Hancom Office.',
+  appMergeSourceLoaded: 'Načteno {name} ({n} záznamů)',
+  appMergeWritten: 'Zapsáno dokumentů: {n}',
+  appMergeNothingToWrite: 'Není co zapsat',
 } satisfies Record<keyof typeof zh, string>

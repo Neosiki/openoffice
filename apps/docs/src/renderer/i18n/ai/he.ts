@@ -123,6 +123,7 @@ export const he = {
   aiSumAnalyzeMediaDone: 'המדיה נותחה',
   aiSumInsertImage: 'הוספת תמונה',
   aiSumInsertWebImage: 'הוספה של תמונה מהאינטרנט',
+  aiSumInsertAttachedImage: 'התמונה המצורפת נוספה',
   aiSumGenerateImage: 'יצירת תמונה',
   aiSumInsertedGenImage: 'הוספה של תמונה שנוצרה על ידי AI',
   aiSumUnknownTool: 'כלי לא ידוע',

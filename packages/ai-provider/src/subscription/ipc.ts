@@ -10,6 +10,7 @@ import {
   SUBSCRIPTION_INSTALL_URLS,
   SUBSCRIPTION_IPC_CHANNELS,
   type SubscriptionLaunchResult,
+  type SubscriptionLoginMode,
   type SubscriptionMeteredResult,
   type SubscriptionStatusMap,
 } from './contract'
@@ -36,7 +37,14 @@ export interface SubscriptionIpcMain {
 
 export interface SubscriptionIpcDeps {
   service: SubscriptionStatusService
-  launchLogin(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  /**
+   * start the CLI's own login; `mode` `window` asks for its window directly,
+   * for a code the browser shows (absent: the browser, window hidden)
+   */
+  launchLogin(
+    provider: AiSubscriptionProviderId,
+    mode?: SubscriptionLoginMode | undefined,
+  ): Promise<SubscriptionLaunchResult>
   /** run the CLI's own logout to its end */
   launchLogout(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   launchInstall(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
@@ -52,6 +60,16 @@ function providerOf(payload: unknown): AiSubscriptionProviderId | null {
   const provider =
     payload && typeof payload === 'object' ? (payload as { provider?: unknown }).provider : null
   return isSubscriptionProvider(provider) ? provider : null
+}
+
+/**
+ * The login mode a renderer asked for. Only `window` means anything: everything
+ * else (absent, `browser`, an unknown value) is the browser sign-in as always.
+ */
+function loginModeOf(payload: unknown): SubscriptionLoginMode | undefined {
+  const mode =
+    payload && typeof payload === 'object' ? (payload as { mode?: unknown }).mode : undefined
+  return mode === 'window' ? 'window' : undefined
 }
 
 function failure(error: unknown, provider: AiSubscriptionProviderId): SubscriptionLaunchResult {
@@ -106,8 +124,10 @@ export function registerSubscriptionIpc(
       return service.check(providers.length > 0 ? providers : undefined)
     },
     // a function per call, so a launcher replaced on `deps` later is the one that runs
-    [SUBSCRIPTION_IPC_CHANNELS.login]: (event, payload) =>
-      launch((provider) => deps.launchLogin(provider))(event, payload),
+    [SUBSCRIPTION_IPC_CHANNELS.login]: (event, payload) => {
+      const mode = loginModeOf(payload)
+      return launch((provider) => deps.launchLogin(provider, mode))(event, payload)
+    },
     // the provider is looked at again before the answer goes back, so the window that asked
     // already shows the outcome; a logout that failed may have signed the CLI out all the same.
     // A check of its own time: one already under way may have asked before the logout ended.
@@ -225,27 +245,42 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
   })
   const logins = new Map<AiSubscriptionProviderId, PendingLogin>()
   const platform = setup.platform ?? process.platform
-  const launchLogin = async (provider: AiSubscriptionProviderId) => {
+  const launchLogin = async (
+    provider: AiSubscriptionProviderId,
+    requested?: SubscriptionLoginMode,
+  ) => {
     const current = logins.get(provider)
     // the window is already open: it is where the user is now
     if (current?.mode === 'window') return { ok: true }
     // On Windows the first press signs in in the browser alone, with the CLI's window
-    // hidden; a press while that runs opens the window instead, for a code to paste.
-    // Elsewhere the CLI has no window to show, so a press while it runs changes nothing.
+    // hidden; a press while that runs, or a press that asks for the window, opens it
+    // instead, for a code the browser shows. Elsewhere the CLI has no window to show,
+    // so a press while it runs changes nothing and both are the same login.
     if (current && platform !== 'win32') return { ok: true }
-    const mode: AiSubscriptionSigningIn = current ? 'window' : 'browser'
+    const mode: AiSubscriptionSigningIn =
+      current || (requested === 'window' && platform === 'win32') ? 'window' : 'browser'
     current?.stop()
     const login: PendingLogin = { mode, stop: () => undefined }
     logins.set(provider, login)
+    // a login is starting: whatever the last one left behind no longer applies
+    service.setLoginUnfinished(provider, false)
     service.setSigningIn(provider, mode)
-    const end = (): void => {
+    const end = (unfinished: boolean): void => {
       clearTimeout(login.timer)
       // a login replaced by its window has ended, but the window has not
       if (logins.get(provider) !== login) return
       logins.delete(provider)
       service.setSigningIn(provider, undefined)
       // a check of its own time: one already under way may have asked before the login ended
-      void service.check([provider], { fresh: true }).catch(() => undefined)
+      void service
+        .check([provider], { fresh: true })
+        .then((statuses) => {
+          // it ended on its own and still no login: the browser may have handed back a
+          // code nobody pasted, so the card offers the window instead of repeating it
+          if (!unfinished || logins.has(provider)) return
+          if (statuses[provider]?.state === 'signed-out') service.setLoginUnfinished(provider, true)
+        })
+        .catch(() => undefined)
     }
     const result = await launchSubscriptionLogin(provider, {
       configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
@@ -259,13 +294,13 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
           login.timer.unref?.()
         }
       },
-      onExit: end,
+      onExit: () => end(true),
       spawn: setup.spawn,
       locate: setup.locate,
       platform,
       killTree: setup.killTree,
     })
-    if (!result.ok) end()
+    if (!result.ok) end(false)
     return result
   }
   return {

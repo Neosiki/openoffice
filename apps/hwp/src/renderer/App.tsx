@@ -5,7 +5,6 @@ import type { Params } from '@genoffice/i18n'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
-  presentationKeyOf,
   skillTemplateText,
   templateDocumentOf,
   useAutoSavePref,
@@ -14,10 +13,18 @@ import {
 } from '@genoffice/ui'
 import { HwpAiDock } from './ai/AiDock'
 import { createAgentBridge } from './ai/agent-bridge'
-import { DIRTY_EVENT, FILE_COMMAND_EVENT } from '../../studio-plugin/agent-plugin.mjs'
+import {
+  DIRTY_EVENT,
+  FILE_COMMAND_EVENT,
+  MEMO_NOT_COPIED_EVENT,
+  MEMO_REMOVED_EVENT,
+} from '../../studio-plugin/agent-plugin.mjs'
 import blankHwpUrl from './assets/blank.hwp?url'
 import { useI18n, type StringKey } from './i18n/locale'
+import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
+import { MemoSide, MemoToggle, memoPanelInitiallyOpen, rememberMemoPanelOpen } from './MemoSide'
 import { openDocumentsDroppedOn } from './editor-drop'
+import { hwpPresentationKeyOf } from './presentation-keys'
 import { gatherPrintJob } from './print-flow'
 import {
   RECOVERY_TICK_MS,
@@ -60,8 +67,10 @@ const DIRTY_POLL_MS = 2000
 const ARRIVAL_POLL_MS = 1000
 /** How long a confirmation stays up; errors stay until dismissed. */
 const INFO_NOTICE_MS = 8000
-/** Where the open / collapsed state of the AI panel is remembered. */
+/** Where the open / collapsed state of the AI dock is remembered. */
 const AI_OPEN_KEY = 'hwpapp.showAi'
+/** A pause after typing before the memo panel is told the document may have changed. */
+const MEMO_TICK_MS = 500
 
 const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
 /** the name the editor holds a new document under; the user names the file at its first save */
@@ -88,6 +97,21 @@ function savePortOf(editor: RhwpEditor): SaveEditorPort {
     exportHwp: () => editor.exportHwp(),
     exportHwpx: () => editor.exportHwpx(),
     exportHwpVerify: () => editor.exportHwpVerify(),
+    listMemos: async () => {
+      const listed = await agent.listMemos()
+      return listed.memos.map((memo) => ({
+        author: memo.author,
+        date: memo.date,
+        text: memo.text,
+        place: memo.place,
+        sectionIndex: memo.sectionIndex,
+        paraIndex: memo.paraIndex,
+        startCharIdx: memo.startCharIdx,
+        endCharIdx: memo.endCharIdx,
+        path: memo.path,
+      }))
+    },
+    setMemoLock: (locked) => agent.setMemoLock(locked),
     measureTabs: async (spots) => (await agent.measureTabs(spots)).tabs,
     notifySaved: (fileName) => editor.notifySaved(fileName),
   }
@@ -105,12 +129,22 @@ export default function App() {
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
-  /** F5: the document alone in fullscreen, with the editor's own chrome hidden */
+  /** Ctrl+F5: the document alone in fullscreen, with the editor's own chrome hidden */
   const [presenting, setPresenting] = useState(false)
   const presentingRef = useRef(false)
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
+  /** the memo column beside the document: out or not, independent of the AI dock */
+  const [memoOpen, setMemoOpen] = useState(memoPanelInitiallyOpen)
+  /** a memo editor is open here or in another tab: save, close and quit must wait */
+  const [memoBlocked, setMemoBlocked] = useState(false)
+  const memoBlockedRef = useRef(false)
+  memoBlockedRef.current = memoBlocked
+  /** bumped when the document may have changed: the memo list reads it again */
+  const [docTick, setDocTick] = useState(0)
+  /** bumped by the editor's Insert > Memo menu: the memo panel opens its add dialog */
+  const [memoInsertTick, setMemoInsertTick] = useState(0)
   const [autoSave, setAutoSave] = useAutoSavePref('hwpapp.autoSave', window.hwpApi)
   /** the file the document is in: the AI conversation is kept with it */
   const [filePath, setFilePath] = useState<string | null>(null)
@@ -136,6 +170,10 @@ export default function App() {
   useEffect(() => {
     rememberAiPanelOpen(AI_OPEN_KEY, aiOpen)
   }, [aiOpen])
+
+  useEffect(() => {
+    rememberMemoPanelOpen(memoOpen)
+  }, [memoOpen])
 
   // boot the editor once and load the file queued for this view
   useEffect(() => {
@@ -256,11 +294,26 @@ export default function App() {
       }
     }
     const frame = editor.element.contentWindow
+    /** one bump after the typing stops, not one per key: the memo list reads it again */
+    let memoTick: ReturnType<typeof setTimeout> | null = null
     const onChange = (event: Event) => {
       changes += 1
+      // the memo list may have gained or lost a memo (a paste adds one)
+      if (memoTick) clearTimeout(memoTick)
+      memoTick = setTimeout(() => setDocTick((tick) => tick + 1), MEMO_TICK_MS)
       report((event as CustomEvent<unknown>).detail === true || restoredRef.current)
     }
+    // one-time news the plugin sends when an edit took memos away or a paste left them behind
+    const onMemoEvent = (event: Event) => {
+      const mapped = memoNoticeOf(event.type, (event as CustomEvent<unknown>).detail)
+      if (!mapped) return
+      setNotice({ tone: 'info', key: mapped.key, params: mapped.params })
+      // the list changed even if the dirty notice for the same edit was missed
+      setDocTick((tick) => tick + 1)
+    }
     frame?.addEventListener(DIRTY_EVENT, onChange)
+    frame?.addEventListener(MEMO_REMOVED_EVENT, onMemoEvent)
+    frame?.addEventListener(MEMO_NOT_COPIED_EVENT, onMemoEvent)
     // an edit before the plugin is up has no event: ask once it is
     void agentBridge
       .foreignChanges()
@@ -269,13 +322,34 @@ export default function App() {
     const timer = setInterval(() => void check(), DIRTY_POLL_MS)
     return () => {
       clearInterval(timer)
+      if (memoTick) clearTimeout(memoTick)
       frame?.removeEventListener(DIRTY_EVENT, onChange)
+      frame?.removeEventListener(MEMO_REMOVED_EVENT, onMemoEvent)
+      frame?.removeEventListener(MEMO_NOT_COPIED_EVENT, onMemoEvent)
     }
   }, [phase, agentBridge])
+
+  /** Save, close and quit wait for the memo editor (spec 3.2): say so, do not discard its text. */
+  const showMemoBlocked = useCallback(() => {
+    setNotice({ tone: 'error', key: 'memoSaveBlocked' })
+  }, [])
+
+  // main refuses a save, close or quit while a memo editor is open; say why, do not discard
+  useEffect(() => window.hwpApi.onMemoBlocked(showMemoBlocked), [showMemoBlocked])
+
+  const showMemoNotice = useCallback((notice: MemoNotice) => {
+    setNotice({ tone: notice.tone ?? 'info', key: notice.key, params: notice.params })
+  }, [])
 
   const save = useCallback(
     async (mode: SaveMode, automatic = false): Promise<boolean> => {
       const editor = editorRef.current
+      if (!editor) return false
+      // a memo editor is open: its text is not in the document yet; an autosave waits quietly
+      if (memoBlockedRef.current) {
+        if (!automatic) showMemoBlocked()
+        return false
+      }
       if (!editor) return false
       // a manual save waits for an autosave already running; an automatic one lets the
       // save in flight stand for it (no second export, and no backoff)
@@ -297,7 +371,15 @@ export default function App() {
           copierRef.current?.saved()
           setFilePath(outcome.path)
           const backup = outcome.backupPath ? { name: fileNameOf(outcome.backupPath) } : null
-          if (outcome.tailsLost) {
+          if (outcome.memosLost) {
+            // stays until dismissed: the file is written, but some memos are not in it
+            setNotice({
+              tone: 'error',
+              key: 'memoHwpxLost',
+              params: { count: outcome.memosLost },
+              ...(backup ? { detail: t('backupKept', backup) } : {}),
+            })
+          } else if (outcome.tailsLost) {
             // stays until dismissed: the file is written, but may not open in Hangul
             setNotice({
               tone: 'error',
@@ -339,7 +421,7 @@ export default function App() {
         if (savingDoneRef.current === done) savingDoneRef.current = null
       }
     },
-    [t],
+    [t, showMemoBlocked],
   )
 
   // the embedded editor drops its own Save and Print, so its File menu gets the app's: they
@@ -362,8 +444,17 @@ export default function App() {
         window.hwpApi.requestFileCommand(command)
       }
     }
+    // the editor's Insert > Memo menu (T4): bring the memo column out and start adding
+    const onMemoInsert = () => {
+      setMemoOpen(true)
+      setMemoInsertTick((tick) => tick + 1)
+    }
     frame.addEventListener(FILE_COMMAND_EVENT, onCommand)
-    return () => frame.removeEventListener(FILE_COMMAND_EVENT, onCommand)
+    frame.addEventListener(MEMO_INSERT_EVENT, onMemoInsert)
+    return () => {
+      frame.removeEventListener(FILE_COMMAND_EVENT, onCommand)
+      frame.removeEventListener(MEMO_INSERT_EVENT, onMemoInsert)
+    }
   }, [phase, agentBridge, t])
 
   // crash-recovery copies while the document has unsaved changes; typing never waits on one
@@ -436,6 +527,12 @@ export default function App() {
   useEffect(() => {
     const ready = () => phase === 'ready'
     const offSave = window.hwpApi.onSaveRequest((mode) => {
+      // a memo editor is open: do not discard its text, and tell the user why not
+      if (memoBlockedRef.current) {
+        showMemoBlocked()
+        window.hwpApi.abortSave()
+        return
+      }
       // the main process is waiting on this request; decline it rather than leave it hanging
       if (!ready()) {
         window.hwpApi.abortSave()
@@ -457,6 +554,11 @@ export default function App() {
       })()
     })
     const offClose = window.hwpApi.onCloseSaveRequest(() => {
+      if (memoBlockedRef.current) {
+        showMemoBlocked()
+        window.hwpApi.sendCloseSaveResult(false)
+        return
+      }
       if (!ready()) {
         window.hwpApi.sendCloseSaveResult(false)
         return
@@ -476,7 +578,7 @@ export default function App() {
       offSave()
       offClose()
     }
-  }, [phase, save])
+  }, [phase, save, showMemoBlocked])
 
   // PDF and print asked for by the menu and Ctrl+P: the pages are gathered here, and the
   // main process makes the PDF or opens the print dialog
@@ -520,6 +622,7 @@ export default function App() {
       shouldSave: async () => {
         if (
           savingRef.current ||
+          memoBlockedRef.current ||
           printingRef.current ||
           presentingRef.current ||
           copierRef.current?.busy()
@@ -564,8 +667,9 @@ export default function App() {
     [],
   )
 
-  // F5: the document alone in fullscreen; the editor's menu/toolbar/status bar hide
-  // with its own chrome API and come back exactly as they were when the show ends.
+  // Ctrl+F5: the document alone in fullscreen; F5 and Shift+F5 stay with Hancom's
+  // cell blocks. The editor's menu/toolbar/status bar hide with its own chrome API
+  // and come back exactly as they were when the show ends.
   useEffect(() => {
     const enter = async (): Promise<void> => {
       const editor = editorRef.current
@@ -595,13 +699,13 @@ export default function App() {
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     }
     const onKey = (event: KeyboardEvent): void => {
-      const action = presentationKeyOf(event, presentingRef.current)
+      const action = hwpPresentationKeyOf(event, presentingRef.current)
       if (!action) return
       event.preventDefault()
-      if (action === 'exit') {
-        event.stopPropagation()
-        exit()
-      } else void enter()
+      // the editor reads any F5 as a cell block: a key the show takes is not its key
+      event.stopPropagation()
+      if (action === 'exit') exit()
+      else void enter()
     }
     // The document lives inside rhwp's own frame, so keys pressed there never
     // reach this window: listen on both. A cross-origin frame simply gets none.
@@ -674,6 +778,7 @@ export default function App() {
     <div className={`hwp-app${presenting ? ' hwp-presenting' : ''}`} data-phase={phase}>
       {phase === 'ready' && (
         <div className="hwp-topbar">
+          <MemoToggle open={memoOpen} onToggle={() => setMemoOpen((open) => !open)} />
           <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
             <span className="autosave-knob" />
             <span className="autosave-text">{t('autoSave')}</span>
@@ -686,7 +791,8 @@ export default function App() {
         </div>
       )}
       <div className="app-main">
-        {/* the assistant works on an open document, so it appears with one */}
+        {/* the AI dock, then the memo column beside the document (as the PDF editor's notes);
+            both can be out at once, and both need an open document */}
         {phase === 'ready' && (
           <HwpAiDock
             open={aiOpen}
@@ -694,6 +800,17 @@ export default function App() {
             bridge={agentBridge}
             filePath={filePath}
             templateDocument={templateDocument}
+          />
+        )}
+        {phase === 'ready' && (
+          <MemoSide
+            open={memoOpen}
+            bridge={agentBridge}
+            changeTick={docTick}
+            insertTick={memoInsertTick}
+            onCollapse={() => setMemoOpen(false)}
+            onModalOpenChange={setMemoBlocked}
+            onNotice={showMemoNotice}
           />
         )}
         <div className="hwp-stage">

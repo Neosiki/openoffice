@@ -158,7 +158,9 @@ jobs:
     # 22.04, not -latest: 24.04's AppArmor hardening blocks Electron renderer
     # spawn under xvfb even with --no-sandbox and the userns sysctl lifted
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    # A cold font install took 24m in #124; leave room for the full serial
+    # Electron suite as well as setup. Individual test timeouts stay unchanged.
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

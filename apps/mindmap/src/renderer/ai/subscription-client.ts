@@ -13,6 +13,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
   SubscriptionConnectHelpPath,
+  SubscriptionLoginMode,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import type { MindmapApi } from '../../shared/ipc'
@@ -28,7 +29,8 @@ export interface SubscriptionConnection {
   readonly update: (provider: AiSubscriptionProviderId) => void
   /** end a sign-in the app started */
   readonly cancelLogin: (provider: AiSubscriptionProviderId) => void
-  readonly login: (provider: AiSubscriptionProviderId) => void
+  /** `window`: the CLI's own window, where a code the browser shows is pasted */
+  readonly login: (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) => void
   readonly recheck: (provider: AiSubscriptionProviderId) => void
   readonly acceptMetered: (provider: AiSubscriptionProviderId) => void
   readonly openInstallHelp: (provider: AiSubscriptionProviderId) => void
@@ -106,9 +108,15 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
+    (
+      kind: 'install' | 'login' | 'update',
+      provider: AiSubscriptionProviderId,
+      mode?: SubscriptionLoginMode,
+    ) => {
       setBusy(true)
-      void attemptSubscription((api) => api[kind](provider))
+      void attemptSubscription((api) =>
+        kind === 'login' && mode ? api.login(provider, mode) : api[kind](provider),
+      )
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
@@ -135,7 +143,8 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     [launch],
   )
   const login = useCallback(
-    (provider: AiSubscriptionProviderId) => launch('login', provider),
+    (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) =>
+      launch('login', provider, mode),
     [launch],
   )
   const update = useCallback(

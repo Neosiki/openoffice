@@ -21,11 +21,13 @@ import type { SaveDiskState } from '@genoffice/electron-utils'
 import { hwpToText } from '@genoffice/file-parse'
 import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
+import { registerHwpImageIpc } from './ai-image'
 import { atomicWriteFile } from './atomic-write'
 import { badJob, printJobToPdf, printJobToPrinter } from './print-document'
 import { tm } from './dialog-strings'
 import { fieldKindsOf } from './field-kinds'
 import type { FieldKinds } from './field-kinds'
+import { lostMemoCountOf } from './memos'
 import {
   hwpRecoveryBeforeSave,
   hwpRecoveryDontSave,
@@ -51,6 +53,8 @@ import type {
   CommitSaveResult,
   HwpFormat,
   MeasuredTab,
+  MemoPathStep,
+  MemoSnapshot,
   PrintJob,
   PrintMode,
   PrintResult,
@@ -94,6 +98,13 @@ const savePathByWc = new Map<number, string>()
 const untitledCopyByWc = new Map<number, { name: string; format: HwpFormat }>()
 /** Unsaved-changes flags mirrored from the renderer; drives the save prompt before closing a tab/window */
 const dirtyByWc = new Set<number>()
+/**
+ * Views whose memo editor is open. The renderer owns the editor; this copy is what main
+ * checks before a save, close or quit, including a clean tab that would otherwise not ask.
+ */
+const memoModalByWc = new Set<number>()
+/** every HWP view this module set up (the memo lock is only taken from one of these) */
+const hwpViews = new Set<number>()
 const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 /** Resolvers for menu- and shortcut-triggered saves, settled when the renderer's save ends */
 const saveWaiters = new Map<number, (ok: boolean) => void>()
@@ -196,11 +207,39 @@ export function hwpFileRenamed(contents: WebContents, oldPath: string, newPath: 
  * Save / Don't Save / Cancel. On Save, ask the renderer to export + write
  * and await the result; a canceled or failed save keeps the tab open.
  */
+/** Whether this view has a memo editor open (the shell's close and quit guards ask). */
+export function hwpMemoModalOpen(webContentsId: number): boolean {
+  return memoModalByWc.has(webContentsId)
+}
+
 export async function requestHwpClose(
   contents: WebContents,
   parent?: BrowserWindow | null,
 ): Promise<boolean> {
-  if (!dirtyByWc.has(contents.id) || contents.isDestroyed()) return true
+  if (contents.isDestroyed()) return true
+  // a clean tab can still hold memo text that has not reached the document yet. Main asks
+  // itself instead of leaving it to the page: a page that hangs with the memo editor open
+  // must not keep its tab, and the app, from closing.
+  if (memoModalByWc.has(contents.id)) {
+    const memoOptions = {
+      type: 'warning' as const,
+      message: tm('closeMemoMsg'),
+      detail: tm('closeMemoDetail'),
+      buttons: [tm('btnDiscardClose'), tm('btnCancel')],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    }
+    const { response } =
+      parent && !parent.isDestroyed()
+        ? await dialog.showMessageBox(parent, memoOptions)
+        : await dialog.showMessageBox(memoOptions)
+    if (response !== 0) return false
+    // the memo text and any unsaved changes are given up: so is their recovery copy
+    if (!contents.isDestroyed() && dirtyByWc.has(contents.id)) hwpRecoveryDontSave(contents)
+    return true
+  }
+  if (!dirtyByWc.has(contents.id)) return true
   const options = {
     type: 'warning' as const,
     message: tm('closeUnsavedMsg'),
@@ -258,6 +297,11 @@ function pdfName(wcId: number): string {
 
 export function requestHwpSave(contents: WebContents, mode: SaveMode): Promise<boolean> {
   if (contents.isDestroyed()) return Promise.resolve(false)
+  // a memo editor is open: its text is not in the document yet, so do not save over it
+  if (memoModalByWc.has(contents.id)) {
+    contents.send(HWP_CHANNELS.memoBlocked)
+    return Promise.resolve(false)
+  }
   // one save at a time per view: a request arriving while one is in flight is declined
   if (saveWaiters.has(contents.id)) return Promise.resolve(false)
   return new Promise<boolean>((resolve) => {
@@ -344,6 +388,73 @@ function settleSave(wcId: number, ok: boolean): void {
   waiter?.(ok)
 }
 
+function memoPathOf(value: unknown): MemoPathStep[] | null {
+  if (!Array.isArray(value)) return null
+  const steps: MemoPathStep[] = []
+  for (const step of value) {
+    if (!step || typeof step !== 'object') return null
+    const raw = step as Record<string, unknown>
+    if (
+      (raw.type !== 'cell' && raw.type !== 'textbox') ||
+      typeof raw.controlIndex !== 'number' ||
+      typeof raw.paraIndex !== 'number'
+    ) {
+      return null
+    }
+    steps.push({
+      type: raw.type,
+      controlIndex: raw.controlIndex,
+      ...(typeof raw.cellIndex === 'number' ? { cellIndex: raw.cellIndex } : {}),
+      paraIndex: raw.paraIndex,
+    })
+  }
+  return steps
+}
+
+/** The editor's memo list, or null when it is not the shape main can compare. */
+function memoSnapshotsOf(value: unknown): MemoSnapshot[] | null {
+  if (!Array.isArray(value)) return null
+  const memos: MemoSnapshot[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null
+    const raw = item as Record<string, unknown>
+    if (
+      typeof raw.author !== 'string' ||
+      typeof raw.text !== 'string' ||
+      typeof raw.place !== 'string' ||
+      (raw.date !== null && typeof raw.date !== 'string')
+    ) {
+      return null
+    }
+    memos.push({
+      author: raw.author,
+      date: raw.date,
+      text: raw.text,
+      place: raw.place,
+      sectionIndex: typeof raw.sectionIndex === 'number' ? raw.sectionIndex : null,
+      paraIndex: typeof raw.paraIndex === 'number' ? raw.paraIndex : null,
+      startCharIdx: typeof raw.startCharIdx === 'number' ? raw.startCharIdx : null,
+      endCharIdx: typeof raw.endCharIdx === 'number' ? raw.endCharIdx : null,
+      path: memoPathOf(raw.path),
+    })
+  }
+  return memos
+}
+
+function commitOptionsOf(raw: unknown): {
+  auto: boolean
+  memos: MemoSnapshot[] | null | undefined
+} {
+  const options = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const memos =
+    options.memos === undefined
+      ? undefined
+      : options.memos === null
+        ? null
+        : memoSnapshotsOf(options.memos)
+  return { auto: options.auto === true, memos }
+}
+
 let ipcRegistered = false
 
 function registerHwpIpc(): void {
@@ -351,8 +462,22 @@ function registerHwpIpc(): void {
   if (ipcRegistered) return
   ipcRegistered = true
   registerHwpAttachmentIpc()
+  // the AI panel's pictures: search result or generated file → bytes for the plugin
+  registerHwpImageIpc({
+    filePathOf: (wcId) => savePathByWc.get(wcId) ?? openPathByWc.get(wcId) ?? null,
+  })
   installHwpRecovery(recoveryHost)
   registerHwpRecoveryIpc()
+
+  // the memo editor is renderer state; main keeps only whether this view has one open, so
+  // save, close and quit can wait for it even when the document itself is clean
+  ipcMain.on(HWP_CHANNELS.memoModalOpen, (e, open: unknown) => {
+    // only an HWP view may hold the lock: its own teardown is what clears it again
+    if (!hwpViews.has(e.sender.id)) return
+    if (open === true) memoModalByWc.add(e.sender.id)
+    else memoModalByWc.delete(e.sender.id)
+  })
+  ipcMain.handle(HWP_CHANNELS.memoModalState, () => memoModalByWc.size > 0)
 
   ipcMain.handle(HWP_CHANNELS.consumePending, (e) => {
     noteHwpPathConsumed(e.sender.id)
@@ -441,6 +566,12 @@ function registerHwpIpc(): void {
   ipcMain.handle(HWP_CHANNELS.beginSave, async (e, mode: unknown): Promise<BeginSaveResult> => {
     const wcId = e.sender.id
     pendingSaveByWc.delete(wcId)
+    // a memo editor's text is not in the document yet: no dialog, no save
+    if (memoModalByWc.has(wcId)) {
+      e.sender.send(HWP_CHANNELS.memoBlocked)
+      settleSave(wcId, false)
+      return { ok: false, error: 'hwp: a memo editor is open', reason: 'memo' }
+    }
     // before any dialog: under no name and in no format
     if (trackedByWc.has(wcId)) {
       settleSave(wcId, false)
@@ -499,8 +630,9 @@ function registerHwpIpc(): void {
 
   ipcMain.handle(
     HWP_CHANNELS.commitSave,
-    async (e, data: unknown, tabs: unknown, auto?: unknown): Promise<CommitSaveResult> => {
+    async (e, data: unknown, tabs: unknown, options?: unknown): Promise<CommitSaveResult> => {
       const wcId = e.sender.id
+      const saveOptions = commitOptionsOf(options)
       const pending = pendingSaveByWc.get(wcId)
       pendingSaveByWc.delete(wcId)
       const done = (result: CommitSaveResult): CommitSaveResult => {
@@ -524,7 +656,7 @@ function registerHwpIpc(): void {
         const recorded = recordedDiskState(wcId, target)
         // the app's 30-second autosave sends auto: true, so a copy-pair conflict
         // stands down quietly instead of asking
-        if (auto === true) {
+        if (saveOptions.auto) {
           if (await shouldDeferAutoSave(target, recorded)) {
             return done({ ok: false, error: EXTERNAL_MODIFIED })
           }
@@ -552,6 +684,27 @@ function registerHwpIpc(): void {
           console.warn(
             `hwp: master pages or memos were not put back on save (${fixed.tailsSkipped})`,
           )
+        }
+        // HWPX has no section-tail repair, so a memo the engine cannot write would vanish
+        // silently. Read the opened file (not this save's target: a Save As may change it)
+        // and the written bytes, and report only what is actually gone. This must finish
+        // before the write so a verification failure cannot stop the save.
+        let memosLost = 0
+        if (pending.format === 'hwpx' && saveOptions.memos !== undefined) {
+          const opened = savePathByWc.get(wcId)
+          let original: Uint8Array | null = null
+          if (opened && hwpFormatOfPath(opened) === 'hwpx') {
+            try {
+              original = await readFile(opened)
+            } catch {
+              original = null
+            }
+          }
+          memosLost = await lostMemoCountOf({
+            saved: bytes,
+            original,
+            memos: saveOptions.memos,
+          })
         }
         const recoveryBefore = hwpRecoveryBeforeSave(wcId)
         const written = writtenByWc.get(wcId) ?? new Set<string>()
@@ -582,6 +735,7 @@ function registerHwpIpc(): void {
           path: target,
           ...(backupPath ? { backupPath } : {}),
           ...(tailsLost ? { tailsLost: true as const } : {}),
+          ...(memosLost > 0 ? { memosLost } : {}),
         })
       } catch (err) {
         return done({ ok: false, error: err instanceof Error ? err.message : String(err) })
@@ -755,6 +909,7 @@ function grantAndTrack(
   options: HwpViewOptions = {},
 ): void {
   const wcId = wc.id
+  hwpViews.add(wcId)
   // first: its close settles the recovery copy while the view's state is still here
   trackHwpRecovery(wc)
   if (openPath && existsSync(openPath)) {
@@ -784,6 +939,8 @@ function grantAndTrack(
     savePathByWc.delete(wcId)
     untitledCopyByWc.delete(wcId)
     dirtyByWc.delete(wcId)
+    memoModalByWc.delete(wcId)
+    hwpViews.delete(wcId)
     pendingSaveByWc.delete(wcId)
     writtenByWc.delete(wcId)
     tailsByWc.delete(wcId)
@@ -794,6 +951,12 @@ function grantAndTrack(
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)
     settleSave(wcId, false)
+  })
+  // a dead renderer cannot close its memo editor; do not keep save, close and quit blocked
+  wc.on('render-process-gone', () => memoModalByWc.delete(wcId))
+  // nor can a page that reloads: the new page starts without one
+  wc.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) memoModalByWc.delete(wcId)
   })
 }
 

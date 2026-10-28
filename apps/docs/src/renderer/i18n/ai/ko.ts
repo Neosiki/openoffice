@@ -126,6 +126,7 @@ export const ko = {
   aiSumAnalyzeMediaDone: '미디어 분석 완료',
   aiSumInsertImage: '이미지 삽입',
   aiSumInsertWebImage: '웹 이미지 삽입',
+  aiSumInsertAttachedImage: '첨부한 이미지를 넣었습니다',
   aiSumGenerateImage: '이미지 생성',
   aiSumInsertedGenImage: 'AI 생성 이미지 삽입',
   aiSumUnknownTool: '알 수 없는 도구',

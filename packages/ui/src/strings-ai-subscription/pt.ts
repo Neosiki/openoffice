@@ -23,6 +23,8 @@ export const pt = {
   actionInstall: 'Instalar',
   actionLogin: 'Entrar',
   actionLoginWindow: 'O navegador não abriu?',
+  actionLoginWithCode: 'O navegador mostrou um código?',
+  actionLoginBrowser: 'Entrar no navegador',
   actionRecheck: 'Verificar novamente',
   actionAcceptMetered: 'Usar mesmo assim',
   actionInstallHelp: 'Guia oficial de instalação',
@@ -121,6 +123,8 @@ export const pt = {
   signingInStalledNote:
     'Se nenhuma página de login abriu no navegador, abra a janela de login com o botão abaixo. Se você ainda está entrando pelo navegador, termine por lá: o botão interrompe esse login e recomeça do início.',
   actionLoginWindowOpen: 'Abrir a janela de login',
+  loginUnfinishedNote:
+    'O início de sessão não terminou. Se o navegador mostrou um código, é preciso colá-lo na janela de início de sessão: abra a janela e inicie sessão novamente ali. Um código mostrado antes já não funciona.',
   loginWindowTitle: 'Login em {provider}',
   loginWindowIntro:
     'Esta é a janela de login do programa {provider}. O texto em inglês abaixo vem do programa {provider}.',

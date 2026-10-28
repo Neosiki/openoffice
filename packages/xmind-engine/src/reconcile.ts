@@ -65,6 +65,7 @@ export function reconcileSheet(
   const outcome = reconcileTree(sheet, state, {
     idsInUse: () => idsInUse(document.sheets),
     reshaped: options.reshapedRelationships,
+    entryExists: (name) => document.hasEntry(name),
   })
   if (!outcome.ok) return { ok: false, problem: outcome.problem, view: sheetToView(sheet, index) }
   if (outcome.changed) {

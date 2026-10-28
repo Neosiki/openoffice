@@ -70,7 +70,15 @@ export interface MapToolResult {
   isError?: boolean
   mutated?: boolean
   /** for the activity line: counts and names the panel puts into words */
-  detail?: { done?: number; total?: number; sheets?: number; title?: string }
+  detail?: {
+    done?: number
+    total?: number
+    sheets?: number
+    title?: string
+    /** image_search: the words searched and how many pictures came back */
+    query?: string
+    count?: number
+  }
 }
 
 const fail = (output: string): MapToolResult => ({ output, isError: true })
@@ -586,6 +594,89 @@ export async function editMap(
     isError: done === 0,
     mutated: done > 0,
     detail: { done, total: edits.length },
+  }
+}
+
+// ---- pictures ----
+
+/** A picture the tool downloaded or generated, and the format its bytes really are. */
+export interface PictureBytes {
+  bytes: Uint8Array
+  ext: 'png' | 'jpg' | 'gif'
+}
+
+/** The topic with this id in a view, or null. */
+function topicInView(topic: ViewTopic, id: string): ViewTopic | null {
+  if (topic.id === id) return topic
+  for (const child of topic.children) {
+    const hit = topicInView(child, id)
+    if (hit) return hit
+  }
+  return null
+}
+
+/**
+ * Puts a picture the map file now holds onto one topic, as one step the user
+ * can undo. The bytes were added to the document by the caller (the entry
+ * exists before this runs); the edit itself goes the way every other edit
+ * does: through the library tree, `controller.edit` and reconciling.
+ *
+ * The picture is read back from the view afterwards: an edit the reconciler
+ * did not take (a changed topic id, a refused state) is reported failed rather
+ * than counted as done.
+ */
+export async function setTopicImage(
+  host: MapAiHost,
+  input: { sheet?: unknown; topicId?: unknown },
+  picture: PictureBytes,
+  turn: MapTurn | null,
+): Promise<MapToolResult> {
+  const topicId = textArg(input.topicId)
+  if (topicId === null || topicId.trim() === '') return fail('topicId must name a topic of the map')
+  host.flush()
+  const where = sheetOf(host, input.sheet)
+  if ('error' in where) return fail(where.error)
+  const { session, key, position } = where
+  const controller = await controllerFor(host, key)
+  if (!controller) return fail(`sheet ${position} could not be opened for editing`)
+  controller.commitEdit()
+  controller.flush()
+
+  const data = JSON.parse(controller.mind.getDataString()) as { nodeData: MapNode }
+  const found = locate(data.nodeData, topicId)
+  if (!found) return fail(`there is no topic with id "${topicId}" on sheet ${position}`)
+
+  // the entry exists before the edit, so the reconciler can verify the
+  // reference; an edit that does not land takes the entry back out again
+  const entryName = session.addPicture(picture.bytes, picture.ext)
+  try {
+    found.node.metadata = {
+      ...metaOf(found.node),
+      image: {
+        src: `xap:${entryName}`,
+        entryName,
+        width: null,
+        height: null,
+      },
+    }
+    turn?.noteEdit(session, key)
+    controller.edit((root) => takeTree(root, data.nodeData))
+
+    const shown = topicInView(session.view(key).root, topicId)
+    if (shown?.image?.entryName !== entryName) {
+      session.removePicture(entryName)
+      return fail(
+        `the picture was not applied to topic "${topicId}"; the map is unchanged. Check the id with read_map and retry.`,
+      )
+    }
+  } catch (error) {
+    session.removePicture(entryName)
+    throw error
+  }
+  return {
+    output: `Put the picture on topic ${topicId} of sheet ${position}. It is saved inside the map file (${entryName}); the user can undo this step.`,
+    mutated: true,
+    detail: { done: 1, total: 1 },
   }
 }
 

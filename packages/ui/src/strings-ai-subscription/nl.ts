@@ -24,6 +24,8 @@ export const nl = {
   actionInstall: 'Installeren',
   actionLogin: 'Aanmelden',
   actionLoginWindow: 'Browser niet geopend?',
+  actionLoginWithCode: 'Toont de browser een code?',
+  actionLoginBrowser: 'In de browser aanmelden',
   actionRecheck: 'Opnieuw controleren',
   actionAcceptMetered: 'Toch gebruiken',
   actionInstallHelp: 'Officiële installatiehandleiding',
@@ -122,6 +124,8 @@ export const nl = {
   signingInStalledNote:
     'Is er in je browser geen aanmeldpagina geopend, open dan het aanmeldvenster met de knop hieronder. Ben je nog bezig met aanmelden in de browser, maak het dan daar af: de knop stopt die aanmelding en begint helemaal opnieuw.',
   actionLoginWindowOpen: 'Aanmeldvenster openen',
+  loginUnfinishedNote:
+    'Het aanmelden is niet afgerond. Als de browser een code toont, moet die in het aanmeldvenster worden geplakt: open het venster en meld daar opnieuw aan. Een eerder getoonde code werkt niet meer.',
   loginWindowTitle: 'Aanmelden bij {provider}',
   loginWindowIntro:
     'Dit is het aanmeldvenster van het programma {provider}. De Engelse tekst hieronder komt van het programma {provider}.',

@@ -6,6 +6,7 @@
 import type {
   AiSubscriptionProviderId,
   SubscriptionLaunchResult,
+  SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionConnectHelpPath,
   SubscriptionStatusMap,
@@ -26,7 +27,10 @@ export interface SubscriptionApi {
   /** look again (both providers when none is named) and answer when done */
   recheck(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
   /** open the program's own sign-in (also the way to sign in with another account) */
-  login(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
+  login(
+    provider: AiSubscriptionProviderId,
+    mode?: SubscriptionLoginMode,
+  ): Promise<SubscriptionLaunchResult>
   /**
    * run the program's own sign-out; the answer comes after the status was
    * checked again. It signs the program out for the whole PC, so the screen

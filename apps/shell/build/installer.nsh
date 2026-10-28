@@ -155,6 +155,53 @@
   DeleteRegKey /ifempty SHELL_CONTEXT "Software\IeumOffice"
 !macroend
 
+; An update the app starts in this installer's own window ("Restart & Install",
+; decision 0077) shows the progress page only. It keeps the install it updates:
+; the mode .onInit read from the registry, which is the same choice a silent
+; update makes, so "who should this be installed for" is not asked again (an
+; "all users" install still gets its administrator prompt from that page's
+; elevation). A first install still asks.
+!macro customInstallMode
+  ${if} ${isUpdated}
+    ${if} $installMode == "all"
+      StrCpy $isForceMachineInstall "1"
+    ${else}
+      StrCpy $isForceCurrentInstall "1"
+    ${endIf}
+  ${endIf}
+!macroend
+
+; The stock finish page (electron-builder's assistedInstaller.nsh: StartApp
+; plus the "Run" checkbox), with one change: an update asked to reopen the app
+; (--updated --force-run) reopens it and ends here instead of waiting on the
+; finish page. electron-builder starts the app itself only after a silent
+; update, so without this the app would not come back after a visible one.
+!macro customFinishPage
+  Function StartApp
+    ${if} ${isUpdated}
+      StrCpy $1 "--updated"
+    ${else}
+      StrCpy $1 ""
+    ${endif}
+    ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
+  FunctionEnd
+
+  Function GenOfficeFinishPagePre
+    ${if} ${isUpdated}
+    ${andIf} ${isForceRun}
+      ; otherwise the app window opens behind this one
+      HideWindow
+      Call StartApp
+      Abort
+    ${endIf}
+  FunctionEnd
+
+  !define MUI_FINISHPAGE_RUN
+  !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE GenOfficeFinishPagePre
+  !insertmacro MUI_PAGE_FINISH
+!macroend
+
 !macro customInstall
   Push "$INSTDIR\resources\cli"
   Call GenOfficeAddToUserPath

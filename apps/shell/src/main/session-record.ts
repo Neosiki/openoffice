@@ -94,6 +94,11 @@ export interface SessionRecord {
   /** index into `tabs` of the main window's front tab; absent = Home */
   active?: number
   split?: SessionRecordSplit
+  /**
+   * the run ended in "Restart & Install": its tabs, as they were when the quit
+   * began, come back in the next run (decision 0077)
+   */
+  updateRestart?: true
 }
 
 /** a main-window strip tab, as TabManager.sessionTabs reports it */
@@ -271,6 +276,7 @@ export function parseSessionRecord(raw: unknown): SessionRecord | null {
     pastStartup: record.pastStartup === true,
     tabs,
   }
+  if (record.updateRestart === true) parsed.updateRestart = true
   if (typeof record.active === 'number') {
     const active = remap.get(record.active)
     if (active !== undefined && !tabs[active]?.detached) parsed.active = active
@@ -320,8 +326,11 @@ export interface PreviousExitJudgment {
    * - `unresolvedCopies`: the quit completed but left undecided or restore-chosen copies
    * - `corruptRecord`: the record was unreadable; abnormal only when undecided
    *   or restore-chosen copies are left, so the launch list still offers them
+   * - `updateRestart`: the quit completed for "Restart & Install" (or the
+   *   installer reopened the app after an update): counted with the abnormal
+   *   exits so the tabs come back, but never a crash loop
    */
-  reason: 'noRecord' | 'clean' | 'notClean' | 'unresolvedCopies' | 'corruptRecord'
+  reason: 'noRecord' | 'clean' | 'notClean' | 'unresolvedCopies' | 'corruptRecord' | 'updateRestart'
   /**
    * The previous run was itself a restore run and died (never completed its
    * quit) within CRASH_LOOP_WINDOW_MS of its start: preload no tab and do not
@@ -335,11 +344,14 @@ export interface PreviousExitJudgment {
  * Normal exit = a record with the clean mark and no undecided / restore-chosen
  * copy ("later" copies may stay). No record at all is normal too. A record
  * that cannot be read is normal unless such copies are left, in which case
- * the launch list must still offer them.
+ * the launch list must still offer them. A clean exit for an update brings
+ * the tabs back: one marked by "Restart & Install", or any clean exit when the
+ * installer reopened the app (an earlier version's quit carries no mark).
  */
 export function judgePreviousExit(
   previous: SessionRecordReadResult,
   store: Pick<RecoveryStore, 'hasUnresolvedCopies'>,
+  options: { reopenedByInstaller?: boolean } = {},
 ): PreviousExitJudgment {
   if (previous.status === 'missing')
     return { abnormal: false, reason: 'noRecord', crashLoop: false }
@@ -355,6 +367,9 @@ export function judgePreviousExit(
       reason: 'notClean',
       crashLoop: record.restoreRun && !record.pastStartup,
     }
+  }
+  if (record.updateRestart === true || options.reopenedByInstaller === true) {
+    return { abnormal: true, reason: 'updateRestart', crashLoop: false }
   }
   if (store.hasUnresolvedCopies()) {
     return { abnormal: true, reason: 'unresolvedCopies', crashLoop: false }
@@ -411,6 +426,19 @@ export interface SessionRecorder {
    */
   markCleanExit(): void
   /**
+   * "Restart & Install" began its quit (`before-quit`): keep the tabs as they
+   * are now. The windows that close afterwards (a detached window after the
+   * main one) must not empty the list the next run brings back. Taken again
+   * by every such quit; an ordinary quit ignores it.
+   */
+  holdTabsForUpdateRestart(): void
+  /**
+   * The quit for "Restart & Install" completed (`will-quit`): like
+   * markCleanExit, with the tabs held at its start and the update mark, so the
+   * next run brings them back.
+   */
+  markUpdateRestart(): void
+  /**
    * The main window finished closing while the app stays in the tray
    * (`shouldKeepQuickLookInTray`): empty the tab list and set the clean mark,
    * so a later power loss does not bring back tabs the user closed. A window
@@ -445,6 +473,8 @@ export function createSessionRecorder(options: SessionRecorderOptions): SessionR
   let startupTimer: ReturnType<typeof setTimeout> | null = null
   /** set once the run ended (quit or OS session end): nothing is written after */
   let ended = false
+  /** the tabs when "Restart & Install" began its quit */
+  let heldForUpdate: SessionSnapshot | null = null
 
   const clearWriteTimer = (): void => {
     if (writeTimer) clearTimeout(writeTimer)
@@ -539,6 +569,29 @@ export function createSessionRecorder(options: SessionRecorderOptions): SessionR
       finish()
     },
 
+    holdTabsForUpdateRestart() {
+      if (!current || ended) return
+      const { tabs, active, split } = current
+      heldForUpdate = {
+        tabs,
+        ...(active !== undefined ? { active } : {}),
+        ...(split ? { split } : {}),
+      }
+    },
+
+    markUpdateRestart() {
+      if (!current || ended) return
+      const { tabs, active, split, ...rest } = current
+      const kept: SessionSnapshot = heldForUpdate ?? {
+        tabs,
+        ...(active !== undefined ? { active } : {}),
+        ...(split ? { split } : {}),
+      }
+      current = { ...rest, ...kept, cleanExit: true, updateRestart: true }
+      writeNow()
+      finish()
+    },
+
     markClosedToTray() {
       if (!current || ended) return
       current = {
@@ -590,6 +643,16 @@ export function noteSessionChanged(source: SessionSnapshotSource): void {
 /** no-op unless initialized: safe from a `will-quit` a second instance also runs */
 export function markSessionCleanExit(): void {
   activeRecorder?.markCleanExit()
+}
+
+/** no-op unless initialized */
+export function holdSessionTabsForUpdateRestart(): void {
+  activeRecorder?.holdTabsForUpdateRestart()
+}
+
+/** no-op unless initialized: safe from a `will-quit` a second instance also runs */
+export function markSessionUpdateRestart(): void {
+  activeRecorder?.markUpdateRestart()
 }
 
 /** no-op unless initialized */

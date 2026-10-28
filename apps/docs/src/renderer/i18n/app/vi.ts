@@ -576,4 +576,7 @@ export const vi = {
   appOdtLabelObject: 'Đối tượng (hiển thị trong Hancom)',
   appOdtLabelNotice:
     'Các đối tượng được vẽ dưới dạng hộp có nhãn có thể trông khác với cách Hancom Office hiển thị.',
+  appMergeSourceLoaded: 'Đã tải {name} ({n} bản ghi)',
+  appMergeWritten: 'Đã ghi {n} tài liệu',
+  appMergeNothingToWrite: 'Không có gì để ghi',
 } satisfies Record<keyof typeof zh, string>

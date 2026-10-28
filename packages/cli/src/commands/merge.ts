@@ -25,6 +25,7 @@ import { runWorkbookDsl } from '../formats/xlsx-dsl'
 import { extension, readInput, resolveInput, resolveOutput, writeOutput } from '../fs'
 import { readOpsStream } from '../ops-input'
 import type { OpenedPptx } from '@genoffice/pptx-engine'
+import type { TableModel } from '@genoffice/docx-engine'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT, type CommandResult } from '../result'
 
@@ -41,11 +42,11 @@ interface Hit {
   key: string
   location: Record<string, string | number | boolean>
   /** set while scanning when no fill path reaches the spot */
-  reason?: 'unreachable_nested'
+  reason?: 'unreachable_nested' | 'formula_cell'
 }
 
 interface Unresolved extends Omit<Hit, 'reason'> {
-  reason: 'no_key' | 'split_placeholder' | 'unreachable_nested'
+  reason: 'no_key' | 'split_placeholder' | 'unreachable_nested' | 'formula_cell'
 }
 
 interface Merged {
@@ -98,6 +99,9 @@ export const mergeCommand: CommandDef = {
     })
     const merged = await MERGE[format as Format](path, values, output, ctx)
     const report = describe(merged, values)
+    const nested = report.unresolved.some((u) => u.reason === 'unreachable_nested')
+    const nestedRemedy =
+      format === 'docx' ? 'fill the nested Word tables in Word' : 'ungroup the nested groups'
     if (flagBool(args, 'strict') && report.unresolved.length) {
       throw new CliError(
         EXIT.usage,
@@ -105,8 +109,9 @@ export const mergeCommand: CommandDef = {
         { unresolved_placeholders: report.unresolved, unused_keys: report.unused },
         {
           reason: 'unresolved_placeholder',
-          suggestion:
-            'add the keys listed in detail.unresolved_placeholders to --data, or drop --strict to write anyway',
+          suggestion: nested
+            ? `${nestedRemedy}, or drop --strict to write anyway`
+            : 'add the keys listed in detail.unresolved_placeholders to --data, or drop --strict to write anyway',
         },
       )
     }
@@ -125,12 +130,12 @@ export const mergeCommand: CommandDef = {
     }
     if (report.unresolved.length) {
       const shown = report.unresolved.slice(0, 5).map((u) => `${u.placeholder} (${where(u)})`)
-      const nested = report.unresolved.some((u) => u.reason === 'unreachable_nested')
+      const inFormula = report.unresolved.some((u) => u.reason === 'formula_cell')
       result.warnings = [
         {
           code: 'unresolved_placeholder',
           message: `${report.unresolved.length} placeholders were left in place: ${shown.join(', ')}${report.unresolved.length > shown.length ? ', …' : ''}`,
-          suggestion: `add the missing keys to --data${nested ? ', ungroup the nested groups' : ''}, or pass --strict to fail instead`,
+          suggestion: `${nested ? nestedRemedy : 'add the missing keys to --data'}${inFormula ? ', move a placeholder out of a formula into a plain text cell' : ''}, or pass --strict to fail instead`,
         },
       ]
     }
@@ -161,7 +166,8 @@ function readData(
         : [readFileSync(resolveInput(spec, ctx), 'utf-8'), spec]
   let parsed: unknown
   try {
-    parsed = JSON.parse(text)
+    // UTF-8 data files may start with a BOM; preserve U+FEFF inside values.
+    parsed = JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch (err) {
     throw new CliError(
       EXIT.usage,
@@ -319,12 +325,39 @@ function scanDocx(doc: OpenDocument): {
   const texts = new Map<string, string>()
   for (const b of describeDocument(doc, undefined, Infinity)) {
     const inBlock = hits(b.text)
-    if (!inBlock.length) continue
-    texts.set(locKey({ block: b.index }), b.text)
-    if (b.type === 'table') tables.add(b.index)
-    for (const h of inBlock) found.push({ ...h, location: { block: b.index } })
+    if (inBlock.length) {
+      texts.set(locKey({ block: b.index }), b.text)
+      if (b.type === 'table') tables.add(b.index)
+      for (const h of inBlock) found.push({ ...h, location: { block: b.index } })
+    }
+    if (b.type !== 'table') continue
+    // Nested tables are read-only atoms. They are absent from the outer
+    // cell's plain text but must still count as unresolved placeholders.
+    doc.editor.state.doc.child(b.index).descendants((node) => {
+      if (node.type.name !== 'docNestedTable') return
+      // the model defaults to null on a node that was never filled in
+      const model = node.attrs.model as TableModel | null
+      if (!model) return false
+      for (const h of nestedDocxHits(model)) {
+        found.push({
+          ...h,
+          location: { block: b.index, nested: true },
+          reason: 'unreachable_nested',
+        })
+      }
+      return false
+    })
   }
   return { found, tables, texts }
+}
+
+function nestedDocxHits(table: TableModel): Array<Pick<Hit, 'placeholder' | 'key'>> {
+  return table.rows.flatMap((row) =>
+    row.flatMap((cell) => [
+      ...cell.paras.flatMap(hits),
+      ...(cell.nestedTables ?? []).flatMap(nestedDocxHits),
+    ]),
+  )
 }
 
 function escapeHtml(s: string): string {
@@ -349,7 +382,7 @@ async function mergeDocx(path: string, values: Values, output: string): Promise<
   const doc = await openDocument(source)
   try {
     const { found, tables, texts } = scanDocx(doc)
-    const provided = found.filter((h) => values.has(h.key))
+    const provided = found.filter((h) => !h.reason && values.has(h.key))
     const viaHtml = new Set(
       provided
         .filter(
@@ -463,7 +496,14 @@ async function mergeXlsx(
     read.rows.forEach((row, r) =>
       row.forEach((value, c) => {
         const address = `${columnLabel(c)}${r + 1}`
-        if (typeof value !== 'string' || read.formulas[address]) return
+        const formula = read.formulas[address]
+        if (formula) {
+          // a formula is never rewritten, so a placeholder inside its text stays; say so
+          const location = { sheet: sheet.name, cell: address }
+          for (const h of hits(formula)) found.push({ ...h, location, reason: 'formula_cell' })
+          return
+        }
+        if (typeof value !== 'string') return
         const inCell = hits(value)
         if (!inCell.length) return
         const location = { sheet: sheet.name, cell: address }

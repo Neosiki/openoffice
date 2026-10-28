@@ -589,4 +589,7 @@ export const zh = {
   appOdtLabelRevision: '修订（在 Hancom 中显示）',
   appOdtLabelObject: '对象（在 Hancom 中显示）',
   appOdtLabelNotice: '以标签框绘制的对象可能与 Hancom Office 中的显示效果不同。',
+  appMergeSourceLoaded: '已加载数据源 {name}（{n} 条记录）',
+  appMergeWritten: '已写出 {n} 个文档',
+  appMergeNothingToWrite: '没有可写出的文档',
 }

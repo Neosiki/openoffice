@@ -64,6 +64,7 @@ function fakeSplit(initial: SplitPaneRole | null): FakeSplit {
 function hwpApiStub(): HwpApi {
   return {
     onLanguageChanged: () => () => undefined,
+    onMemoBlocked: () => () => undefined,
     getAiSettings: async () => defaultAiSettings(),
     setAiSettings: async () => undefined,
     onAiSettingsChanged: () => () => undefined,
@@ -170,6 +171,7 @@ describe('the split pane role', () => {
         getTheme: async () => 'system',
         getLanguage: async () => 'en',
         onLanguageChanged: () => () => undefined,
+        onMemoBlocked: () => () => undefined,
         onThemeChanged: () => () => undefined,
         onSaveRequest: () => () => undefined,
         onCloseSaveRequest: () => () => undefined,

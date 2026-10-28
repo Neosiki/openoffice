@@ -28,6 +28,7 @@ export const de = {
   trConfirmDone:
     '{done} von {total} Blöcken sind bereits übersetzt und werden nicht erneut gesendet',
   trConfirmSends: 'Der Text der gewählten Seiten wird an diese KI gesendet.',
+  trRightsNotice: 'Übersetzen Sie nur Dokumente, für die Sie die Rechte haben.',
   trProviderChange:
     'Die gespeicherte Übersetzung wurde mit {stored} erstellt. Wenn Sie mit {next} fortfahren, mischen sich zwei KIs in einer Übersetzung.',
   trProviderUnknown: 'einer unbekannten KI',

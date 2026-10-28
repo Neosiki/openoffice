@@ -6,6 +6,7 @@ import type {
   AgentTransport,
   AgentMessage,
 } from './types'
+import { contextWarningFor, type ContextWarning } from './context-budget'
 
 /**
  * Machine-readable cause of a failed turn. The one definition of the union:
@@ -34,6 +35,8 @@ export type IpcStreamErrorKind =
   | 'headless-limit'
   /** today's free allowance of a free key connection (OpenRouter `:free`, Gemini free tier) is used up */
   | 'free-limit'
+  /** the user declined to send a request larger than the context budget */
+  | 'context-limit'
 
 /** Providers reached through a locally installed vendor CLI (ai-provider's AiSubscriptionProviderId) */
 export type IpcSubscriptionProviderId = 'claude-code' | 'codex'
@@ -121,6 +124,16 @@ export interface IpcStreamStart<S> {
  */
 export const IPC_STREAM_SILENCE_TIMEOUT_MS = 240_000
 
+/**
+ * Remembers which runs the person already confirmed for a large prompt. The app
+ * may share one across transports (a panel per window) so one tool loop asks
+ * once; without it a transport keeps its own memory.
+ */
+export interface IpcContextGate {
+  isConfirmed(runId: string): boolean
+  markConfirmed(runId: string): void
+}
+
 export interface IpcTransportOptions<S> {
   /** subscribe to stream chunks; returns the unsubscribe function */
   onStream(listener: (chunk: IpcStreamChunk) => void): () => void
@@ -150,6 +163,21 @@ export interface IpcTransportOptions<S> {
   onSubscriptionUsage?(usage: IpcSubscriptionUsage[]): void
   /** the input was cut to fit a limit; the app must tell the user */
   onInputTruncated?(): void
+  /**
+   * The selected model's context window, when the app knows how to read it.
+   * Returning undefined (a subscription provider or another connection without
+   * a local window) skips the context gate for that request; an unreported size
+   * is `{ limit: 4096, known: false }`, not undefined.
+   */
+  contextLimit?(settings: S): { limit: number; known: boolean } | undefined
+  /**
+   * Ask the person before sending a prompt close to that window. False means
+   * the request must not be sent. Absent is treated as a decline: a limit is
+   * reported only to protect the person, never to send silently.
+   */
+  confirmContext?(warning: ContextWarning): boolean
+  /** confirmation memory shared across transports (see IpcContextGate) */
+  contextGate?: IpcContextGate
 }
 
 /**
@@ -175,9 +203,58 @@ export function createIpcTransport<S>(options: IpcTransportOptions<S>): AgentTra
     return options.errorText?.(cause) ?? legacy?.() ?? carried ?? options.unknownErrorText()
   }
   const sessionId = crypto.randomUUID()
+  /** runs this transport confirmed, when the app did not supply a shared gate */
+  const confirmedRuns = new Set<string>()
+  const ownGate: IpcContextGate = {
+    isConfirmed: (runId) => confirmedRuns.has(runId),
+    markConfirmed: (runId) => {
+      confirmedRuns.add(runId)
+    },
+  }
+  const gate = (): IpcContextGate => options.contextGate ?? ownGate
+  /** The warning this request must confirm first, or undefined when it may start */
+  const pendingWarning = (request: AgentStreamRequest): ContextWarning | undefined => {
+    // internal follow-up turns (a compaction summary) are not the person's request
+    if (request.skipContextGate) return undefined
+    const limit = options.contextLimit?.(options.getSettings())
+    if (!limit) return undefined
+    const warning = contextWarningFor(
+      request.system,
+      request.messages,
+      request.tools,
+      limit.limit,
+      limit.known,
+    )
+    if (!warning) return undefined
+    // an absent run id has no memory: each request is its own run, so each asks
+    if (request.runId && gate().isConfirmed(request.runId)) return undefined
+    return warning
+  }
   return {
     stream(request: AgentStreamRequest, cb) {
       const requestId = crypto.randomUUID()
+      const warning = pendingWarning(request)
+      if (warning) {
+        let confirmed: boolean
+        try {
+          confirmed = options.confirmContext?.(warning) === true
+        } catch {
+          // a broken dialog declines: nothing is sent without a yes
+          confirmed = false
+        }
+        if (!confirmed) {
+          const message = causeText({ kind: 'context-limit' }, undefined)
+          try {
+            options.onStreamError?.({ kind: 'context-limit', message })
+          } catch {
+            // a broken listener must not swallow the refusal
+          }
+          cb.onError(message)
+          // nothing was started, so nothing needs cancelling
+          return { cancel: () => {} }
+        }
+        if (request.runId) gate().markConfirmed(request.runId)
+      }
       let settled = false
       let silenceTimer: ReturnType<typeof setTimeout> | undefined
       const settle = () => {

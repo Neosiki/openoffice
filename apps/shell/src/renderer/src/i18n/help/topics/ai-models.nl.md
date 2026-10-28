@@ -17,7 +17,7 @@ Alles waarvoor een sleutel nodig is, staat onder **Geavanceerd**, onderaan dezel
 Voor wie liever rechtstreeks aan een provider betaalt of een eigen model draait.
 
 - Kies een **Provider**, vul de **API-sleutel** in (en een **Base URL** als de provider die nodig heeft), kies een **Model** en druk op **Opslaan**. De lijst bevat OpenAI-compatibele servers, Anthropic, Gemini, DeepSeek, DashScope (qwen), Atlas Cloud en meer.
-- De lijst **Provider** bepaalt hier alleen wiens velden op het scherm staan. Welke AI in gebruik is, verandert er niet door; dat bepaalt altijd **AI die wordt gebruikt**.
+- De lijst **Provider** bepaalt hier alleen wiens velden op het scherm staan. Welke AI in gebruik is, verandert er niet door; dat bepaalt altijd **AI die wordt gebruikt**. Is een opgeslagen provider niet de AI die in gebruik is, dan verschijnt bovenaan **Deze AI gebruiken**; een klik maakt die provider de **AI die wordt gebruikt**.
 - Gesprekken via een provider met een sleutel gebruiken je eigen sleutel, en die provider brengt ze bij je in rekening.
 - Sleutels worden opgeslagen in het instellingenbestand van de app op deze machine en alleen in aanvraagheaders verzonden.
 - **Verbinding testen**: controleert vóór het opslaan of het eindpunt bereikbaar is en het model zichtbaar is.

@@ -1,4 +1,4 @@
-import type { AgentSkill, ToolDisplay } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill, type ToolDisplay } from '@genoffice/agent-core'
 import type {
   GroupRenderNode,
   PictureRenderNode,
@@ -267,6 +267,8 @@ export interface DeckAccess {
   resolveAttachmentImage?(
     name: string,
   ): Promise<{ ok: true; base64: string; ext: string } | { ok: false; error: string }>
+  /** exact names of the image files in this chat, for the prompt */
+  imageAttachmentNames?(): string[]
 }
 
 /** `attachment://<file name>` → decoded file name, or null when not an attachment reference. */
@@ -1137,7 +1139,16 @@ export function createSlidesSkill(access: DeckAccess): AgentSkill {
       // pays nothing and is not told to look for markers that are not there.
       const labels = deckRedactLabels(access)
       const redact = labels.length > 0 ? `\n\n${placeholderInstruction(labels)}` : ''
-      return brandText(systemPrompt, 'en') + mediaToolsOffNote(hiddenMediaTools(access)) + redact
+      const attached = attachedImageNote(
+        access.imageAttachmentNames?.() ?? [],
+        'pass url=attachment://<name> to insert_web_image',
+      )
+      return (
+        brandText(systemPrompt, 'en') +
+        mediaToolsOffNote(hiddenMediaTools(access)) +
+        attached +
+        redact
+      )
     },
     // live view: the predicates are re-read before every model request
     get tools() {
@@ -1991,6 +2002,8 @@ async function executeTool(
         canvasW: 1280,
         canvasH: 720,
         ...(regenBasedOn ? { templateDevices: true } : {}),
+        // the run's signal: Stop ends the redo, and its two attempts share one context check
+        ...(signal ? { signal } : {}),
       }
       const runRegen = async (gen: NonNullable<DeckAccess['generatePageLocal']>) => {
         for (let attempt = 0; attempt < 2 && !marker; attempt++) {

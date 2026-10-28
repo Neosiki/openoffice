@@ -26,6 +26,7 @@ export const cs = {
   trConfirmCalls: 'Volání AI: {calls} (bloky: {blocks}, odesílané po dávkách)',
   trConfirmDone: 'Už přeloženo {done} z {total} bloků; znovu se neodesílají',
   trConfirmSends: 'Text vybraných stránek se odešle této AI.',
+  trRightsNotice: 'Překládejte pouze dokumenty, ke kterým máte práva.',
   trProviderChange:
     'Uložený překlad vznikl pomocí {stored}. Pokračováním s {next} se v jednom překladu smíchají dvě AI.',
   trProviderUnknown: 'neznámé AI',

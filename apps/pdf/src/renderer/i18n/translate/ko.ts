@@ -24,6 +24,7 @@ export const ko = {
   trConfirmCalls: 'AI 호출: {calls}번(블록 {blocks}개를 묶어서 보냄)',
   trConfirmDone: '전체 {total}개 블록 중 {done}개는 이미 번역되어 다시 보내지 않습니다',
   trConfirmSends: '고른 페이지의 글이 이 AI로 보내집니다.',
+  trRightsNotice: '권리를 가진 문서만 번역하세요.',
   trProviderChange:
     '보관된 번역은 {stored}(으)로 만들었습니다. {next}(으)로 이어 가면 한 번역에 두 AI의 번역이 섞입니다.',
   trProviderUnknown: '알 수 없는 AI',

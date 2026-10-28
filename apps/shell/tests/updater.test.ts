@@ -138,10 +138,18 @@ interface UpdateActions {
   onOpenDownload: () => void
 }
 
-const showUpdateWindow =
-  vi.fn<(parent: unknown, state: UpdateUiState, actions: UpdateActions) => void>()
+type ShowOptions = { inactive?: boolean }
+// whether the (mocked) update window is on screen: shown until closed
+const updateWindow = { open: false }
+const showUpdateWindow = vi.fn<
+  (parent: unknown, state: UpdateUiState, actions: UpdateActions, options?: ShowOptions) => void
+>(() => {
+  updateWindow.open = true
+})
 const pushUpdateState = vi.fn<(patch: Partial<UpdateUiState>) => void>()
-const closeUpdateWindow = vi.fn()
+const closeUpdateWindow = vi.fn(() => {
+  updateWindow.open = false
+})
 
 vi.mock('../src/main/update-attempt', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/main/update-attempt')>()),
@@ -149,10 +157,11 @@ vi.mock('../src/main/update-attempt', async (importOriginal) => ({
 }))
 
 vi.mock('../src/main/update-window', () => ({
-  showUpdateWindow: (...args: [unknown, UpdateUiState, UpdateActions]) => showUpdateWindow(...args),
+  showUpdateWindow: (...args: [unknown, UpdateUiState, UpdateActions, ShowOptions?]) =>
+    showUpdateWindow(...args),
   pushUpdateState: (patch: Partial<UpdateUiState>) => pushUpdateState(patch),
   closeUpdateWindow: () => closeUpdateWindow(),
-  isUpdateWindowOpen: () => false,
+  isUpdateWindowOpen: () => updateWindow.open,
   setUpdateParentWindow: () => {},
   clearUpdateState: () => closeUpdateWindow(),
 }))
@@ -356,6 +365,7 @@ beforeEach(() => {
   showUpdateWindow.mockClear()
   pushUpdateState.mockClear()
   closeUpdateWindow.mockClear()
+  updateWindow.open = false
   openExternal.mockClear()
   showMessageBox.mockReset()
   showMessageBox.mockImplementation(() => Promise.resolve({ response: 0 }))
@@ -416,6 +426,24 @@ describe('initAutoUpdater', () => {
     initAutoUpdater(() => null)
     vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
     expect(checkForUpdates).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips background checks while automatic checking is off, and resumes when it is back on', async () => {
+    let auto = false
+    const { initAutoUpdater, checkForUpdatesNow } = await loadUpdater()
+    initAutoUpdater(
+      () => null,
+      'stable',
+      () => auto,
+    )
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).not.toHaveBeenCalled()
+    // an explicit Help › Check for Updates… still asks the feed
+    void checkForUpdatesNow()
+    expect(checkForUpdates).toHaveBeenCalledTimes(1)
+    auto = true
     vi.advanceTimersByTime(RECHECK_INTERVAL_MS)
     expect(checkForUpdates).toHaveBeenCalledTimes(2)
   })
@@ -487,8 +515,35 @@ describe('initAutoUpdater', () => {
     // save prompts may still be open: the installer must not close the app under them
     expect(install).not.toHaveBeenCalled()
     quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, true)
+    // Windows: the installer's own window (progress only), which reopens the app
+    expect(install).toHaveBeenCalledWith(false, true)
     expect(quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('says before the restart that the installer window shows and the app comes back', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    expect(lastShownState().strings.restartDesc.length).toBeGreaterThan(0)
+  })
+
+  it('keeps the installer silent where no installer window exists (Linux AppImage)', async () => {
+    setPlatform('linux')
+    process.env.APPIMAGE = '/tmp/IeumOffice.AppImage'
+    try {
+      const { initAutoUpdater } = await loadUpdater()
+      initAutoUpdater(() => null)
+      updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+      expect(lastShownState().strings.restartDesc).toBe('')
+      lastShownActions().onDownload()
+      updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+      lastShownActions().onInstall()
+      vi.advanceTimersByTime(0)
+      quitCompletes()
+      expect(install).toHaveBeenCalledWith(true, true)
+    } finally {
+      delete process.env.APPIMAGE
+    }
   })
 
   it('records the installer start for the next launch to check', async () => {
@@ -503,7 +558,7 @@ describe('initAutoUpdater', () => {
     const recorded = JSON.parse(
       readFileSync(join(appState.dataDir, 'update-install-attempt.json'), 'utf8'),
     )
-    expect(recorded).toEqual({ version: '0.2.0', fromVersion: '0.1.0', visible: false })
+    expect(recorded).toEqual({ version: '0.2.0', fromVersion: '0.1.0', visible: true, tries: 1 })
   })
 
   it('writes what it did to the update record in the data folder', async () => {
@@ -528,12 +583,12 @@ describe('initAutoUpdater', () => {
     // a dirty tab's prompt was answered Cancel: the app stays
     cancelUpdateRestart()
     expect(install).not.toHaveBeenCalled()
-    // a later ordinary quit installs, but does not bring the app back
+    // a later ordinary quit installs nothing
     quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, false)
+    expect(install).not.toHaveBeenCalled()
   })
 
-  it('installs a package downloaded and then put off on an ordinary quit', async () => {
+  it('never installs on an ordinary quit, where nobody would see it run', async () => {
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
     updaterState.listeners.get('update-available')!({ version: '0.2.0' })
@@ -541,7 +596,43 @@ describe('initAutoUpdater', () => {
     updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
     lastShownActions().onLater()
     quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, false)
+    expect(install).not.toHaveBeenCalled()
+    expect(existsSync(join(appState.dataDir, 'update-install-attempt.json'))).toBe(false)
+  })
+
+  it('brings Restart & Install back, unfocused, when a minimized download finishes', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+    lastShownActions().onLater()
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+    expect(showUpdateWindow).toHaveBeenCalledTimes(2)
+    expect(lastShownState().phase).toBe('downloaded')
+    expect(showUpdateWindow.mock.calls.at(-1)![3]).toEqual({ inactive: true })
+  })
+
+  it('leaves an open window to show the finished download itself', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
+  })
+
+  it('notes in the update record when the installer reopened the app', async () => {
+    const argv = process.argv
+    process.argv = [...argv, '--updated']
+    try {
+      const { initAutoUpdater } = await loadUpdater()
+      initAutoUpdater(() => null)
+    } finally {
+      process.argv = argv
+    }
+    const record = readFileSync(join(appState.dataDir, 'update-log.txt'), 'utf8')
+    expect(record).toContain('running 0.1.0 on the stable channel, reopened by the installer')
   })
 
   it('starts no installer on quit while nothing is downloaded', async () => {
@@ -658,7 +749,7 @@ describe('initAutoUpdater', () => {
     lastShownActions().onInstall()
     vi.advanceTimersByTime(0)
     quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, true)
+    expect(install).toHaveBeenCalledWith(false, true)
   })
 
   it('applyUpdateChannel cancels an in-flight download and shields the new one from its leftovers', async () => {
@@ -707,10 +798,10 @@ describe('initAutoUpdater', () => {
 })
 
 describe('an installer that did not update the app', () => {
-  function previousAttempt(visible: boolean, version = '0.2.0'): void {
+  function previousAttempt(visible: boolean, version = '0.2.0', tries?: number): void {
     writeFileSync(
       join(appState.dataDir, 'update-install-attempt.json'),
-      JSON.stringify({ version, fromVersion: CURRENT_VERSION, visible }),
+      JSON.stringify({ version, fromVersion: CURRENT_VERSION, visible, tries }),
     )
   }
 
@@ -736,7 +827,7 @@ describe('an installer that did not update the app', () => {
     expect(pushUpdateState).toHaveBeenLastCalledWith({
       phase: 'downloaded',
       percent: 100,
-      visibleInstall: true,
+      visibleInstall: false,
     })
     lastShownActions().onInstall()
     vi.advanceTimersByTime(0)
@@ -746,7 +837,16 @@ describe('an installer that did not update the app', () => {
     const recorded = JSON.parse(
       readFileSync(join(appState.dataDir, 'update-install-attempt.json'), 'utf8'),
     )
-    expect(recorded.visible).toBe(true)
+    // the second start for this version: one more failure goes to the download page
+    expect(recorded).toMatchObject({ visible: true, tries: 2 })
+  })
+
+  it('gives a failed installer window one more try', async () => {
+    previousAttempt(true, '0.2.0', 1)
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    expect(lastShownState().phase).toBe('install-failed')
   })
 
   it('offers a newer release the same way', async () => {
@@ -768,7 +868,7 @@ describe('an installer that did not update the app', () => {
   })
 
   it('points at the download page once the installer window failed too', async () => {
-    previousAttempt(true)
+    previousAttempt(true, '0.2.0', 2)
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
     updaterState.listeners.get('update-available')!({ version: '0.2.0' })
@@ -829,17 +929,6 @@ describe('an install folder only an administrator can write', () => {
     vi.advanceTimersByTime(0)
     quitCompletes()
     expect(install).toHaveBeenCalledWith(false, true)
-  })
-
-  it('keeps the quiet install on an ordinary quit', async () => {
-    const { initAutoUpdater } = await loadUpdater()
-    initAutoUpdater(() => null)
-    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
-    lastShownActions().onDownload()
-    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
-    lastShownActions().onLater()
-    quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, false)
   })
 
   it('reopens a downloaded update with the installer-window wording', async () => {
@@ -1080,7 +1169,7 @@ describe('GitHub Releases feed', () => {
     lastShownActions().onInstall()
     vi.advanceTimersByTime(0)
     quitCompletes()
-    expect(install).toHaveBeenCalledWith(true, true)
+    expect(install).toHaveBeenCalledWith(false, true)
   })
 
   it('converts the release body into notes on the shown state', async () => {

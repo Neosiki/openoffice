@@ -33,10 +33,12 @@ import {
   newCustomEndpointId,
   normalizeAiSettings,
   removeCustomEndpoint,
+  resolveCustomEndpoints,
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from '@genoffice/ai-provider/browser'
 import type {
+  AiCustomEndpoint,
   AiMediaProviderId,
   AiMediaProviderMeta,
   AiMediaSettings,
@@ -57,16 +59,20 @@ import { useSubscriptionConnection } from './subscription-client'
 import { SkillsPane } from './skills/SkillsPane'
 import { skillsText } from './i18n/strings-skills'
 import {
+  advancedPaneUseChoice,
   advancedProviderIds,
+  changeAiSettings,
   initialAdvancedProvider,
   mediaKeyProviders,
   mediaSelection,
   mediaSpecialChoices,
   readAiSettings,
+  withAiSelection,
   withLiveSelectionFields,
   writeAiSettings,
 } from './settings-ai'
 import type { MediaSpecialChoice } from './settings-ai'
+import { mergeLoadedModel } from './local-ai'
 import './settings.css'
 
 // ── Settings modal (opened from the account menu) ─────────
@@ -346,6 +352,81 @@ function foldModels(providerId: string, models: string[]) {
 }
 
 /**
+ * The settings after the Advanced Custom pane saves. Only the endpoint being
+ * edited comes from the pane; every other endpoint is taken from the file as it
+ * is now, so a server saved by the local AI card while this pane was open is
+ * not dropped. `kind`, `modelProfiles` and `timeoutMs` are local-card fields the
+ * pane does not show, so they always come from the latest file. A model the
+ * pane did not change follows the latest file too (`mergeLoadedModel`).
+ */
+export function withAdvancedCustomSave(
+  draft: AiSettings,
+  latest: AiSettings,
+  edited: AiCustomEndpoint | undefined,
+  loadedModel: string,
+  removedIds: readonly string[] = [],
+  /** endpoint ids the pane loaded; an id missing from the latest file was deleted elsewhere */
+  loadedIds: readonly string[] = [],
+): AiSettings {
+  const base = withLiveSelectionFields(draft, latest)
+  // a deletion clears the mirror first, as removeCustomEndpoint does, so a
+  // removed server cannot be called through the old `providers.custom` slot
+  const seed =
+    removedIds.length > 0
+      ? {
+          ...base,
+          providers: {
+            ...base.providers,
+            custom: { apiKey: '', model: '', baseUrl: '' },
+          },
+        }
+      : base
+  const latestEndpoints = (latest.customEndpoints ?? []).filter(
+    (endpoint) => !removedIds.includes(endpoint.id),
+  )
+  const latestEndpoint = edited
+    ? latestEndpoints.find((endpoint) => endpoint.id === edited.id)
+    : undefined
+  // a server deleted by the local card while this pane was open is not brought
+  // back with stale local-only fields the pane never showed
+  const deletedElsewhere = edited !== undefined && !latestEndpoint && loadedIds.includes(edited.id)
+  if (!edited || deletedElsewhere) {
+    return resolveCustomEndpoints({
+      ...seed,
+      customEndpoints: latestEndpoints,
+      ...(typeof latest.customEndpoint === 'string'
+        ? { customEndpoint: latest.customEndpoint }
+        : {}),
+    })
+  }
+
+  const merged: AiCustomEndpoint = {
+    ...edited,
+    model: latestEndpoint
+      ? mergeLoadedModel(edited, loadedModel, latestEndpoint.model)
+      : edited.model,
+  }
+  if (latestEndpoint?.kind) merged.kind = latestEndpoint.kind
+  else delete merged.kind
+  if (latestEndpoint?.modelProfiles) merged.modelProfiles = latestEndpoint.modelProfiles
+  else delete merged.modelProfiles
+  if (latestEndpoint?.timeoutMs !== undefined) merged.timeoutMs = latestEndpoint.timeoutMs
+  else delete merged.timeoutMs
+
+  const withEndpoint = resolveCustomEndpoints({
+    ...seed,
+    customEndpoints: latestEndpoint
+      ? latestEndpoints.map((endpoint) => (endpoint.id === merged.id ? merged : endpoint))
+      : [...latestEndpoints, merged],
+    ...(typeof latest.customEndpoint === 'string' && latestEndpoint
+      ? { customEndpoint: latest.customEndpoint }
+      : {}),
+  })
+  // a server added in this pane becomes the custom slot's active entry, as before
+  return upsertCustomEndpoint(withEndpoint, merged, !latestEndpoint)
+}
+
+/**
  * AI model pane (Advanced): provider / model / key / base URL, saved to
  * userData/ai-settings.json. The provider picked here is the one being filled
  * in; which AI is in use is chosen in the section above, never here.
@@ -385,6 +466,9 @@ function AiModelPane({ t }: { t: TFunc }) {
   dirtyRef.current = dirty
   /** bumped on every outside reload so a connection test that was still running reports nothing */
   const testSeqRef = useRef(0)
+  /** endpoint ids and models the pane loaded, to tell a deletion from an outside addition */
+  const baselineIdsRef = useRef<string[]>([])
+  const baselineModelsRef = useRef<Record<string, string>>({})
   useEffect(() => {
     let alive = true
     const load = () => {
@@ -397,6 +481,10 @@ function AiModelPane({ t }: { t: TFunc }) {
         // selections an older settings file made among removed providers read as their defaults
         s = normalizeAiSettings(s)
         setSettings(s)
+        baselineIdsRef.current = (s.customEndpoints ?? []).map((endpoint) => endpoint.id)
+        baselineModelsRef.current = Object.fromEntries(
+          (s.customEndpoints ?? []).map((endpoint) => [endpoint.id, endpoint.model]),
+        )
         const codex = s.providers.codex
         if (codex) {
           void refreshCodexModels(codex.cliPath ?? '', codex.model).catch(() => undefined)
@@ -556,16 +644,41 @@ function AiModelPane({ t }: { t: TFunc }) {
       const live = (meta?.models ?? []).filter((m) => m !== endpoint.model)
       if (live.length > 0) toSave = upsertCustomEndpoint(settings, { ...endpoint, models: live })
     }
-    readAiSettings()
-      .then((latest) => writeAiSettings(withLiveSelectionFields(toSave, latest)))
+    const edited = meta?.needsBaseUrl ? activeCustomEndpoint(toSave) : undefined
+    const loadedModel = edited ? (baselineModelsRef.current[edited.id] ?? edited.model) : ''
+    const removedIds = baselineIdsRef.current.filter(
+      (id) => !(toSave.customEndpoints ?? []).some((entry) => entry.id === id),
+    )
+    changeAiSettings((latest) =>
+      withAdvancedCustomSave(
+        toSave,
+        latest,
+        edited,
+        loadedModel,
+        removedIds,
+        baselineIdsRef.current,
+      ),
+    )
       .then((written) => {
+        if (!written) return
         setSettings(written)
+        baselineIdsRef.current = (written.customEndpoints ?? []).map((entry) => entry.id)
+        baselineModelsRef.current = Object.fromEntries(
+          (written.customEndpoints ?? []).map((entry) => [entry.id, entry.model]),
+        )
         setDirty(false)
         setSaved(true)
       })
       .catch((error) => {
         window.alert(error instanceof Error ? error.message : String(error))
       })
+  }
+  // a saved key provider that is not the AI in use: one press selects it, as
+  // "AI to use" would; an unsaved draft offers nothing until it is written
+  const useChoice = dirty ? undefined : advancedPaneUseChoice(settings, provider, endpoint?.id)
+  const useThis = () => {
+    if (!useChoice) return
+    void changeAiSettings((current) => withAiSelection(current, useChoice))
   }
   const test = () => {
     const seq = ++testSeqRef.current
@@ -608,6 +721,11 @@ function AiModelPane({ t }: { t: TFunc }) {
                     : null
             }
           />
+          {useChoice && (
+            <button className="set-btn" onClick={useThis}>
+              {t('freeUse')}
+            </button>
+          )}
           <button className="set-btn" disabled={testing} onClick={test}>
             {t('setAiTest')}
           </button>
@@ -1522,6 +1640,7 @@ export function SettingsModal({
   const [docTheme, setDocTheme] = useState<DocTheme>('follow')
   const [saveDir, setSaveDir] = useState('')
   const [autoSaveOn, setAutoSaveOn] = useState(false)
+  const [autoUpdateCheckOn, setAutoUpdateCheckOn] = useState(true)
   const [defaultApp, setDefaultApp] = useState<DefaultAppStatus | null>(null)
   const [defaultAppBusy, setDefaultAppBusy] = useState(false)
   const [defaultAppFailed, setDefaultAppFailed] = useState(false)
@@ -1558,6 +1677,9 @@ export function SettingsModal({
     })
     void window.aiOffice.getUpdateChannel?.().then((ch) => {
       if (alive) setChannel(ch)
+    })
+    void window.aiOffice.getAutoUpdateCheck?.().then((on) => {
+      if (alive) setAutoUpdateCheckOn(on)
     })
     void window.aiOffice.getAppVersion?.().then((v) => {
       if (alive && v) setAppVersion(v)
@@ -1974,6 +2096,25 @@ export function SettingsModal({
                       const next = v === 'beta' ? 'beta' : 'stable'
                       setChannel(next)
                       void window.aiOffice.setUpdateChannel(next)
+                    }}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <div className="set-field-label">{t('setAutoUpdateCheck')}</div>
+                      <div className="set-field-desc">{t('setAutoUpdateCheckDesc')}</div>
+                    </div>
+                  </div>
+                  <button
+                    className="set-switch"
+                    role="switch"
+                    aria-checked={autoUpdateCheckOn}
+                    aria-label={t('setAutoUpdateCheck')}
+                    onClick={() => {
+                      const next = !autoUpdateCheckOn
+                      setAutoUpdateCheckOn(next)
+                      void window.aiOffice.setAutoUpdateCheck?.(next).catch(() => {})
                     }}
                   />
                 </div>

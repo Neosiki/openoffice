@@ -12,6 +12,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
   SubscriptionConnectHelpPath,
+  SubscriptionLoginMode,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import { subscriptionConnectHelpUrl } from '@genoffice/ai-provider/browser'
@@ -103,9 +104,15 @@ export function useSubscriptionConnection(): SubscriptionConnection {
   }, [apply, check])
 
   const launch = useCallback(
-    (kind: 'install' | 'login' | 'update', provider: AiSubscriptionProviderId) => {
+    (
+      kind: 'install' | 'login' | 'update',
+      provider: AiSubscriptionProviderId,
+      mode?: SubscriptionLoginMode,
+    ) => {
       setBusy(true)
-      void attempt((api) => api[kind](provider))
+      void attempt((api) =>
+        kind === 'login' && mode ? api.login(provider, mode) : api[kind](provider),
+      )
         .then((result) => {
           if (!alive.current) return
           if (result?.ok) {
@@ -129,7 +136,8 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     [launch],
   )
   const onLogin = useCallback(
-    (provider: AiSubscriptionProviderId) => launch('login', provider),
+    (provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode) =>
+      launch('login', provider, mode),
     [launch],
   )
   const onUpdate = useCallback(

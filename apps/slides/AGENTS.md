@@ -25,6 +25,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 문서 옆에 쓰는 파일의 이름을 바꾸지 않는다. 생성된 초안 옆의 스타일 기록은 같은 이름의 `.styleskill.json`이다. 생성된 쪽의 표식 `cloudpptx:`와 임시 폴더 이름(`genoffice-cloud-pages`, `genoffice-local-pages`)은 "생성된 쪽"을 뜻하는 내부 이름이라 그대로 둔다.
 - shell 안에서도 필요한 슬라이드 전용 AI 채널은 `registerSlidesOnlyAiIpc`에 둔다(`slides:ai-tool-capabilities`, `ai:generate-image`, `ai:analyze-media`, `ai:insert-image-url`, `ai:save-sidecar` 등). `registerAiIpc`에 두면 배포 앱에서 "핸들러 없음" 오류가 난다. 반대로 문서 에디터가 이미 등록하는 공용 채널을 여기서 또 등록하면 예외가 난다.
 - 요청은 다른 제공자로 넘어가지 않는다. 단독 실행의 `ai:stream`은 `resolveStreamTarget`으로 대상을 정하고, 실행할 수 없는 선택은 원인을 담아 거절한다. 이 규칙은 문서 에디터의 것과 같은 답을 내야 한다.
+- 덱 만들기의 한 번짜리 호출(`AiPanel.tsx`의 `runLlmAttempt`: 스타일, 개요, 쪽, 쪽 다시 만들기)은 패널의 전송부를 거치지 않으므로 `deck-context-gate.ts`로 같은 문맥 80% 확인을 한다(결정 0067). 같은 창(`localContextLimit`)과 같은 대화 상자(`aiContextConfirmText`)를 쓰고, 루프의 중단 신호 하나(한 실행)에 한 번만 묻는다. 거절하면 모델을 부르지 않고 그 실행의 이후 덱 호출도 묻지 않고 거절한다. 이 호출에 중단 신호를 빼먹으면 재시도마다 다시 묻는다.
 - 모델에게 주는 도구는 실제 경로가 있는 것만이다. 렌더러는 메인의 가용성 보고(`slides:ai-tool-capabilities`)가 답하기 전에는 이미지 생성·미디어 분석 도구를 내놓지 않는다(`toolGatesOf`).
 - 구독 IPC는 `ensureSubscriptionIpc`로만 등록하고 `initSubscriptionChildTracking`은 부르지 않는다. 단독 실행 진입은 `will-quit`와 `process.on('exit')`에서 `shutdownSubscriptionChildren`을 부른다.
 - 지금은 글꼴을 내려받는 기능이 없다. 글꼴 목록은 PC에 설치된 것과 앱에 든 것이고, "글꼴 파일 설치"는 사용자가 가진 파일을 앱의 글꼴 폴더(`<userData>/fonts`)로 복사한다. 시스템에는 설치하지 않는다. 디자인 템플릿 글꼴 폴더는 읽기만 한다.
@@ -41,6 +42,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 메인 코드는 shell 번들에 들어간다(`../../../slides/src/main/slides-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
 - 쓸 만한 답을 내지 못한 실행의 사후 기록(`ai:log-run-failure` → `userData/ai-run-failures.jsonl`, 2MB에서 한 세대 회전)은 `registerAiIpc`에 있어 단독 실행에서만 남는다. shell 안에서는 이 채널에 핸들러가 없다.
 - 패널은 공용 부품으로 조립한다. 보내기는 `useAiSendGate`, 연결 상태와 막힌 실행 판정은 `src/renderer/ai/subscription.ts`, 문장은 `aiRunErrorText`를 쓴다. 메인의 핸들러는 먼저 로드된 모듈이 등록하므로 렌더러 쪽 호출은 모두 실패를 견딘다(없으면 상태는 `checking`).
+- **AI 그림 넣기는 `image_search` → `insert_web_image`, `generate_image` → `insert_web_image` 두 걸음이다.** 채팅에 붙인 그림은 `insert_web_image`의 `url=attachment://<파일 이름>`으로 넣고, 이름은 패널의 목록(`resolveAttachmentImage`)에서만 바이트로 풀린다. 지시문은 그 대화의 그림 이름을 `attachedImageNote`로 적어 준다(`imageAttachmentNames`). 있던 그림을 바꾸는 것은 `replace_image`/`generate_image`의 편집 흐름이고, 새 그림 넣기는 그 경로를 건드리지 않는다.
 - 프롬프트 파일(`src/renderer/ai/prompts/*.md`)은 Prettier 대상이 아니다. Prettier가 강조 표식과 목록 들여쓰기를 바꾸면 모델이 읽는 글이 달라진다. 이 파일들을 포매터에 넣지 않는다.
 - 메인 프로세스의 Node `fetch`는 시스템 프록시를 쓰지 않아 `applyMainProcessProxy`가 환경 변수나 시스템 설정의 프록시를 전역 디스패처에 건다. 이 프록시는 구독 프로그램에는 전달되지 않는다(그쪽은 물려받은 환경 변수만 본다).
 - 메모(클래식 검토 댓글)는 `slides:get-comments`(현재 페이지)와 `slides:get-all-comments`(전 덱, 읽기 전용)로 읽는다. 메모 창은 현재 페이지/모든 페이지 두 보기를 쓰고(순수 함수는 `comments-view.ts`), AI는 `read_comments` 도구와 덱 문맥의 메모 힌트로 읽는다. 메모는 가리기 표식 대상이 아니며, 저장은 기존 댓글 경로 그대로다.

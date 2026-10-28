@@ -104,6 +104,18 @@ describe('genoffice create --type xlsx / sheet', () => {
     expect(conv.json().detail.sheet).toBe('data_final__v2')
   })
 
+  it('cuts a long file stem at 31 characters without splitting an emoji', async () => {
+    const dir = tempDir()
+    // the emoji's two UTF-16 units sit at positions 30 and 31
+    const stem = `${'가'.repeat(30)}😀끝`
+    const csv = join(dir, `${stem}.csv`)
+    writeFileSync(csv, 'a,b\n1,2\n')
+    const conv = await run(['convert', csv, '--to', 'xlsx', '--out', join(dir, 'c.xlsx'), '--json'])
+    expect(conv.code).toBe(0)
+    expect(conv.json().detail.sheet).toBe('가'.repeat(30))
+    expect(await part(join(dir, 'c.xlsx'), 'xl/workbook.xml')).not.toContain('\uFFFD')
+  })
+
   it('types ISO dates, honours sep= and --decimal, and --header freezes and filters', async () => {
     const dir = tempDir()
     const csv = join(dir, 'orders.csv')

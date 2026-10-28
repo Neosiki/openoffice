@@ -1,4 +1,12 @@
-import type { HwpApi, HwpFormat, MeasuredTab, SaveMode, TabMeasure, TabSpot } from '../shared/ipc'
+import type {
+  HwpApi,
+  HwpFormat,
+  MeasuredTab,
+  MemoSnapshot,
+  SaveMode,
+  TabMeasure,
+  TabSpot,
+} from '../shared/ipc'
 
 /** The part of the embedded editor a save needs. */
 export interface SaveEditorPort {
@@ -12,6 +20,10 @@ export interface SaveEditorPort {
     pageCountAfter: number
     recovered: boolean
   }>
+  /** the memos the editor holds; null when it cannot list them */
+  listMemos(): Promise<MemoSnapshot[] | null>
+  /** hold off user input while memos are listed and the bytes are exported */
+  setMemoLock(locked: boolean): Promise<unknown>
   /** how the editor lays out the given tabs; null for one it cannot measure */
   measureTabs(spots: TabSpot[]): Promise<(TabMeasure | null)[]>
   /** clear the editor's unsaved state after the host stored the bytes */
@@ -19,8 +31,17 @@ export interface SaveEditorPort {
 }
 
 export type SaveOutcome =
-  /** `tailsLost`: written, but without some master pages or memos the opened file had */
-  | { kind: 'saved'; path: string; backupPath?: string; tailsLost?: true }
+  /**
+   * `tailsLost`: written, but without some master pages or memos the opened file had.
+   * `memosLost`: written, but fewer memos than the editor held made it into the HWPX.
+   */
+  | {
+      kind: 'saved'
+      path: string
+      backupPath?: string
+      tailsLost?: true
+      memosLost?: number
+    }
   | { kind: 'canceled' }
   /**
    * Nothing was written.
@@ -66,6 +87,33 @@ async function measuredTabs(
 }
 
 /**
+ * Export HWPX with the memo list the bytes correspond to. The editor is locked while both
+ * happen, so no keystroke can add or remove a memo between the list and the export. If the
+ * lock cannot be taken, the list is not trusted (only raw memo records are checked) but the
+ * save still goes ahead; a save never fails over this.
+ */
+async function exportHwpxWithMemos(editor: SaveEditorPort): Promise<{
+  bytes: Uint8Array
+  memos: MemoSnapshot[] | null
+}> {
+  let locked = false
+  try {
+    await editor.setMemoLock(true)
+    locked = true
+  } catch {
+    // fall through: export without a list
+  }
+  if (!locked) return { bytes: await editor.exportHwpx(), memos: null }
+  try {
+    const memos = await editor.listMemos().catch(() => null)
+    const bytes = await editor.exportHwpx()
+    return { bytes, memos }
+  } finally {
+    await editor.setMemoLock(false).catch(() => {})
+  }
+}
+
+/**
  * One save, start to finish: the main process decides where and in which
  * format, the editor exports, the main process writes. The file on disk is
  * only replaced by bytes the engine could produce; a failed export leaves it
@@ -91,6 +139,7 @@ export async function runSave(
 
   const begin = await api.beginSave(mode)
   if (!begin.ok) {
+    if (begin.reason === 'memo') return { kind: 'canceled' }
     return begin.reason === 'tracked'
       ? { kind: 'failed', reason: 'tracked' }
       : { kind: 'failed', reason: 'write', detail: begin.error }
@@ -98,6 +147,7 @@ export async function runSave(
   if ('canceled' in begin) return { kind: 'canceled' }
 
   let bytes: Uint8Array
+  let memos: MemoSnapshot[] | null | undefined
   try {
     if (begin.format === 'hwp') {
       const verify = await editor.exportHwpVerify()
@@ -107,7 +157,9 @@ export async function runSave(
       }
       bytes = await editor.exportHwp()
     } else {
-      bytes = await editor.exportHwpx()
+      const exported = await exportHwpxWithMemos(editor)
+      bytes = exported.bytes
+      memos = exported.memos
     }
   } catch (error) {
     api.abortSave()
@@ -117,7 +169,7 @@ export async function runSave(
   const commit = await api.commitSave(
     bytes,
     await measuredTabs(editor, api, bytes, begin.format),
-    automatic,
+    memos === undefined ? { auto: automatic } : { auto: automatic, memos },
   )
   if (!commit.ok) {
     // a same-document copy holds the disk version: the main process refused
@@ -133,5 +185,6 @@ export async function runSave(
     path: commit.path,
     ...(commit.backupPath ? { backupPath: commit.backupPath } : {}),
     ...(commit.tailsLost ? { tailsLost: true as const } : {}),
+    ...(commit.memosLost ? { memosLost: commit.memosLost } : {}),
   }
 }

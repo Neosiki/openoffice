@@ -82,6 +82,8 @@ export const fr = {
   aiToolInsert: 'Paragraphes ajoutés : {count}',
   aiToolDelete: 'Paragraphe supprimé · {text}',
   aiToolTable: 'Tableau ajouté · {rows} × {cols}',
+  aiToolImageSearchDone: 'Recherche d’images « {query} » ({count} images)',
+  aiToolInsertImage: 'Image insérée {what}',
   aiToolFormat: 'Mise en forme modifiée · {text}',
   aiFmtBold: 'Gras',
   aiFmtItalic: 'Italique',
@@ -145,4 +147,58 @@ export const fr = {
   aiReverted: 'Modifications annulées',
   aiRevertRefused:
     'Ces modifications n’ont pas pu être annulées d’un coup. Si le document a été modifié depuis, utilisez l’annulation de l’éditeur (Ctrl+Z).',
+  memoTitle: 'Commentaires',
+  memoOpen: 'Commentaires',
+  memoAdd: 'Ajouter un commentaire',
+  memoEmpty: 'Aucun commentaire.',
+  memoNoBody: 'Aucun texte',
+  memoPage: 'p. {page}',
+  memoUnknownAuthor: 'Inconnu',
+  memoReadOnly: 'Lecture seule',
+  memoReadOnlyFormatted:
+    'Ce commentaire mélange des mises en forme : son texte ne peut pas être modifié ici.',
+  memoReadOnlyObject:
+    'Ce commentaire contient un tableau, une image ou un autre objet : son texte ne peut pas être modifié ici.',
+  memoReadOnlyPlace:
+    'Les commentaires des en-têtes, pieds de page ou notes ne peuvent pas être modifiés ici.',
+  memoReadOnlyProtected:
+    'Les commentaires d’un document protégé par mot de passe ne peuvent pas être modifiés ici.',
+  memoEdit: 'Modifier',
+  memoDelete: 'Supprimer',
+  memoNewTitle: 'Ajouter un commentaire',
+  memoEditTitle: 'Modifier le commentaire',
+  memoAuthor: 'Auteur',
+  memoBody: 'Commentaire',
+  memoBodyPlaceholder: 'Écrivez un commentaire…',
+  memoSelectionLabel: 'Texte sélectionné : {text}',
+  memoCaretLabel: 'Le commentaire sera ajouté à la position du curseur.',
+  memoSaveHint: 'Ctrl+Entrée pour enregistrer',
+  memoCancel: 'Annuler',
+  memoErrNone:
+    'Il n’y a aucun endroit où ajouter un commentaire. Sélectionnez du texte ou placez le curseur.',
+  memoErrMultiParagraph: 'Un commentaire ne peut être ajouté que dans un seul paragraphe.',
+  memoErrUnsupported:
+    'Impossible d’ajouter un commentaire dans un en-tête, un pied de page ou une note.',
+  memoErrOverlap: 'Un commentaire couvre déjà cette plage.',
+  memoErrProtected: 'Impossible d’ajouter un commentaire à un document protégé par mot de passe.',
+  memoErrEmpty: 'Écrivez le texte du commentaire.',
+  memoErrSave: 'Le commentaire n’a pas pu être enregistré.',
+  memoErrDelete: 'Le commentaire n’a pas pu être supprimé.',
+  memoErrTooLong: 'Le commentaire est trop long. Il peut contenir jusqu’à 100 000 caractères.',
+  memoErrLoad: 'La liste des commentaires n’a pas pu être lue.',
+  memoSaveBlocked: 'Enregistrez ou annulez d’abord le commentaire en cours de rédaction.',
+  memoRemoved: 'Commentaires supprimés avec le texte : {count}. Appuyez sur Ctrl+Z pour annuler.',
+  memoNotCopied: 'Le commentaire n’a pas été copié.',
+  memoLockedElsewhere:
+    'Un commentaire est en cours de rédaction dans un autre onglet. Attendez son enregistrement ou son annulation.',
+  memoContended:
+    'Une fenêtre de commentaire est aussi ouverte dans un autre onglet. Enregistrez ou annulez d’abord dans l’une des deux.',
+  memoUnsupportedBuild: 'Cette version ne prend pas en charge les commentaires.',
+  memoHwpxLost:
+    'Commentaires non transférés dans le fichier HWPX : {count}. Enregistrez au format HWP ou vérifiez le fichier dans Hancom Hangul.',
+  aiToolMemos: 'Commentaires vérifiés : {count}',
+  aiMemoContext: 'Commentaires : {count}',
+  aiMemoApprovalTitle: 'Cette modification supprime {count} commentaire(s). Continuer ?',
+  aiMemoApprovalKeep: 'Conserver les commentaires',
+  aiMemoApprovalRemove: 'Continuer et les supprimer',
 } satisfies Record<keyof typeof zh, string>

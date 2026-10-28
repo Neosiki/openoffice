@@ -41,6 +41,7 @@ export const pl = {
   btConfirmChecking: 'Sprawdzanie połączenia z AI…',
   btConfirmProvider: 'Używana AI: {provider}',
   btConfirmSends: 'Tekst wybranych rozdziałów zostanie wysłany do tej AI.',
+  btRightsNotice: 'Tłumacz tylko dokumenty, do których masz prawa.',
   btConfirmPaid: '{provider} naliczy za to opłatę',
   btProviderChange:
     'Zapisane tłumaczenie powstało w innej AI ({stored}). Resztę przetłumaczy {next}.',

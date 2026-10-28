@@ -13,6 +13,9 @@ const tDlg = createI18n({
     btnSave: '保存',
     btnDontSave: '不保存',
     btnCancel: '取消',
+    closeMemoMsg: '您正在编写的批注仍处于打开状态。',
+    closeMemoDetail: '批注内容尚未写入文档。要放弃批注以及未保存的更改并关闭吗？',
+    btnDiscardClose: '放弃并关闭',
     dlgAddAttachment: '添加附件',
     filterSupported: '支持的文件',
     filterAll: '所有文件',
@@ -37,6 +40,10 @@ const tDlg = createI18n({
     btnSave: 'Save',
     btnDontSave: "Don't Save",
     btnCancel: 'Cancel',
+    closeMemoMsg: 'A memo you are writing is still open.',
+    closeMemoDetail:
+      'Its text is not in the document yet. Discard it, along with any unsaved changes, and close?',
+    btnDiscardClose: 'Discard and Close',
     dlgAddAttachment: 'Add Attachments',
     filterSupported: 'Supported Files',
     filterAll: 'All Files',
@@ -61,6 +68,10 @@ const tDlg = createI18n({
     btnSave: 'Lưu',
     btnDontSave: 'Không lưu',
     btnCancel: 'Hủy',
+    closeMemoMsg: 'Cửa sổ ghi chú bạn đang viết vẫn đang mở.',
+    closeMemoDetail:
+      'Nội dung ghi chú chưa được đưa vào tài liệu. Bỏ ghi chú cùng các thay đổi chưa lưu và đóng?',
+    btnDiscardClose: 'Bỏ và đóng',
     dlgAddAttachment: 'Thêm tệp đính kèm',
     filterSupported: 'Các tệp được hỗ trợ',
     filterAll: 'Tất cả các tệp',
@@ -86,6 +97,10 @@ const tDlg = createI18n({
     btnSave: '保存',
     btnDontSave: '保存しない',
     btnCancel: 'キャンセル',
+    closeMemoMsg: '作成中のコメントがまだ開いています。',
+    closeMemoDetail:
+      'コメントの内容はまだ文書に入っていません。コメントと未保存の変更を破棄して閉じますか？',
+    btnDiscardClose: '破棄して閉じる',
     dlgAddAttachment: '添付ファイルの追加',
     filterSupported: 'サポートされているファイル',
     filterAll: 'すべてのファイル',
@@ -111,6 +126,10 @@ const tDlg = createI18n({
     btnSave: '저장',
     btnDontSave: '저장 안 함',
     btnCancel: '취소',
+    closeMemoMsg: '작성 중인 메모 창이 열려 있습니다.',
+    closeMemoDetail:
+      '메모 내용은 아직 문서에 들어가지 않았습니다. 메모와 저장하지 않은 변경 사항을 버리고 닫을까요?',
+    btnDiscardClose: '버리고 닫기',
     dlgAddAttachment: '첨부 파일 추가',
     filterSupported: '지원되는 파일',
     filterAll: '모든 파일',
@@ -136,6 +155,10 @@ const tDlg = createI18n({
     btnSave: 'Enregistrer',
     btnDontSave: 'Ne pas enregistrer',
     btnCancel: 'Annuler',
+    closeMemoMsg: 'Un commentaire en cours de rédaction est encore ouvert.',
+    closeMemoDetail:
+      'Son texte n’est pas encore dans le document. L’abandonner, ainsi que les modifications non enregistrées, et fermer ?',
+    btnDiscardClose: 'Abandonner et fermer',
     dlgAddAttachment: 'Ajouter des pièces jointes',
     filterSupported: 'Fichiers pris en charge',
     filterAll: 'Tous les fichiers',
@@ -161,6 +184,10 @@ const tDlg = createI18n({
     btnSave: 'Speichern',
     btnDontSave: 'Nicht speichern',
     btnCancel: 'Abbrechen',
+    closeMemoMsg: 'Ein Kommentar, den Sie gerade schreiben, ist noch geöffnet.',
+    closeMemoDetail:
+      'Sein Text steht noch nicht im Dokument. Kommentar und ungespeicherte Änderungen verwerfen und schließen?',
+    btnDiscardClose: 'Verwerfen und schließen',
     dlgAddAttachment: 'Anlagen hinzufügen',
     filterSupported: 'Unterstützte Dateien',
     filterAll: 'Alle Dateien',
@@ -186,6 +213,10 @@ const tDlg = createI18n({
     btnSave: 'Guardar',
     btnDontSave: 'No guardar',
     btnCancel: 'Cancelar',
+    closeMemoMsg: 'Hay un comentario que estás escribiendo todavía abierto.',
+    closeMemoDetail:
+      'Su texto aún no está en el documento. ¿Descartarlo, junto con los cambios sin guardar, y cerrar?',
+    btnDiscardClose: 'Descartar y cerrar',
     dlgAddAttachment: 'Agregar datos adjuntos',
     filterSupported: 'Archivos compatibles',
     filterAll: 'Todos los archivos',
@@ -211,6 +242,10 @@ const tDlg = createI18n({
     btnSave: 'บันทึก',
     btnDontSave: 'ไม่บันทึก',
     btnCancel: 'ยกเลิก',
+    closeMemoMsg: 'ความคิดเห็นที่คุณกำลังเขียนยังเปิดอยู่',
+    closeMemoDetail:
+      'ข้อความของความคิดเห็นยังไม่ได้อยู่ในเอกสาร ต้องการทิ้งความคิดเห็นและการเปลี่ยนแปลงที่ยังไม่บันทึกแล้วปิดหรือไม่',
+    btnDiscardClose: 'ทิ้งและปิด',
     dlgAddAttachment: 'เพิ่มสิ่งที่แนบ',
     filterSupported: 'ไฟล์ที่รองรับ',
     filterAll: 'ไฟล์ทั้งหมด',
@@ -236,6 +271,10 @@ const tDlg = createI18n({
     btnSave: 'Simpan',
     btnDontSave: 'Jangan Simpan',
     btnCancel: 'Batal',
+    closeMemoMsg: 'Komentar yang sedang Anda tulis masih terbuka.',
+    closeMemoDetail:
+      'Teksnya belum masuk ke dokumen. Buang komentar itu beserta perubahan yang belum disimpan, lalu tutup?',
+    btnDiscardClose: 'Buang dan Tutup',
     dlgAddAttachment: 'Tambahkan Lampiran',
     filterSupported: 'File yang Didukung',
     filterAll: 'Semua File',
@@ -261,6 +300,10 @@ const tDlg = createI18n({
     btnSave: 'Сохранить',
     btnDontSave: 'Не сохранять',
     btnCancel: 'Отмена',
+    closeMemoMsg: 'Примечание, которое вы пишете, всё ещё открыто.',
+    closeMemoDetail:
+      'Его текст ещё не попал в документ. Отменить примечание вместе с несохранёнными изменениями и закрыть?',
+    btnDiscardClose: 'Отменить и закрыть',
     dlgAddAttachment: 'Добавить вложения',
     filterSupported: 'Поддерживаемые файлы',
     filterAll: 'Все файлы',
@@ -286,6 +329,10 @@ const tDlg = createI18n({
     btnSave: 'حفظ',
     btnDontSave: 'عدم الحفظ',
     btnCancel: 'إلغاء',
+    closeMemoMsg: 'لا يزال التعليق الذي تكتبه مفتوحًا.',
+    closeMemoDetail:
+      'لم يُضف نصه إلى المستند بعد. هل تريد تجاهله مع التغييرات غير المحفوظة والإغلاق؟',
+    btnDiscardClose: 'تجاهل وإغلاق',
     dlgAddAttachment: 'إضافة مرفقات',
     filterSupported: 'الملفات المدعومة',
     filterAll: 'كل الملفات',
@@ -311,6 +358,10 @@ const tDlg = createI18n({
     btnSave: 'Salvar',
     btnDontSave: 'Não Salvar',
     btnCancel: 'Cancelar',
+    closeMemoMsg: 'Um comentário que você está escrevendo ainda está aberto.',
+    closeMemoDetail:
+      'O texto dele ainda não está no documento. Descartá-lo, junto com as alterações não salvas, e fechar?',
+    btnDiscardClose: 'Descartar e fechar',
     dlgAddAttachment: 'Adicionar Anexos',
     filterSupported: 'Arquivos Compatíveis',
     filterAll: 'Todos os Arquivos',
@@ -336,6 +387,10 @@ const tDlg = createI18n({
     btnSave: 'Salva',
     btnDontSave: 'Non salvare',
     btnCancel: 'Annulla',
+    closeMemoMsg: 'Un commento che stai scrivendo è ancora aperto.',
+    closeMemoDetail:
+      'Il suo testo non è ancora nel documento. Scartarlo, insieme alle modifiche non salvate, e chiudere?',
+    btnDiscardClose: 'Scarta e chiudi',
     dlgAddAttachment: 'Aggiungi allegati',
     filterSupported: 'File supportati',
     filterAll: 'Tutti i file',
@@ -361,6 +416,10 @@ const tDlg = createI18n({
     btnSave: 'Zapisz',
     btnDontSave: 'Nie zapisuj',
     btnCancel: 'Anuluj',
+    closeMemoMsg: 'Komentarz, który piszesz, jest nadal otwarty.',
+    closeMemoDetail:
+      'Jego tekst nie trafił jeszcze do dokumentu. Odrzucić go wraz z niezapisanymi zmianami i zamknąć?',
+    btnDiscardClose: 'Odrzuć i zamknij',
     dlgAddAttachment: 'Dodaj załączniki',
     filterSupported: 'Obsługiwane pliki',
     filterAll: 'Wszystkie pliki',
@@ -386,6 +445,10 @@ const tDlg = createI18n({
     btnSave: 'Uložit',
     btnDontSave: 'Neukládat',
     btnCancel: 'Zrušit',
+    closeMemoMsg: 'Komentář, který píšete, je stále otevřený.',
+    closeMemoDetail:
+      'Jeho text ještě není v dokumentu. Zahodit ho spolu s neuloženými změnami a zavřít?',
+    btnDiscardClose: 'Zahodit a zavřít',
     dlgAddAttachment: 'Přidat přílohy',
     filterSupported: 'Podporované soubory',
     filterAll: 'Všechny soubory',
@@ -411,6 +474,10 @@ const tDlg = createI18n({
     btnSave: 'Opslaan',
     btnDontSave: 'Niet opslaan',
     btnCancel: 'Annuleren',
+    closeMemoMsg: 'Een opmerking die u aan het schrijven bent, is nog geopend.',
+    closeMemoDetail:
+      'De tekst staat nog niet in het document. De opmerking en niet-opgeslagen wijzigingen verwerpen en sluiten?',
+    btnDiscardClose: 'Verwerpen en sluiten',
     dlgAddAttachment: 'Bijlagen toevoegen',
     filterSupported: 'Ondersteunde bestanden',
     filterAll: 'Alle bestanden',
@@ -436,6 +503,10 @@ const tDlg = createI18n({
     btnSave: 'Simpan',
     btnDontSave: 'Jangan Simpan',
     btnCancel: 'Batal',
+    closeMemoMsg: 'Komen yang sedang anda tulis masih terbuka.',
+    closeMemoDetail:
+      'Teksnya belum dimasukkan ke dalam dokumen. Buang komen itu bersama perubahan yang belum disimpan, dan tutup?',
+    btnDiscardClose: 'Buang dan Tutup',
     dlgAddAttachment: 'Tambah Lampiran',
     filterSupported: 'Fail yang Disokong',
     filterAll: 'Semua Fail',
@@ -461,6 +532,9 @@ const tDlg = createI18n({
     btnSave: 'שמירה',
     btnDontSave: 'אל תשמור',
     btnCancel: 'ביטול',
+    closeMemoMsg: 'הערה שאתם כותבים עדיין פתוחה.',
+    closeMemoDetail: 'הטקסט שלה עדיין לא נכנס למסמך. לבטל אותה יחד עם השינויים שלא נשמרו ולסגור?',
+    btnDiscardClose: 'ביטול וסגירה',
     dlgAddAttachment: 'הוספת קבצים מצורפים',
     filterSupported: 'קבצים נתמכים',
     filterAll: 'כל הקבצים',
@@ -486,6 +560,10 @@ const tDlg = createI18n({
     btnSave: 'सहेजें',
     btnDontSave: 'न सहेजें',
     btnCancel: 'रद्द करें',
+    closeMemoMsg: 'आप जो टिप्पणी लिख रहे हैं वह अभी भी खुली है।',
+    closeMemoDetail:
+      'उसका पाठ अभी दस्तावेज़ में नहीं गया है। टिप्पणी और बिना सहेजे बदलावों को छोड़कर बंद करें?',
+    btnDiscardClose: 'छोड़ें और बंद करें',
     dlgAddAttachment: 'अनुलग्नक जोड़ें',
     filterSupported: 'समर्थित फ़ाइलें',
     filterAll: 'सभी फ़ाइलें',
@@ -511,6 +589,9 @@ const tDlg = createI18n({
     btnSave: '儲存',
     btnDontSave: '不儲存',
     btnCancel: '取消',
+    closeMemoMsg: '您正在撰寫的批註仍然開著。',
+    closeMemoDetail: '批註內容尚未寫入文件。要捨棄批註以及未儲存的變更並關閉嗎？',
+    btnDiscardClose: '捨棄並關閉',
     dlgAddAttachment: '新增附件',
     filterSupported: '支援的檔案',
     filterAll: '所有檔案',
@@ -537,6 +618,9 @@ export type DlgKey =
   | 'btnSave'
   | 'btnDontSave'
   | 'btnCancel'
+  | 'closeMemoMsg'
+  | 'closeMemoDetail'
+  | 'btnDiscardClose'
   | 'dlgAddAttachment'
   | 'filterSupported'
   | 'filterAll'

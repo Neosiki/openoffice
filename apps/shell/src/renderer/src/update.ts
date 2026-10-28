@@ -129,14 +129,17 @@ function render(state: UpdateUiState): void {
       percentText.textContent = `${pct}%`
       break
     }
-    case 'downloaded':
-      // the installer will open its own window: say so before the restart
-      desc.textContent = state.visibleInstall ? s.visibleInstallDesc : s.desc
-      if (state.visibleInstall) desc.style.display = ''
+    case 'downloaded': {
+      // say what the restart does before it happens: an installer window (and
+      // its administrator prompt), then the app and its documents come back
+      const restartDesc = state.visibleInstall ? s.visibleInstallDesc : s.restartDesc
+      desc.textContent = restartDesc || s.desc
+      if (restartDesc) desc.style.display = ''
       progress.style.display = 'none'
       action.style.display = ''
       action.textContent = s.install
       break
+    }
     case 'install-failed':
       desc.textContent = s.installFailedDesc
       desc.style.display = ''

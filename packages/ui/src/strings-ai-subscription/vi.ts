@@ -23,6 +23,8 @@ export const vi = {
   actionInstall: 'Cài đặt',
   actionLogin: 'Đăng nhập',
   actionLoginWindow: 'Trình duyệt không mở?',
+  actionLoginWithCode: 'Trình duyệt hiện mã?',
+  actionLoginBrowser: 'Đăng nhập trong trình duyệt',
   actionRecheck: 'Kiểm tra lại',
   actionAcceptMetered: 'Vẫn sử dụng',
   actionInstallHelp: 'Hướng dẫn cài đặt chính thức',
@@ -118,6 +120,8 @@ export const vi = {
   signingInStalledNote:
     'Nếu trình duyệt không mở trang đăng nhập nào, hãy mở cửa sổ đăng nhập bằng nút bên dưới. Nếu bạn vẫn đang đăng nhập trong trình duyệt, đừng nhấn nút mà hãy hoàn tất ở đó: nút này sẽ dừng lần đăng nhập đó và bắt đầu lại từ đầu.',
   actionLoginWindowOpen: 'Mở cửa sổ đăng nhập',
+  loginUnfinishedNote:
+    'Quá trình đăng nhập chưa hoàn tất. Nếu trình duyệt hiện mã, bạn cần dán mã vào cửa sổ đăng nhập: hãy mở cửa sổ đó và đăng nhập lại tại đó. Mã hiện trước đó không còn dùng được.',
   loginWindowTitle: 'Đăng nhập {provider}',
   loginWindowIntro:
     'Đây là cửa sổ đăng nhập của chương trình {provider}. Đoạn tiếng Anh bên dưới là hướng dẫn của chương trình {provider}.',
