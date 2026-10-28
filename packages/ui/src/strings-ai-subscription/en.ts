@@ -141,4 +141,21 @@ export const en = {
   actionCopyInfo: 'Copy details for help',
   copyInfoDone: 'Copied',
   actionConnectHelp: 'See each step on screen (page in Korean)',
+  guidePathChatGptBody:
+    'Sign in with your ChatGPT account and use your plan. Nothing to install. The free plan allows only a little use.',
+  guideUseCodex: 'Already use the Codex program on this PC? Connect with Codex',
+  guideUseDirect: 'Connect directly in the app, without Codex',
+  chatgptLoginNote:
+    'A ChatGPT sign-in page opens in your browser. Sign in and allow this app to use your ChatGPT plan; the connection finishes by itself.',
+  chatgptLoginUnfinishedNote:
+    'The sign-in did not finish. Press it again to start over. The connection needs you to allow use of your ChatGPT plan.',
+  chatgptSigningInNote:
+    'Sign in with your ChatGPT account in the browser that opened, and allow this app to use your plan. The connection finishes by itself.',
+  chatgptPlanNote:
+    'AI in this app runs on your ChatGPT plan. Disconnecting ends it for this app only; other programs on this PC stay signed in.',
+  actionContinueWithChatGpt: 'Continue with ChatGPT',
+  actionManageUsage: 'Manage usage',
+  browserPageDoneBody: 'You can close this tab and go back to the app.',
+  browserPageFailedTitle: 'The connection was not made',
+  browserPageFailedBody: 'Go back to the app and try again.',
 } satisfies Record<keyof typeof zh, string>

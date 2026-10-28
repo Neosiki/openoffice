@@ -24,7 +24,7 @@ import {
   type SubscriptionProgram,
   type SubscriptionStatusMap,
 } from '../src/subscription'
-import type { AiSubscriptionProviderId } from '../src/types'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../src/types'
 
 class FakeChild extends EventEmitter {
   constructor(readonly pid: number) {
@@ -38,7 +38,7 @@ class FakeChild extends EventEmitter {
 
 const WINDOWS = { SystemRoot: 'C:\\Windows' }
 
-function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
+function program(provider: AiSubscriptionCliId): SubscriptionProgram {
   const command = provider === 'codex' ? 'C:\\npm\\codex.exe' : 'C:\\npm\\claude.exe'
   return { provider, command, prefixArgs: [], env: {}, entry: command, source: 'npm' }
 }

@@ -32,6 +32,7 @@ export {
   providerSelectionOf,
   selectAiProvider,
   subscriptionConnection,
+  subscriptionStateOf,
 } from './provider-selection'
 export type { AiNotConnectedReason, AiProviderChoice } from './provider-selection'
 export {
@@ -53,6 +54,7 @@ export type { AiImageBackend, AiImageBackendContext } from './image-backend'
 export { subscriptionConnectHelpUrl } from './connect-help'
 export type { SubscriptionConnectHelpPath } from './connect-help'
 export {
+  SUBSCRIPTION_CHATGPT_USAGE_URL,
   SUBSCRIPTION_INSTALL_COMMANDS,
   SUBSCRIPTION_INSTALL_URLS,
   SUBSCRIPTION_IPC_CHANNELS,

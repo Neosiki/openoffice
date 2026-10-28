@@ -136,4 +136,21 @@ export const ko = {
   actionCopyInfo: '도움 요청용 정보 복사',
   copyInfoDone: '복사했습니다',
   actionConnectHelp: '연결하는 방법 화면으로 보기',
+  guidePathChatGptBody:
+    'ChatGPT 계정으로 로그인하면 그 요금제 안에서 씁니다. 프로그램을 설치하지 않아도 됩니다. 무료 요금제는 쓸 수 있는 양이 적습니다.',
+  guideUseCodex: '이 PC에서 Codex 프로그램을 이미 쓰고 있나요? Codex로 연결',
+  guideUseDirect: 'Codex 없이 앱에서 바로 연결',
+  chatgptLoginNote:
+    '누르면 브라우저에 ChatGPT 로그인 화면이 열립니다. 로그인한 뒤 이 앱이 ChatGPT 요금제를 쓰도록 허용하면 저절로 연결됩니다.',
+  chatgptLoginUnfinishedNote:
+    '로그인이 끝나지 않았습니다. 다시 누르면 처음부터 시작합니다. ChatGPT 요금제 사용을 허용해야 연결됩니다.',
+  chatgptSigningInNote:
+    '열린 브라우저에서 ChatGPT 계정으로 로그인하고, 이 앱이 요금제를 쓰도록 허용하세요. 끝나면 저절로 연결됩니다.',
+  chatgptPlanNote:
+    '이 앱에서 쓰는 AI는 ChatGPT 요금제 안에서 처리됩니다. 연결을 끊으면 이 앱에서만 끊기고, 이 PC의 다른 프로그램은 그대로입니다.',
+  actionContinueWithChatGpt: 'ChatGPT로 계속',
+  actionManageUsage: '사용량 관리',
+  browserPageDoneBody: '이 탭을 닫고 앱으로 돌아가세요.',
+  browserPageFailedTitle: '연결하지 못했습니다',
+  browserPageFailedBody: '앱으로 돌아가 다시 시도하세요.',
 } satisfies Record<keyof typeof zh, string>

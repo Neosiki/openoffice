@@ -135,4 +135,21 @@ export const he = {
   actionCopyInfo: 'העתקת פרטים לקבלת עזרה',
   copyInfoDone: 'הועתק',
   actionConnectHelp: 'צפו בכל שלב על המסך (דף בקוריאנית)',
+  guidePathChatGptBody:
+    'היכנסו עם חשבון ChatGPT והשתמשו בתוכנית שלכם. אין צורך להתקין דבר. בתוכנית החינמית אפשר להשתמש רק מעט.',
+  guideUseCodex: 'כבר משתמשים בתוכנת Codex במחשב הזה? התחברות דרך Codex',
+  guideUseDirect: 'התחברות ישירה באפליקציה, בלי Codex',
+  chatgptLoginNote:
+    'דף כניסה של ChatGPT ייפתח בדפדפן. היכנסו ואשרו לאפליקציה הזו להשתמש בתוכנית ה-ChatGPT שלכם; החיבור יושלם מעצמו.',
+  chatgptLoginUnfinishedNote:
+    'הכניסה לא הושלמה. לחצו שוב כדי להתחיל מחדש. כדי להתחבר צריך לאשר שימוש בתוכנית ה-ChatGPT שלכם.',
+  chatgptSigningInNote:
+    'היכנסו עם חשבון ChatGPT בדפדפן שנפתח ואשרו לאפליקציה הזו להשתמש בתוכנית שלכם. החיבור יושלם מעצמו.',
+  chatgptPlanNote:
+    'הבינה המלאכותית באפליקציה הזו פועלת במסגרת תוכנית ה-ChatGPT שלכם. ניתוק החיבור חל רק על האפליקציה הזו; תוכנות אחרות במחשב הזה יישארו מחוברות.',
+  actionContinueWithChatGpt: 'המשך עם ChatGPT',
+  actionManageUsage: 'ניהול השימוש',
+  browserPageDoneBody: 'אפשר לסגור את הכרטיסייה הזו ולחזור לאפליקציה.',
+  browserPageFailedTitle: 'החיבור לא הושלם',
+  browserPageFailedBody: 'חזרו לאפליקציה ונסו שוב.',
 } satisfies Record<keyof typeof zh, string>

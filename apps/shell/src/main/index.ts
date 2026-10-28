@@ -361,6 +361,7 @@ import type {
 import { TAB_STRIP_HEIGHT } from '../shared/tab-drag-geometry'
 import { SHELL_SUBSCRIPTION_CHANNELS, isSubscriptionProviderId } from '../shared/subscription-api'
 import {
+  SUBSCRIPTION_CHATGPT_USAGE_URL,
   SUBSCRIPTION_INSTALL_URLS,
   initSubscriptionChildTracking,
   sharedSubscriptionStatuses,
@@ -6205,7 +6206,10 @@ function registerHomeIpc(): void {
   // the page is the vendor's fixed install guide; the renderer only names the provider
   ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, (_event, provider: unknown) => {
     if (!isSubscriptionProviderId(provider)) return
-    const url = safeExternalUrl(SUBSCRIPTION_INSTALL_URLS[provider])
+    // ChatGPT installs nothing: its page is where the user sees and limits the app's use of the plan
+    const url = safeExternalUrl(
+      provider === 'chatgpt' ? SUBSCRIPTION_CHATGPT_USAGE_URL : SUBSCRIPTION_INSTALL_URLS[provider],
+    )
     if (!url) return
     shell.openExternal(url).catch(() => {
       // no browser handler available; nothing actionable for the user here

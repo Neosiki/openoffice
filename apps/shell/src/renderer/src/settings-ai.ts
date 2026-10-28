@@ -48,6 +48,8 @@ export const CODEX_MAY_KEEP_HISTORY = true
 const SUBSCRIPTION_PROGRAM_NAMES: Record<AiSubscriptionProviderId, string> = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
+  // no program: its sign-out is the app's own and asks with words of its own
+  chatgpt: 'ChatGPT',
 }
 
 export function subscriptionProgramName(provider: AiSubscriptionProviderId): string {

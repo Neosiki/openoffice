@@ -43,6 +43,7 @@ function settingsWith(
 function statuses(claude: AiSubscriptionState, codex: AiSubscriptionState): SubscriptionStatusMap {
   return {
     'claude-code': { provider: 'claude-code', state: claude, meteredAccepted: false },
+    chatgpt: { provider: 'chatgpt', state: 'signed-out', meteredAccepted: false },
     codex: { provider: 'codex', state: codex, meteredAccepted: false },
   }
 }

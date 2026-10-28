@@ -9,6 +9,7 @@ import {
   AI_SUBSCRIPTION_PROVIDERS,
   selectAiProvider,
   subscriptionConnection,
+  subscriptionStateOf,
 } from '@genoffice/ai-provider/browser'
 import type {
   AiSettings,
@@ -53,7 +54,7 @@ export function subscriptionSummary(statuses: AiSubscriptionStatuses): Subscript
   const connected = usableSubscriptionProviders(statuses)
   if (connected.length > 0) return { state: 'connected', connected }
   const checking = AI_SUBSCRIPTION_PROVIDERS.some(
-    (provider) => (statuses[provider]?.state ?? 'checking') === 'checking',
+    (provider) => subscriptionStateOf(statuses, provider) === 'checking',
   )
   return { state: checking ? 'checking' : 'disconnected', connected: [] }
 }
@@ -84,7 +85,7 @@ export function aiConnectHint(
   const view = aiConnectPromptView(selectAiProvider(settings, statuses))
   if (!view) return null
   const waiting = view.providers.some(
-    (provider) => (statuses[provider]?.state ?? 'checking') === 'checking',
+    (provider) => subscriptionStateOf(statuses, provider) === 'checking',
   )
   return waiting ? null : view
 }

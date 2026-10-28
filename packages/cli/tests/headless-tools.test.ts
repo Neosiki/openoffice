@@ -51,6 +51,8 @@ const PNG = Buffer.from(
 const READY: Record<string, SubscriptionDetection> = {
   'claude-code': { provider: 'claude-code', state: 'ready', loginMethod: 'subscription' },
   codex: { provider: 'codex', state: 'ready', loginMethod: 'subscription' },
+  // the terminal command has no ChatGPT connection of its own
+  chatgpt: { provider: 'chatgpt', state: 'signed-out' },
 }
 
 const METERED_CLAUDE: SubscriptionDetection = {
@@ -315,7 +317,11 @@ describe('media on the automatic-call path', () => {
       'claude-code': { provider: 'claude-code', state: 'ready' },
       codex: { provider: 'codex', state: 'ready' },
     })
-    expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual(['claude-code', 'codex'])
+    expect(fakes.detect.mock.calls.map((call) => call[0]).sort()).toEqual([
+      'chatgpt',
+      'claude-code',
+      'codex',
+    ])
   })
 
   it('keeps the account a CLI names out of the tool context, the result and the audit log', async () => {

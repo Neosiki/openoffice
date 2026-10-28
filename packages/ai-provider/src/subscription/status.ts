@@ -14,8 +14,10 @@
  * account is for the Settings card alone: it stays in the status in memory and
  * is never written anywhere. The organisation is dropped as before.
  */
+import { detectChatGptConnection } from '../chatgpt/status'
 import { AI_SUBSCRIPTION_PROVIDERS } from '../providers'
 import type {
+  AiSubscriptionCliId,
   AiSubscriptionLoginMethod,
   AiSubscriptionProviderId,
   AiSubscriptionState,
@@ -380,13 +382,13 @@ function errorCodeSuffix(error: unknown): string {
   return typeof code === 'string' && /^E[A-Z0-9_]{1,30}$/.test(code) ? ` (${code})` : ''
 }
 
-const STATUS_ARGS: Record<AiSubscriptionProviderId, string[]> = {
+const STATUS_ARGS: Record<AiSubscriptionCliId, string[]> = {
   'claude-code': ['auth', 'status', '--json'],
   codex: ['login', 'status'],
 }
 
 function parseStatus(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   result: SubscriptionCommandResult,
 ): SubscriptionLogin | null {
   return provider === 'claude-code'
@@ -395,7 +397,7 @@ function parseStatus(
 }
 
 async function inspect(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   options: SubscriptionDetectOptions,
   signal: AbortSignal,
   timeoutMs: number,
@@ -493,6 +495,8 @@ async function inspect(
  * that outlasts `timeoutMs` included, is an `error` detection.
  */
 export const detectSubscriptionLogin: SubscriptionDetector = async (provider, options = {}) => {
+  // no program: the app's own sign-in is what there is to look at
+  if (provider === 'chatgpt') return detectChatGptConnection()
   const timeoutMs = options.timeoutMs ?? SUBSCRIPTION_STATUS_TIMEOUT_MS
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined

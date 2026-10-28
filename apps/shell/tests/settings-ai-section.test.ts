@@ -282,7 +282,7 @@ describe('the default view', () => {
 
     expect(card('claude-code').dataset.state).toBe('ready')
     expect(card('codex').dataset.state).toBe('signed-out')
-    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(3)
     // the free connections sit outside Advanced (decision 0009); Gemini's key field is theirs
     expect(host.querySelectorAll('.free-ai-card')).toHaveLength(2)
 
@@ -350,13 +350,14 @@ describe('the default view', () => {
     const rows = [...host.querySelectorAll<HTMLElement>('.set-field[data-provider]')]
     expect(rows.map((row) => row.textContent)).toEqual([
       'ClaudeConnected · max',
+      'ChatGPTNot signed in',
       'CodexNot installed',
     ])
     expect(host.textContent).not.toMatch(/credits/i)
 
     await click(button('Manage connections'))
     expect(nav('AI')?.classList.contains('active')).toBe(true)
-    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card:not(.free-ai-card)')).toHaveLength(3)
   })
 })
 
@@ -1149,9 +1150,9 @@ describe('without the main-process handlers', () => {
     installHome(defaultAiSettings())
     delete window.aiOfficeSubscription
     await openModal()
-    expect(host.querySelectorAll('.set-field[data-provider]')).toHaveLength(2)
+    expect(host.querySelectorAll('.set-field[data-provider]')).toHaveLength(3)
     await openAiSection()
-    expect(host.querySelectorAll('.ai-sub-card[data-state="checking"]')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card[data-state="checking"]')).toHaveLength(3)
     await settle()
     expect(unhandled).toEqual([])
   })
@@ -1176,7 +1177,7 @@ describe('without the main-process handlers', () => {
     installSubscription(statusMap('ready', 'ready'))
     await openModal()
     await openAiSection()
-    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(2)
+    expect(host.querySelectorAll('.ai-sub-card')).toHaveLength(3)
     expect(dropdown('AI to use')).toBeNull()
     await settle()
     expect(unhandled).toEqual([])

@@ -38,8 +38,8 @@ export type IpcStreamErrorKind =
   /** the user declined to send a request larger than the context budget */
   | 'context-limit'
 
-/** Providers reached through a locally installed vendor CLI (ai-provider's AiSubscriptionProviderId) */
-export type IpcSubscriptionProviderId = 'claude-code' | 'codex'
+/** Subscription providers (ai-provider's AiSubscriptionProviderId): the two vendor CLIs, and ChatGPT reached directly */
+export type IpcSubscriptionProviderId = 'claude-code' | 'codex' | 'chatgpt'
 
 /** What an error chunk says about its cause, without the message */
 export interface IpcStreamErrorCause {

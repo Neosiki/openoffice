@@ -301,12 +301,22 @@ describe('provider registry', () => {
     ).toBe('https://mirror/v1')
   })
 
-  it('only the two subscription CLIs authenticate without an API key', () => {
-    for (const [id, adapter] of Object.entries(AI_PROVIDER_ADAPTERS)) {
-      expect(adapter.capabilities.auth).toBe(
-        id === 'codex' ? 'codex-chatgpt' : id === 'claude-code' ? 'claude-subscription' : 'api-key',
-      )
+  it('only the subscription providers authenticate without an API key', () => {
+    const subscription: Record<string, string> = {
+      codex: 'codex-chatgpt',
+      'claude-code': 'claude-subscription',
+      chatgpt: 'chatgpt-plan',
     }
+    for (const [id, adapter] of Object.entries(AI_PROVIDER_ADAPTERS)) {
+      expect(adapter.capabilities.auth).toBe(subscription[id] ?? 'api-key')
+    }
+  })
+
+  it('routes ChatGPT to the direct Responses bridge', () => {
+    expect(AI_PROVIDER_ADAPTERS.chatgpt.resolveEndpoint({ apiKey: '', model: '' })).toEqual({
+      protocol: 'chatgpt-responses',
+      baseUrl: '',
+    })
   })
 
   it('routes Codex to the auto-discovered local process bridge', () => {
