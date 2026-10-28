@@ -9,11 +9,17 @@
  *
  * One CLI process serves one turn and then ends. Everything the model reads
  * (system prompt, conversation, images) goes over stdin; the command line
- * carries fixed flags only.
+ * carries fixed flags, the model name and, for a structured turn, the schema,
+ * which holds nothing but the app's tool names.
  *
- * The schema is given to the model in its instructions, not to the CLI's own
- * `--json-schema`: that option adds a `StructuredOutput` tool to the session,
- * and the bridge runs only while the CLI reports no tool at all.
+ * A structured turn passes the schema to the CLI's own `--json-schema`
+ * (decision 0082). Told in words to answer with JSON, the model kept slipping
+ * into its own tool-call markup and runaway repetition; with the option, it
+ * answers through the CLI's `StructuredOutput` tool, which the CLI validates
+ * against the schema and answers itself. That tool is the only one a
+ * structured turn runs with: the CLI must report exactly it, and any other
+ * tool, tool block or permission request ends the run. A plain turn and the
+ * model list run with no tool at all.
  */
 import type { ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -84,14 +90,26 @@ export const MAX_CLAUDE_CODE_IMAGES = 100
 const EMPTY_STREAM_MARK = '(empty stream)'
 const TOOL_ARGS_DROP_MARK = 'while sending tool arguments'
 
+/**
+ * The CLI's own tool that `--json-schema` adds: the model hands its answer to
+ * it, and the CLI checks the answer against the schema and acknowledges it
+ * without asking anyone. It is the one tool a structured turn may run with.
+ */
+const STRUCTURED_OUTPUT_TOOL = 'StructuredOutput'
+
+/** A tool name as the model APIs take it; only names of this shape go on the command line */
+const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/
+
 const NO_TOOLS_INSTRUCTIONS =
   'You are the language-model backend embedded in an office application. You have no tools of your own: you cannot read or change files, run commands, browse the web or call any tool, and you must not try.'
 
 const STRUCTURED_INSTRUCTIONS =
-  `${NO_TOOLS_INSTRUCTIONS} The caller supplies the conversation so far, the list of application tools and a JSON Schema. ` +
-  'Answer with exactly one JSON object that matches the schema and nothing else: no prose before or after it and no code fence. ' +
+  'You are the language-model backend embedded in an office application. You cannot read or change files, run commands or browse the web yourself, and you must not try. ' +
+  `The caller supplies the conversation so far and the list of application tools. Give your whole answer by calling ${STRUCTURED_OUTPUT_TOOL} exactly once; write nothing outside that call. ` +
   'Write the "text" property first and put the user-visible prose there. ' +
   'Put the application tool calls you request in "toolCalls"; each "inputJson" must be a JSON-encoded object matching that tool\'s inputSchema; use only the listed tool names; return an empty "toolCalls" array when no tool is needed. ' +
+  'Never write a tool call into "text": a call written as text is never run. ' +
+  `The application tools are not tools of yours: do not call them directly, request them in "toolCalls" of the ${STRUCTURED_OUTPUT_TOOL} call. ` +
   'The application runs the requested tools itself and reports their results in the next turn.'
 
 const PLAIN_INSTRUCTIONS = `${NO_TOOLS_INSTRUCTIONS} Answer the request directly.`
@@ -117,15 +135,23 @@ const AFTER_TOOL_RESULTS =
 export const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._:[\]-]{0,127}$/
 
 /**
- * The whole command line: fixed flags, plus the configured model. Built-in
- * tools off (`--tools ""`), user/project/local settings and with them hooks
- * and plugins ignored (`--restricted`, `--setting-sources ""`), no MCP server
- * from any configuration (`--strict-mcp-config`), no skills, nothing written
- * to the session store. Never `--bare`: that mode does not read the
- * subscription login. The flags are not trusted: the run checks the tool list
- * the CLI reports.
+ * The whole command line: fixed flags, plus the configured model and, for a
+ * structured turn, the output schema. Built-in tools off (`--tools ""`),
+ * user/project/local settings and with them hooks and plugins ignored
+ * (`--restricted`, `--setting-sources ""`), no MCP server from any
+ * configuration (`--strict-mcp-config`), no skills, nothing written to the
+ * session store. Never `--bare`: that mode does not read the subscription
+ * login. The flags are not trusted: the run checks the tool list the CLI
+ * reports.
+ *
+ * The schema is built by `claudeCodeOutputSchema` from tool names only, and
+ * every name must have the shape model APIs take, so nothing a person wrote
+ * reaches the command line.
  */
-export function claudeCodeCliLaunchArgs(model: string): string[] {
+export function claudeCodeCliLaunchArgs(
+  model: string,
+  outputSchema?: Record<string, unknown>,
+): string[] {
   const name = model.trim()
   if (name && !MODEL_NAME.test(name)) {
     throw new Error(`Invalid Claude Code model name: ${name.slice(0, 80)}`)
@@ -147,6 +173,7 @@ export function claudeCodeCliLaunchArgs(model: string): string[] {
     '--disable-slash-commands',
     '--no-session-persistence',
     ...(name ? ['--model', name] : []),
+    ...(outputSchema ? ['--json-schema', JSON.stringify(outputSchema)] : []),
   ]
 }
 
@@ -169,8 +196,17 @@ export interface ClaudeCodeInput {
   truncated: boolean
 }
 
-/** The structured turn the model must answer with: prose, and calls to the app's tools by name */
+/**
+ * The structured turn the model must answer with: prose, and calls to the app's
+ * tools by name. It goes on the command line, so it carries the tool names and
+ * nothing else of the tools, and a name of any other shape is refused.
+ */
 export function claudeCodeOutputSchema(tools: AgentToolDef[]): Record<string, unknown> {
+  for (const tool of tools) {
+    if (!TOOL_NAME.test(tool.name)) {
+      throw new Error(`Invalid tool name for Claude Code: ${tool.name.slice(0, 80)}`)
+    }
+  }
   return {
     type: 'object',
     properties: {
@@ -247,7 +283,7 @@ export function buildClaudeCodeInput(
         JSON.stringify(claudeCodeOutputSchema(tools)),
         '</response_schema>',
         'The content blocks after this one are the conversation so far, in order: one JSON object per event, and the images attached to a user event right after it.',
-        'Answer the conversation with exactly one JSON object matching response_schema, "text" first, and nothing outside it.',
+        `Answer the conversation with one ${STRUCTURED_OUTPUT_TOOL} call whose input matches response_schema, "text" first, and nothing outside it.`,
         `Keep this one-turn response within roughly ${maxTokens} output tokens.`,
       ].join('\n'),
     },
@@ -647,6 +683,58 @@ interface TurnRequest {
   tools: AgentToolDef[]
 }
 
+/** The tool list a turn may run with: the CLI's structured-output tool for a structured turn, none otherwise */
+function expectedTools(mode: TurnRequest['mode']): readonly string[] {
+  return mode === 'structured' ? [STRUCTURED_OUTPUT_TOOL] : []
+}
+
+function isStructuredOutputUse(block: unknown): block is Record<string, unknown> {
+  return isPlainObject(block) && block.type === 'tool_use' && block.name === STRUCTURED_OUTPUT_TOOL
+}
+
+/**
+ * The input of a direct app-tool call, in the shape `parseClaudeCodeTurn`
+ * takes. The CLI does not know the tool, so the model guesses the input's
+ * shape (seen live): it may wrap the real input as a `toolCalls` item's
+ * `"inputJson"` string, or write an array or object field as a JSON string.
+ * Both are undone against the tool's schema; numeric strings are left to the
+ * loop, which repairs them for every provider.
+ */
+export function directCallInput(
+  tool: AgentToolDef | undefined,
+  input: unknown,
+): { inputJson: string } | { input: Record<string, unknown> } {
+  if (!isPlainObject(input)) return { input: {} }
+  const keys = Object.keys(input)
+  if (keys.length === 1 && keys[0] === 'inputJson' && typeof input.inputJson === 'string') {
+    return { inputJson: input.inputJson }
+  }
+  const properties = tool?.inputSchema?.properties
+  if (!isPlainObject(properties)) return { input }
+  let out = input
+  for (const [field, schema] of Object.entries(properties)) {
+    const value = input[field]
+    if (typeof value !== 'string' || !isPlainObject(schema)) continue
+    const declared = (Array.isArray(schema.type) ? schema.type : [schema.type]).filter(
+      (type): type is string => typeof type === 'string',
+    )
+    if (declared.includes('string')) continue
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      continue
+    }
+    const fits =
+      (declared.includes('array') && Array.isArray(parsed)) ||
+      (declared.includes('object') && isPlainObject(parsed))
+    if (!fits) continue
+    if (out === input) out = { ...input }
+    out[field] = parsed
+  }
+  return { input: out }
+}
+
 /** Split a stream into lines, giving up on a line that grows past the cap */
 export function readLines(
   stream: NodeJS.ReadableStream,
@@ -727,7 +815,11 @@ async function runClaudeCodeTurn(
   deps: ClaudeCodeCliDeps,
 ): Promise<void> {
   if (cb.signal.aborted) throw cancelledError()
-  const args = claudeCodeCliLaunchArgs(config.model)
+  const { mode, tools } = request
+  const args = claudeCodeCliLaunchArgs(
+    config.model,
+    mode === 'structured' ? claudeCodeOutputSchema(tools) : undefined,
+  )
   const program = await (
     deps.resolveProgram ??
     ((configuredPath) => resolveSubscriptionProgram(PROVIDER, { configuredPath }))
@@ -756,19 +848,44 @@ async function runClaudeCodeTurn(
   }
 
   const killTree = deps.killTree ?? ((target) => killProcessTree(target, { force: true }))
-  const { mode, tools } = request
+  const allowed = expectedTools(mode)
   return new Promise<void>((resolve, reject) => {
     let settled = false
     let exited = false
     let stderr = ''
     /** the CLI accepted the system prompt */
     let initialized = false
-    /** the CLI reported its tool list, and the list is empty */
+    /** the CLI reported its tool list, and the list is exactly what the turn may run with */
     let verified = false
-    /** the model's answer as streamed */
+    /** the model's answer as streamed: the text of a plain turn, the StructuredOutput input of a structured one */
     let raw = ''
     /** the model's answer as carried by whole assistant messages */
     let whole = ''
+    /** stream indexes of the StructuredOutput blocks of the current message */
+    const structuredBlocks = new Set<number>()
+    /** ids of the StructuredOutput calls, whose acknowledgement the CLI sends back itself */
+    const structuredIds = new Set<string>()
+    /**
+     * A structured turn's model may call an app tool directly instead of naming
+     * it in "toolCalls" (seen live: the editor prompts name the tools). The CLI
+     * has no such tool, so the call cannot run there: `takeDirectCalls` takes it
+     * as the turn's request and ends the CLI. Only a call to a tool of this
+     * turn's list is let through, and the only result the CLI may send for it
+     * is its "no such tool" error.
+     */
+    const appToolNames = new Set(mode === 'structured' ? tools.map((tool) => tool.name) : [])
+    const appToolBlocks = new Set<number>()
+    const appToolIds = new Set<string>()
+    const isAppToolUse = (block: unknown): block is Record<string, unknown> =>
+      isPlainObject(block) &&
+      block.type === 'tool_use' &&
+      typeof block.name === 'string' &&
+      block.name !== STRUCTURED_OUTPUT_TOOL &&
+      appToolNames.has(block.name)
+    const toolNameOf = (block: unknown): string =>
+      isPlainObject(block) && typeof block.name === 'string' ? ` (${block.name.slice(0, 80)})` : ''
+    /** the answer as the CLI validated it, from its result */
+    let structuredOutput: unknown
     /** what was passed to onDelta so far */
     let emitted = ''
     /** characters of a restarted answer that were already passed on */
@@ -792,11 +909,12 @@ async function runClaudeCodeTurn(
       timer.unref?.()
       child.once('close', () => clearTimeout(timer))
     }
-    const finish = (error?: Error): void => {
+    /** `end`: the answer is complete but the CLI would go on working, so it is ended at once */
+    const finish = (error?: Error, end = false): void => {
       if (settled) return
       settled = true
       cb.signal.removeEventListener('abort', onAbort)
-      stop(error !== undefined)
+      stop(error !== undefined || end)
       if (error) reject(error)
       else resolve()
     }
@@ -831,14 +949,19 @@ async function runClaudeCodeTurn(
       }
     }
 
-    /** The run must stop at the first sign of a tool: the CLI's own, or one of an MCP server */
+    /**
+     * The run must stop at the first sign of a tool other than the one it may
+     * run with: one of the CLI's own, or one of an MCP server
+     */
     const checkTools = (event: Record<string, unknown>): void => {
       const listed = event.tools
       if (!Array.isArray(listed)) {
         refuse('Claude Code did not report its tool list')
         return
       }
-      if (listed.length > 0) {
+      const exact =
+        listed.length === allowed.length && allowed.every((name) => listed.includes(name))
+      if (!exact) {
         const names = listed
           .filter((name): name is string => typeof name === 'string')
           .slice(0, 5)
@@ -846,7 +969,7 @@ async function runClaudeCodeTurn(
         refuse(
           `Claude Code started with ${listed.length} tool(s) available (${names.join(', ')}${
             listed.length > names.length ? ', …' : ''
-          })`,
+          }) instead of ${allowed.length ? allowed.join(', ') : 'none'}`,
         )
         return
       }
@@ -861,11 +984,25 @@ async function runClaudeCodeTurn(
 
     const onStreamEvent = (event: Record<string, unknown>): void => {
       if (event.type === 'content_block_start') {
-        if (isToolBlock(event.content_block)) refuse('Claude Code started to call a tool')
+        const block = event.content_block
+        if (mode === 'structured' && isStructuredOutputUse(block)) {
+          if (typeof event.index === 'number') structuredBlocks.add(event.index)
+          if (typeof block.id === 'string') structuredIds.add(block.id)
+          return
+        }
+        if (isAppToolUse(block)) {
+          if (typeof event.index === 'number') appToolBlocks.add(event.index)
+          if (typeof block.id === 'string') appToolIds.add(block.id)
+          return
+        }
+        if (isToolBlock(block)) refuse(`Claude Code started to call a tool${toolNameOf(block)}`)
         return
       }
       if (event.type === 'message_start') {
-        // the CLI is sending the answer again (a retried request): skip what was already passed on
+        structuredBlocks.clear()
+        appToolBlocks.clear()
+        // the CLI is sending the answer again (a retried request, or a new try after the
+        // CLI rejected a structured answer): skip what was already passed on
         if (raw) {
           raw = ''
           whole = ''
@@ -877,12 +1014,26 @@ async function runClaudeCodeTurn(
       if (event.type !== 'content_block_delta' || !isPlainObject(event.delta)) return
       const delta = event.delta
       if (delta.type === 'text_delta' && typeof delta.text === 'string') {
-        raw += delta.text
-        deliver(mode === 'plain' ? delta.text : scanner.push(delta.text))
+        // a structured turn answers through StructuredOutput: prose beside the call is not the answer
+        if (mode === 'plain') {
+          raw += delta.text
+          deliver(delta.text)
+        }
       } else if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
         if (delta.thinking) cb.onReasoningDelta?.(delta.thinking)
       } else if (delta.type === 'input_json_delta') {
-        refuse('Claude Code started to call a tool')
+        // the input of a direct app-tool call is never used: the CLI refuses that call
+        if (typeof event.index === 'number' && appToolBlocks.has(event.index)) return
+        if (
+          typeof event.index !== 'number' ||
+          !structuredBlocks.has(event.index) ||
+          typeof delta.partial_json !== 'string'
+        ) {
+          refuse('Claude Code started to call a tool')
+          return
+        }
+        raw += delta.partial_json
+        deliver(scanner.push(delta.partial_json))
       }
     }
 
@@ -925,6 +1076,37 @@ async function runClaudeCodeTurn(
       }
     }
 
+    /**
+     * The model called app tools directly instead of naming them in
+     * StructuredOutput (seen live, the editor prompts name the tools). The CLI
+     * has no such tool and would answer with an error, which led the model to
+     * report the tool as unusable and give up. The calls are taken as this
+     * turn's requests, checked the same way as "toolCalls", and the CLI is
+     * ended before it answers them.
+     */
+    const takeDirectCalls = (
+      content: unknown,
+      calls: Record<string, unknown>[],
+      message: unknown,
+    ): void => {
+      const turn = {
+        text: textOf(content).trim(),
+        toolCalls: calls.map((call) => {
+          const tool = tools.find((entry) => entry.name === call.name)
+          return { name: call.name, ...directCallInput(tool, call.input) }
+        }),
+      }
+      try {
+        deliverStructured(JSON.stringify(turn), 'tool_use')
+      } catch (error) {
+        finish(error instanceof Error ? error : new Error(String(error)))
+        return
+      }
+      const usage = tokenUsage(isPlainObject(message) ? message.usage : undefined)
+      if (usage) cb.onUsage?.(usage)
+      finish(undefined, true)
+    }
+
     const onResult = (event: Record<string, unknown>): void => {
       const text = typeof event.result === 'string' ? event.result : ''
       if (event.is_error === true || event.subtype !== 'success') {
@@ -940,8 +1122,15 @@ async function runClaudeCodeTurn(
         return
       }
       if (!requireVerified()) return
-      const stopReason = typeof event.stop_reason === 'string' ? event.stop_reason : ''
-      const answer = raw || whole || text
+      let stopReason = typeof event.stop_reason === 'string' ? event.stop_reason : ''
+      // the result text of a structured turn may be prose the model wrote beside the call: never the answer
+      let answer = raw || whole || text
+      if (mode === 'structured') {
+        if (isPlainObject(event.structured_output)) structuredOutput = event.structured_output
+        answer = structuredOutput !== undefined ? JSON.stringify(structuredOutput) : raw || whole
+        // the turn ended on the CLI's own tool, which the CLI answered; for the loop it is a finished turn
+        if (stopReason === 'tool_use' && structuredOutput !== undefined) stopReason = 'end_turn'
+      }
       try {
         if (mode === 'plain') deliverRest(answer)
         else deliverStructured(answer, stopReason)
@@ -1025,16 +1214,41 @@ async function runClaudeCodeTurn(
             return
           }
           if (!requireVerified()) return
-          if (Array.isArray(content) && content.some(isToolBlock)) {
-            refuse('Claude Code called a tool')
-            return
+          const blocks = Array.isArray(content) ? content : []
+          const direct: Record<string, unknown>[] = []
+          let answered = false
+          for (const block of blocks) {
+            if (mode === 'structured' && isStructuredOutputUse(block)) {
+              answered = true
+              if (typeof block.id === 'string') structuredIds.add(block.id)
+              if (isPlainObject(block.input)) whole = JSON.stringify(block.input)
+            } else if (isAppToolUse(block)) {
+              if (typeof block.id === 'string') appToolIds.add(block.id)
+              direct.push(block)
+            } else if (isToolBlock(block)) {
+              refuse(`Claude Code called a tool${toolNameOf(block)}`)
+              return
+            }
           }
-          whole += textOf(content)
+          if (mode === 'plain') whole += textOf(content)
+          if (direct.length > 0 && !answered) takeDirectCalls(content, direct, event.message)
           return
         }
         case 'user': {
           const content = isPlainObject(event.message) ? event.message.content : undefined
-          if (Array.isArray(content) && content.some(isToolBlock)) refuse('Claude Code ran a tool')
+          // the only tool results a run may see: the CLI's own acknowledgement of a StructuredOutput
+          // call, and its error for a direct call to an app tool it does not have
+          const expected = (block: unknown): boolean =>
+            mode === 'structured' &&
+            isPlainObject(block) &&
+            block.type === 'tool_result' &&
+            typeof block.tool_use_id === 'string' &&
+            (structuredIds.has(block.tool_use_id) ||
+              (appToolIds.has(block.tool_use_id) && block.is_error === true))
+          const ranTool =
+            Array.isArray(content) &&
+            content.some((block) => isToolBlock(block) && !expected(block))
+          if (ranTool) refuse('Claude Code ran a tool')
           return
         }
         case 'result':
