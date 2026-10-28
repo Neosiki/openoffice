@@ -79,6 +79,15 @@ export function IconHeading(props: IconProps) {
   )
 }
 
+/** insert: equation (a sigma letterform) */
+export function IconSigma(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.8 3.5h8.4L8 8l4.2 4.5H3.8" />
+    </Svg>
+  )
+}
+
 /** insert: button (a pill with its label line) */
 export function IconButton(props: IconProps) {
   return (
