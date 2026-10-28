@@ -8,7 +8,7 @@ Alles, wofür ein Schlüssel nötig ist, liegt unter **Erweitert** am unteren En
 
 ## Der Standard: Ihr Abonnement
 
-- **Verwendete KI** steht anfangs auf **Automatisch**: zuerst ein verbundenes Claude-Abonnement, dann Codex.
+- **Verwendete KI** steht anfangs auf **Automatisch**: von den verbundenen Abonnements zuerst Claude, dann ChatGPT, dann Codex.
 - Automatisch wählt nie etwas, das zusätzlich Geld kostet. Ein API-Schlüssel wird nur verwendet, solange Sie diesen Anbieter selbst unter **Verwendete KI** auswählen.
 - Die Modellliste unten in jedem KI-Bereich zeigt zuerst die Abonnements, dann die Anbieter mit Schlüssel, die Sie fertig eingerichtet haben. Unter einem Abonnement ist **Standardmodell** das reguläre Modell dieses Abonnements.
 

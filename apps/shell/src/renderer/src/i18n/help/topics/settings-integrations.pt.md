@@ -4,7 +4,7 @@
 
 A linha no canto inferior esquerdo do ecrã Início abre o painel de configurações (mostra Conectar IA enquanto não houver uma IA conectada). O painel tem cinco secções: Conta, IA, Geral, Integrações e Sobre.
 
-**Conta** mostra em que estado estão as suas assinaturas do Claude e do Codex, e **Gerenciar conexões** leva à secção IA. A IA tem os seus próprios artigos: [Conexão por assinatura](help://subscription) e [Modelos de IA e configurações](help://ai-models).
+**Conta** mostra em que estado estão as suas conexões do Claude, do ChatGPT e do Codex, e **Gerenciar conexões** leva à secção IA. A IA tem os seus próprios artigos: [Conexão por assinatura](help://subscription) e [Modelos de IA e configurações](help://ai-models).
 
 ## Idioma
 

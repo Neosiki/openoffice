@@ -8,7 +8,7 @@ Tout ce qui demande une clé se trouve sous **Avancé**, en bas de la même page
 
 ## Par défaut : votre abonnement
 
-- **IA à utiliser** est réglé au départ sur **Automatique** : d’abord un abonnement Claude connecté, puis Codex.
+- **IA à utiliser** est réglé au départ sur **Automatique** : parmi les abonnements connectés, d’abord Claude, puis ChatGPT, puis Codex.
 - Automatique ne choisit jamais rien qui coûte de l’argent en plus. Une clé API ne sert que tant que vous choisissez vous-même ce fournisseur sous **IA à utiliser**.
 - La liste des modèles en bas de chaque panneau IA montre d’abord les abonnements, puis les fournisseurs à clé dont vous avez terminé la configuration. Sous un abonnement, **Modèle par défaut** est le modèle standard de cet abonnement.
 

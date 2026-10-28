@@ -8,7 +8,7 @@ Tutto ciò che richiede una chiave si trova sotto **Avanzate**, in fondo alla st
 
 ## L'impostazione predefinita: il tuo abbonamento
 
-- **IA da usare** parte da **Automatico**: prima un abbonamento Claude collegato, poi Codex.
+- **IA da usare** parte da **Automatico**: tra gli abbonamenti collegati, prima Claude, poi ChatGPT, poi Codex.
 - Automatico non sceglie mai nulla che costi denaro in più. Una chiave API viene usata solo finché scegli tu quel provider in **IA da usare**.
 - L'elenco dei modelli in fondo a ogni pannello IA mostra prima gli abbonamenti, poi i provider con chiave che hai finito di configurare. Sotto un abbonamento, **Modello predefinito** è il modello standard di quell'abbonamento.
 

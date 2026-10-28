@@ -8,7 +8,7 @@ Wszystko, co wymaga klucza, znajduje się w części **Zaawansowane** na dole te
 
 ## Domyślnie: twoja subskrypcja
 
-- Pole **Używane AI** jest początkowo ustawione na **Automatycznie**: najpierw połączona subskrypcja Claude, potem Codex.
+- Pole **Używane AI** jest początkowo ustawione na **Automatycznie**: spośród połączonych subskrypcji najpierw Claude, potem ChatGPT, potem Codex.
 - Tryb automatyczny nigdy nie wybiera niczego, co kosztuje dodatkowo. Klucz API jest używany tylko wtedy, gdy samodzielnie wybierzesz danego dostawcę w polu **Używane AI**.
 - Lista modeli u dołu każdego panelu AI pokazuje najpierw subskrypcje, a potem dostawców z kluczem, których konfiguracja jest ukończona. W ramach subskrypcji **Model domyślny** oznacza standardowy model tej subskrypcji.
 

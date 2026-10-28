@@ -8,7 +8,7 @@ Todo lo que requiere una clave está en **Avanzado**, al final de la misma pági
 
 ## Lo predeterminado: su suscripción
 
-- **IA que se usa** empieza en **Automático**: primero una suscripción de Claude conectada, después Codex.
+- **IA que se usa** empieza en **Automático**: de las suscripciones conectadas, primero Claude, después ChatGPT y después Codex.
 - Automático nunca elige nada que cueste dinero adicional. Una clave de API solo se usa mientras usted mismo elija ese proveedor en **IA que se usa**.
 - La lista de modelos de la parte inferior de cada panel de IA muestra primero las suscripciones y después los proveedores con clave que haya terminado de configurar. Dentro de una suscripción, **Modelo predeterminado** es el modelo estándar de esa suscripción.
 

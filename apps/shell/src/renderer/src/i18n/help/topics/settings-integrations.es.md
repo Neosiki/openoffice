@@ -4,7 +4,7 @@
 
 La fila de la parte inferior izquierda de Inicio abre el panel de configuración (muestra «Conectar IA» hasta que hay una IA conectada). Tiene cinco secciones: Cuenta, IA, General, Integraciones y Acerca de.
 
-**Cuenta** muestra en qué estado están sus suscripciones de Claude y Codex, y **Gestionar conexiones** lleva a la sección IA. La IA tiene sus propios artículos: [Conexión por suscripción](help://subscription) y [Modelos de IA y ajustes](help://ai-models).
+**Cuenta** muestra en qué estado están sus conexiones de Claude, ChatGPT y Codex, y **Gestionar conexiones** lleva a la sección IA. La IA tiene sus propios artículos: [Conexión por suscripción](help://subscription) y [Modelos de IA y ajustes](help://ai-models).
 
 ## Idioma
 

@@ -8,7 +8,7 @@ Alles waarvoor een sleutel nodig is, staat onder **Geavanceerd**, onderaan dezel
 
 ## De standaard: je abonnement
 
-- **AI die wordt gebruikt** staat eerst op **Automatisch**: eerst een verbonden Claude-abonnement, daarna Codex.
+- **AI die wordt gebruikt** staat eerst op **Automatisch**: van de verbonden abonnementen eerst Claude, dan ChatGPT, dan Codex.
 - Automatisch kiest nooit iets wat extra geld kost. Een API-sleutel wordt alleen gebruikt zolang je die provider zelf kiest onder **AI die wordt gebruikt**.
 - De modellenlijst onder in elk AI-paneel toont eerst de abonnementen en daarna de providers met een sleutel die je volledig hebt ingesteld. Onder een abonnement is **Standaardmodel** het standaardmodel van dat abonnement.
 

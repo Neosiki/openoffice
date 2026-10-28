@@ -13,9 +13,10 @@ and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents and mind
 maps in one window, and its AI works on the document itself instead of
 answering in a chat box beside it.
 
-The AI runs on **the Claude or Codex subscription you already pay for**. You
-do not create an API key and you do not pay IeumOffice anything. Without a
-subscription you can connect a **free AI** (OpenRouter or Google Gemini).
+The AI runs on **the Claude subscription or ChatGPT plan you already pay
+for**. You do not create an API key and you do not pay IeumOffice anything.
+Without a subscription you can connect a **free AI** (OpenRouter or Google
+Gemini).
 
 IeumOffice is a modified version of the open-source project
 [GenOffice](https://github.com/genspark-ai/genoffice) (see
@@ -97,15 +98,21 @@ Mac or Linux builds on those machines; please report problems as
 
 ## Connecting your subscription
 
-IeumOffice does not sign you in to anything. It starts the Claude Code or
-Codex program that is installed on your PC and already signed in by you, hands
-it your request, and reads the answer. What you need:
+IeumOffice does not sign you in to anything. You need one of these:
 
-1. A Claude subscription or a ChatGPT subscription of your own.
-2. **Claude Code** or **Codex** installed on the PC, and signed in.
+1. A Claude subscription of your own, and **Claude Code** installed on the PC
+   and signed in. IeumOffice starts that program, hands it your request, and
+   reads the answer.
+2. A ChatGPT plan of your own. There is no program to install. Press
+   **Continue with ChatGPT** on the ChatGPT card: OpenAI's ChatGPT sign-in page
+   opens in your browser, and once you sign in and allow this app to use your
+   ChatGPT plan, it is connected. Requests go from your PC straight to
+   `api.openai.com`. If you already use the **Codex** program on this PC, you
+   can connect through it instead, the same way as Claude Code.
 
-The first-run guide and **Settings → AI → Subscription connection** show the
-state of each program and offer a button for the step that is missing:
+The first-run guide and **Settings → AI → Subscription connection** (the
+Claude, ChatGPT and Codex cards) show the state of each connection and offer a
+button for the step that is missing. For Claude Code and Codex:
 
 - **Install** runs the vendor's official install command in a terminal window
   you can watch. The app does not download an installer itself.
@@ -115,9 +122,9 @@ state of each program and offer a button for the step that is missing:
   `codex login`). The sign-in page that opens belongs to Anthropic or OpenAI,
   not to this app.
 
-With **AI to use** left on _Automatic_, the app uses Claude when it is
-connected and Codex otherwise. You can pick one yourself in the same place or
-in the model picker of the AI panel. Claude Code 2.1.248 or newer is required;
+With **AI to use** left on _Automatic_, the app uses the connected
+subscriptions in this order: Claude, then ChatGPT, then Codex. You can pick
+one yourself in the same place or in the model picker of the AI panel. Claude Code 2.1.248 or newer is required;
 an older one is reported as needing an update.
 
 ## Using it for free, without a subscription
@@ -147,8 +154,12 @@ refused if the program reports that any tool is still available.
 
 - It never reads, copies or stores your Claude or Codex login: not
   `~/.codex/auth.json`, not the Claude credential store, not a session token.
+- The one sign-in the app keeps is the one OpenAI gives this app when you
+  connect ChatGPT directly. It can only use your ChatGPT plan, and it is not
+  the Codex program's login. Disconnecting asks OpenAI to revoke it and deletes
+  it from your PC; other programs on the PC stay as they are.
 - It has no Claude or ChatGPT sign-in form of its own. Signing in always
-  happens in the vendor's program and on the vendor's page.
+  happens in the vendor's program or on the vendor's page in your browser.
 - It never modifies or wraps the vendor programs. They run as distributed.
 - It never pays for, resells or relays anyone's AI usage. Your usage is billed
   to your own account by Anthropic or OpenAI.
@@ -163,7 +174,7 @@ IeumOffice itself is free. What the AI costs depends on the connection:
 
 | Connection                                                                                     | Cost                                                                     | When it is used                                                 |
 | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| Claude or Codex signed in with a **subscription**                                              | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                        |
+| Claude or Codex signed in with a **subscription**, or ChatGPT connected directly in the app    | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                        |
 | Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**       |
 | An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use**      |
 | OpenRouter or Gemini connected under **Settings → AI → Use for free**                          | Nothing within the free limit                                            | Once connected, or while you have chosen it under **AI to use** |
@@ -182,10 +193,11 @@ OpenAI, and their terms can change.
 
 ## Images, pictures and search
 
-- **Image generation is key-based only in this version.** It works after you
-  enter the key of an image provider under **Settings → AI → Advanced**.
-  Generating images with a Codex subscription is not included. Without an
-  image provider, slides use pictures found by search instead.
+- **Image generation** works when you have entered the key of an image
+  provider under **Settings → AI → Advanced**, or when the Codex program on
+  this PC is signed in with a paid ChatGPT plan; pictures made through Codex
+  are charged to that plan. ChatGPT connected directly in the app does not
+  make images. Without either, slides use pictures found by search instead.
 - **Looking at pictures**: a picture you attach is shown to the AI you are
   using, subscription included. Video and sound analysis need a key-based
   provider that supports video.
@@ -229,7 +241,8 @@ letting a program use a subscription automatically; an account may be
 restricted for it. So **Settings → AI → Advanced → Let automatic requests use
 a subscription** is off by default. While it is off, these requests use a key
 provider if you set one up and are otherwise answered with "unavailable".
-While it is on, they run one at a time, with no hourly limit.
+While it is on, they run one at a time, with no hourly limit. Even then they
+use Claude Code or Codex, never ChatGPT connected directly in the app.
 `ieumoffice capabilities --json` reports what is available and by which route.
 
 IeumOffice can be installed next to GenOffice. It registers only its own names
@@ -359,8 +372,8 @@ project easy to take.
   checked through user reports.
 - **Unsigned installers**, as described above. That is also why the Mac build
   cannot update itself.
-- **A subscription answers a little later than an API key.** Each request
-  starts the vendor's program first, so the first words take a few seconds to
+- **Claude Code and Codex answer a little later than an API key.** Each
+  request starts the program first, so the first words take a few seconds to
   appear (about four seconds with Claude on the development PC).
 - **Codex cannot be told to ignore all of your personal Codex settings.** The
   app overrides what it can (your MCP servers, hooks and plugins are switched
@@ -370,12 +383,14 @@ project easy to take.
 - **Any ChatGPT login shows as connected**, a free plan included. What it can
   actually do is decided by that plan.
 - **Usage display for Codex** appears only when Codex reports a five-hour or
-  seven-day limit.
-- **Proxies.** The app's own requests (search, key providers, update checks)
-  follow the proxy environment variables or the Windows proxy setting. Claude
-  Code and Codex are separate programs: they see only the proxy environment
-  variables (`HTTPS_PROXY` and the like), not a proxy that is set in Windows
-  alone.
+  seven-day limit. ChatGPT connected directly has no usage display;
+  **Manage usage** on the ChatGPT card opens the usage page of your ChatGPT
+  settings.
+- **Proxies.** The app's own requests (search, key providers, ChatGPT
+  connected directly, update checks) follow the proxy environment variables or
+  the Windows proxy setting. Claude Code and Codex are separate programs: they
+  see only the proxy environment variables (`HTTPS_PROXY` and the like), not a
+  proxy that is set in Windows alone.
 - **Image generation needs a key**, as described above.
 - **Translations.** 19 of the 21 interface languages are machine-translated
   and have not been reviewed by native speakers.
