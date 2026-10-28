@@ -86,7 +86,7 @@ function setup(chatGptSignIn = true) {
 
 /** wait until the status service has caught up, however loaded the machine is */
 async function until(done: () => boolean): Promise<void> {
-  const deadline = Date.now() + 5_000
+  const deadline = Date.now() + 10_000
   while (!done()) {
     if (Date.now() > deadline) throw new Error('timed out waiting for the status')
     await new Promise((resolve) => setTimeout(resolve, 5))
@@ -95,7 +95,8 @@ async function until(done: () => boolean): Promise<void> {
 
 afterEach(() => setChatGptConnection(null))
 
-describe('the ChatGPT provider on the subscription channels', () => {
+// the status service answers in microseconds, but a loaded test run can stall the event loop
+describe('the ChatGPT provider on the subscription channels', { timeout: 20_000 }, () => {
   it('registers the connection for the bridge and the status check', () => {
     const { fake } = setup()
     expect(chatGptConnection()).toBe(fake.connection)

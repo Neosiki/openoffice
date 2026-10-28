@@ -281,7 +281,8 @@ describe('the stored connection', () => {
   })
 })
 
-describe('the connection', () => {
+// real loopback requests: a loaded test run needs more than the default five seconds
+describe('the connection', { timeout: 20_000 }, () => {
   it('signs in through the browser and the loopback server, then reports ready', async () => {
     const store = createChatGptConnectionMemoryStore()
     let nonce = ''
