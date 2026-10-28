@@ -4,6 +4,7 @@ import { chatOpenAiCompatible } from './protocols/openai-compatible'
 import { ResponseBodyTooLargeError } from './protocols/shared'
 import { chatCodexAppServer } from './codex-app-server'
 import { chatClaudeCodeCli } from './claude-code-cli'
+import { chatChatGpt } from './chatgpt/responses'
 import { getProviderAdapter, type ResolvedEndpoint } from './registry'
 import type { AiChatResponse, AiProviderConfig, AiProviderSelection } from './types'
 import { AI_CHAT_RESPONSE_TIMEOUT_MS, createStreamWatchdog } from './watchdog'
@@ -36,6 +37,8 @@ export async function chatForProvider(
         return chatCodexAppServer(config, system, user, wd.signal)
       case 'claude-code-cli':
         return chatClaudeCodeCli(wd, config, system, user)
+      case 'chatgpt-responses':
+        return chatChatGpt(config, system, user, wd.signal)
       case 'anthropic':
         return chatAnthropic(wd, config, system, user, endpoint.baseUrl)
       case 'gemini':

@@ -5,11 +5,16 @@ import type { AiProviderConfig, AiProviderId, AiProviderMeta, AiProviderSelectio
 
 /** Wire protocols every provider maps onto, including the Codex app-server and Claude Code CLI bridges. */
 export type AiProtocol =
-  'anthropic' | 'gemini' | 'openai-compatible' | 'codex-app-server' | 'claude-code-cli'
+  | 'anthropic'
+  | 'gemini'
+  | 'openai-compatible'
+  | 'codex-app-server'
+  | 'claude-code-cli'
+  | 'chatgpt-responses'
 
 export interface ProviderCapabilities {
-  /** How the provider authenticates: user key, or the Codex / Claude Code CLI's existing login. */
-  auth: 'api-key' | 'codex-chatgpt' | 'claude-subscription'
+  /** How the provider authenticates: user key, the Codex / Claude Code CLI's existing login, or the app's own ChatGPT sign-in. */
+  auth: 'api-key' | 'codex-chatgpt' | 'claude-subscription' | 'chatgpt-plan'
   /** chat models accept image input (declarative; for custom endpoints it is assumed, not known) */
   vision: boolean
 }
@@ -205,6 +210,13 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
     capabilities: { auth: 'claude-subscription', vision: true },
     resolveEndpoint() {
       return { protocol: 'claude-code-cli', baseUrl: '' }
+    },
+  },
+  chatgpt: {
+    meta: metaOf('chatgpt'),
+    capabilities: { auth: 'chatgpt-plan', vision: true },
+    resolveEndpoint() {
+      return { protocol: 'chatgpt-responses', baseUrl: '' }
     },
   },
   codex: {

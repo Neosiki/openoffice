@@ -16,6 +16,7 @@ import {
 
 const CHECKING = {
   'claude-code': { provider: 'claude-code', state: 'checking', meteredAccepted: false },
+  chatgpt: { provider: 'chatgpt', state: 'checking', meteredAccepted: false },
   codex: { provider: 'codex', state: 'checking', meteredAccepted: false },
 }
 
@@ -126,7 +127,7 @@ describe('subscriptionStatusMapOf', () => {
     const map = subscriptionStatusMapOf({
       openai: { provider: 'openai', state: 'ready', meteredAccepted: false },
     })
-    expect(Object.keys(map).sort()).toEqual(['claude-code', 'codex'])
+    expect(Object.keys(map).sort()).toEqual(['chatgpt', 'claude-code', 'codex'])
   })
 })
 

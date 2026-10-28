@@ -7,6 +7,7 @@ import type {
   AiProviderMeta,
   AiReadUrlSettings,
   AiSettings,
+  AiSubscriptionCliId,
   AiSubscriptionProviderId,
   LegacyAiSettings,
 } from './types'
@@ -35,6 +36,15 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     // Aliases the CLI resolves to the subscription's current models, so no
     // dated id goes stale here. Empty leaves the choice to the CLI.
     models: ['opus', 'sonnet', 'haiku'],
+    defaultModel: '',
+    keyPlaceholder: '',
+  },
+  {
+    id: 'chatgpt',
+    label: 'ChatGPT',
+    // Read at runtime from the plan's model catalog (/v1/models). Empty runs
+    // on the first model the catalog lists.
+    models: [],
     defaultModel: '',
     keyPlaceholder: '',
   },
@@ -461,16 +471,31 @@ export function headlessSubscriptionOn(
   )
 }
 
-/** Providers reached through the vendor CLI's own login, in the order `auto` tries them */
+/**
+ * Providers that run on the user's subscription, in the order `auto` tries
+ * them. ChatGPT reached directly comes before Codex: both draw on the same
+ * ChatGPT plan, and the direct one starts no program and has no shell tool.
+ */
 export const AI_SUBSCRIPTION_PROVIDERS: readonly AiSubscriptionProviderId[] = [
   'claude-code',
+  'chatgpt',
   'codex',
 ]
 
-/** One boolean per subscription provider; anything that is not `true` reads as not accepted */
-export function sanitizeMeteredAccepted(
-  stored: unknown,
-): Record<AiSubscriptionProviderId, boolean> {
+/** The subscription providers behind a vendor CLI */
+export const AI_SUBSCRIPTION_CLIS: readonly AiSubscriptionCliId[] = ['claude-code', 'codex']
+
+/** A subscription provider behind a vendor CLI (found, installed, updated and signed in through the program) */
+export function isSubscriptionCli(id: unknown): id is AiSubscriptionCliId {
+  return AI_SUBSCRIPTION_CLIS.includes(id as AiSubscriptionCliId)
+}
+
+/**
+ * One boolean per vendor CLI; anything that is not `true` reads as not
+ * accepted. The ChatGPT sign-in is to the plan alone and has no metered login
+ * to accept, so it has no entry (and the stored file keeps its shape).
+ */
+export function sanitizeMeteredAccepted(stored: unknown): Record<AiSubscriptionCliId, boolean> {
   const raw = isRecord(stored) ? stored : {}
   return { 'claude-code': raw['claude-code'] === true, codex: raw.codex === true }
 }

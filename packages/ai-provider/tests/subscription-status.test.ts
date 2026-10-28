@@ -18,13 +18,13 @@ import {
   type SubscriptionProgram,
   type SubscriptionRunner,
 } from '../src/subscription'
-import type { AiSubscriptionProviderId } from '../src/types'
+import type { AiSubscriptionCliId } from '../src/types'
 
 const EMAIL = 'someone@example.com'
 const ORG_ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
 const ORG_NAME = 'Example Research Org'
 
-function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
+function program(provider: AiSubscriptionCliId): SubscriptionProgram {
   return {
     provider,
     command: provider === 'codex' ? '/fake/codex' : '/fake/claude',
@@ -35,7 +35,7 @@ function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
   }
 }
 
-const found = async (provider: AiSubscriptionProviderId) => program(provider)
+const found = async (provider: AiSubscriptionCliId) => program(provider)
 const missing = async () => null
 
 function ok(stdout: string, stderr = ''): SubscriptionCommandResult {
