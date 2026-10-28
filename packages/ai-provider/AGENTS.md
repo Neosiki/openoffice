@@ -1,6 +1,6 @@
 # packages/ai-provider (`@genoffice/ai-provider`)
 
-모델에게 한 턴을 맡기는 계층이다. 사용자가 PC에 설치해 로그인해 둔 Claude Code·Codex 프로그램을 "한 턴짜리 두뇌"로 띄우는 브리지와, 사용자가 직접 고른 API 키 제공자의 HTTP 프로토콜을 한 계약으로 묶는다.
+모델에게 한 턴을 맡기는 계층이다. 사용자가 PC에 설치해 로그인해 둔 Claude Code·Codex 프로그램을 "한 턴짜리 두뇌"로 띄우는 브리지, 앱이 직접 로그인한 ChatGPT 요금제의 HTTP 브리지(결정 0081), 사용자가 직접 고른 API 키 제공자의 HTTP 프로토콜을 한 계약으로 묶는다.
 
 ## 맡은 범위
 
@@ -12,6 +12,7 @@
 - 에이전트 모드(결정 0032)의 실행부 `src/agent-session/`(진입점 `/agent-session`, Node 전용): 허락 판단 `agentPolicyVerdict`(`policy.ts`), Claude Code 세션(`claude.ts`), Codex 세션(`codex.ts`), 두 프로그램이 같이 받는 스킬 묶음(`skills.ts`, 켜진 스킬과 프로젝트 스킬, 결정 0049), 프로그램에 돌려주는 거절 문장(`messages.ts`).
 - 사용자 스킬의 코어 `src/user-skills/`(Node 전용, 대표 진입점에서 내보냄): 출처 목록과 읽기(`userSkillSources`·`listUserSkills`, `~/.codex`는 읽지 않음, `genoffice`·`ieumoffice` 이름 제외), 한 폴더의 판정(읽을 수 없는 이유, 스크립트 포함, 양식), 식별자(`userSkillId`), 켜기·끄기 상태 합치기(`resolveUserSkillStates`)와 켜진 것 사이의 우선순위(`pickEnabledUserSkills`), 앞머리 읽기·쓰기(`parseSkillMd`·`renderSkillMd`), 새 이름 규칙과 제안, 폴더 내용 해시(`skillContentHash`), 웹 주소 찾기, `builtin-skills.json` 읽기.
 - 사용자 스킬 가져오기·내보내기·업데이트(결정 0048, 같은 폴더): 폴더·zip·깃허브에서 찾아 미리보기를 만들고(`prepareFolderImport`·`prepareZipImport`·`prepareGitHubImport`, `import.ts`), 임시 폴더에 다 쓴 뒤 옮겨 설치하고(`installImportedSkills`), 깃허브 출처 기록(`.ieum-source.json`, `source-record.ts`)으로 업데이트를 확인·적용하고(`update.ts`), zip으로 내보낸다(`export.ts`, 출처 기록 제외). 깃허브 연결은 `github.ts`의 세 호스트(`GITHUB_SKILL_HOSTS`)뿐이고, 압축 풀기는 `archive.ts`가 폭탄 검사와 경로 검사를 거친다.
+- ChatGPT 직접 연결 `src/chatgpt/`(Node 전용, 결정 0081): OAuth(`oauth.ts`: 로그인 주소, `127.0.0.1` 루프백 서버, 코드 교환, 갱신, 폐기, ID 토큰 서명 확인), 토큰 보관(`credentials.ts`: `chatgpt-connection.json`, 봉인), 프로세스의 연결(`connection.ts`: 로그인·갱신·끊기, `setChatGptConnection`·`chatGptConnection`), 상태(`status.ts`: `detectChatGptConnection`), 한 턴(`responses.ts`: `/v1/responses` 스트림, `/v1/models`).
 - 무료 연결: 화면용 규칙과 상수(`src/free-ai.ts`, `/browser`로 내보냄: 무료 모델 목록, 연결·해제한 설정, 카드의 "연결됨" 판정, IPC 채널 이름과 답 판독, 오늘 무료 사용량 소진 판정 `freeLimitOf`)와 뒷단 전용 연결부(`src/free-connect.ts`, `/free-connect`: OpenRouter OAuth PKCE와 루프백 서버, Gemini 키 확인, 무료 모델 고르기, 남은 무료 요청 수).
 
 ## 맡지 않는 것 (경계)
@@ -20,7 +21,7 @@
 - 웹·이미지 검색, `generate_image`/`analyze_media` 도구, 화면 경로와 자동 호출 경로의 구분, 자동 호출의 차례 처리와 사용 횟수 장부는 `packages/ai-search`의 범위다. 여기에는 그 판단에 쓰이는 순수 함수(`resolveImageBackend`)만 둔다.
 - 사용자에게 보이는 문장과 연결 카드·알림 컴포넌트는 `packages/ui`의 범위다. 이 모듈이 만드는 오류 문장은 영어 예비 문구이고, 화면은 `AiRunErrorKind`와 `subscriptionStatusErrorKind`로 번역한다.
 - Electron을 import하지 않는다. `ipcMain`은 `SubscriptionIpcMain` 모양으로 주입받고, 어느 앱의 메인이 등록할지·설정 파일을 어디에 쓸지는 `apps/*/src/main`이 정한다.
-- 벤더 프로그램 자체는 고치거나 감싸지 않는다. 앱 안에 Claude·ChatGPT 로그인 폼을 만드는 일도 범위 밖이며 하지 않는다.
+- 벤더 프로그램 자체는 고치거나 감싸지 않는다. 앱 안에 Claude·ChatGPT 로그인 폼을 만드는 일도 범위 밖이며 하지 않는다. ChatGPT 직접 연결의 로그인 화면도 시스템 브라우저에 뜨는 OpenAI의 것이다.
 
 ## 항상 지켜야 하는 것
 
@@ -62,6 +63,18 @@
 - 스킬은 사용자 설정을 읽게 해서 싣지 않는다(훅이 실행된다). `buildAgentSkillBundle`이 스킬 폴더만 복사한 플러그인 폴더를 만들고, 디렉터리 연결은 쓰지 않는다(연결이 실제 위치로 풀려 작업 폴더 밖으로 막힌다).
 - 사용자 스킬은 `~/.codex` 안을 어떤 경로로도 읽지 않고, 스킬 폴더 밖으로 이어지는 링크를 따라가지 않는다. 이름이 `genoffice`·`ieumoffice`인 스킬은 어느 출처에서든 목록에 넣지 않는다. 파일을 쓰는 곳은 내 스킬 폴더(`~/.ieumoffice/skills`) 하나이고, 깃허브 요청에는 쿠키와 인증 머리글을 싣지 않는다(결정 0048).
 
+- **ChatGPT 직접 연결(결정 0081).** 토큰은 이 앱이 OpenAI에 자기 이름으로 등록해 받은 것이고, Codex의 로그인을 읽지 않는다. 지킬 것:
+  - 돌아오는 서버는 `127.0.0.1`에만 열고(`localhost` 금지), `/callback` 가운데 `state`가 맞는 요청 하나에만 답한다. 시도마다 PKCE·`state`·`nonce`를 새로 만든다.
+  - ID 토큰은 JWKS 서명, 발급자, 대상(발급된 `client_id`), 만료, `nonce`를 모두 본다. 요금제 범위(`chatgpt.tokens.use.direct`)가 없으면 저장하지 않는다.
+  - 토큰은 `credentials.ts`로만 쓴다(봉인, 임시 이름 뒤 바꾸기, 소유자 권한). 이메일은 쓰지 않는다. 토큰을 로그·오류 글·주소에 싣지 않는다.
+  - 갱신은 `connection.ts`의 줄 하나로만 한다(같은 갱신 토큰을 두 번 보내면 무효). 거절은 세션을 지우고 `signed-out`, 네트워크 실패는 아직 유효한 토큰을 쓴다.
+  - 요청은 `api.openai.com/v1/responses`와 `/v1/models`뿐이고 `store: false`, `stream: true`다. 비공개 주소(`backend-api`)를 쓰지 않는다. 도구는 API 형식으로 보내지 않고 Claude 브리지의 규약(`buildClaudeCodeInput`, `parseClaudeCodeTurn`)을 쓴다.
+  - 한도(`subscription_sharing_usage_limit_exceeded`)는 `rate-limit`, 401·`subscription_sharing_invalid_user`는 세션을 버리고 `signed-out`이다. 다른 제공자로 넘어가지 않는다.
+  - 연결은 프로세스에 하나다. `createSubscriptionIpcDeps`가 데이터 폴더 위에 만들어 `setChatGptConnection`으로 등록한다. 터미널 명령어에는 등록하지 않으므로 거기서 `chatgpt`는 늘 `signed-out`이다.
+  - 로그인을 띄우려면 앱이 `SubscriptionIpcSetup.chatGptSignIn`(브라우저 열기, 돌아왔을 때의 페이지)을 준다. 없으면 로그인은 `unsupported`다. 편집기 뒷단 셋이 같은 값을 넘긴다.
+- **상태가 없을 때.** `auto`와 보내기 문지기는 `subscriptionStateOf`로 읽는다. CLI의 상태가 없으면 `checking`(기다린다), ChatGPT의 상태가 없으면 `signed-out`이다. `subscriptionStatusMapOf`도 답이 왔는데 `chatgpt`가 없으면 `signed-out`으로 채운다.
+- CLI만의 표와 함수(찾기, 설치, 업데이트, 로그인 창, 종량 허용)는 `AiSubscriptionCliId`로 받는다. `chatgpt`가 들어오면 `invalid`로 답한다.
+
 ## 이 모듈의 방식
 
 - 브리지는 "한 턴짜리 두뇌"다. 앱의 system prompt, 지금까지의 대화, 앱 도구 목록, 응답 JSON Schema를 주고 `{ text, toolCalls }` 객체 하나를 받는다. Claude는 턴마다 새 프로세스를 띄우고 끝나면 스스로 나가게 둔다(stdin을 닫고 5초 뒤에도 남아 있으면 트리 종료). Codex는 app-server 프로세스를 실행들이 공유하고 쓰는 실행이 없으면 끝낸다.
@@ -86,7 +99,7 @@
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/ai-provider`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-provider`.
-- 어떤 테스트도 실제 `claude`·`codex`에 닿으면 안 된다. 닿으면 개발자의 구독 사용량이 소모된다. 주입 지점을 쓴다: `ClaudeCodeCliDeps`(`spawn`, `resolveProgram`, `registry`, `killTree`), `setCodexAppServerRuntime`, 상태 확인의 `locate`·`run`·`detect`, 상태 서비스의 `listModels`, `setSubscriptionModelSource`, 로그아웃의 `locate`·`run`·`spawn`, IPC의 `resetSharedSubscriptionIpc`와 `SubscriptionIpcSetup`의 `detect`·`listModels`, 프로세스 조회의 `inspectProcesses` 두 번째 인자. `createSubscriptionIpcDeps`가 만든 로그인·로그아웃 실행부는 실제 프로그램을 찾아 띄우므로, 그것을 거치는 테스트는 `vi.mock('../src/subscription/launch')`로 실행부를 바꾼다(`tests/subscription-account-change.test.ts`). 라우터 테스트는 `vi.mock('../src/claude-code-cli')`로 브리지를 통째로 바꾼다.
+- 어떤 테스트도 실제 `claude`·`codex`에 닿으면 안 된다. ChatGPT 직접 연결의 테스트도 OpenAI에 닿지 않는다. `ChatGptConnectionDeps.fetch`, `ChatGptBridgeDeps`의 `fetch`·`connection`, 메모리 저장소(`createChatGptConnectionMemoryStore`), `SubscriptionIpcSetup.chatGptConnection`을 쓴다. 로그인 시험의 "브라우저"는 시험이 루프백 서버에 직접 보내는 요청이다(`tests/chatgpt-connection.test.ts`). 닿으면 개발자의 구독 사용량이 소모된다. 주입 지점을 쓴다: `ClaudeCodeCliDeps`(`spawn`, `resolveProgram`, `registry`, `killTree`), `setCodexAppServerRuntime`, 상태 확인의 `locate`·`run`·`detect`, 상태 서비스의 `listModels`, `setSubscriptionModelSource`, 로그아웃의 `locate`·`run`·`spawn`, IPC의 `resetSharedSubscriptionIpc`와 `SubscriptionIpcSetup`의 `detect`·`listModels`, 프로세스 조회의 `inspectProcesses` 두 번째 인자. `createSubscriptionIpcDeps`가 만든 로그인·로그아웃 실행부는 실제 프로그램을 찾아 띄우므로, 그것을 거치는 테스트는 `vi.mock('../src/subscription/launch')`로 실행부를 바꾼다(`tests/subscription-account-change.test.ts`). 라우터 테스트는 `vi.mock('../src/claude-code-cli')`로 브리지를 통째로 바꾼다.
 - 바꾸면 반드시 테스트하는 것: 시작 인자(플래그 하나가 빠지면 사용자 hook·MCP가 들어온다), 환경에서 지우는 변수 목록, 0-도구 확인의 모든 거절 경로, 상태 파서에 "예상과 다른 형식"의 출력을 넣었을 때 조직 이름이 상태·오류 문장·동의 파일 어디에도 남지 않는지와 계정 이메일이 상태 밖 어디에도 쓰이지 않는지(`tests/subscription-identity.test.ts`), 모델 목록 읽기가 `initialize`만 보내고 프로세스를 끝내는지(`tests/claude-code-cli.test.ts`), 목록이 상태보다 늦게 오고 실패해도 상태가 그대로인지(`tests/subscription-models.test.ts`), 로그아웃이 셸 없이 정리된 환경으로 도는지(`tests/subscription-launch.test.ts`), `selectAiProvider`가 돈이 드는 경로를 스스로 고르지 않는지.
 - 경계 사례: 재전송된 답(`message_start`가 두 번 오면 이미 내보낸 글자를 건너뛴다), `max_tokens`로 잘린 구조화 답, 코드 펜스로 감싼 JSON, 개행 없이 4MB를 넘는 줄, pid 재사용(시작 시각이 다르면 건드리지 않는다), 손상된 동의 파일.
 - 에이전트 세션은 가짜 프로그램으로 시험한다(`tests/agent-session-claude.test.ts`, `tests/agent-session-codex.test.ts`). 주입 지점은 `ClaudeAgentDeps`·`CodexAgentDeps`의 `resolveProgram`, `spawn`, `registry`, `killTree`, `writeFile`이다. 실제 프로그램으로 확인한 것은 결정 0032와 `.dryforge/agent-mode/design.md`에 적었다.
