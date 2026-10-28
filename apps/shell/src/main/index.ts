@@ -127,6 +127,7 @@ import { registerIntegrationsIpc } from './integrations-ipc'
 import { registerResultStoreIpc } from './result-store-ipc'
 import { FEEDBACK_SURVEY_URL, feedbackDetails, feedbackText, platformLabel } from './feedback'
 import { registerDriveIpc, type DriveService } from './drive/drive-ipc'
+import { freeAiInUse } from './drive/drive-consent'
 import { registerOutboundIpc } from './outbound-confirm'
 import { projectSkillsAllowed, projectSkillsView, setProjectSkills } from './agent/project-skills'
 import {
@@ -8711,7 +8712,8 @@ app.whenReady().then(async () => {
         (open) => resolve(open).toLowerCase() === resolve(path).toLowerCase(),
       ),
     parse: (path) => parseFileToText(path),
-    theme: () => currentTheme(),
+    freeAi: () => freeAiInUse(readStoredAiSettings()),
+    documentOf: (id) => tabManager?.describeWebContents(id)?.filePath ?? null,
   })
   // The "Attach documents" window: an editor's AI panel asks the shell for the
   // documents it already knows, and the shell hands back the paths it ticked.

@@ -74,6 +74,7 @@ import {
   type RecoveryEditorContract,
   type RecoveryIdentity,
 } from '@genoffice/electron-utils'
+import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
 import {
   configureExtraFontDirs,
   configureMetricsCache,
@@ -4101,6 +4102,11 @@ export function registerAiIpc(): void {
       return
     }
     const { settings, provider, config } = target
+    const refusal = aiRunRefusal({ senderId: event.sender.id, provider, model: config.model })
+    if (refusal) {
+      send({ requestId, type: 'error', error: refusal })
+      return
+    }
     const tools = request.tools ?? []
     const maxTokens = request.maxTokens ?? maxOutputTokensOf(settings)
     // A local server loads the model on its first request, so this endpoint's
