@@ -31,6 +31,7 @@ import type { MenuItemConstructorOptions, NativeImage, WebContents } from 'elect
 import { atomicWriteFile } from './atomic-write'
 import { tabStripOverlay } from './title-bar-overlay'
 import { shellWindowBackground } from './window-background'
+import { installPointerSize } from './pointer-size'
 import {
   applyUiScaleTo,
   applyUiScaleToAll,
@@ -9020,6 +9021,7 @@ app.whenReady().then(async () => {
     console.error('[mcp] failed to start on boot:', error)
   })
   installUiScale()
+  installPointerSize(app)
   installTabShortcuts()
   createShellWindow()
   // deferred to ready: labels need currentLang(), which reads app.getLocale()
