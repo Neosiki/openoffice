@@ -65,4 +65,4 @@ Formeln direkt eingeben oder LaTeX bearbeiten. HTML speichert den Quelltext zur 
 
 Wählen Sie Formel einfügen in der Werkzeugleiste, verwenden Sie das Eingabefeld, Vorlagen oder LaTeX und wenden Sie die Formel an. Gespeicherte Formeln lassen sich per Klick in der Vorschau bearbeiten. Für eine Formel im Text wählen Sie einen Absatz und deaktivieren die eigene Zeile; die Formel wird am Absatzende eingefügt.
 
-Diese Formel kann nicht gesetzt werden. Der Quelltext wird zur späteren Korrektur gespeichert.
+Ein Ausdruck, den der Formelsatz nicht verarbeitet, geht nicht verloren: Die Formel behält ihren LaTeX-Quelltext und zeigt im Dokument den Rohtext, den Sie zum Korrigieren erneut öffnen können.

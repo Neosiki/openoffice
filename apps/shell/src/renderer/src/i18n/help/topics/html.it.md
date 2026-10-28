@@ -65,4 +65,4 @@ Scrivi visivamente o modifica LaTeX. Il codice viene salvato nel file HTML per m
 
 Scegli Inserisci equazione nella barra, usa il campo visivo, i modelli o LaTeX e applica. Fai clic su una formula salvata nell’anteprima per modificarla. Per inserirla nel testo, seleziona un paragrafo e disattiva la riga separata; verrà aggiunta alla fine del paragrafo.
 
-Impossibile comporre questa espressione. Il codice sarà conservato per correggerlo in seguito.
+Un’espressione che il compositore non gestisce non va persa: la formula conserva il codice LaTeX e mostra il testo grezzo nella pagina, così puoi riaprirla e correggerla.

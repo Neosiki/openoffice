@@ -65,4 +65,4 @@ Ketik secara visual atau edit LaTeX. HTML menyimpan sumber untuk diedit kembali.
 
 Pilih Sisipkan persamaan di bilah alat, gunakan kolom visual, templat atau LaTeX, lalu terapkan. Klik persamaan tersimpan di pratinjau untuk mengeditnya. Untuk menyisipkan dalam teks, pilih paragraf dan matikan baris terpisah; persamaan ditambahkan di akhir paragraf.
 
-Ekspresi ini tidak dapat ditampilkan. Sumber akan disimpan untuk diperbaiki nanti.
+Ekspresi yang tidak didukung penata huruf tidak hilang: persamaan tetap menyimpan sumber LaTeX dan menampilkan teks mentah di halaman, sehingga bisa dibuka lagi dan diperbaiki.

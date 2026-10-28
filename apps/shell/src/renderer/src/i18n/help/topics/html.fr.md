@@ -65,4 +65,4 @@ Saisissez une formule ou modifiez le LaTeX. Le HTML conserve la source pour la r
 
 Choisissez Insérer une équation dans la barre d’outils, saisissez une formule visuellement, par modèle ou en LaTeX, puis appliquez. Cliquez sur une formule enregistrée dans l’aperçu pour la modifier. Pour une formule en ligne, sélectionnez un paragraphe et désactivez la ligne séparée : la formule sera ajoutée à sa fin.
 
-Cette formule ne peut pas être composée. Sa source sera conservée pour la corriger plus tard.
+Une expression que le moteur de composition ne gère pas n’est pas perdue : la formule conserve sa source LaTeX et affiche le texte brut dans la page, que vous pouvez rouvrir pour la corriger.

@@ -4,7 +4,7 @@ HTML 에디터다. HTML 원문이 기준이고, 옆에서 실시간 미리 보�
 
 ## 맡은 범위
 
-- 렌더러(`src/renderer/`): 원문 편집기(`source/`), 미리 보기와 검사기(`preview/`), 문서 모델(`document/`의 `patch.ts`, `parse-map.ts`, `ops.ts`, `brief.ts`), 발표 보기(`PresentView.tsx`), 리본과 스타일 패널(`components/`).
+- 렌더러(`src/renderer/`): 원문 편집기(`source/`), 미리 보기와 검사기(`preview/`), 문서 모델(`document/`의 `patch.ts`, `parse-map.ts`, `ops.ts`, `brief.ts`), 발표 보기(`PresentView.tsx`), 리본과 스타일 패널(`components/`), 수식 편집 확장(`extensions/math/`).
 - 메인 프로세스(`src/main/html-main.ts`와 주변): 열기·저장, 미리 보기 스킴(`preview-protocol.ts`, `preview-document.ts`), 문서가 소유한 자산 폴더(`asset-lifecycle.ts`, `asset-mime.ts`), 단일 파일 내보내기(`single-file-html.ts`), PDF 인쇄와 Word 내보내기의 숨은 창, ODT 내보내기(`odt-export.ts`).
 - IPC 계약 `src/shared/ipc.ts`(`HTML_CHANNELS`).
 - HTML의 AI(`src/renderer/ai/`): 패널, skill과 도구(`html-skill.ts`, `tools.ts`), 쪽 전체 생성(`page-writer.ts`, `brief-writer.ts`), 빈 문서의 의도(`intent.ts`), 가림(`redact.ts`, `redact-guard.ts`, `document/redact-edit.ts`), 막힌 실행 판정(`connection.ts`), 연결 상태(`subscription-client.ts`).
@@ -20,7 +20,7 @@ HTML 에디터다. HTML 원문이 기준이고, 옆에서 실시간 미리 보�
 
 - 모든 편집은 원문의 글자 범위 치환(`Patch`) 하나로 내려간다. 수동 편집, 검사기, AI, 서식 변경이 모두 같다. 원문을 파싱해 다시 직렬화하는 편집 경로를 만들지 않는다. 이 앱에는 JavaScript 파서나 포매터가 없고, 그래서 사용자가 쓴 표기와 아래의 가림 표시가 고쳐지지 않고 살아남는다.
 - 저장되는 파일에 미리 보기용 수정을 넣지 않는다. 미리 보기 사본에는 상대 경로 자산이 `html-asset://`로 풀리도록 `<base>`를 넣지만(작성자가 이미 선언했으면 넣지 않는다) 저장 파일에는 들어가지 않는다. 이미지를 data URL로 넣는 것도 단일 파일 내보내기 때에만 한다. 작업 문서는 이미지를 `assets/`에 둔다(수 MB짜리 base64 줄은 원문과 AI 편집을 깨지기 쉽게 만든다).
-- 문서 안에 저장되는 식별자를 바꾸지 않는다. 가림 표시 `data-gx-redact="label"`, `data-gx-redact-<attr>="label"`, 스크립트 안의 `/*gx:redact:label*/` 주석, 생성 개요를 담는 `<meta name="genoffice:brief">`(`BRIEF_META_NAME`), 자산 폴더의 `.genoffice-assets.json`은 사용자 문서에 들어 있는 데이터다. 이름을 바꾸면 이미 만든 문서의 가림과 개요, 자산 소유 기록을 읽지 못한다.
+- 문서 안에 저장되는 식별자를 바꾸지 않는다. 가림 표시 `data-gx-redact="label"`, `data-gx-redact-<attr>="label"`, 스크립트 안의 `/*gx:redact:label*/` 주석, 생성 개요를 담는 `<meta name="genoffice:brief">`(`BRIEF_META_NAME`), 수식의 `data-gx-math="1"`·`data-latex`·`data-display`, 자산 폴더의 `.genoffice-assets.json`은 사용자 문서에 들어 있는 데이터다. 이름을 바꾸면 이미 만든 문서의 가림과 개요, 수식 원문, 자산 소유 기록을 읽지 못한다.
 - 가림은 암호화가 아니고 "실수로 넘기는 것"을 막는다. 글자는 파일에 남고 쪽은 똑같이 그려지며 모델에게만 `{{label}}`이 나간다. 모델용 원문은 단순 문자열 치환으로 만들지 않는다. 줄 번호와 요소 id로 읽고 고치는 도구가 있으므로, 길이가 바뀐 구간의 위치를 양방향으로 옮겨 주는 투영을 유지한다. 모델의 편집은 표식 검사를 통과해야 원문에 들어간다.
 - AI가 만들었거나 신뢰할 수 없는 HTML을 그리는 창은 적대적인 내용으로 취급한다. 숨은 창은 `sandbox: true`, preload 없음, IPC 없음이다. 인쇄용 창은 스크립트를 끈다(`javascript: false`). Word 내보내기용 창은 스크립트를 켠 채 `executeJavaScript`로만 몰고, 시간 제한(`HTML_EXPORT_TIMEOUT_MS`)이 지나면 창을 없앤다. 스크립트가 끝나지 않는 쪽이 숨은 창을 붙잡아 두지 못하게 한다.
 - 미리 보기의 두 스킴(`html-preview`, `html-asset`)은 앱 준비 전에 프로세스당 한 번 등록한다. 렌더러 스킴과 한 목록으로 등록해야 하고(`registerPrivilegedSchemes`), shell도 앱 전체의 스킴을 이 함수 하나로 등록한다. 그러니 다른 곳에서 `registerSchemesAsPrivileged`를 또 부르지 않는다. 둘 다 secure로 등록한다. 아니면 미리 보기 문서의 스타일시트와 스크립트가 혼합 콘텐츠로 막힌다.
