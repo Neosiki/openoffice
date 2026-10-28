@@ -16,6 +16,7 @@ import {
   type SheetStructuralOps,
   type XlsxMutation,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { resolveRelTarget } from '@genoffice/xlsx-gateway/gateway/xlsx-drawing-add'
 import {
   nextFreeRelationshipId,
   parseRelationships,
@@ -1204,14 +1205,28 @@ export async function writeWorkbook(
   const changesValues =
     formulaCells.length > 0 || canChangeValues(edits, plan, structuralOps, gateway)
   if (!changesValues) return { ...base, cachedValues: true }
-  const inFile = await formulaCellsInPackage(first.buffer)
-  if (formulaCells.length === 0 && inFile.size === 0) return { ...base, cachedValues: true }
+  // The scan never throws: a part it cannot open is reported, not skipped, so
+  // "no formulas found" can never stand for "could not look".
+  const scan = await formulaCellsInPackage(first.buffer)
+  const inFile = scan.cells
+  // `base` carries the notes of the write; the scan's own note rides along
+  // with whichever note the refresh adds
+  const scanNotes = scan.unreadable.length ? [unreadableNote(scan.unreadable)] : []
+  const withNotes = (more: readonly { code: string; message: string }[] = []) => {
+    const all = [...notes, ...scanNotes, ...more]
+    return all.length ? { notes: all } : {}
+  }
+  if (formulaCells.length === 0 && inFile.size === 0) {
+    if (scan.unreadable.length === 0) return { ...base, cachedValues: true }
+    return { ...base, ...withNotes(), cachedValues: false }
+  }
   if (!xlsxSidecarPath()) {
     if (formulaCells.length === 0) {
-      return { ...base, notes: [...notes, NO_ENGINE_STALE_NOTE], cachedValues: true }
+      return { ...base, ...withNotes([NO_ENGINE_STALE_NOTE]), cachedValues: true }
     }
     return {
       ...base,
+      ...withNotes(),
       cachedValues: false,
       warning: 'xlsx engine not found; formulas recalculate on open',
     }
@@ -1223,18 +1238,20 @@ export async function writeWorkbook(
       inFile,
       renames,
     )
-    const stale = leftStale ? { notes: [...notes, STALE_NOTE] } : {}
+    const stale = withNotes(leftStale ? [STALE_NOTE] : [])
+    // a sheet the scan could not open may hold stale formulas: not "fresh"
+    const fresh = scan.unreadable.length === 0
     if (values.length) {
       const second = await save(values)
       await atomicWriteFile(outputPath, second.buffer)
       if (uncached.length === 0 && unparsed.length === 0) {
-        return { ...base, ...stale, cachedValues: true }
+        return { ...base, ...stale, cachedValues: fresh }
       }
       const skipped = uncached.length + unparsed.length
       return {
         ...base,
         ...stale,
-        cachedValues: skipped < formulaCells.length,
+        cachedValues: fresh && skipped < formulaCells.length,
         ...(uncached.length ? { uncached } : {}),
         ...(unparsed.length ? { unparsed } : {}),
         ...(uncached.length
@@ -1249,7 +1266,7 @@ export async function writeWorkbook(
           : {}),
       }
     }
-    if (formulaCells.length === 0) return { ...base, ...stale, cachedValues: true }
+    if (formulaCells.length === 0) return { ...base, ...stale, cachedValues: fresh }
     return {
       ...base,
       ...stale,
@@ -1261,6 +1278,7 @@ export async function writeWorkbook(
     const message = err instanceof Error ? err.message : String(err)
     return {
       ...base,
+      ...withNotes(),
       cachedValues: false,
       warning: `formula results not cached (${message}); the file is complete and recalculates on open`,
     }
@@ -1272,6 +1290,11 @@ const STALE_NOTE = {
   message:
     'the workbook has more formulas than a write refreshes cached results for, so formulas that read the edited cells may show an old result until the file is opened in Excel',
 }
+
+const unreadableNote = (sheets: readonly string[]) => ({
+  code: 'dependent_formulas_not_refreshed',
+  message: `could not read the formulas of ${sheets.map((s) => `"${s}"`).join(', ')} to refresh their cached results, so formulas there that read the edited cells may show an old result until the file is opened in Excel`,
+})
 
 const NO_ENGINE_STALE_NOTE = {
   code: 'dependent_formulas_not_refreshed',
@@ -1325,31 +1348,66 @@ export function canChangeValues(
  * engine is not asked, so a large workbook costs a scan of its XML, not a
  * read of every cell through the sidecar.
  */
-async function formulaCellsInPackage(
-  buffer: Buffer,
-): Promise<Map<string, { row: number; column: number }[]>> {
-  const zip = await JSZip.loadAsync(buffer)
-  const read = async (name: string) => (await zip.file(name)?.async('string')) ?? ''
-  const targets = new Map(
-    parseRelationships(await read('xl/_rels/workbook.xml.rels'))
-      .filter((rel) => rel.id !== undefined && !rel.external)
-      .map((rel) => [
-        rel.id!,
-        rel.target.startsWith('/') ? rel.target.slice(1) : `xl/${rel.target.replace(/^\.\//, '')}`,
-      ]),
-  )
-  const found = new Map<string, { row: number; column: number }[]>()
-  for (const sheet of parseSheetElements(await read('xl/workbook.xml'))) {
-    const part = sheet.relationshipId === undefined ? undefined : targets.get(sheet.relationshipId)
-    if (!part) continue
-    const cells = formulaCellsInSheet(await read(part))
-    if (cells.length) found.set(sheet.name, cells)
+export async function formulaCellsInPackage(buffer: Buffer): Promise<PackageFormulas> {
+  const cells = new Map<string, FormulaCell[]>()
+  const unreadable: string[] = []
+  let zip: JSZip
+  try {
+    zip = await JSZip.loadAsync(buffer)
+  } catch {
+    return { cells, unreadable: ['(workbook)'] }
   }
-  return found
+  const read = async (name: string): Promise<string | undefined> => {
+    try {
+      return await zip.file(name)?.async('string')
+    } catch {
+      return undefined
+    }
+  }
+  const workbook = await read('xl/workbook.xml')
+  const relationships = await read('xl/_rels/workbook.xml.rels')
+  if (workbook === undefined || relationships === undefined) {
+    return { cells, unreadable: ['(workbook)'] }
+  }
+  // the same resolver the drawing and note writers use: it decodes %-escapes
+  // and walks "../" and absolute targets, which a plain "xl/" prefix does not
+  const targets = new Map<string, string>()
+  for (const rel of parseRelationships(relationships)) {
+    if (rel.id === undefined || rel.external) continue
+    try {
+      targets.set(rel.id, resolveRelTarget('xl/workbook.xml', rel.target))
+    } catch {
+      // the sheet that points here is reported below
+    }
+  }
+  for (const sheet of parseSheetElements(workbook)) {
+    const part = sheet.relationshipId === undefined ? undefined : targets.get(sheet.relationshipId)
+    const xml = part === undefined ? undefined : await read(part)
+    if (xml === undefined) {
+      unreadable.push(sheet.name)
+      continue
+    }
+    const found = formulaCellsInSheet(xml)
+    if (found.length) cells.set(sheet.name, found)
+  }
+  return { cells, unreadable }
 }
 
-export function formulaCellsInSheet(xml: string): { row: number; column: number }[] {
-  const cells: { row: number; column: number }[] = []
+/** A formula cell of the file; `boolean` marks a cell whose cached result the file typed t="b". */
+export interface FormulaCell {
+  row: number
+  column: number
+  boolean?: true
+}
+
+export interface PackageFormulas {
+  cells: Map<string, FormulaCell[]>
+  /** sheets whose XML could not be opened (or '(workbook)' when the package itself could not be read) */
+  unreadable: string[]
+}
+
+export function formulaCellsInSheet(xml: string): FormulaCell[] {
+  const cells: FormulaCell[] = []
   let nextRow = 0
   for (const rowMatch of xml.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
     const rowNumber = /\br="(\d+)"/.exec(rowMatch[1] ?? '')?.[1]
@@ -1367,7 +1425,13 @@ export function formulaCellsInSheet(xml: string): { row: number; column: number 
         }
       }
       nextColumn = column + 1
-      if (cellMatch[2] !== undefined && /<f[\s>/]/.test(cellMatch[2])) cells.push({ row, column })
+      if (cellMatch[2] !== undefined && /<f[\s>/]/.test(cellMatch[2])) {
+        cells.push({
+          row,
+          column,
+          ...(/\bt="b"/.test(cellMatch[1] ?? '') ? { boolean: true as const } : {}),
+        })
+      }
     }
   }
   return cells
@@ -1388,13 +1452,13 @@ const list = (cells: readonly string[]) =>
 async function evaluateFormulas(
   path: string,
   formulaCells: readonly CellEdit[],
-  inFile: ReadonlyMap<string, { row: number; column: number }[]>,
+  inFile: ReadonlyMap<string, readonly FormulaCell[]>,
   renames: Record<string, string>,
 ): Promise<{
   values: SheetFormulaValues[]
   uncached: string[]
   unparsed: string[]
-  /** the untouched formulas were too many (or too scattered) to refresh */
+  /** some untouched formulas were left as they were: too many, too scattered, or not evaluated by the engine */
   leftStale: boolean
 }> {
   // edits carry the file's original sheet names; the written file has the renamed ones
@@ -1405,50 +1469,81 @@ async function evaluateFormulas(
     const out: SheetFormulaValues[] = []
     const uncached: string[] = []
     const unparsed: string[] = []
+    // an untouched formula the engine could not evaluate keeps its old result
+    let leftUnrefreshed = false
     // formulas no edit wrote but whose inputs an edit may have changed: their
     // cached <v> is refreshed too, and kept as it is when the engine cannot tell
     const { cells: untouched, leftStale } = untouchedFormulaCells(inFile, wanted, originalName)
+    // group by sheet by pushing: copying the array per formula made the refresh
+    // quadratic (about 9 s for 50,000 formulas)
     const bySheet = new Map<string, { row: number; column: number }[]>()
-    for (const e of [...formulaCells, ...untouched]) {
-      bySheet.set(e.sheetName, [...(bySheet.get(e.sheetName) ?? []), e])
+    const group = (e: { sheetName: string; row: number; column: number }) => {
+      const cells = bySheet.get(e.sheetName)
+      if (cells) cells.push(e)
+      else bySheet.set(e.sheetName, [e])
     }
-    for (const e of untouched) wanted.add(`${e.sheetName} ${e.row} ${e.column}`)
+    for (const e of formulaCells) group(e)
+    // untouched formulas whose cached result the file typed as a boolean
+    const booleans = new Set<string>()
+    for (const e of untouched) {
+      group(e)
+      wanted.add(`${e.sheetName} ${e.row} ${e.column}`)
+      if (e.boolean) booleans.add(`${e.sheetName} ${e.row} ${e.column}`)
+    }
     const own = new Set(formulaCells.map((c) => `${c.sheetName} ${c.row} ${c.column}`))
     for (const [sheet, cells] of bySheet) {
       const evaluated = await recalcRange(client, path, renames[sheet] ?? sheet, boundingBox(cells))
       const values = evaluated
         .filter((cell) => wanted.has(`${originalName(cell.sheet)} ${cell.row} ${cell.column}`))
         .flatMap((cell): SheetFormulaValues['cells'][number][] => {
-          const mine = own.has(`${originalName(cell.sheet)} ${cell.row} ${cell.column}`)
+          const key = `${originalName(cell.sheet)} ${cell.row} ${cell.column}`
+          const mine = own.has(key)
           // Both leave the cell without a cached value — the file is correct
           // and Excel recomputes on open — but they have different causes and
           // the caller reports them apart. A formula the edits did not write
           // keeps the value it had instead.
           if (cell.formatted === UNKNOWN_FUNCTION_RESULT) {
-            if (!mine) return []
+            if (!mine) {
+              leftUnrefreshed = true
+              return []
+            }
             uncached.push(`${sheet}!${toA1Address(cell.row, cell.column)}`)
             return [{ row: cell.row, column: cell.column, value: null }]
           }
           if (cell.formatted === UNPARSED_RESULT) {
-            if (!mine) return []
+            if (!mine) {
+              leftUnrefreshed = true
+              return []
+            }
             unparsed.push(`${sheet}!${toA1Address(cell.row, cell.column)}`)
             return [{ row: cell.row, column: cell.column, value: null }]
           }
           if (cell.isError) {
             return [{ row: cell.row, column: cell.column, value: { error: cell.formatted } }]
           }
+          // The engine answers a boolean with the text TRUE/FALSE. A formula the
+          // file already typed t="b" stays a boolean; one an edit wrote has no
+          // earlier type to go by and keeps the text.
+          const text = cell.formatted.toUpperCase()
+          const hasNumber = typeof cell.number === 'number'
+          if (!mine && booleans.has(key) && !hasNumber && (text === 'TRUE' || text === 'FALSE')) {
+            return [{ row: cell.row, column: cell.column, value: text === 'TRUE' }]
+          }
+          // A formula that now returns "" keeps an empty cached string when no
+          // edit wrote it, instead of losing its <v>.
+          const empty = !hasNumber && cell.formatted === ''
           return [
             {
               row: cell.row,
               column: cell.column,
-              value: (cell.number ?? (cell.formatted === '' ? null : cell.formatted)) as Scalar,
+              value: (cell.number ?? (empty ? (mine ? null : '') : cell.formatted)) as Scalar,
             },
           ]
         })
       // the refresh is keyed like the edits, by the file's original sheet name
       if (values.length) out.push({ sheetName: sheet, cells: values })
     }
-    return { values: out, uncached, unparsed, leftStale }
+    return { values: out, uncached, unparsed, leftStale: leftStale || leftUnrefreshed }
   })
 }
 
@@ -1463,17 +1558,25 @@ const UNTOUCHED_BOX_CAP = 1_000_000
  * with none: a refresh of part of them would only mix fresh and stale.
  */
 function untouchedFormulaCells(
-  inFile: ReadonlyMap<string, readonly { row: number; column: number }[]>,
+  inFile: ReadonlyMap<string, readonly FormulaCell[]>,
   edited: ReadonlySet<string>,
   originalName: (written: string) => string,
-): { cells: { sheetName: string; row: number; column: number }[]; leftStale: boolean } {
-  const found: { sheetName: string; row: number; column: number }[] = []
+): {
+  cells: { sheetName: string; row: number; column: number; boolean?: true }[]
+  leftStale: boolean
+} {
+  const found: { sheetName: string; row: number; column: number; boolean?: true }[] = []
   let leftStale = false
   for (const [written, cells] of inFile) {
     const sheetName = originalName(written)
     const all = cells
       .filter((c) => !edited.has(`${sheetName} ${c.row} ${c.column}`))
-      .map((c) => ({ sheetName, row: c.row, column: c.column }))
+      .map((c) => ({
+        sheetName,
+        row: c.row,
+        column: c.column,
+        ...(c.boolean ? { boolean: true as const } : {}),
+      }))
     if (found.length + all.length > UNTOUCHED_FORMULA_CAP) return { cells: [], leftStale: true }
     if (all.length === 0) continue
     const box = boundingBox(all)
@@ -1482,7 +1585,8 @@ function untouchedFormulaCells(
       leftStale = true
       continue
     }
-    found.push(...all)
+    // a loop, not push(...all): a spread of this many arguments can overflow the stack
+    for (const c of all) found.push(c)
   }
   return { cells: found, leftStale }
 }
