@@ -2313,7 +2313,11 @@ function patchFormulaCachedValue(
   } else if (typeof value === 'object' && value !== null) {
     typeAttr = ' t="e"'
     valueXml = `<v>${escapeCellText(value.error)}</v>`
-  } else if (value !== null && value !== undefined && value !== '') {
+  } else if (value === '') {
+    // a formula that returns "" keeps its typed empty result, as Excel writes it
+    typeAttr = ' t="str"'
+    valueXml = '<v></v>'
+  } else if (value !== null && value !== undefined) {
     typeAttr = ' t="str"'
     valueXml = `<v>${escapeCellText(String(value))}</v>`
   }
