@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto'
 import { lookup } from 'node:dns/promises'
 import { createWriteStream, existsSync, mkdirSync, rmSync, statSync } from 'node:fs'
-import { request as httpRequest, type IncomingMessage } from 'node:http'
-import { request as httpsRequest } from 'node:https'
+// node:http and node:https are imported where a download starts: on Node 22 a
+// static ESM import of node:http evaluates its WebSocket getter, which compiles
+// undici's WebAssembly parser, and every command reaches this module.
+import type { IncomingMessage } from 'node:http'
 import { BlockList, isIP } from 'node:net'
 import { basename, extname, join } from 'node:path'
 import { Transform } from 'node:stream'
@@ -218,9 +220,10 @@ function pinnedLookup(pinned: Pinned[]) {
   }
 }
 
-function get(url: URL, pinned: Pinned[], signal: AbortSignal): Promise<IncomingMessage> {
+async function get(url: URL, pinned: Pinned[], signal: AbortSignal): Promise<IncomingMessage> {
+  const { request } =
+    url.protocol === 'https:' ? await import('node:https') : await import('node:http')
   return new Promise((resolve, reject) => {
-    const request = url.protocol === 'https:' ? httpsRequest : httpRequest
     const req = request(
       url,
       { method: 'GET', signal, lookup: pinnedLookup(pinned) as never },

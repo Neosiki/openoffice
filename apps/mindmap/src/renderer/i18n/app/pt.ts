@@ -46,6 +46,8 @@ export const pt = {
   layoutRight: 'Direita',
   layoutBoth: 'Ambos os lados',
   layoutDown: 'Para baixo',
+  layoutTree: 'Árvore',
+  layoutTimeline: 'Linha do tempo',
   layoutStandIn:
     'O layout original deste mapa não pode ser desenhado aqui, por isso outro é exibido. Ao escolher um layout, ele é gravado no arquivo.',
   sheetTabs: 'Folhas',

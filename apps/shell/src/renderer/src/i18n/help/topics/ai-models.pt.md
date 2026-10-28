@@ -8,7 +8,7 @@ Tudo o que requer uma chave fica em **Avançado**, ao fundo da mesma página. Fi
 
 ## A predefinição: a sua assinatura
 
-- **IA em uso** começa em **Automático**: primeiro uma assinatura do Claude conectada, depois o Codex.
+- **IA em uso** começa em **Automático**: das assinaturas conectadas, primeiro o Claude, depois o ChatGPT, depois o Codex.
 - O Automático nunca escolhe nada que custe dinheiro extra. Uma chave de API só é usada enquanto escolher por si esse fornecedor em **IA em uso**.
 - A lista de modelos ao fundo de cada painel de IA mostra primeiro as assinaturas, depois os fornecedores com chave cuja configuração concluiu. Dentro de uma assinatura, **Modelo padrão** é o modelo normal dessa assinatura.
 

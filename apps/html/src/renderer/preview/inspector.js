@@ -209,6 +209,8 @@
   const targetOf = (node) => {
     let el = node && node.nodeType === 3 ? node.parentElement : node
     if (!el || isOwn(el)) return null
+    const formula = el.closest('span[data-latex],div[data-latex]')
+    if (formula && sidOf(formula) !== null) return formula
     for (let cur = el; cur && cur !== document.documentElement; cur = cur.parentElement) {
       if (ATOMIC.has(cur.tagName.toLowerCase())) el = cur
     }
@@ -476,6 +478,7 @@
    * editable (no text, or block children next to several runs: those edits go through AI or source) */
   const editMode = (el) => {
     if (!el || sidOf(el) === null || !TEXT_TAGS.has(el.tagName.toLowerCase())) return null
+    if (el.matches('span[data-latex],div[data-latex]')) return null
     if (!(el.textContent || '').trim()) return null
     const children = Array.from(el.children)
     if (children.length && children.every((c) => INLINE_TAGS.has(c.tagName.toLowerCase())))
@@ -500,6 +503,10 @@
    * range made before the edit is kept). Without a point the whole run is selected (toolbar / host entry). */
   const beginEdit = (el, at) => {
     if (!el || editing) return
+    if (el.matches('span[data-latex],div[data-latex]')) {
+      post({ type: 'gx:editMath', sid: sidOf(el) })
+      return
+    }
     const mode = editMode(el)
     if (!mode) return
     // read the pre-edit selection before focus() can move it
@@ -948,6 +955,10 @@
       // A single left click on the text itself starts editing with the caret at the click
       // (PowerPoint/WPS); the box around the text only selects, so it stays the drag surface.
       const plain = e.button === 0 && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey
+      if (plain && el.matches('span[data-latex],div[data-latex]')) {
+        post({ type: 'gx:editMath', sid: sidOf(el) })
+        return
+      }
       if (plain && editMode(el) && overText(el, e.clientX, e.clientY))
         beginEdit(el, { x: e.clientX, y: e.clientY })
     },

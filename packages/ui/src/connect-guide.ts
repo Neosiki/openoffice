@@ -14,10 +14,15 @@ import {
 import { aiSubscriptionStatusOf } from './ai-subscription'
 import type { AiSubscriptionStringKey } from './strings-ai-subscription'
 
-/** A way to connect: one of the two subscriptions, or the free connections */
+/** A way to connect: one of the subscriptions, or the free connections */
 export type AiConnectPath = AiSubscriptionProviderId | 'free'
 
-export const AI_CONNECT_PATHS: readonly AiConnectPath[] = [...AI_SUBSCRIPTION_PROVIDERS, 'free']
+/**
+ * The answers to the question. ChatGPT is one answer: its path connects
+ * directly, and the Codex program is a way within it (a link on that path),
+ * so nobody has to choose between two ChatGPT answers (decision 0081).
+ */
+export const AI_CONNECT_PATHS: readonly AiConnectPath[] = ['claude-code', 'chatgpt', 'free']
 
 export interface AiConnectPathOption {
   readonly path: AiConnectPath
@@ -39,12 +44,30 @@ const PATH_TEXT: Record<
   { titleKey: AiSubscriptionStringKey; bodyKey: AiSubscriptionStringKey }
 > = {
   'claude-code': { titleKey: 'guidePathClaudeTitle', bodyKey: 'guidePathClaudeBody' },
+  chatgpt: { titleKey: 'guidePathCodexTitle', bodyKey: 'guidePathChatGptBody' },
   codex: { titleKey: 'guidePathCodexTitle', bodyKey: 'guidePathCodexBody' },
   free: { titleKey: 'guidePathFreeTitle', bodyKey: 'guidePathFreeBody' },
 }
 
+/** The title and the line on what it needs, for any path (the Codex one is not among the answers) */
+export function aiConnectPathText(path: AiConnectPath): {
+  titleKey: AiSubscriptionStringKey
+  bodyKey: AiSubscriptionStringKey
+} {
+  return PATH_TEXT[path]
+}
+
+/** The other way along the ChatGPT answer: Codex from the direct path, and back */
+export function aiConnectAlternatePath(path: AiConnectPath): AiConnectPath | null {
+  if (path === 'chatgpt') return 'codex'
+  if (path === 'codex') return 'chatgpt'
+  return null
+}
+
 function badgeOf(status: AiSubscriptionStatus): AiSubscriptionStringKey | undefined {
   if (status.signingIn) return 'cardSigningIn'
+  // nothing to install: signed out says nothing of its own
+  if (status.provider === 'chatgpt') return status.state === 'ready' ? 'guideBadgeReady' : undefined
   switch (status.state) {
     case 'ready':
       return 'guideBadgeReady'
@@ -91,10 +114,23 @@ export function aiConnectGuideView(
         ? freeConnected
           ? 'guideBadgeReady'
           : undefined
-        : badgeOf(aiSubscriptionStatusOf(statuses, path))
+        : path === 'chatgpt'
+          ? chatGptAnswerBadge(statuses)
+          : badgeOf(aiSubscriptionStatusOf(statuses, path))
     return { path, ...PATH_TEXT[path], ...(badgeKey ? { badgeKey } : {}) }
   })
   return { open, options }
+}
+
+/** The ChatGPT answer covers both ways in: connected or signing in on either shows on it */
+function chatGptAnswerBadge(statuses: AiSubscriptionStatuses): AiSubscriptionStringKey | undefined {
+  const both = [
+    aiSubscriptionStatusOf(statuses, 'chatgpt'),
+    aiSubscriptionStatusOf(statuses, 'codex'),
+  ]
+  if (both.some((status) => status.state === 'ready' && !status.signingIn)) return 'guideBadgeReady'
+  if (both.some((status) => status.signingIn)) return 'cardSigningIn'
+  return undefined
 }
 
 export type AiConnectStepId = 'install' | 'login' | 'ready'
@@ -121,10 +157,15 @@ export interface AiConnectStepsView {
  */
 export function aiConnectStepsView(status: AiSubscriptionStatus): AiConnectStepsView {
   const current = currentStep(status)
-  const at = current ? AI_CONNECT_STEPS.indexOf(current) : -1
+  // ChatGPT reached directly installs nothing: sign in, then connected
+  const ids =
+    status.provider === 'chatgpt'
+      ? AI_CONNECT_STEPS.filter((id) => id !== 'install')
+      : AI_CONNECT_STEPS
+  const at = current ? ids.indexOf(current) : -1
   return {
     current,
-    steps: AI_CONNECT_STEPS.map((id, index) => ({
+    steps: ids.map((id, index) => ({
       id,
       done: current === 'ready' || index < at,
     })),

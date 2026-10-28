@@ -129,6 +129,7 @@ function harness(): Harness {
     login: {
       'claude-code': apiKeyLogin,
       codex: { provider: 'codex', state: 'not-installed' },
+      chatgpt: { provider: 'chatgpt', state: 'signed-out' },
     },
     changes: [],
   }
@@ -155,6 +156,7 @@ describe('the status service', () => {
     const h = harness()
     expect(h.service.getStatuses()).toEqual({
       'claude-code': { provider: 'claude-code', state: 'checking', meteredAccepted: false },
+      chatgpt: { provider: 'chatgpt', state: 'checking', meteredAccepted: false },
       codex: { provider: 'codex', state: 'checking', meteredAccepted: false },
     })
     const statuses = await h.service.check()
@@ -385,7 +387,8 @@ describe('the status service', () => {
     })
     const [first, second] = await Promise.all([service.check(), service.check()])
     expect(first).toEqual(second)
-    expect(detections).toBe(2)
+    // one detection per provider, shared by both callers
+    expect(detections).toBe(3)
   })
 
   it('a fresh check does not share one already under way: it waits for that one, then asks again', async () => {
@@ -441,6 +444,7 @@ describe('the status service', () => {
     })
     await service.check()
     expect(seen.sort()).toEqual([
+      ['chatgpt', undefined],
       ['claude-code', undefined],
       ['codex', 'D:\\tools\\codex.exe'],
     ])

@@ -21,7 +21,7 @@ import {
   subscriptionInstallCommandLine,
   type SubscriptionProgram,
 } from '../src/subscription'
-import type { AiSubscriptionProviderId } from '../src/types'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../src/types'
 
 class FakeChild extends EventEmitter {
   unrefs = 0
@@ -71,7 +71,7 @@ const NOT_FULL_PATHS = [
   'C:\\%X%',
 ]
 
-function program(provider: AiSubscriptionProviderId): SubscriptionProgram {
+function program(provider: AiSubscriptionCliId): SubscriptionProgram {
   const command = provider === 'codex' ? 'C:\\npm\\codex.exe' : 'C:\\npm\\claude.exe'
   return { provider, command, prefixArgs: [], env: {}, entry: command, source: 'npm' }
 }

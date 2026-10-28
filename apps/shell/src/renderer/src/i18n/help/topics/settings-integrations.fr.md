@@ -4,7 +4,7 @@
 
 La ligne en bas à gauche de l’accueil ouvre le panneau des paramètres (elle affiche Connecter l’IA tant qu’aucune IA n’est connectée). Il comporte cinq sections : Compte, IA, Général, Intégrations et À propos.
 
-**Compte** indique où en sont vos abonnements Claude et Codex, et **Gérer les connexions** mène à la section IA. L’IA a ses propres articles : [Connexion par abonnement](help://subscription) et [Modèles IA et paramètres](help://ai-models).
+**Compte** indique où en sont vos connexions Claude, ChatGPT et Codex, et **Gérer les connexions** mène à la section IA. L’IA a ses propres articles : [Connexion par abonnement](help://subscription) et [Modèles IA et paramètres](help://ai-models).
 
 ## Langue
 

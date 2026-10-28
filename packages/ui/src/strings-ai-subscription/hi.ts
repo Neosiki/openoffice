@@ -143,4 +143,21 @@ export const hi = {
   actionCopyInfo: 'मदद के लिए जानकारी कॉपी करें',
   copyInfoDone: 'कॉपी हो गया',
   actionConnectHelp: 'हर चरण स्क्रीन पर देखें (कोरियाई भाषा का पेज)',
+  guidePathChatGptBody:
+    'अपने ChatGPT खाते से साइन इन करें और अपने प्लान का उपयोग करें। कुछ भी इंस्टॉल नहीं करना है। मुफ़्त प्लान में बहुत कम उपयोग मिलता है।',
+  guideUseCodex: 'क्या आप इस PC पर पहले से Codex प्रोग्राम का उपयोग करते हैं? Codex से कनेक्ट करें',
+  guideUseDirect: 'Codex के बिना, सीधे ऐप में कनेक्ट करें',
+  chatgptLoginNote:
+    'आपके ब्राउज़र में ChatGPT का साइन-इन पेज खुलेगा। साइन इन करें और इस ऐप को अपने ChatGPT प्लान का उपयोग करने की अनुमति दें; कनेक्शन अपने आप पूरा हो जाएगा।',
+  chatgptLoginUnfinishedNote:
+    'साइन इन पूरा नहीं हुआ। फिर से शुरू करने के लिए इसे दोबारा दबाएँ। कनेक्ट करने के लिए आपको अपने ChatGPT प्लान के उपयोग की अनुमति देनी होगी।',
+  chatgptSigningInNote:
+    'खुले हुए ब्राउज़र में अपने ChatGPT खाते से साइन इन करें और इस ऐप को अपने प्लान का उपयोग करने की अनुमति दें। कनेक्शन अपने आप पूरा हो जाएगा।',
+  chatgptPlanNote:
+    'इस ऐप में AI आपके ChatGPT प्लान पर चलता है। डिस्कनेक्ट करने पर यह केवल इस ऐप के लिए बंद होगा; इस PC के दूसरे प्रोग्राम साइन इन रहेंगे।',
+  actionContinueWithChatGpt: 'ChatGPT के साथ जारी रखें',
+  actionManageUsage: 'उपयोग प्रबंधित करें',
+  browserPageDoneBody: 'आप यह टैब बंद करके ऐप पर लौट सकते हैं।',
+  browserPageFailedTitle: 'कनेक्शन नहीं हो सका',
+  browserPageFailedBody: 'ऐप पर लौटें और फिर से कोशिश करें।',
 } satisfies Record<keyof typeof zh, string>

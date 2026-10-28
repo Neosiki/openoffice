@@ -9,6 +9,7 @@ import {
   aiConnectPromptView,
   aiSubscriptionCardView,
   aiSubscriptionProviderName,
+  aiSubscriptionStatusOf,
   aiSubscriptionText,
 } from '@genoffice/ui'
 import type { Lang } from '@genoffice/i18n'
@@ -58,7 +59,7 @@ export function SubscriptionSummary({
       <h3 className="set-pane-title">{t('setSecAccount')}</h3>
       <div className="set-field-desc set-ai-note">{aiSubscriptionText(lang, 'connectBody')}</div>
       {AI_SUBSCRIPTION_PROVIDERS.map((provider) => {
-        const view = aiSubscriptionCardView(connection.statuses[provider])
+        const view = aiSubscriptionCardView(aiSubscriptionStatusOf(connection.statuses, provider))
         return (
           <div className="set-field" key={provider} data-provider={provider}>
             <div className="set-field-text">
@@ -262,7 +263,7 @@ export function AiSection({
         {AI_SUBSCRIPTION_PROVIDERS.map((provider) => (
           <Fragment key={provider}>
             <AiSubscriptionCard
-              status={statuses[provider]}
+              status={aiSubscriptionStatusOf(statuses, provider)}
               lang={lang}
               disabled={busy}
               onInstall={connection.install}
@@ -273,8 +274,16 @@ export function AiSection({
               onAcceptMetered={acceptMetered}
               onOpenInstallHelp={connection.openInstallHelp}
               showAccount
-              onSwitchAccount={(id) => setAccountAsked({ provider: id, action: 'switch' })}
+              // ChatGPT's sign-in is the app's own: another account touches nothing else on the PC
+              onSwitchAccount={(id) =>
+                id === 'chatgpt'
+                  ? connection.switchAccount(id)
+                  : setAccountAsked({ provider: id, action: 'switch' })
+              }
               onLogout={(id) => setAccountAsked({ provider: id, action: 'logout' })}
+              onManageUsage={
+                provider === 'chatgpt' ? () => connection.openInstallHelp('chatgpt') : undefined
+              }
             />
             {accountAsked?.provider === provider && (
               <div
@@ -285,9 +294,11 @@ export function AiSection({
               >
                 <div className="set-field-desc set-adv-warning">
                   {t(
-                    accountAsked.action === 'logout'
-                      ? 'setSubLogoutConfirm'
-                      : 'setSubSwitchConfirm',
+                    provider === 'chatgpt'
+                      ? 'setSubChatGptLogoutConfirm'
+                      : accountAsked.action === 'logout'
+                        ? 'setSubLogoutConfirm'
+                        : 'setSubSwitchConfirm',
                     { program: subscriptionProgramName(provider) },
                   )}
                 </div>

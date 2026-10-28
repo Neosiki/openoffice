@@ -148,4 +148,21 @@ export const nl = {
   actionCopyInfo: 'Gegevens kopiëren voor hulp',
   copyInfoDone: 'Gekopieerd',
   actionConnectHelp: 'Bekijk elke stap op het scherm (pagina in het Koreaans)',
+  guidePathChatGptBody:
+    'Meld je aan met je ChatGPT-account en gebruik je abonnement. Je hoeft niets te installeren. Met het gratis abonnement kun je maar weinig gebruiken.',
+  guideUseCodex: 'Gebruik je het Codex-programma al op deze pc? Verbinden via Codex',
+  guideUseDirect: 'Rechtstreeks in de app verbinden, zonder Codex',
+  chatgptLoginNote:
+    'Er opent een aanmeldpagina van ChatGPT in je browser. Meld je aan en sta deze app toe je ChatGPT-abonnement te gebruiken; de verbinding komt dan vanzelf tot stand.',
+  chatgptLoginUnfinishedNote:
+    'Het aanmelden is niet afgerond. Druk nogmaals om opnieuw te beginnen. Voor de verbinding moet je toestaan dat je ChatGPT-abonnement wordt gebruikt.',
+  chatgptSigningInNote:
+    'Meld je in de geopende browser aan met je ChatGPT-account en sta deze app toe je abonnement te gebruiken. De verbinding komt vanzelf tot stand.',
+  chatgptPlanNote:
+    'AI in deze app draait op je ChatGPT-abonnement. Als je de verbinding verbreekt, geldt dat alleen voor deze app; andere programma’s op deze pc blijven aangemeld.',
+  actionContinueWithChatGpt: 'Doorgaan met ChatGPT',
+  actionManageUsage: 'Gebruik beheren',
+  browserPageDoneBody: 'Je kunt dit tabblad sluiten en teruggaan naar de app.',
+  browserPageFailedTitle: 'De verbinding is niet gelukt',
+  browserPageFailedBody: 'Ga terug naar de app en probeer het opnieuw.',
 } satisfies Record<keyof typeof zh, string>

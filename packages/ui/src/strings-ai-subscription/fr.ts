@@ -150,4 +150,21 @@ export const fr = {
   actionCopyInfo: 'Copier les infos pour obtenir de l’aide',
   copyInfoDone: 'Copié',
   actionConnectHelp: 'Voir chaque étape à l’écran (page en coréen)',
+  guidePathChatGptBody:
+    'Connectez-vous avec votre compte ChatGPT et utilisez votre forfait. Rien à installer. Le forfait gratuit ne permet qu’une utilisation limitée.',
+  guideUseCodex: 'Vous utilisez déjà le programme Codex sur ce PC ? Se connecter avec Codex',
+  guideUseDirect: 'Se connecter directement dans l’application, sans Codex',
+  chatgptLoginNote:
+    'Une page de connexion ChatGPT s’ouvre dans votre navigateur. Connectez-vous et autorisez cette application à utiliser votre forfait ChatGPT ; la connexion se fait ensuite d’elle-même.',
+  chatgptLoginUnfinishedNote:
+    'La connexion n’a pas abouti. Appuyez de nouveau pour recommencer. Pour vous connecter, vous devez autoriser l’utilisation de votre forfait ChatGPT.',
+  chatgptSigningInNote:
+    'Connectez-vous avec votre compte ChatGPT dans le navigateur qui s’est ouvert, puis autorisez cette application à utiliser votre forfait. La connexion se fait d’elle-même.',
+  chatgptPlanNote:
+    'L’IA de cette application fonctionne avec votre forfait ChatGPT. La déconnexion ne concerne que cette application ; les autres programmes de ce PC restent connectés.',
+  actionContinueWithChatGpt: 'Continuer avec ChatGPT',
+  actionManageUsage: 'Gérer l’utilisation',
+  browserPageDoneBody: "Vous pouvez fermer cet onglet et revenir à l'application.",
+  browserPageFailedTitle: "La connexion n'a pas abouti",
+  browserPageFailedBody: "Revenez à l'application et réessayez.",
 } satisfies Record<keyof typeof zh, string>

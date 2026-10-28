@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutFromStructureClass, structureClassForLayout } from '../src/layout'
+import { layoutFromStructureClass, structureClassForLayout, VIEW_LAYOUTS } from '../src/layout'
 import { htmlToPlainText, noteText } from '../src/notes'
 import type { XmindSheet } from '../src/types'
 import {
@@ -314,6 +314,8 @@ describe('layout', () => {
       ['org.xmind.ui.map.clockwise', 'both', true],
       ['org.xmind.ui.map.anticlockwise', 'both', true],
       ['org.xmind.ui.org-chart.down', 'down', true],
+      ['org.xmind.ui.tree.right', 'tree', true],
+      ['org.xmind.ui.timeline.horizontal', 'timeline', true],
       [undefined, 'both', true],
     ]
     for (const [structureClass, layout, exact] of cases) {
@@ -325,7 +327,7 @@ describe('layout', () => {
   })
 
   it('draws every other arrangement as a stand-in and says so', () => {
-    for (const rightward of ['org.xmind.ui.tree.right', 'org.xmind.ui.brace.right']) {
+    for (const rightward of ['org.xmind.ui.brace.right', 'org.xmind.ui.fishbone.right']) {
       expect(layoutFromStructureClass(rightward), rightward).toEqual({
         layout: 'right',
         exact: false,
@@ -336,7 +338,7 @@ describe('layout', () => {
       'org.xmind.ui.brace.left',
       'org.xmind.ui.org-chart.up',
       'org.xmind.ui.fishbone.leftHeaded',
-      'org.xmind.ui.timeline.horizontal',
+      'org.xmind.ui.timeline.vertical',
       'org.xmind.ui.spreadsheet',
       'something.new',
       '',
@@ -350,17 +352,21 @@ describe('layout', () => {
     }
   })
 
-  it('never stands in with left or down: those are only drawn for the classes that mean them', () => {
+  it('never stands in with left, down, tree or timeline: those are only drawn for the classes that mean them', () => {
     for (const unknown of [
       'org.xmind.ui.tree.left',
       'org.xmind.ui.brace.left',
       'org.xmind.ui.fishbone.rightHeaded',
       'org.xmind.ui.timeline.down',
+      'org.xmind.ui.timeline.vertical',
       'org.xmind.ui.org-chart.up',
       'vendor.new.left',
       'vendor.new.down',
+      'vendor.tree',
       'left',
       'down',
+      'tree',
+      'timeline',
     ]) {
       const { layout, exact } = layoutFromStructureClass(unknown)
       expect(exact, unknown).toBe(false)
@@ -375,7 +381,7 @@ describe('layout', () => {
   })
 
   it('names a structure class for each layout that maps back to the same layout', () => {
-    for (const layout of ['left', 'right', 'both', 'down'] as const) {
+    for (const layout of VIEW_LAYOUTS) {
       expect(layoutFromStructureClass(structureClassForLayout(layout))).toEqual({
         layout,
         exact: true,

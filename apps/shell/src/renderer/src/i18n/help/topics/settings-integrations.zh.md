@@ -4,7 +4,7 @@
 
 主屏左下角的那一行打开设置面板（还没有连接 AI 时显示为「连接 AI」）。面板共五个分区：账户、AI、通用、集成、关于。
 
-**账户**显示你的 Claude 和 Codex 订阅当前的状态，**管理连接**会带你到 AI 分区。AI 有专门的两篇说明：[订阅连接](help://subscription)和 [AI 模型与设置](help://ai-models)。
+**账户**显示你的 Claude、ChatGPT 和 Codex 连接当前的状态，**管理连接**会带你到 AI 分区。AI 有专门的两篇说明：[订阅连接](help://subscription)和 [AI 模型与设置](help://ai-models)。
 
 ## 语言
 

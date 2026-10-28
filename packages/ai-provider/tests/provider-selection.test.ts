@@ -13,6 +13,7 @@ import {
   isSubscriptionProvider,
   selectAiProvider,
   subscriptionConnection,
+  subscriptionStateOf,
 } from '../src/provider-selection'
 import { defaultAiSettings } from '../src/providers'
 import type {
@@ -41,10 +42,16 @@ function status(
 function statuses(
   claude: AiSubscriptionState,
   codex: AiSubscriptionState,
-  extra: { claude?: Partial<AiSubscriptionStatus>; codex?: Partial<AiSubscriptionStatus> } = {},
+  extra: {
+    claude?: Partial<AiSubscriptionStatus>
+    codex?: Partial<AiSubscriptionStatus>
+    /** the direct ChatGPT connection; signed out unless a test says otherwise */
+    chatgpt?: AiSubscriptionState
+  } = {},
 ): AiSubscriptionStatuses {
   return {
     'claude-code': status('claude-code', claude, extra.claude),
+    chatgpt: status('chatgpt', extra.chatgpt ?? 'signed-out'),
     codex: status('codex', codex, extra.codex),
   }
 }
@@ -115,6 +122,37 @@ describe('selectAiProvider with auto', () => {
     expect(
       selectAiProvider(settingsWith('auto'), { 'claude-code': status('claude-code', 'ready') }),
     ).toEqual(claude)
+  })
+
+  it('picks ChatGPT ahead of Codex when both are ready, and Claude ahead of both', () => {
+    const chatgpt = { connected: true, provider: 'chatgpt', metered: false }
+    expect(
+      selectAiProvider(settingsWith('auto'), statuses('signed-out', 'ready', { chatgpt: 'ready' })),
+    ).toEqual(chatgpt)
+    expect(
+      selectAiProvider(settingsWith('auto'), statuses('ready', 'ready', { chatgpt: 'ready' })),
+    ).toEqual({ connected: true, provider: 'claude-code', metered: false })
+  })
+
+  it('does not decide for Codex while the ChatGPT check has not answered', () => {
+    expect(
+      selectAiProvider(
+        settingsWith('auto'),
+        statuses('signed-out', 'ready', { chatgpt: 'checking' }),
+      ),
+    ).toMatchObject({ connected: false, selection: 'auto', reason: 'no-subscription' })
+  })
+
+  it('reads a ChatGPT status that is missing (not one still checking) as signed out', () => {
+    // a map from where the direct connection does not exist lists the two CLIs alone
+    expect(
+      selectAiProvider(settingsWith('auto'), {
+        'claude-code': status('claude-code', 'signed-out'),
+        codex: status('codex', 'ready'),
+      }),
+    ).toEqual({ connected: true, provider: 'codex', metered: false })
+    expect(subscriptionStateOf({}, 'chatgpt')).toBe('signed-out')
+    expect(subscriptionStateOf({}, 'claude-code')).toBe('checking')
   })
 
   it('skips an accepted metered Claude login and picks the ready Codex', () => {
@@ -310,8 +348,9 @@ describe('selectAiProvider with an explicit selection', () => {
 
 describe('subscription helpers', () => {
   it('lists the subscription providers in auto order', () => {
-    expect(AI_SUBSCRIPTION_PROVIDERS).toEqual(['claude-code', 'codex'])
+    expect(AI_SUBSCRIPTION_PROVIDERS).toEqual(['claude-code', 'chatgpt', 'codex'])
     expect(isSubscriptionProvider('claude-code')).toBe(true)
+    expect(isSubscriptionProvider('chatgpt')).toBe(true)
     expect(isSubscriptionProvider('codex')).toBe(true)
     expect(isSubscriptionProvider('anthropic')).toBe(false)
     expect(isSubscriptionProvider('auto')).toBe(false)

@@ -266,7 +266,9 @@ describe('AI panel: not connected', () => {
     await click(panel.querySelector('[data-provider="claude-code"] [data-action="login"]'))
     expect(bridge.subscription.login).toHaveBeenCalledWith('claude-code')
     await click(panel.querySelector('[data-action="guide-back"]'))
-    await click(panel.querySelector('[data-path="codex"]'))
+    // the Codex program is a way within the one ChatGPT answer
+    await click(panel.querySelector('[data-path="chatgpt"]'))
+    await click(panel.querySelector('[data-action="guide-alternate"]'))
     await click(panel.querySelector('[data-provider="codex"] [data-action="install"]'))
     expect(bridge.subscription.install).toHaveBeenCalledWith('codex')
     await click(panel.querySelector('[data-provider="codex"] [data-action="install-help"]'))

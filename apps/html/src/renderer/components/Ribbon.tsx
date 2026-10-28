@@ -29,6 +29,7 @@ import {
   IconSave,
   IconSearch,
   IconSection,
+  IconSigma,
   IconSplitView,
   IconSummarize,
   IconTable,
@@ -79,6 +80,7 @@ interface Props {
   canInsert: boolean
   /** images come from a picked file by default; `url` places a remote image instead; tables take the picker's rows × cols */
   onInsert: (kind: InsertKind, opts?: InsertOptions) => void
+  onMath?: () => void
   /** replace a still-blank page with the document skeleton, in the UI language */
   onInsertSkeleton: () => void
   /** false once the page has content: a skeleton would only duplicate the document */
@@ -369,6 +371,20 @@ export function Ribbon(p: Props) {
             <span className="rb-group-lead" aria-hidden="true">
               {t('ribbonGroupInsert')}
             </span>
+            {p.onMath && (
+              <button
+                type="button"
+                className="rb-btn rb-view"
+                data-tip={t('mathInsert')}
+                aria-label={t('mathInsert')}
+                disabled={insertOff}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={p.onMath}
+              >
+                <IconSigma size={ICON} />
+                <span>{t('mathInsert')}</span>
+              </button>
+            )}
             <button
               type="button"
               className="rb-btn rb-view"

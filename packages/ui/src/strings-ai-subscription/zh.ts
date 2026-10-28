@@ -123,4 +123,20 @@ export const zh = {
   actionCopyInfo: '复制求助信息',
   copyInfoDone: '已复制',
   actionConnectHelp: '查看每一步的画面演示（韩语页面）',
+  guidePathChatGptBody:
+    '用 ChatGPT 账号登录，即可在其套餐内使用。无需安装程序。免费套餐可用量较少。',
+  guideUseCodex: '这台电脑上已在用 Codex 程序？通过 Codex 连接',
+  guideUseDirect: '不用 Codex，直接在应用中连接',
+  chatgptLoginNote:
+    '浏览器中会打开 ChatGPT 登录页面。登录后允许本应用使用你的 ChatGPT 套餐，即可自动完成连接。',
+  chatgptLoginUnfinishedNote: '登录未完成。再按一次会重新开始。需要允许使用 ChatGPT 套餐才能连接。',
+  chatgptSigningInNote:
+    '请在打开的浏览器中用 ChatGPT 账号登录，并允许本应用使用你的套餐。完成后会自动连接。',
+  chatgptPlanNote:
+    '本应用中的 AI 在你的 ChatGPT 套餐内运行。断开连接只影响本应用，这台电脑上的其他程序不受影响。',
+  actionContinueWithChatGpt: '使用 ChatGPT 继续',
+  actionManageUsage: '管理用量',
+  browserPageDoneBody: '可以关闭此标签页并返回应用。',
+  browserPageFailedTitle: '未能完成连接',
+  browserPageFailedBody: '请返回应用后重试。',
 }

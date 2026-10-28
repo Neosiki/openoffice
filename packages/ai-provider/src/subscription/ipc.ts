@@ -3,8 +3,17 @@
  * channel, wired to whatever the caller injects. Nothing here imports Electron,
  * so an app passes its `ipcMain` and the tests pass a stand-in.
  */
+import { PRODUCT_NAME } from '@genoffice/i18n'
+import {
+  createChatGptConnection,
+  setChatGptConnection,
+  type ChatGptConnection,
+} from '../chatgpt/connection'
+import { createChatGptConnectionFileStore } from '../chatgpt/credentials'
+import type { FreeConnectPage } from '../free-connect'
 import { codexImageGenerationAvailable } from '../image-backend'
 import { isSubscriptionProvider } from '../provider-selection'
+import { isSubscriptionCli } from '../providers'
 import type { AiSettings, AiSubscriptionProviderId, AiSubscriptionSigningIn } from '../types'
 import {
   SUBSCRIPTION_INSTALL_URLS,
@@ -77,7 +86,7 @@ function failure(error: unknown, provider: AiSubscriptionProviderId): Subscripti
     ok: false,
     reason: 'failed',
     error: error instanceof Error ? error.message : String(error),
-    installUrl: SUBSCRIPTION_INSTALL_URLS[provider],
+    ...(isSubscriptionCli(provider) ? { installUrl: SUBSCRIPTION_INSTALL_URLS[provider] } : {}),
   }
 }
 
@@ -203,6 +212,19 @@ export interface SubscriptionIpcSetup {
    */
   loginWindowText?:
     ((provider: AiSubscriptionProviderId) => SubscriptionLoginWindowText) | undefined
+  /**
+   * The ChatGPT sign-in (decision 0081): how the system browser is opened, and
+   * what it shows once it is back on this PC, in the app's language. Without
+   * it the ChatGPT login answers `unsupported`.
+   */
+  chatGptSignIn?:
+    | {
+        openBrowser: (url: string) => Promise<boolean>
+        pages: () => { done: FreeConnectPage; failed: FreeConnectPage }
+      }
+    | undefined
+  /** stand-in for tests: the ChatGPT connection; one over `dataDir` when absent */
+  chatGptConnection?: ChatGptConnection | undefined
 }
 
 /** The window's words, or none when they cannot be had: a guide is no reason for a login not to start */
@@ -236,6 +258,14 @@ interface PendingLogin {
  * starts then, so the UI follows without being asked.
  */
 export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): SubscriptionIpcDeps {
+  // the process's ChatGPT connection, over the same data folder as the metered record
+  const chatGpt =
+    setup.chatGptConnection ??
+    createChatGptConnection({
+      store: createChatGptConnectionFileStore(setup.dataDir),
+      agentName: PRODUCT_NAME,
+    })
+  setChatGptConnection(chatGpt)
   const service = createSubscriptionStatusService({
     getSettings: setup.getSettings,
     setMeteredAccepted: setup.setMeteredAccepted,
@@ -243,12 +273,42 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
     detect: setup.detect,
     listModels: setup.listModels ?? listSubscriptionModels,
   })
+  // a session that came or went (a sign-in, a sign-out, one OpenAI ended) shows at once
+  chatGpt.onChange(() => {
+    void service.check(['chatgpt'], { fresh: true }).catch(() => undefined)
+  })
   const logins = new Map<AiSubscriptionProviderId, PendingLogin>()
   const platform = setup.platform ?? process.platform
+
+  /** The app's own browser sign-in; a press while one runs leaves it running */
+  const launchChatGptLogin = async (): Promise<SubscriptionLaunchResult> => {
+    if (logins.has('chatgpt')) return { ok: true }
+    const signIn = setup.chatGptSignIn
+    if (!signIn) return { ok: false, reason: 'unsupported' }
+    const attempt = new AbortController()
+    const login: PendingLogin = { mode: 'browser', stop: () => attempt.abort() }
+    logins.set('chatgpt', login)
+    service.setLoginUnfinished('chatgpt', false)
+    service.setSigningIn('chatgpt', 'browser')
+    void chatGpt
+      .signIn({ openBrowser: signIn.openBrowser, pages: signIn.pages(), signal: attempt.signal })
+      .catch(() => ({ ok: false as const, reason: 'network' as const }))
+      .then((result) => {
+        if (logins.get('chatgpt') !== login) return
+        logins.delete('chatgpt')
+        service.setSigningIn('chatgpt', undefined)
+        // a sign-in nobody finished, or one that failed: the card says so and offers it again
+        if (!result.ok && result.reason !== 'cancelled') service.setLoginUnfinished('chatgpt', true)
+        void service.check(['chatgpt'], { fresh: true }).catch(() => undefined)
+      })
+    return { ok: true }
+  }
+
   const launchLogin = async (
     provider: AiSubscriptionProviderId,
     requested?: SubscriptionLoginMode,
   ) => {
+    if (provider === 'chatgpt') return launchChatGptLogin()
     const current = logins.get(provider)
     // the window is already open: it is where the user is now
     if (current?.mode === 'window') return { ok: true }
@@ -306,10 +366,16 @@ export function createSubscriptionIpcDeps(setup: SubscriptionIpcSetup): Subscrip
   return {
     service,
     launchLogin,
-    launchLogout: (provider) =>
-      launchSubscriptionLogout(provider, {
-        configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
-      }),
+    launchLogout: async (provider) => {
+      if (provider !== 'chatgpt') {
+        return launchSubscriptionLogout(provider, {
+          configuredPath: setup.getSettings().providers?.[provider]?.cliPath,
+        })
+      }
+      await chatGpt.signOut()
+      return { ok: true }
+    },
+    // there is no program to install or update for ChatGPT: those answer `invalid`
     launchInstall: (provider) => launchSubscriptionInstall(provider),
     launchUpdate: (provider) =>
       launchSubscriptionUpdate(provider, {

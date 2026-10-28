@@ -1,6 +1,36 @@
 import type { zh } from './zh'
 
 export const ru = {
+  mathInsert: 'Вставить формулу',
+  mathEdit: 'Изменить формулу',
+  mathHelp:
+    'Вводите формулу визуально или редактируйте LaTeX. HTML сохраняет исходный код для дальнейших правок.',
+  mathVisualInput: 'Визуальный ввод формулы',
+  mathSource: 'Исходный код LaTeX',
+  mathDisplay: 'Показать на отдельной строке',
+  mathPreview: 'Предпросмотр',
+  mathUnsupported:
+    'Не удалось отобразить выражение. Исходный код будет сохранён для исправления позже.',
+  mathTooLong: 'Используйте не более {n} символов.',
+  mathStale: 'Документ изменился. Скопируйте черновик, закройте это окно и откройте формулу снова.',
+  mathShortcut: '⌘+Enter — применить',
+  mathApply: 'Применить формулу',
+  mathKeyboard: 'Математическая клавиатура',
+  mathFraction: 'Дробь',
+  mathRoot: 'Квадратный корень',
+  mathNthRoot: 'Корень n-й степени',
+  mathPower: 'Степень',
+  mathSubscript: 'Нижний индекс',
+  mathSum: 'Сумма',
+  mathProduct: 'Произведение',
+  mathIntegral: 'Интеграл',
+  mathLimit: 'Предел',
+  mathMatrix: 'Матрица',
+  mathVector: 'Вектор',
+  mathCases: 'Система',
+  mathPiecewise: 'Кусочная функция',
+  mathBinomial: 'Биномиальный коэффициент',
+
   redactMenuLabel: 'Скрыть выделение от ИИ',
   redactDialogDesc:
     'Слова остаются в документе и в файле, а модель видит только метку. Дайте ей имя, чтобы было понятно, что она обозначает.',

@@ -8,7 +8,7 @@ Semua yang memerlukan kunci ada di bawah **Lanjutan**, di bagian bawah halaman y
 
 ## Bawaan: langganan Anda
 
-- **AI yang digunakan** awalnya diatur ke **Otomatis**: langganan Claude yang terhubung lebih dulu, lalu Codex.
+- **AI yang digunakan** awalnya diatur ke **Otomatis**: dari langganan yang terhubung, Claude lebih dulu, lalu ChatGPT, lalu Codex.
 - Mode Otomatis tidak pernah memilih apa pun yang menimbulkan biaya tambahan. Kunci API hanya dipakai selama Anda sendiri memilih penyedia itu di **AI yang digunakan**.
 - Daftar model di bagian bawah setiap panel AI menampilkan langganan lebih dulu, lalu penyedia berbasis kunci yang penyiapannya sudah Anda selesaikan. Di bawah sebuah langganan, **Model bawaan** adalah model standar langganan itu.
 

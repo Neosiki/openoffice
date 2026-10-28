@@ -46,6 +46,8 @@ export const de = {
   layoutRight: 'Rechts',
   layoutBoth: 'Beidseitig',
   layoutDown: 'Nach unten',
+  layoutTree: 'Baum',
+  layoutTimeline: 'Zeitleiste',
   layoutStandIn:
     'Das eigene Layout dieser Mindmap kann hier nicht gezeichnet werden, daher wird ein anderes angezeigt. Erst wenn Sie ein Layout wählen, wird es in die Datei geschrieben.',
   sheetTabs: 'Blätter',

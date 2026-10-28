@@ -46,6 +46,8 @@ export const en = {
   layoutRight: 'Right',
   layoutBoth: 'Both sides',
   layoutDown: 'Downward',
+  layoutTree: 'Tree',
+  layoutTimeline: 'Timeline',
   layoutStandIn:
     "This map's own layout cannot be drawn here, so another one is shown. Picking a layout writes it to the file.",
   sheetTabs: 'Sheets',

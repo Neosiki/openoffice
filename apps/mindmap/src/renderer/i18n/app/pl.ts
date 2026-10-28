@@ -46,6 +46,8 @@ export const pl = {
   layoutRight: 'W prawo',
   layoutBoth: 'Po obu stronach',
   layoutDown: 'W dół',
+  layoutTree: 'Drzewo',
+  layoutTimeline: 'Oś czasu',
   layoutStandIn:
     'Własnego układu tej mapy nie można tutaj narysować, dlatego wyświetlany jest inny. Układ zostaje zapisany w pliku dopiero wtedy, gdy go wybierzesz.',
   sheetTabs: 'Arkusze',

@@ -4,7 +4,7 @@
 
 Baris di kiri bawah Beranda membuka panel pengaturan (bacaannya Hubungkan AI sampai ada AI yang terhubung). Panel ini punya lima bagian: Akun, AI, Umum, Integrasi, dan Tentang.
 
-**Akun** menunjukkan keadaan langganan Claude dan Codex Anda, dan **Kelola koneksi** membawa Anda ke bagian AI. AI punya artikel tersendiri: [Koneksi langganan](help://subscription) dan [Model AI dan pengaturan](help://ai-models).
+**Akun** menunjukkan keadaan koneksi Claude, ChatGPT, dan Codex Anda, dan **Kelola koneksi** membawa Anda ke bagian AI. AI punya artikel tersendiri: [Koneksi langganan](help://subscription) dan [Model AI dan pengaturan](help://ai-models).
 
 ## Bahasa
 

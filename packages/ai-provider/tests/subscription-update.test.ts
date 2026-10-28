@@ -22,7 +22,7 @@ import {
   type SubscriptionProgram,
   type SubscriptionProgramSource,
 } from '../src/subscription'
-import type { AiSubscriptionProviderId } from '../src/types'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../src/types'
 
 class FakeChild extends EventEmitter {
   unrefs = 0
@@ -61,7 +61,7 @@ const POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.e
 const WINDOWS = { SystemRoot: 'C:\\Windows' }
 
 function program(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   entry: string,
   source: SubscriptionProgramSource = 'path',
   extra: Partial<SubscriptionProgram> = {},

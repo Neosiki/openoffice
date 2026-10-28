@@ -142,6 +142,72 @@ jobs:
             test -s "$work/$input.pdf"
           done
 
+      # Sandboxes that hand the command line to an agent often cap virtual
+      # memory (ulimit -v) far below what a WebAssembly memory reserves. Document
+      # commands must still run there, the ones that need the parser must answer
+      # resource_limit instead of aborting, and capabilities must say which is
+      # which before an agent plans work.
+      - name: The command line runs under a 2 GB virtual-memory cap
+        run: |
+          set -euo pipefail
+          cli="$PWD/apps/shell/release/linux-unpacked/resources/cli/genoffice.cjs"
+          work="$RUNNER_TEMP/cli-cap"
+          mkdir -p "$work"
+          printf '# Cap\n\n- one\n- two\n' > "$work/note.md"
+          limited() { bash -c 'ulimit -v 2097152; exec "$@"' _ "$@"; }
+          limited node "$cli" --version
+          limited node "$cli" create --type docx --from "$work/note.md" --out "$work/note.docx" --json
+          limited node "$cli" docs read "$work/note.docx" --json
+          limited node "$cli" capabilities --json > "$work/cap.json"
+          grep -q '"wasm":{"available":false' "$work/cap.json" || {
+            echo "capabilities should report wasm as unavailable under the cap"; cat "$work/cap.json"; exit 1;
+          }
+          set +e
+          limited node "$cli" pdf read "$RUNNER_TEMP/smoke/note.md.pdf" --json > "$work/pdf.json" 2>/dev/null
+          code=$?
+          set -e
+          [ "$code" -eq 3 ] || { echo "pdf read should answer 3 under the cap, got $code"; cat "$work/pdf.json"; exit 1; }
+          grep -q '"error":"resource_limit"' "$work/pdf.json" || {
+            echo "pdf read should answer resource_limit under the cap"; cat "$work/pdf.json"; exit 1;
+          }
+
+      # The same command line without the Electron runtime: a tarball an agent
+      # sandbox or server can unpack. Proved in a bare Node image (no GTK, no
+      # app) under the 2 GB virtual-memory cap such containers usually have.
+      - name: Build the standalone command-line archive
+        run: |
+          set -euo pipefail
+          node packages/cli/pack-tarball.mjs \
+            --from apps/shell/release/linux-unpacked/resources \
+            --out apps/shell/release --platform linux --arch x64
+          cat apps/shell/release/ieumoffice-cli_*.tar.gz.sha256
+
+      - name: The standalone archive runs without GTK or the app
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/apps/shell/release:/dist:ro" \
+            -v "$RUNNER_TEMP/smoke:/work:ro" \
+            node:22-slim bash -c '
+              set -euo pipefail
+              ulimit -v 2097152
+              mkdir -p /tmp/cli
+              tar -xzf /dist/ieumoffice-cli_*.tar.gz -C /tmp/cli
+              cli=/tmp/cli/ieumoffice-cli/cli/ieumoffice
+              "$cli" --version
+              printf "# Standalone\n\n- one\n- two\n" > /tmp/note.md
+              "$cli" create --type docx --from /tmp/note.md --out /tmp/note.docx --json
+              "$cli" docs read /tmp/note.docx --json
+              "$cli" capabilities --json > /tmp/cap.json
+              grep -q "\"wasm\":{\"available\":false" /tmp/cap.json
+              set +e
+              "$cli" pdf read /work/note.md.pdf --json > /tmp/pdf.json 2>/dev/null
+              code=$?
+              set -e
+              [ "$code" -eq 3 ]
+              grep -q "\"error\":\"resource_limit\"" /tmp/pdf.json
+            '
+
       - name: List the release files
         run: ls -la apps/shell/release
 
@@ -153,6 +219,8 @@ jobs:
             apps/shell/release/*.AppImage
             apps/shell/release/*.deb
             apps/shell/release/*.rpm
+            apps/shell/release/*cli*.tar.gz
+            apps/shell/release/*cli*.tar.gz.sha256
             apps/shell/release/*-linux.yml
           if-no-files-found: error
           retention-days: 14
@@ -181,5 +249,5 @@ jobs:
           feed=$(ls linux/*-linux.yml)
           built=$(sed -n 's/^version: *//p' $feed | tr -d "'\"")
           [ "v$built" = "$TAG" ] || { echo "built $built, but the release is $TAG"; exit 1; }
-          gh release upload "$TAG" linux/*.AppImage linux/*.deb linux/*.rpm $feed --clobber
+          gh release upload "$TAG" linux/*.AppImage linux/*.deb linux/*.rpm linux/*cli*.tar.gz linux/*cli*.tar.gz.sha256 $feed --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'

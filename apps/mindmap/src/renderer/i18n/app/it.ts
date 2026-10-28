@@ -46,6 +46,8 @@ export const it = {
   layoutRight: 'A destra',
   layoutBoth: 'Su entrambi i lati',
   layoutDown: 'Verso il basso',
+  layoutTree: 'Albero',
+  layoutTimeline: 'Sequenza temporale',
   layoutStandIn:
     "La disposizione originale di questa mappa non può essere disegnata qui, quindi ne viene mostrata un'altra. Scegliendo una disposizione, questa viene scritta nel file.",
   sheetTabs: 'Fogli',

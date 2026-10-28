@@ -63,11 +63,21 @@ const NOTE_CHIP_TEXT = '≡'
 
 type Direction = 0 | 1 | 2 | 3
 
+/**
+ * The library knows four directions. A tree and a timeline are drawn on top
+ * of one of them, by the editor's own rules (`map.css`, `branches.ts`): the
+ * tree on the direction to the right, the timeline on the one downward, whose
+ * main topics already stand in a row. `map` is a direction drawn as it is.
+ */
+export type MapStructure = 'map' | 'tree' | 'timeline'
+
 const DIRECTION_OF: Readonly<Record<ViewLayout, Direction>> = {
   left: 0,
   right: 1,
   both: 2,
   down: 3,
+  tree: 1,
+  timeline: 3,
 }
 const LAYOUT_OF: readonly ViewLayout[] = ['left', 'right', 'both', 'down']
 
@@ -75,7 +85,13 @@ export function directionOfLayout(layout: ViewLayout): Direction {
   return DIRECTION_OF[layout]
 }
 
-export function layoutOfDirection(direction: unknown): ViewLayout {
+export function structureOfLayout(layout: ViewLayout): MapStructure {
+  return layout === 'tree' || layout === 'timeline' ? layout : 'map'
+}
+
+/** The layout of a library direction drawn as `structure`. A structure that does not sit on that direction is not drawn. */
+export function layoutOfDirection(direction: unknown, structure: MapStructure = 'map'): ViewLayout {
+  if (structure !== 'map' && direction === DIRECTION_OF[structure]) return structure
   return typeof direction === 'number' ? (LAYOUT_OF[direction] ?? 'both') : 'both'
 }
 
@@ -169,6 +185,8 @@ export interface StateBase {
   removedSummaries: ReadonlySet<string>
   /** ids of relationships the user removed since then */
   removedRelationships: ReadonlySet<string>
+  /** how the screen draws the library's direction; absent: as the last view was drawn */
+  structure?: MapStructure
 }
 
 function readMeta(value: unknown): MapNodeMeta {
@@ -218,7 +236,10 @@ export function mindToState(data: MindElixirData, base: StateBase): ViewSheet {
   const ends = new Set(byId.keys())
   placeSummaries(data.summaries ?? [], base, byId, ends)
 
-  const layout = layoutOfDirection(data.direction)
+  const layout = layoutOfDirection(
+    data.direction,
+    base.structure ?? structureOfLayout(base.view.layout),
+  )
   return {
     index: base.view.index,
     id: base.view.id,

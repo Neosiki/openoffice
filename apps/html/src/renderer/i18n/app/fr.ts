@@ -1,6 +1,37 @@
 import type { zh } from './zh'
 
 export const fr = {
+  mathInsert: 'Insérer une équation',
+  mathEdit: 'Modifier une équation',
+  mathHelp:
+    'Saisissez une formule ou modifiez le LaTeX. Le HTML conserve la source pour la réédition.',
+  mathVisualInput: 'Saisie visuelle de formule',
+  mathSource: 'Source LaTeX',
+  mathDisplay: 'Afficher sur une ligne séparée',
+  mathPreview: 'Aperçu',
+  mathUnsupported:
+    'Cette formule ne peut pas être composée. Sa source sera conservée pour la corriger plus tard.',
+  mathTooLong: 'Limitez la saisie à {n} caractères.',
+  mathStale:
+    'Le document a changé. Copiez votre brouillon, fermez cette fenêtre et rouvrez la formule.',
+  mathShortcut: '⌘+Entrée pour appliquer',
+  mathApply: 'Appliquer la formule',
+  mathKeyboard: 'Clavier mathématique',
+  mathFraction: 'Fraction',
+  mathRoot: 'Racine carrée',
+  mathNthRoot: 'Racine n-ième',
+  mathPower: 'Puissance',
+  mathSubscript: 'Indice',
+  mathSum: 'Somme',
+  mathProduct: 'Produit',
+  mathIntegral: 'Intégrale',
+  mathLimit: 'Limite',
+  mathMatrix: 'Matrice',
+  mathVector: 'Vecteur',
+  mathCases: 'Système',
+  mathPiecewise: 'Fonction par morceaux',
+  mathBinomial: 'Coefficient binomial',
+
   redactMenuLabel: 'Masquer la sélection à l’IA',
   redactDialogDesc:
     'Les mots restent dans le document et dans le fichier ; le modèle ne voit que le marqueur ci-dessous. Donnez-lui un nom pour qu’il sache ce qu’il désigne.',

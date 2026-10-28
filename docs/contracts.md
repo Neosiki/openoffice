@@ -178,17 +178,20 @@
 
 **`ieumoffice capabilities --json`** 은 모델을 부르지 않고, 위 세 명령이 지금 무엇을 할지 알려 준다. `detail`:
 
-| 항목                                                                                               | 값                                                                                             |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                           |
-| `pdf_ai_read`, `pdf_translation`                                                                   | 같은 모양. PDF의 AI 페이지 읽기와 문서 번역이 갈 길(대화에 쓰는 AI 제공자)                     |
-| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                           |
-| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`                   |
-| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                          |
-| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                           |
-| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있을 때만 `{ used, limit: null, remaining: null }`이 더해진다 |
-| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                               |
-| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                      |
+| 항목                                                                                               | 값                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `search`, `image_search`, `image_generation`, `image_analysis`, `video_analysis`, `media_analysis` | 각각 `{ available, via, route, metered?, message? }`                                                                                                                                                                     |
+| `pdf_ai_read`, `pdf_translation`                                                                   | 같은 모양. PDF의 AI 페이지 읽기와 문서 번역이 갈 길(대화에 쓰는 AI 제공자)                                                                                                                                               |
+| `via`                                                                                              | 누가 답하는지(검색 경로, 키 제공자, 대화용 AI 제공자). 없으면 `null`                                                                                                                                                     |
+| `route`                                                                                            | 비용이 어디로 가는지. `free` \| `key` \| `subscription`. 쓸 수 없으면 `null`                                                                                                                                             |
+| `metered`                                                                                          | `true`면 쓴 만큼 요금이 나가는 로그인                                                                                                                                                                                    |
+| `message`                                                                                          | 쓸 수 없을 때만 온다. 명령이 실제로 답할 글 그대로다                                                                                                                                                                     |
+| `automatic_calls`                                                                                  | `{ subscription_enabled }`. 켜져 있을 때만 `{ used, limit: null, remaining: null }`이 더해진다                                                                                                                           |
+| `app`                                                                                              | `{ available }`. 화면이 필요한 변환에 쓸 앱 실행 파일을 찾았는지                                                                                                                                                         |
+| `wasm`                                                                                             | `{ available, reason?, limit_bytes? }`. PDF·한글 엔진과 네트워크 명령이 쓰는 WebAssembly 메모리를 지금 만들 수 있는지. 가상 메모리 상한(`ulimit -v`)에 걸리면 `reason: "virtual_memory"`와 그 상한(`limit_bytes`)이 온다 |
+| `settings_path`                                                                                    | 이 답을 읽어 온 설정 파일                                                                                                                                                                                                |
+
+- `wasm.available`이 거짓이면 `pdf read`·`hwp read`·`search`·`read-url`처럼 WebAssembly를 쓰는 명령은 그 환경에서 돌지 않는다. 그때 명령은 크래시 대신 종료 코드 3, `error: "resource_limit"`, `detail.reason: "virtual_memory"`와 `ulimit -v`를 올리라는 `suggestion`으로 답한다. DOCX·XLSX·PPTX·Markdown·HTML·CSV·ODT 문서 작업은 WebAssembly를 쓰지 않는다.
 
 - `media_analysis`는 예전 호출자를 위해 남긴 항목이다. `image_analysis`와 같고, 영상만 될 때는 `video_analysis`와 같다.
 - 웹·이미지 검색은 키 제공자를 고르지 않는 한 항상 `available`이고 `route`는 `free`다.
@@ -312,7 +315,8 @@ metadata:
 - `readUrl.githubToken`은 비공개 GitHub 파일을 읽는 읽기 토큰이다. 키와 같은 방식으로 저장되고, `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
 - `headlessSubscriptionEnabled`가 참이어도 `headlessSubscriptionConsentVersion`이 지금 경고의 판(2)보다 작거나 없으면 꺼진 것으로 읽는다. 판 1은 시간당 한도가 있던 예전 경고이고, 그때는 판을 저장하지 않았다.
 - 이미지 생성 제공자의 저장값 기본은 `codex`다. Codex 구독 이미지 생성이 들어 있지 않은 지금은 `none`(선택 없음)과 똑같이 동작한다.
-- 구독 제공자의 식별자는 `claude-code`, `codex`다. 인증 방식은 `claude-subscription`, `codex-chatgpt`, `api-key` 셋이다.
+- 구독 제공자의 식별자는 `claude-code`, `chatgpt`, `codex`다. 인증 방식은 `claude-subscription`, `chatgpt-plan`, `codex-chatgpt`, `api-key` 넷이다. `provider`에 `chatgpt`를 저장할 수 있고, `providers.chatgpt.model`이 그 모델이다(빈 값은 요금제 목록의 첫 모델). `meteredAccepted`에는 `chatgpt` 항목이 없다(요금제 범위 연결이라 종량 로그인이 없다).
+- ChatGPT 직접 연결(결정 0081)의 토큰은 이 파일이 아니라 같은 폴더의 `chatgpt-connection.json`에 있다. 앱만 읽고 쓴다. 손으로 고치거나 옮기지 않는다(다른 PC·계정에서는 봉인이 풀리지 않아 연결이 없는 것으로 읽힌다). 터미널 명령어와 MCP는 이 파일을 읽지 않는다. 명령어에서 `chatgpt`는 늘 로그인되지 않은 상태이고, `auto`는 Claude, Codex 순으로 고른다.
 - 모르는 제공자 식별자나 없어진 값이 있어도 오류 없이 읽는다. 그 자리는 기본값이 되고, 다음에 앱이 저장할 때 지워진다.
 - `providers` 표가 아예 없는 파일은 제공자 설정 이전의 파일로 읽혀, 다른 값까지 기본값이 된다.
 - 종량 허용은 이 파일의 값만으로는 유효하지 않다. 같은 폴더의 기록(`subscription-metered.json`)에 적힌 로그인 종류가 지금 감지된 것과 같아야 한다.
@@ -368,7 +372,7 @@ metadata:
 
 | 항목              | 값                                                                                   |
 | ----------------- | ------------------------------------------------------------------------------------ |
-| `provider`        | `claude-code` \| `codex`                                                             |
+| `provider`        | `claude-code` \| `chatgpt` \| `codex`                                                |
 | `state`           | `checking` \| `not-installed` \| `signed-out` \| `ready` \| `metered` \| `error`     |
 | `version`         | 프로그램 버전(있을 때)                                                               |
 | `loginMethod`     | `subscription` \| `metered` \| `unknown`                                             |
@@ -383,6 +387,7 @@ metadata:
 - `programPath`는 버전이 낮은 `error`(`needs-update`)일 때만 있다. 한 줄짜리 절대 경로(드라이브, `\\` 공유, `/`로 시작)가 아니면 빠진다.
 - `models`의 `id`는 프로그램이 받는 값이자 저장되는 선택값이다. 빈 `id`는 프로그램의 기본 모델을 뜻하고, 그것이 가리키는 모델이 `resolved`에 온다. 목록은 50개까지다.
 - 창구 이름은 `ai:subscription-statuses`, `-recheck`, `-login`, `-logout`, `-install`, `-metered`, `-codex-image`와 변경 알림 `ai:subscription-changed`다. `-logout`은 껍데기 앱의 화면에서만 부른다.
+- `chatgpt`의 `state`는 `checking`, `signed-out`, `ready`, `error`뿐이다. `-login`은 앱 자신의 브라우저 로그인을 시작하고, `-logout`은 이 앱의 연결만 끊는다. `-install`·`-update`는 `invalid`로 답한다. 답에 `chatgpt` 항목이 없으면(예전 앱) `signed-out`으로 읽는다.
 
 ## 문서 호환
 

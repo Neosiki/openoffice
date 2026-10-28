@@ -13,7 +13,7 @@
 import { lookup } from 'node:dns/promises'
 import type { LookupAddress, LookupOptions } from 'node:dns'
 import { BlockList, isIP } from 'node:net'
-import { Agent, fetch as undiciFetch, getGlobalDispatcher, type Dispatcher } from 'undici'
+import type { Dispatcher } from 'undici'
 
 /**
  * Non-public address ranges. BlockList does the range math and maps
@@ -247,12 +247,26 @@ const PROXY_DISPATCHER_SYMBOLS: ReadonlySet<string> = new Set([
   'tunnel proxy',
 ])
 
-function globalDispatcherRoutesThroughProxy(): boolean {
-  const d: unknown = getGlobalDispatcher()
-  if (d === null || typeof d !== 'object') return false
-  return Object.getOwnPropertySymbols(d).some((s) =>
+function globalDispatcherRoutesThroughProxy(dispatcher: unknown): boolean {
+  if (dispatcher === null || typeof dispatcher !== 'object') return false
+  return Object.getOwnPropertySymbols(dispatcher).some((s) =>
     PROXY_DISPATCHER_SYMBOLS.has(s.description ?? ''),
   )
+}
+
+type UndiciModule = typeof import('undici')
+
+/**
+ * undici is imported when a hop is really requested, never when this module is
+ * evaluated. Importing it runs the HTTP/1 client, which instantiates the llhttp
+ * WebAssembly parser; a WebAssembly memory reserves a large virtual address
+ * range, and on a machine with a low `ulimit -v` that instantiation aborts the
+ * process. The command line imports this module through its search/read-url
+ * commands, so an eager import would make document-only commands (`docs read`,
+ * `create`, `convert`) die before they print anything.
+ */
+async function loadUndici(): Promise<UndiciModule> {
+  return await import('undici')
 }
 
 /**
@@ -294,21 +308,24 @@ export async function fetchWithSsrfGuard(
       ...(signal ? { signal } : {}),
     }
     let dispatcher: Dispatcher | undefined
-    if (!target.literal && !globalDispatcherRoutesThroughProxy()) {
+    // The hop is about to be requested, so the transport (and the Agent that
+    // pins the validated addresses) is needed from here on.
+    const undici = await loadUndici()
+    if (!target.literal && !globalDispatcherRoutesThroughProxy(undici.getGlobalDispatcher())) {
       // A forward proxy resolves at its own exit, so pinning is neither
       // possible (the proxy owns the connection) nor meaningful — when the
       // shell has installed one via setGlobalDispatcher, let the hop ride it
       // instead of dialing the validated address directly and breaking
       // proxied users. Behind a proxy the gate therefore degrades to its
       // per-hop validation; rebinding is then the proxy's to prevent.
-      dispatcher = new Agent({ connect: { lookup: pinnedLookup(target) } })
+      dispatcher = new undici.Agent({ connect: { lookup: pinnedLookup(target) } })
       init.dispatcher = dispatcher
     }
     try {
       const resp =
         fetchImpl !== undefined
           ? await fetchImpl(current, init as RequestInit)
-          : ((await undiciFetch(current, init as never)) as unknown as Response)
+          : ((await undici.fetch(current, init as never)) as unknown as Response)
       if (resp.status < 300 || resp.status >= 400) return resp
       const location = resp.headers.get('location')
       if (!location) return null

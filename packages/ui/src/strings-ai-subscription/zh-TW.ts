@@ -125,4 +125,21 @@ export const zhTW = {
   actionCopyInfo: '複製求助資訊',
   copyInfoDone: '已複製',
   actionConnectHelp: '查看每一步的畫面示範（韓語頁面）',
+  guidePathChatGptBody:
+    '用你的 ChatGPT 帳戶登入，即可在方案範圍內使用。不需要安裝程式。免費方案可用量很少。',
+  guideUseCodex: '這台電腦上已在使用 Codex 程式？透過 Codex 連線',
+  guideUseDirect: '不用 Codex，直接在應用程式中連線',
+  chatgptLoginNote:
+    '瀏覽器中會開啟 ChatGPT 登入頁面。登入後允許此應用程式使用你的 ChatGPT 方案，就會自動完成連線。',
+  chatgptLoginUnfinishedNote:
+    '登入沒有完成。再按一次會重新開始。必須允許使用你的 ChatGPT 方案才能連線。',
+  chatgptSigningInNote:
+    '請在開啟的瀏覽器中用 ChatGPT 帳戶登入，並允許此應用程式使用你的方案。完成後會自動連線。',
+  chatgptPlanNote:
+    '此應用程式中的 AI 在你的 ChatGPT 方案內執行。中斷連線只影響此應用程式，這台電腦上的其他程式仍會保持登入。',
+  actionContinueWithChatGpt: '使用 ChatGPT 繼續',
+  actionManageUsage: '管理用量',
+  browserPageDoneBody: '可以關閉此分頁並返回應用程式。',
+  browserPageFailedTitle: '未能完成連線',
+  browserPageFailedBody: '請返回應用程式後再試一次。',
 } satisfies Record<keyof typeof zh, string>

@@ -5,7 +5,11 @@ People who helped IeumOffice with code, docs, translations, or reproductions.
 
 ## 코드 / Code
 
+- [@CauchyRiemannEquations](https://github.com/CauchyRiemannEquations) — HTML 편집기의 수식 넣기·고치기 · [PR 보기](https://github.com/pblsketch/openoffice/pulls?q=is%3Apr+author%3ACauchyRiemannEquations)
+- [@dossamlab](https://github.com/dossamlab) — 엑셀을 창 없이 PDF로 내보낼 때 수식 결과 기다리기 · [PR 보기](https://github.com/pblsketch/openoffice/pulls?q=is%3Apr+author%3Adossamlab)
+- [@hunkim](https://github.com/hunkim) — Upstage Solar 키 제공자, macOS·한글 경로에서의 시험, 시험 속도, HTML → 워드 변환의 깨진 그림 처리 · [PR 보기](https://github.com/pblsketch/openoffice/pulls?q=is%3Apr+author%3Ahunkim)
 - [@Neosiki](https://github.com/Neosiki) — CLI·HWP·ODT 오류 수정과 실제 문서로 재현한 문제 제보 · [PR 보기](https://github.com/pblsketch/openoffice/pulls?q=is%3Apr+author%3ANeosiki)
+- [@thecodinglog](https://github.com/thecodinglog) — 엑셀 수식 입력줄 높이 고정과 크기 조절 · [PR 보기](https://github.com/pblsketch/openoffice/pulls?q=is%3Apr+author%3Athecodinglog)
 
 ## 안내 / Notes
 

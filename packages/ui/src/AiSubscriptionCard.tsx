@@ -67,6 +67,7 @@ const ACTION_LABELS: Record<AiSubscriptionCardAction, AiSubscriptionStringKey> =
   recheck: 'actionRecheck',
   'switch-account': 'actionSwitchAccount',
   logout: 'actionLogout',
+  'manage-usage': 'actionManageUsage',
 }
 
 /**
@@ -95,6 +96,7 @@ export function AiSubscriptionCard({
   showAccount = false,
   onSwitchAccount,
   onLogout,
+  onManageUsage,
 }: AiSubscriptionCardActions & {
   readonly status: AiSubscriptionStatus
   readonly lang: Lang
@@ -108,6 +110,8 @@ export function AiSubscriptionCard({
   readonly onSwitchAccount?: ((provider: AiSubscriptionProviderId) => void) | undefined
   /** Settings only: the user asked to sign out (the CLI's own logout) */
   readonly onLogout?: ((provider: AiSubscriptionProviderId) => void) | undefined
+  /** Settings only: open where ChatGPT shows and limits this app's use of the plan */
+  readonly onManageUsage?: (() => void) | undefined
 }): React.JSX.Element {
   const stalled = useSigningInStalled(status.signingIn === 'browser')
   const view = aiSubscriptionCardView(status, {
@@ -116,6 +120,7 @@ export function AiSubscriptionCard({
     terminalWindows: TERMINAL_WINDOWS,
     update: onUpdate !== undefined,
     cancelLogin: onCancelLogin !== undefined,
+    manageUsage: onManageUsage !== undefined,
     signingInStalled: stalled,
   })
   const provider = view.provider
@@ -139,6 +144,7 @@ export function AiSubscriptionCard({
     recheck: onRecheck,
     'switch-account': (id) => onSwitchAccount?.(id),
     logout: (id) => onLogout?.(id),
+    'manage-usage': () => onManageUsage?.(),
   }
   return (
     <div
@@ -219,7 +225,10 @@ export function AiSubscriptionCard({
                   // lifted out of the links, the way to the window says what it opens
                   action === 'login-window' || action === 'login-code'
                     ? 'actionLoginWindowOpen'
-                    : ACTION_LABELS[action],
+                    : // the app's own ChatGPT sign-in is labelled the way OpenAI asks
+                      action === 'login' && provider === 'chatgpt'
+                      ? 'actionContinueWithChatGpt'
+                      : ACTION_LABELS[action],
                 )}
               </button>
             ),

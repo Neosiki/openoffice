@@ -460,6 +460,19 @@ html.genoffice-popover-open .ribbon-tabs {
   left: calc(50% - 7px);
 }
 
+/* in a tree or a timeline, on the trunk right under the topic (map/branches.ts: TREE_TRUNK = 18px) */
+.mm-card .map-container[data-mm-structure] me-nodes me-main > me-wrapper > me-parent > me-epd {
+  top: calc(100% + 2px);
+  right: auto;
+  left: 11px;
+}
+
+.mm-card .map-container[data-mm-structure] me-nodes me-children me-parent > me-epd {
+  top: calc(100% - var(--mm-row-pad) + 2px);
+  right: auto;
+  left: calc(var(--node-gap-x) + 11px);
+}
+
 .mm-card .map-container .context-menu .menu-list {
   color: var(--text-primary);
   border: 1px solid var(--border);

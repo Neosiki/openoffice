@@ -75,6 +75,7 @@ import {
 import { AiMark, CropDialog, CutoutDialog, type ImageDialogLabels } from '@genoffice/ui'
 import { FloatToolbar } from './components/FloatToolbar'
 import { RedactDialog } from './components/RedactDialog'
+import { useMathExtension } from './extensions/math/useMathExtension'
 import { redactClearPlan, redactMarkPlan, type RedactPlan } from './document/redact-edit'
 import {
   insertOp,
@@ -122,7 +123,9 @@ const ZOOM_STEP = 10
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
 const inTextField = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
-  !!target.closest('.cm-editor, input, textarea, [contenteditable=""], [contenteditable="true"]')
+  !!target.closest(
+    '.cm-editor, input, textarea, math-field, [contenteditable=""], [contenteditable="true"]',
+  )
 const PREVIEW_DEBOUNCE_MS = 150
 const DEFAULT_ENVELOPE: Envelope = { bom: false, eol: '\n', trailingNewline: true }
 /** live style pokes are written to the source as one set_style op this long after the last change */
@@ -660,6 +663,19 @@ export default function App() {
     [applyOps, getMap, flushPending, pushPreview],
   )
 
+  const mathExtension = useMathExtension({
+    flush: flushPending,
+    read: () => ({
+      source: textRef.current,
+      identity: pathRef.current,
+      map: getMap(),
+      sid: selectedSidRef.current,
+    }),
+    apply: (ops) => runManual(ops, 'inserted'),
+    unavailable: () => setNotice(t('insertNoBody')),
+  })
+  const openMathRef = mathExtension.openRef
+
   /**
    * Land a redaction plan. The marks the op vocabulary can express go through
    * `runManual`, so they are validated, journaled and undoable like any toolbar
@@ -792,6 +808,10 @@ export default function App() {
       // a click that lands while the frame is reloading carries sids from the previous copy
       if (!frameVersionsRef.current.has(msg.version)) return
       switch (msg.type) {
+        case 'gx:editMath':
+          if (canvasModeRef.current === 'edit' && Number.isSafeInteger(msg.sid))
+            openMathRef.current(msg.sid, msg.version)
+          return
         case 'gx:ready': {
           previewRef.current?.post({ type: 'gx:theme', dark: isDarkTheme() })
           previewRef.current?.post({ type: 'gx:setMode', mode: frameMode(canvasModeRef.current) })
@@ -1000,7 +1020,18 @@ export default function App() {
           return
       }
     },
-    [getMap, postMarks, postPaper, runManual, selectSid, selectionSids, setExtras, t, flushPending],
+    [
+      getMap,
+      postMarks,
+      postPaper,
+      runManual,
+      selectSid,
+      selectionSids,
+      setExtras,
+      t,
+      flushPending,
+      openMathRef,
+    ],
   )
 
   // the source cursor picks the covering element (no reveal: the user is already there)
@@ -1919,6 +1950,7 @@ export default function App() {
         onToggleAi={() => setAiOpen((v) => !v)}
         canInsert={canvasMode === 'edit'}
         onInsert={(kind, opts) => void insertElement(kind, opts)}
+        onMath={() => openMathRef.current()}
         onInsertSkeleton={insertSkeleton}
         canInsertSkeleton={canvasMode === 'edit' && isDocEmpty(textRef.current)}
         onAiPreset={(text) => {
@@ -2211,6 +2243,7 @@ export default function App() {
           onCancel={cancelRedaction}
         />
       )}
+      {mathExtension.dialog}
       {pictureDialog?.kind === 'cutout' && (
         <CutoutDialog
           labels={imageDialogLabels}

@@ -102,6 +102,21 @@ export function providerSelectionOf(settings: Pick<AiSettings, 'provider'>): AiP
   return AI_PROVIDERS.find((m) => m.id === stored)?.id ?? 'auto'
 }
 
+/**
+ * A provider's state as the choice reads it. A status the check has not
+ * answered yet is `checking`, and so is a missing CLI status: the check is
+ * still out. A missing ChatGPT status is different: the same service makes
+ * all three at once, so a map without it comes from where the direct
+ * connection does not exist (an older app, a caller that lists the CLIs
+ * alone), and it reads as signed out instead of holding `auto` for ever.
+ */
+export function subscriptionStateOf(
+  statuses: AiSubscriptionStatuses,
+  id: AiSubscriptionProviderId,
+): AiSubscriptionStatus['state'] {
+  return statuses[id]?.state ?? (id === 'chatgpt' ? 'signed-out' : 'checking')
+}
+
 const SUBSCRIPTION_BLOCKERS: Record<
   Exclude<AiSubscriptionStatus['state'], 'ready'>,
   { reason: AiNotConnectedReason; errorKind: AiRunErrorKind }
@@ -133,7 +148,7 @@ export function selectAiProvider(
   if (selection === 'auto') {
     let ready: AiSubscriptionProviderId | undefined
     for (const id of AI_SUBSCRIPTION_PROVIDERS) {
-      const state = statuses[id]?.state ?? 'checking'
+      const state = subscriptionStateOf(statuses, id)
       if (state === 'ready') ready = id
       if (state === 'ready' || state === 'checking') break
     }

@@ -4,7 +4,7 @@
  * to avoid renderer CORS), search tools, and the slides-only ai:* channels
  * (image generation, media analysis, style templates).
  */
-import { app, ipcMain, nativeImage, net, webContents } from 'electron'
+import { app, ipcMain, nativeImage, net, shell, webContents } from 'electron'
 import {
   appendFileSync,
   existsSync,
@@ -34,6 +34,7 @@ import {
   MAX_REMOTE_IMAGE_BYTES,
   fetchRemoteImage,
   readBodyCapped,
+  safeExternalUrl,
   writeJsonAtomic,
 } from '@genoffice/electron-utils'
 import {
@@ -54,7 +55,10 @@ import { addPicture, editPictureSrcRect, replacePictureBytes } from '@genoffice/
 import { rasterImageExt } from './media-mime'
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { coverCropFractions } from '@genoffice/pipelines/slides'
-import { aiSubscriptionLoginWindowText } from '@genoffice/ui/ai-subscription-login-window'
+import {
+  aiChatGptSignInPages,
+  aiSubscriptionLoginWindowText,
+} from '@genoffice/ui/ai-subscription-login-window'
 import type { AiRunFailure } from '../shared/ipc'
 import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
 import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
@@ -155,6 +159,18 @@ export function registerAiIpc(): void {
     dataDir: app.getPath('userData'),
     broadcast: broadcastToWindows,
     loginWindowText: (provider) => aiSubscriptionLoginWindowText(getUiLang(), provider),
+    // the ChatGPT sign-in is the app's own (decision 0081): OpenAI's page in the system browser
+    chatGptSignIn: {
+      openBrowser: async (url) => {
+        const target = safeExternalUrl(url)
+        if (!target) return false
+        return shell.openExternal(target).then(
+          () => true,
+          () => false,
+        )
+      },
+      pages: () => aiChatGptSignInPages(getUiLang()),
+    },
   })
 
   ipcMain.handle('ai:set-settings', (_event, settings: AiSettings) => {

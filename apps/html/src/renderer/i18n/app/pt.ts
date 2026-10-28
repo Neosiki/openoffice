@@ -1,6 +1,35 @@
 import type { zh } from './zh'
 
 export const pt = {
+  mathInsert: 'Inserir equação',
+  mathEdit: 'Editar equação',
+  mathHelp: 'Digite visualmente ou edite LaTeX. O HTML mantém o código para edições futuras.',
+  mathVisualInput: 'Entrada visual de equações',
+  mathSource: 'Código LaTeX',
+  mathDisplay: 'Mostrar em uma linha separada',
+  mathPreview: 'Prévia',
+  mathUnsupported:
+    'Esta expressão não pode ser renderizada. O código será salvo para correção posterior.',
+  mathTooLong: 'Use no máximo {n} caracteres.',
+  mathStale: 'O documento mudou. Copie seu rascunho, feche esta janela e reabra a equação.',
+  mathShortcut: '⌘+Enter para aplicar',
+  mathApply: 'Aplicar equação',
+  mathKeyboard: 'Teclado matemático',
+  mathFraction: 'Fração',
+  mathRoot: 'Raiz quadrada',
+  mathNthRoot: 'Raiz enésima',
+  mathPower: 'Potência',
+  mathSubscript: 'Subscrito',
+  mathSum: 'Soma',
+  mathProduct: 'Produto',
+  mathIntegral: 'Integral',
+  mathLimit: 'Limite',
+  mathMatrix: 'Matriz',
+  mathVector: 'Vetor',
+  mathCases: 'Sistema',
+  mathPiecewise: 'Função por partes',
+  mathBinomial: 'Coeficiente binomial',
+
   redactMenuLabel: 'Ocultar a seleção da IA',
   redactDialogDesc:
     'As palavras continuam no documento e no arquivo; o modelo vê apenas o marcador. Dê-lhe um nome para que saiba o que representa.',

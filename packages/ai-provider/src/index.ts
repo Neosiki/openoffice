@@ -46,6 +46,7 @@ export {
   providerSelectionOf,
   selectAiProvider,
   subscriptionConnection,
+  subscriptionStateOf,
 } from './provider-selection'
 export type { AiNotConnectedReason, AiProviderChoice } from './provider-selection'
 export {

@@ -1,6 +1,36 @@
 import type { zh } from './zh'
 
 export const nl = {
+  mathInsert: 'Formule invoegen',
+  mathEdit: 'Formule bewerken',
+  mathHelp: 'Voer visueel in of bewerk LaTeX. HTML bewaart de bron voor latere bewerking.',
+  mathVisualInput: 'Visuele formule-invoer',
+  mathSource: 'LaTeX-bron',
+  mathDisplay: 'Op een aparte regel weergeven',
+  mathPreview: 'Voorbeeld',
+  mathUnsupported:
+    'Deze formule kan niet worden weergegeven. De bron wordt bewaard om later te corrigeren.',
+  mathTooLong: 'Gebruik maximaal {n} tekens.',
+  mathStale:
+    'Het document is gewijzigd. Kopieer uw concept, sluit dit venster en open de formule opnieuw.',
+  mathShortcut: '⌘+Enter om toe te passen',
+  mathApply: 'Formule toepassen',
+  mathKeyboard: 'Wiskundetoetsenbord',
+  mathFraction: 'Breuk',
+  mathRoot: 'Vierkantswortel',
+  mathNthRoot: 'n-de wortel',
+  mathPower: 'Macht',
+  mathSubscript: 'Subscript',
+  mathSum: 'Som',
+  mathProduct: 'Product',
+  mathIntegral: 'Integraal',
+  mathLimit: 'Limiet',
+  mathMatrix: 'Matrix',
+  mathVector: 'Vector',
+  mathCases: 'Stelsel',
+  mathPiecewise: 'Stuksgewijze functie',
+  mathBinomial: 'Binomiaalcoëfficiënt',
+
   redactMenuLabel: 'Selectie verbergen voor de AI',
   redactDialogDesc:
     'De woorden blijven in het document en het bestand; het model ziet alleen de placeholder. Geef hem een naam.',

@@ -8,7 +8,7 @@
  * markers, styles, the sheet's own title) is not looked at.
  */
 
-import type { ViewLayout } from './layout'
+import { VIEW_LAYOUTS, type ViewLayout } from './layout'
 import { MAX_TOPIC_DEPTH } from './structure-check'
 import { isRecord } from './types'
 import { isShownLink, type ViewImage } from './view'
@@ -59,7 +59,7 @@ export interface StateRelationship {
   title: string
 }
 
-const LAYOUTS: ReadonlySet<unknown> = new Set<ViewLayout>(['left', 'right', 'both', 'down'])
+const LAYOUTS: ReadonlySet<unknown> = new Set<ViewLayout>(VIEW_LAYOUTS)
 
 /**
  * The checked copy of a state, or a `Refusal` naming the first thing wrong

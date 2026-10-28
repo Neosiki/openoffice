@@ -2,10 +2,12 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   configuredDefaultSaveDir,
+  defaultSaveDirFallback,
+  isUsableSaveDir,
   readDefaultSaveDirSetting,
   resolveDefaultSaveDir,
 } from '../src/index'
@@ -101,5 +103,58 @@ describe('configuredDefaultSaveDir', () => {
     expect(existsSync(join(documents, 'IeumOffice'))).toBe(true)
     // the upstream app's folder is its own: never created or reused here
     expect(existsSync(join(documents, 'GenOffice'))).toBe(false)
+  })
+})
+
+describe('a blocked Documents folder', () => {
+  const appAt = (userData: string, documents: string, home: string) => ({
+    getPath: (name: 'userData' | 'documents' | 'home') =>
+      name === 'userData' ? userData : name === 'documents' ? documents : home,
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('falls back to <home>/<product name> and reports the switch', () => {
+    const userData = join(root, 'userData')
+    const documents = join(root, 'Documents')
+    const home = join(root, 'home')
+    mkdirSync(userData, { recursive: true })
+    mkdirSync(documents, { recursive: true })
+    // a file where the folder should be: neither creatable nor writable as a folder
+    writeFileSync(join(documents, 'IeumOffice'), 'x')
+    expect(configuredDefaultSaveDir(appAt(userData, documents, home))).toBe(
+      join(home, 'IeumOffice'),
+    )
+    expect(defaultSaveDirFallback()).toEqual({
+      blocked: join(documents, 'IeumOffice'),
+      using: join(home, 'IeumOffice'),
+    })
+  })
+
+  it('skips the blocked folder for a while instead of retrying on every call, then picks it up', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const blocked = join(root, 'Documents', 'IeumOffice')
+    const next = join(root, 'home', 'IeumOffice')
+    mkdirSync(join(root, 'Documents'))
+    writeFileSync(blocked, 'x')
+    expect(resolveDefaultSaveDir(null, [blocked, next])).toBe(next)
+    // the block is lifted, but the resolver does not touch the folder again yet
+    rmSync(blocked)
+    expect(resolveDefaultSaveDir(null, [blocked, next])).toBe(next)
+    expect(existsSync(blocked)).toBe(false)
+    vi.advanceTimersByTime(30_000)
+    expect(resolveDefaultSaveDir(null, [blocked, next])).toBe(blocked)
+    expect(existsSync(blocked)).toBe(true)
+    expect(defaultSaveDirFallback()).toBeNull()
+  })
+
+  it('leaves an existing folder as it is when checking it', () => {
+    const existing = join(root, 'existing')
+    mkdirSync(existing)
+    expect(isUsableSaveDir(existing)).toBe(true)
+    expect(isUsableSaveDir(join(root, 'created', 'nested'))).toBe(true)
+    expect(existsSync(join(root, 'created', 'nested'))).toBe(true)
   })
 })

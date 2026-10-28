@@ -46,6 +46,8 @@ export const fr = {
   layoutRight: 'À droite',
   layoutBoth: 'Des deux côtés',
   layoutDown: 'Vers le bas',
+  layoutTree: 'Arbre',
+  layoutTimeline: 'Chronologie',
   layoutStandIn:
     "La disposition d'origine de cette carte ne peut pas être dessinée ici ; une autre est donc affichée. Choisir une disposition l'inscrit dans le fichier.",
   sheetTabs: 'Feuilles',

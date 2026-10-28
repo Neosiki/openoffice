@@ -14,8 +14,8 @@
  */
 import { spawn as nodeSpawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { isSubscriptionProvider } from '../provider-selection'
-import type { AiSubscriptionProviderId } from '../types'
+import { isSubscriptionCli } from '../providers'
+import type { AiSubscriptionCliId, AiSubscriptionProviderId } from '../types'
 import {
   SUBSCRIPTION_INSTALL_COMMANDS,
   SUBSCRIPTION_INSTALL_URLS,
@@ -41,13 +41,13 @@ import {
 } from './process'
 
 /** The CLI's own sign-in command */
-const LOGIN_ARGS: Record<AiSubscriptionProviderId, string[]> = {
+const LOGIN_ARGS: Record<AiSubscriptionCliId, string[]> = {
   'claude-code': ['auth', 'login'],
   codex: ['login'],
 }
 
 /** The CLI's own sign-out command */
-const LOGOUT_ARGS: Record<AiSubscriptionProviderId, string[]> = {
+const LOGOUT_ARGS: Record<AiSubscriptionCliId, string[]> = {
   'claude-code': ['auth', 'logout'],
   codex: ['logout'],
 }
@@ -302,7 +302,8 @@ export async function launchSubscriptionLogin(
   provider: AiSubscriptionProviderId,
   options: SubscriptionLoginOptions = {},
 ): Promise<SubscriptionLaunchResult> {
-  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  // only a vendor CLI has a program to launch (ChatGPT signs in with the app's own flow)
+  if (!isSubscriptionCli(provider)) return { ok: false, reason: 'invalid' }
   let program
   try {
     program = await (options.locate ?? locateSubscriptionProgram)(provider, {
@@ -355,7 +356,8 @@ export async function launchSubscriptionLogout(
   provider: AiSubscriptionProviderId,
   options: SubscriptionLogoutOptions = {},
 ): Promise<SubscriptionLaunchResult> {
-  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  // only a vendor CLI has a program to launch (ChatGPT signs in with the app's own flow)
+  if (!isSubscriptionCli(provider)) return { ok: false, reason: 'invalid' }
   let program
   try {
     program = await (options.locate ?? locateSubscriptionProgram)(provider, {
@@ -392,7 +394,7 @@ export async function launchSubscriptionLogout(
  * directory before anywhere else.
  */
 export function subscriptionInstallCommandLine(
-  provider: AiSubscriptionProviderId,
+  provider: AiSubscriptionCliId,
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   const powershell = windowsSystemTool(env, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
@@ -420,7 +422,8 @@ export async function launchSubscriptionInstall(
   provider: AiSubscriptionProviderId,
   options: SubscriptionInstallOptions = {},
 ): Promise<SubscriptionLaunchResult> {
-  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  // only a vendor CLI has a program to launch (ChatGPT signs in with the app's own flow)
+  if (!isSubscriptionCli(provider)) return { ok: false, reason: 'invalid' }
   const installUrl = SUBSCRIPTION_INSTALL_URLS[provider]
   if ((options.platform ?? process.platform) !== 'win32') {
     return { ok: false, reason: 'unsupported', installUrl }
@@ -536,7 +539,8 @@ export async function launchSubscriptionUpdate(
   provider: AiSubscriptionProviderId,
   options: SubscriptionUpdateOptions = {},
 ): Promise<SubscriptionLaunchResult> {
-  if (!isSubscriptionProvider(provider)) return { ok: false, reason: 'invalid' }
+  // only a vendor CLI has a program to launch (ChatGPT signs in with the app's own flow)
+  if (!isSubscriptionCli(provider)) return { ok: false, reason: 'invalid' }
   const installUrl = SUBSCRIPTION_INSTALL_URLS[provider]
   const platform = options.platform ?? process.platform
   if (platform !== 'win32') return { ok: false, reason: 'unsupported', installUrl }
