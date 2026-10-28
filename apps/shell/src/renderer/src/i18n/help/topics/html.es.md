@@ -65,4 +65,4 @@ Escriba visualmente o edite LaTeX. El HTML guarda el código para editarlo despu
 
 Elija Insertar ecuación en la barra, use el campo visual, las plantillas o LaTeX y aplique. Pulse una ecuación guardada en la vista previa para editarla. Para insertarla en línea, seleccione un párrafo y desactive la línea aparte; se añadirá al final del párrafo.
 
-No se puede representar esta expresión. Se guardará el código para corregirlo después.
+Una expresión que el compositor no admite no se pierde: la ecuación conserva su código LaTeX y muestra el texto sin formato en la página, para volver a abrirla y corregirla.

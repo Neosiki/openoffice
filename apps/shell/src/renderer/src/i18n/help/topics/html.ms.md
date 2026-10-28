@@ -65,4 +65,4 @@ Taip secara visual atau sunting LaTeX. HTML menyimpan sumber untuk disunting sem
 
 Pilih Sisip persamaan pada bar alat, gunakan medan visual, templat atau LaTeX, kemudian gunakan. Klik persamaan tersimpan dalam pratonton untuk menyuntingnya. Untuk sisipan dalam teks, pilih perenggan dan matikan baris berasingan; persamaan ditambah di hujung perenggan.
 
-Ungkapan ini tidak dapat dipaparkan. Sumber akan disimpan untuk pembetulan kemudian.
+Ungkapan yang tidak dapat dizahirkan oleh penetap huruf tidak hilang: persamaan mengekalkan sumber LaTeX dan memaparkan teks mentah pada halaman, jadi ia boleh dibuka semula dan dibetulkan.

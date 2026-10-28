@@ -65,4 +65,4 @@ Type visually or edit LaTeX. Saved HTML keeps the source for later editing.
 
 Choose Insert equation in the toolbar. Use the visual field, templates or LaTeX, then apply. Click a saved equation in the preview to edit it again. For inline math, select a paragraph and turn off the separate-line option; the equation is appended to that paragraph.
 
-This expression cannot be typeset. Its source will be saved so you can fix it later.
+An expression the typesetter cannot handle is not lost: the equation keeps its LaTeX source and shows the raw text in the page, so you can open it again and correct it.

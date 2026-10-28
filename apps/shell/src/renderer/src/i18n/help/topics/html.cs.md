@@ -65,4 +65,4 @@ Zadávejte vizuálně nebo upravujte LaTeX. HTML uchová zdroj pro pozdější �
 
 Na panelu zvolte Vložit rovnici, použijte vizuální pole, šablony nebo LaTeX a potvrďte. Uloženou rovnici upravíte kliknutím v náhledu. Pro vložení do textu vyberte odstavec a vypněte samostatný řádek; rovnice se přidá na konec odstavce.
 
-Tento výraz nelze vysázet. Zdroj se uloží pro pozdější opravu.
+Výraz, který sazba nezvládne, se neztratí: rovnice si ponechá zdroj LaTeX a v dokumentu zobrazí surový text, takže ji lze znovu otevřít a opravit.

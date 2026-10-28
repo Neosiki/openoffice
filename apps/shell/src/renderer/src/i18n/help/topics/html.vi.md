@@ -65,4 +65,4 @@ Nhập trực quan hoặc sửa LaTeX. HTML giữ mã nguồn để chỉnh sử
 
 Chọn Chèn công thức trên thanh công cụ, dùng ô trực quan, mẫu hoặc LaTeX rồi áp dụng. Nhấp công thức đã lưu trong bản xem trước để sửa. Để chèn cùng dòng, chọn đoạn văn và tắt dòng riêng; công thức sẽ được thêm vào cuối đoạn.
 
-Không thể hiển thị biểu thức này. Mã nguồn sẽ được lưu để sửa sau.
+Biểu thức mà trình dàn chữ không xử lý được sẽ không bị mất: công thức vẫn giữ mã LaTeX và hiển thị văn bản thô trên trang, nên có thể mở lại để sửa.

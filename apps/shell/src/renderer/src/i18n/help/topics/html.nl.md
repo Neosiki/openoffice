@@ -65,4 +65,4 @@ Voer visueel in of bewerk LaTeX. HTML bewaart de bron voor latere bewerking.
 
 Kies Formule invoegen in de werkbalk, gebruik het visuele veld, sjablonen of LaTeX en pas toe. Klik op een opgeslagen formule in het voorbeeld om deze te bewerken. Selecteer voor een formule in de tekst een alinea en schakel de aparte regel uit; de formule komt aan het einde.
 
-Deze formule kan niet worden weergegeven. De bron wordt bewaard om later te corrigeren.
+Een formule die de zetter niet aankan, gaat niet verloren: de vergelijking houdt de LaTeX-bron en toont de ruwe tekst in de pagina, zodat je hem opnieuw kunt openen en verbeteren.
