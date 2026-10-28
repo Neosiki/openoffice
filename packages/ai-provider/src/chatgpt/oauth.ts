@@ -9,7 +9,9 @@
  * injectable fetch, so tests never reach OpenAI.
  */
 import { createHash, createPublicKey, randomBytes, verify, type JsonWebKey } from 'node:crypto'
-import { createServer } from 'node:http'
+// node:http is imported where a server starts: on Node 22 a static ESM import of
+// it evaluates its WebSocket getter, which compiles undici's WebAssembly parser,
+// and the command line imports this module from every command.
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { aiFetch } from '../fetch'
 import { freeConnectPageHtml, type FreeConnectPage } from '../free-connect'
@@ -186,6 +188,7 @@ export async function waitForChatGptCallback(
     )
   }
 
+  const { createServer } = await import('node:http')
   const server = createServer(handle)
   try {
     port = await listen(server, '127.0.0.1')
