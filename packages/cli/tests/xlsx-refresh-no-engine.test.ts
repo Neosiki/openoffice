@@ -21,6 +21,7 @@ describe('sheet apply without the xlsx engine', () => {
     const applied = await run(['sheet', 'apply', out, '--ops', ops, '--json'])
     expect(applied.code).toBe(0)
     expect(JSON.stringify(applied.json())).toContain('dependent_formulas_not_refreshed')
+    expect(applied.json().detail.cached_values).toBe(false)
   })
 
   it('still finds the formulas when the sheet relationship climbs out with ../', async () => {
@@ -45,6 +46,7 @@ describe('sheet apply without the xlsx engine', () => {
     expect(applied.code).toBe(0)
     // the scan used to miss the sheet, find no formulas and answer cached_values: true in silence
     expect(JSON.stringify(applied.json())).toContain('dependent_formulas_not_refreshed')
+    expect(applied.json().detail.cached_values).toBe(false)
   })
 
   it('stays quiet when the batch cannot change a value', async () => {

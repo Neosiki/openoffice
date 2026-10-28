@@ -42,6 +42,21 @@ describe('formulaCellsInSheet', () => {
 })
 
 describe('formulaCellsInPackage', () => {
+  it('normalizes prefixed workbook, relationship and worksheet parts before scanning', async () => {
+    const dir = tempDir()
+    const { zip } = await workbook(dir)
+    for (const path of ['xl/workbook.xml', RELS, SHEET]) {
+      const xml = await zip.file(path)!.async('string')
+      zip.file(
+        path,
+        xml.replace(/xmlns="/g, 'xmlns:x="').replace(/<(\/?)([A-Za-z][A-Za-z0-9]*)/g, '<$1x:$2'),
+      )
+    }
+    const found = await formulaCellsInPackage(await save(zip, join(dir, 'prefixed.xlsx')))
+    expect(found.unreadable).toEqual([])
+    expect(found.cells.get(SHEET_NAME)).toEqual([{ row: 0, column: 1 }])
+  })
+
   it('finds the formulas of a sheet whose relationship target climbs out with ../', async () => {
     const dir = tempDir()
     const { zip } = await workbook(dir)
@@ -90,6 +105,27 @@ describe('formulaCellsInPackage', () => {
 })
 
 describe('cached results of formulas the edit did not write', () => {
+  it.skipIf(!sidecar)(
+    'refreshes distant formulas through multiple small reads without touching data cells',
+    async () => {
+      const dir = tempDir()
+      const { path, zip } = await workbook(dir)
+      zip.file(
+        SHEET,
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><f>C1*10</f><v>20</v></c><c r="B1"><v>123</v></c><c r="C1"><v>2</v></c></row><row r="1048576"><c r="Z1048576"><f>C1*20</f><v>40</v></c></row></sheetData></worksheet>',
+      )
+      await save(zip, path)
+      const ops = join(dir, 'distant-ops.json')
+      writeFileSync(ops, JSON.stringify([{ op: 'set_cell', address: 'C1', value: 5 }]))
+      const applied = await run(['sheet', 'apply', path, '--ops', ops, '--json'])
+      expect(applied.code).toBe(0)
+      expect(applied.json().detail.cached_values).toBe(true)
+      const xml = await (await JSZip.loadAsync(readFileSync(path))).file(SHEET)!.async('string')
+      expect(xml).toContain('<c r="B1"><v>123</v></c>')
+      expect(xml).toContain('<f>C1*10</f><v>50</v>')
+      expect(xml).toContain('<f>C1*20</f><v>100</v>')
+    },
+  )
   it.skipIf(!sidecar)('keeps a boolean result typed t="b"', async () => {
     const dir = tempDir()
     const { path, zip } = await workbook(dir, '=A1>0')
