@@ -8,7 +8,7 @@ Everything that takes a key is under **Advanced**, at the bottom of the same pag
 
 ## The default: your subscription
 
-- **AI to use** starts on **Automatic**: a connected Claude subscription first, then Codex.
+- **AI to use** starts on **Automatic**: of the subscriptions that are connected, Claude first, then ChatGPT, then Codex.
 - Automatic never picks anything that costs extra money. An API key is used only while you choose that provider yourself under **AI to use**.
 - The model list at the bottom of each AI panel shows the subscriptions first, then the key providers you have finished setting up. Under a subscription, **Default model** is the standard model for that subscription.
 

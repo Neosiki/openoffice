@@ -8,7 +8,7 @@ Vše, k čemu je potřeba klíč, je v části **Pokročilé** dole na téže st
 
 ## Výchozí stav: vaše předplatné
 
-- Volba **Používaná AI** je zpočátku nastavena na **Automaticky**: nejprve připojené předplatné Claude, potom Codex.
+- Volba **Používaná AI** je zpočátku nastavena na **Automaticky**: z připojených předplatných nejprve Claude, potom ChatGPT, potom Codex.
 - Automatický režim nikdy nevybere nic, co stojí peníze navíc. Klíč API se používá jen tehdy, když daného poskytovatele sami zvolíte v nabídce **Používaná AI**.
 - Seznam modelů ve spodní části každého panelu AI zobrazuje nejprve předplatná a potom poskytovatele s klíčem, jejichž nastavení jste dokončili. U předplatného znamená **Výchozí model** standardní model daného předplatného.
 

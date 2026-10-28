@@ -4,7 +4,7 @@
 
 Die Zeile unten links auf der Startseite öffnet den Einstellungsbereich (solange keine KI verbunden ist, steht dort „KI verbinden“). Er hat fünf Abschnitte: Konto, KI, Allgemein, Integrationen und Über.
 
-**Konto** zeigt, wie es um Ihre Claude- und Codex-Abonnements steht, und **Verbindungen verwalten** führt zum Abschnitt KI. Zur KI gibt es eigene Artikel: [Abonnement-Verbindung](help://subscription) und [KI-Modelle und Einstellungen](help://ai-models).
+**Konto** zeigt, wie es um Ihre Verbindungen zu Claude, ChatGPT und Codex steht, und **Verbindungen verwalten** führt zum Abschnitt KI. Zur KI gibt es eigene Artikel: [Abonnement-Verbindung](help://subscription) und [KI-Modelle und Einstellungen](help://ai-models).
 
 ## Sprache
 

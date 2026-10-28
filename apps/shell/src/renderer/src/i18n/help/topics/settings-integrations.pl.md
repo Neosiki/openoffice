@@ -4,7 +4,7 @@
 
 Wiersz w lewym dolnym rogu strony głównej otwiera panel ustawień (dopóki żadne AI nie jest połączone, pokazuje Połącz AI). Ma pięć sekcji: Konto, AI, Ogólne, Integracje i O aplikacji.
 
-**Konto** pokazuje stan twoich subskrypcji Claude i Codex, a **Zarządzaj połączeniami** prowadzi do sekcji AI. AI ma własne artykuły: [Połączenie z subskrypcją](help://subscription) oraz [Modele AI i ustawienia](help://ai-models).
+**Konto** pokazuje stan twoich połączeń Claude, ChatGPT i Codex, a **Zarządzaj połączeniami** prowadzi do sekcji AI. AI ma własne artykuły: [Połączenie z subskrypcją](help://subscription) oraz [Modele AI i ustawienia](help://ai-models).
 
 ## Język
 

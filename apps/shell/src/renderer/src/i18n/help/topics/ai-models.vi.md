@@ -8,7 +8,7 @@ Mọi thứ cần đến khóa đều nằm trong **Nâng cao**, ở cuối chí
 
 ## Mặc định: gói đăng ký của bạn
 
-- **AI sử dụng** ban đầu được đặt là **Tự động**: ưu tiên gói đăng ký Claude đã kết nối, sau đó đến Codex.
+- **AI sử dụng** ban đầu được đặt là **Tự động**: trong các gói đăng ký đã kết nối, Claude được ưu tiên trước, rồi đến ChatGPT, sau đó đến Codex.
 - Tự động không bao giờ chọn thứ gì tốn thêm tiền. Khóa API chỉ được dùng trong lúc bạn tự chọn nhà cung cấp đó trong **AI sử dụng**.
 - Danh sách mô hình ở cuối mỗi bảng AI hiển thị các gói đăng ký trước, rồi đến các nhà cung cấp dùng khóa mà bạn đã thiết lập xong. Dưới một gói đăng ký, **Mô hình mặc định** là mô hình tiêu chuẩn của gói đó.
 

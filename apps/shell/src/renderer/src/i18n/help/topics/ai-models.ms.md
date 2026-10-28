@@ -8,7 +8,7 @@ Segala yang memerlukan kunci berada di bawah **Lanjutan**, di bahagian bawah hal
 
 ## Lalai: langganan anda
 
-- **AI yang digunakan** bermula pada **Automatik**: langganan Claude yang disambungkan dahulu, kemudian Codex.
+- **AI yang digunakan** bermula pada **Automatik**: antara langganan yang disambungkan, Claude dahulu, kemudian ChatGPT, kemudian Codex.
 - Automatik tidak pernah memilih apa-apa yang mengenakan kos tambahan. Kunci API digunakan hanya selagi anda sendiri memilih penyedia itu di bawah **AI yang digunakan**.
 - Senarai model di bahagian bawah setiap panel AI memaparkan langganan dahulu, kemudian penyedia berasaskan kunci yang telah selesai anda sediakan. Di bawah sesuatu langganan, **Model lalai** ialah model standard bagi langganan itu.
 
