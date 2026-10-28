@@ -356,6 +356,16 @@ Nothing in this list is uploaded by the app.
   error messages, and it is kept under
   64 KB by dropping the oldest lines. The app never sends it anywhere; if you
   report a problem, you can attach it yourself. No crash dumps are written.
+- **The spreadsheet save-failure record** (`sheets-save-failures.jsonl` in
+  the data folder): one line each time a spreadsheet save could not be opened
+  back and your file was therefore left as it was. A line holds the time, the
+  app version, what kind of file the tab was opened from (such as `xlsx` or
+  `csv`), the size of the result that failed, and the reason in a few words
+  (such as which part of the workbook the engine could not read), with any
+  file path replaced by `<path>`. It holds no cell contents, and it is kept
+  under 64 KB by dropping its older half. The app never sends it anywhere; if
+  you report a save problem, you can attach it yourself. The same short reason
+  is shown at the end of the save error message.
 - **The update record** (`update-log.txt` in the data folder): what the
   installed app's updater did, one line each time — the checks, downloads and
   the installer it started (silently or in the installer's own window). A line

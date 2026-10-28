@@ -231,6 +231,13 @@ import {
 import { XlsxSidecarClient } from './xlsx-sidecar-client'
 import { convertLegacyWorkbook } from './legacy-import'
 import { sessionAfterRename } from './session-rename'
+import {
+  appendSaveFailure,
+  describeReopenFailure,
+  reopenFailureNote,
+  SAVE_FAILURE_LOG_FILE,
+  sessionSourceFormat,
+} from './save-failure-log'
 
 /**
  * Sheets main-process logic as an embeddable module: no top-level lifecycle.
@@ -3888,9 +3895,22 @@ export function registerSheetsIpc(): void {
         await client.open(stagedPath, getUiLang(), systemShortDate()),
       )
     } catch (error) {
+      const stagedBytes = await stat(stagedPath).then(
+        (info) => info.size,
+        () => null,
+      )
       await rm(stagedPath, { force: true }).catch(() => undefined)
       console.warn('[sheets] the saved workbook did not reopen; the target was left as is:', error)
-      throw new Error(tm('errSaveUnreadable'), { cause: error })
+      const failure = describeReopenFailure(error)
+      appendSaveFailure(join(app.getPath('userData'), SAVE_FAILURE_LOG_FILE), {
+        failure,
+        sourceFormat: sessionSourceFormat(session),
+        stagedBytes,
+        appVersion: app.getVersion(),
+      })
+      throw new Error(`${tm('errSaveUnreadable')} ${reopenFailureNote(failure)}`, {
+        cause: error,
+      })
     }
     try {
       if (plainSavePath !== undefined && session.password !== undefined) {
