@@ -70,6 +70,8 @@ export const ms = {
     'Peruntukan percuma hari ini telah habis. Cuba lagi esok, atau pilih AI lain dalam Tetapan.',
   errFreeLimitReset:
     'Peruntukan percuma hari ini telah habis. Anda boleh menggunakannya semula pada {time}.',
+  errFreeTierModel:
+    'Model ini tiada peringkat percuma, jadi kunci percuma tidak boleh menggunakannya. Pilih model yang termasuk dalam peringkat percuma (contohnya model Flash), atau hidupkan pengebilan dalam konsol penyedia.',
   continueWith: 'Teruskan dengan {provider}',
   continueMeteredNote:
     'Sambungan {provider} bukan langganan: meneruskan akan dicaj mengikut penggunaan.',

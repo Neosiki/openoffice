@@ -134,6 +134,7 @@ import {
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
+import { createKeyModelRefresher, withStoredKeyModels } from '@genoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   initSubscriptionChildTracking,
@@ -3932,6 +3933,9 @@ const TWIPS_PER_INCH = 1440
 
 const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
+/** how long after start the key providers are first asked for their models */
+const KEY_MODEL_FIRST_LIST_DELAY_MS = 5000
+
 const activeAiStreams = new Map<string, AbortController>()
 
 /** AI requests in flight across every editor (the shell's memory record reads it) */
@@ -3964,6 +3968,42 @@ function screenToolContext(): AiToolCallContext {
 const AI_RUN_TEXTS: AiRunTexts = {
   noApiKey: (provider) => tm('errNoApiKey', { provider }),
   noModel: () => tm('errNoModel'),
+}
+
+/**
+ * Asks the key providers for their current models (decision 0087): once per run,
+ * then again for a provider whose key or base URL changed. The list lands in
+ * the settings file, so every picker shows it.
+ */
+const keyModelRefresher = createKeyModelRefresher({
+  read: storedAiSettings,
+  write: (update) => {
+    const latest = storedAiSettings()
+    const next = update(latest)
+    if (next === latest) return
+    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(next))
+    broadcastAiSettingsChanged()
+  },
+})
+
+/**
+ * Persist settings a renderer sent: schema-checked, with the live model lists
+ * kept from the file (only the main process writes them), then a listing for
+ * a key that changed. False when the payload is not settings at all.
+ */
+function writeRendererAiSettings(settings: unknown): boolean {
+  // SECURITY.md: payloads are schema-checked in the main process. The settings
+  // file feeds cliPath into spawn() and baseUrl receives the provider's API key,
+  // so the renderer's copy is sanitized before it touches disk.
+  const sanitized = sanitizeAiSettings(settings)
+  if (!sanitized) return false
+  writeJsonAtomic(
+    SETTINGS_PATH(),
+    sealAiSecrets(withStoredKeyModels(sanitized, storedAiSettings())),
+  )
+  broadcastAiSettingsChanged()
+  keyModelRefresher.refreshChanged()
+  return true
 }
 
 let codexImageRegistered = false
@@ -4030,28 +4070,20 @@ export function registerAiIpc(): void {
   )
 
   ipcMain.handle('ai:set-settings', (_event, settings: AiSettings) => {
-    // SECURITY.md: payloads are schema-checked in the main process. The settings
-    // file feeds cliPath into spawn() and baseUrl receives the provider's API key,
-    // so the renderer's copy is sanitized before it touches disk.
-    const sanitized = sanitizeAiSettings(settings)
-    if (!sanitized) {
+    if (!writeRendererAiSettings(settings)) {
       console.warn('[ai] rejected invalid ai:set-settings payload')
-      return
     }
-    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
-    broadcastAiSettingsChanged()
   })
 
   registerFreeAiIpc({
     readSettings: storedAiSettings,
-    writeSettings: (settings) => {
-      const sanitized = sanitizeAiSettings(settings)
-      if (!sanitized) return false
-      writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
-      broadcastAiSettingsChanged()
-      return true
-    },
+    writeSettings: writeRendererAiSettings,
     windowFor: hostWindowFor,
+  })
+
+  // the first listing waits for the windows: a key provider's list is not needed to show them
+  void app.whenReady().then(() => {
+    setTimeout(() => keyModelRefresher.refreshChanged(), KEY_MODEL_FIRST_LIST_DELAY_MS)
   })
 
   ipcMain.handle('ai:codex-models', async (_event, cliPath: unknown) => {

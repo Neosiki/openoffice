@@ -2518,6 +2518,8 @@ const aiProviderConfigSchema = z
     model: z.string(),
     baseUrl: z.string().optional(),
     cliPath: z.string().optional(),
+    // the vendor's live model list (decision 0087); the main process keeps its own copy on write
+    models: z.array(z.string()).optional(),
   })
   .strict()
 

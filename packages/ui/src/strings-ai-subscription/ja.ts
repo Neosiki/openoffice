@@ -69,6 +69,8 @@ export const ja = {
   errFreeLimit:
     '今日の無料利用分を使い切りました。明日もう一度お試しいただくか、設定で別の AI を選んでください。',
   errFreeLimitReset: '今日の無料利用分を使い切りました。{time} から再び利用できます。',
+  errFreeTierModel:
+    'このモデルには無料枠がないため、無料のキーでは使えません。無料枠で使えるモデル（Flash など）を選ぶか、提供元のコンソールで課金を有効にしてください。',
   continueWith: '{provider} で続行',
   continueMeteredNote:
     '{provider} の接続はサブスクリプションではありません。続行すると使った分だけ料金が発生します。',

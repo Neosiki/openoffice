@@ -68,6 +68,8 @@ export const vi = {
   errFreeLimit:
     'Đã dùng hết lượt miễn phí hôm nay. Hãy thử lại vào ngày mai hoặc chọn AI khác trong Cài đặt.',
   errFreeLimitReset: 'Đã dùng hết lượt miễn phí hôm nay. Bạn có thể dùng lại lúc {time}.',
+  errFreeTierModel:
+    'Mô hình này không có gói miễn phí nên khóa miễn phí không dùng được. Hãy chọn mô hình có trong gói miễn phí (ví dụ mô hình Flash) hoặc bật thanh toán trong bảng điều khiển của nhà cung cấp.',
   continueWith: 'Tiếp tục với {provider}',
   continueMeteredNote:
     'Kết nối {provider} không phải gói đăng ký: tiếp tục sẽ bị tính phí theo mức sử dụng.',

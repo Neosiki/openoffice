@@ -58,6 +58,8 @@ export const zhTW = {
   actionConnectFree: '連結免費 AI',
   errFreeLimit: '今日免費額度已用完。請明天再試，或在設定中選擇其他 AI。',
   errFreeLimitReset: '今日免費額度已用完。{time} 後可再次使用。',
+  errFreeTierModel:
+    '此模型沒有免費額度，免費金鑰無法使用。請在模型清單中選擇可免費使用的模型（例如 Flash），或在該服務的主控台中開啟付費。',
   continueWith: '改用 {provider} 繼續',
   continueMeteredNote: '{provider} 連線不是訂閱：繼續使用將依用量收費。',
   usageLine: '已用 {percent}% · {time} 重設',

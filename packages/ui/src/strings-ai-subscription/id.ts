@@ -66,6 +66,8 @@ export const id = {
   errFreeLimit:
     'Jatah gratis hari ini sudah habis. Coba lagi besok, atau pilih AI lain di Pengaturan.',
   errFreeLimitReset: 'Jatah gratis hari ini sudah habis. Anda bisa memakainya lagi pada {time}.',
+  errFreeTierModel:
+    'Model ini tidak punya tingkat gratis, jadi kunci gratis tidak bisa memakainya. Pilih model yang termasuk tingkat gratis (misalnya model Flash), atau aktifkan penagihan di konsol penyedia.',
   continueWith: 'Lanjutkan dengan {provider}',
   continueMeteredNote:
     'Koneksi {provider} bukan langganan: melanjutkan akan ditagih sesuai pemakaian.',

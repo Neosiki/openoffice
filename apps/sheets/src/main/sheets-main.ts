@@ -117,6 +117,7 @@ import {
   sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
+import { withStoredKeyModels } from '@genoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   sharedSubscriptionStatuses,
@@ -4304,7 +4305,12 @@ export function registerSheetsAiIpc(): void {
   ipcMain.handle(IPC_CHANNELS.aiSetSettings, async (event, input: unknown) => {
     sessionFor(event)
     const settings = aiSettingsInputSchema.parse(input)
-    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(settings))
+    // the live model lists are the main process's (decision 0087): the file's copy is kept
+    const stored = aiSettingsFromStored(readJson<unknown>(SETTINGS_PATH(), {}))
+    writeJsonAtomic(
+      SETTINGS_PATH(),
+      sealAiSecrets(withStoredKeyModels(settings as AiSettings, stored)),
+    )
     broadcastAiSettingsChanged()
   })
 

@@ -63,6 +63,8 @@ export const ko = {
   errFreeLimit:
     '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. 내일 다시 쓰거나 설정에서 다른 AI를 고르세요.',
   errFreeLimitReset: '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. {time}부터 다시 쓸 수 있습니다.',
+  errFreeTierModel:
+    '이 모델은 무료 등급이 없어서 무료 키로는 쓸 수 없습니다. 무료로 쓸 수 있는 모델(Flash 등)을 고르거나, 그 회사의 콘솔에서 결제를 켜세요.',
   continueWith: '{provider}로 계속',
   continueMeteredNote: '{provider} 연결은 구독이 아닙니다. 계속하면 쓴 만큼 요금이 나갑니다.',
   usageLine: '{percent}% 사용 · {time}에 초기화',

@@ -79,11 +79,15 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
   {
     id: 'gemini',
     label: 'Gemini',
-    // 3.x lineup per ai.google.dev/gemini-api/docs/models (2026-09-23). 3.8 Flash
-    // is the current stable Flash Google recommends; 3.1 Pro is still preview-only.
+    // per ai.google.dev/gemini-api/docs/models (2026-10-29). 4 Argon (GA
+    // 2026-10-13) is the flagship reasoning model and 3.1 Pro is still
+    // preview-only; neither has a free tier, so 3.8 Flash, the stable Flash
+    // Google recommends, stays the default. 3.7 Flash was deprecated on
+    // 2026-10-08 (see RETIRED_MODELS). Models released after this list come
+    // from the key's live list (key-models.ts).
     models: [
       'gemini-3.8-flash',
-      'gemini-3.7-flash',
+      'gemini-4-argon',
       'gemini-3.1-pro-preview',
       'gemini-3.6-flash',
       'gemini-3.5-flash-lite',
@@ -529,6 +533,39 @@ const RETIRED_MODELS: Partial<Record<AiProviderId, Record<string, string>>> = {
   },
   // 5-Turbo left the Z.ai price card late 2026-08; 5.3 Flash is the cheap tier now
   glm: { 'glm-5-turbo': 'glm-5.3-flash' },
+  // deprecated 2026-10-08; Google routes its requests to 3.8 Flash
+  gemini: { 'gemini-3.7-flash': 'gemini-3.8-flash' },
+}
+
+/**
+ * The id a provider's model goes by in this app: a retired id as its
+ * replacement, a vendor's wire id as the name the catalog lists it under,
+ * anything else as given.
+ */
+export function currentModelId(provider: AiProviderId, model: string): string {
+  return RETIRED_MODELS[provider]?.[model] ?? model
+}
+
+/** Ids at most this long are kept from a stored live list; the settings guard bounds a model id the same way */
+const MAX_LISTED_MODEL_LENGTH = 256
+/** entries kept from a stored live list (key-models.ts lists no more) */
+const MAX_LISTED_MODELS = 2000
+
+/**
+ * A stored live model list as the pickers may read it: strings only, trimmed,
+ * bounded, without duplicates; undefined when nothing is left. The file is
+ * hand-editable, so anything else in the field is dropped rather than shown.
+ */
+export function listedModelsOf(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const seen = new Set<string>()
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue
+    const id = entry.trim()
+    if (id && id.length <= MAX_LISTED_MODEL_LENGTH) seen.add(id)
+    if (seen.size >= MAX_LISTED_MODELS) break
+  }
+  return seen.size > 0 ? [...seen] : undefined
 }
 
 /**
@@ -581,12 +618,15 @@ function trimConfigs(providers: Record<string, unknown>): AiSettings['providers'
   const trimmed: Record<string, unknown> = {}
   for (const [id, config] of Object.entries(providers)) {
     if (!isRecord(config)) continue
+    const { models: rawModels, ...rest } = config
+    const models = listedModelsOf(rawModels)
     trimmed[id] = {
-      ...config,
+      ...rest,
       apiKey: str(config.apiKey),
       model: str(config.model),
       ...(config.baseUrl !== undefined ? { baseUrl: str(config.baseUrl) } : {}),
       ...(config.cliPath !== undefined ? { cliPath: str(config.cliPath) } : {}),
+      ...(models ? { models } : {}),
     }
   }
   return trimmed as AiSettings['providers']

@@ -73,6 +73,8 @@ export const fr = {
     'Le quota gratuit du jour est épuisé. Réessayez demain ou choisissez une autre IA dans les paramètres.',
   errFreeLimitReset:
     'Le quota gratuit du jour est épuisé. Vous pourrez de nouveau l’utiliser à {time}.',
+  errFreeTierModel:
+    "Ce modèle n'a pas d'offre gratuite : une clé gratuite ne peut pas l'utiliser. Choisissez un modèle couvert par l'offre gratuite (un modèle Flash, par exemple) ou activez la facturation dans la console du fournisseur.",
   continueWith: 'Continuer avec {provider}',
   continueMeteredNote:
     'La connexion {provider} n’est pas un abonnement : continuer est facturé à l’usage.',

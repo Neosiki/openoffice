@@ -72,6 +72,8 @@ export const it = {
   errFreeLimit:
     'La quota gratuita di oggi è esaurita. Riprova domani oppure scegli un’altra IA nelle Impostazioni.',
   errFreeLimitReset: 'La quota gratuita di oggi è esaurita. Potrai usarla di nuovo alle {time}.',
+  errFreeTierModel:
+    'Questo modello non ha un livello gratuito, quindi una chiave gratuita non può usarlo. Scegli un modello incluso nel livello gratuito (ad esempio un modello Flash) oppure attiva la fatturazione nella console del fornitore.',
   continueWith: 'Continua con {provider}',
   continueMeteredNote:
     'La connessione {provider} non è un abbonamento: continuando paghi a consumo.',

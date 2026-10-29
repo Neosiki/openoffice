@@ -70,6 +70,8 @@ export const pt = {
   errFreeLimit:
     'O uso gratuito de hoje acabou. Tente novamente amanhã ou escolha outra IA nas Configurações.',
   errFreeLimitReset: 'O uso gratuito de hoje acabou. Você poderá usá-lo novamente às {time}.',
+  errFreeTierModel:
+    'Este modelo não tem nível gratuito, então uma chave gratuita não pode usá-lo. Escolha um modelo incluído no nível gratuito (como um modelo Flash) ou ative o faturamento no console do provedor.',
   continueWith: 'Continuar com {provider}',
   continueMeteredNote:
     'A conexão {provider} não é uma assinatura: continuar é cobrado por consumo.',

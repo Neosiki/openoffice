@@ -65,6 +65,8 @@ export const en = {
   errFreeLimit:
     "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",
   errFreeLimitReset: "Today's free allowance is used up. You can use it again at {time}.",
+  errFreeTierModel:
+    "This model has no free tier, so a free key cannot use it. Pick a model the free tier covers (such as a Flash model), or turn on billing in the provider's console.",
   continueWith: 'Continue with {provider}',
   continueMeteredNote:
     'The {provider} connection is not a subscription: continuing is charged by usage.',
