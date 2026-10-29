@@ -78,6 +78,7 @@ import {
   NO_SKILL_USE,
   skillChipRefsOf,
   panelUserSkills,
+  panelProjectSkill,
   useSkillProposals,
   useSkillTemplates,
   templateDocumentOf,
@@ -90,6 +91,9 @@ import {
   docMentionActions,
   presentationKeyOf,
   type AiComposerDocs,
+  type ProjectChatEntry,
+  type ProjectChatOpened,
+  type ProjectMemoryLine,
 } from '@genoffice/ui'
 
 import {
@@ -209,6 +213,7 @@ import {
 import { moveOutlineEntries, shiftOutlineEntries } from './outline-model'
 import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { createElectronTransport } from './ai/transport'
+import { useProjectPanel, type ProjectPanel } from './ai/project-panel'
 import { useSubscriptionConnection } from './ai/subscription-client'
 import {
   aiBlockedRunOf,
@@ -222,6 +227,56 @@ import {
   type SheetsSkillDeps,
 } from './ai/tools'
 import { scopeLabel, type AiChatMessage } from './ai/AiChatPanel'
+
+/** A stored message (per-document or project chat) as the AI panel keeps it */
+interface StoredChatEntry {
+  readonly role: 'user' | 'assistant'
+  readonly text: string
+  readonly tools?:
+    readonly { name: string; summary: string; isError?: boolean; output?: string }[] | undefined
+  readonly attachments?:
+    readonly { name: string; path?: string; ext?: string; sizeBytes?: number }[] | undefined
+  readonly scope?: AiScopeQuoteData | undefined
+  readonly skills?: unknown
+  readonly skillProposals?: string[] | undefined
+  readonly memory?: readonly ProjectMemoryLine[] | undefined
+  readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
+}
+
+/** One message of a stored conversation, as the read-only transcript shows it */
+function storedChatMessageOf(m: StoredChatEntry): AiChatMessage {
+  return {
+    role: m.role,
+    text: m.text,
+    tools:
+      m.tools?.map((t) => ({
+        summary: t.summary,
+        isError: !!t.isError,
+        ...(t.name ? { name: t.name } : {}),
+        ...(t.output ? { output: t.output.slice(0, 2000) } : {}),
+      })) ?? [],
+    // stored metadata only: no thumbnail read for history, the chips render name/size
+    ...(m.attachments && m.attachments.length > 0
+      ? {
+          attachments: m.attachments
+            .filter((a) => a.path)
+            .map((a) => ({
+              name: a.name,
+              path: a.path ?? '',
+              ext: a.ext ?? '',
+              sizeBytes: a.sizeBytes ?? 0,
+            })),
+        }
+      : {}),
+    ...(m.scope ? { scope: m.scope } : {}),
+    ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+      ? { skills: skillChipRefsOf(m.skills) }
+      : {}),
+    ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
+    ...(m.memory && m.memory.length > 0 ? { memory: m.memory } : {}),
+    ...(m.otherEditorTools ? { otherEditorTools: m.otherEditorTools } : {}),
+  }
+}
 import { pruneFailedExchange } from './ai/retry-prune'
 import { parseSheetNavHref } from './ai/sheet-nav'
 import {
@@ -1318,6 +1373,10 @@ export function App({
   const workbookOpeningRef = useRef(false)
   /** Current session's projectId/chatId (resolved when the workbook opens) */
   const chatRefIdsRef = useRef<{ projectId: string; chatId: string } | null>(null)
+  /** the project folder of the AI panel (set once its hook ran; read by callbacks) */
+  const projectRef = useRef<ProjectPanel | null>(null)
+  /** the workbook's path when its chat was last bound (a save under a new name changes it) */
+  const chatSavedPathRef = useRef<string | null>(null)
 
   // File renamed externally (in the shell Home list) → sync the title-bar file
   // name (the save path is synced by the main process)
@@ -1434,7 +1493,15 @@ export function App({
     const stale = () => chatResolveGenRef.current !== generation
     // Reset (new workbook or new session)
     chatRefIdsRef.current = null
-    if (!continues) setHistoricChat([])
+    // a project chat on screen stays: this workbook's own chat is not shown over it
+    const projectChatShown = () => !!projectRef.current?.chat.chat
+    if (!continues && !projectChatShown()) setHistoricChat([])
+    // a save under a new name: a project chat notes the workbook (spec 5.3.6)
+    const savedPath = (workbookFile ? (workbookFile.csvPath ?? workbookFile.path) : null) ?? null
+    if (continues && savedPath && savedPath !== chatSavedPathRef.current) {
+      void projectRef.current?.chat.documentSaved()
+    }
+    chatSavedPathRef.current = savedPath
     const tempChatId = `unsaved-${Date.now()}`
     const sessionId = workbookFile?.sessionId
     const resolveArgs: Parameters<typeof api.resolveChat>[0] = { filePath: null, tempChatId }
@@ -1464,48 +1531,25 @@ export function App({
           chatId: ids.chatId,
           limit: 200,
         })
-        if (stale() || stored.length === 0) return
-        // skill cards come back closed; a saved card's record is not part of the conversation
-        const msgs = skillCardsRef.current.restore(stored)
-        setHistoricChat(
-          msgs.map((m) => ({
-            role: m.role,
-            text: m.text,
-            tools:
-              m.tools?.map((t) => ({
-                summary: t.summary,
-                isError: !!t.isError,
-                ...(t.name ? { name: t.name } : {}),
-                ...(t.output ? { output: t.output.slice(0, 2000) } : {}),
-              })) ?? [],
-            // stored metadata only: no thumbnail read for history, the chips render name/size
-            ...(m.attachments && m.attachments.length > 0
-              ? {
-                  attachments: m.attachments
-                    .filter((a) => a.path)
-                    .map((a) => ({
-                      name: a.name,
-                      path: a.path ?? '',
-                      ext: a.ext ?? '',
-                      sizeBytes: a.sizeBytes ?? 0,
-                    })),
-                }
-              : {}),
-            ...(m.scope ? { scope: m.scope } : {}),
-            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
-              ? { skills: skillChipRefsOf(m.skills) }
-              : {}),
-            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
-          })),
-        )
-        // Restore model context: follow-ups after reopening the file continue the
-        // previous conversation (only when the loop is idle and has no history)
-        agentLoopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
+        if (stale() || stored.length === 0 || projectChatShown()) return
+        showStoredChat(stored)
       })
       .catch(() => {
         /* silent */
       })
+    // the path is read when the session changes, not on every rename
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workbookFile?.sessionId])
+
+  /** Show a stored conversation as the read-only transcript and hand it to the model. */
+  function showStoredChat(stored: readonly StoredChatEntry[]): void {
+    // skill cards come back closed; a saved card's record is not part of the conversation
+    const msgs = skillCardsRef.current.restore(stored)
+    setHistoricChat(msgs.map(storedChatMessageOf))
+    // Restore model context: follow-ups after reopening the file continue the
+    // previous conversation (only when the loop is idle and has no history)
+    agentLoopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
+  }
 
   const persistChatMessage = (
     role: 'user' | 'assistant',
@@ -1521,36 +1565,35 @@ export function App({
     scope?: AiScopeQuoteData,
     skillChips?: readonly SkillChipRef[],
   ): boolean => {
+    const record = {
+      role,
+      text,
+      ...(tools && tools.length > 0
+        ? { tools: tools.map((t) => ({ ...t, name: t.name ?? '' })) }
+        : {}),
+      ...(attachments && attachments.length > 0
+        ? {
+            attachments: attachments.map((a) => ({
+              name: a.name,
+              path: a.path,
+              ext: a.ext,
+              sizeBytes: a.sizeBytes,
+            })),
+          }
+        : {}),
+      ...(scope ? { scope } : {}),
+      ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
+    }
+    // a chosen project (or this workbook's earlier chat) records it; otherwise as before
+    if (projectRef.current?.chat.persist(record)) return true
     // Reports whether a write was issued: right after a workbook opens the
     // chat refs resolve asynchronously, and a send in that window is dropped.
     const ids = chatRefIdsRef.current
     const api = (window as Window & { projectApi?: typeof window.projectApi }).projectApi
     if (!ids || !api) return false
-    void api
-      .appendChat({
-        projectId: ids.projectId,
-        chatId: ids.chatId,
-        role,
-        text,
-        ...(tools && tools.length > 0
-          ? { tools: tools.map((t) => ({ ...t, name: t.name ?? '' })) }
-          : {}),
-        ...(attachments && attachments.length > 0
-          ? {
-              attachments: attachments.map((a) => ({
-                name: a.name,
-                path: a.path,
-                ext: a.ext,
-                sizeBytes: a.sizeBytes,
-              })),
-            }
-          : {}),
-        ...(scope ? { scope } : {}),
-        ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
-      })
-      .catch(() => {
-        /* silent */
-      })
+    void api.appendChat({ projectId: ids.projectId, chatId: ids.chatId, ...record }).catch(() => {
+      /* silent */
+    })
     return true
   }
 
@@ -1587,16 +1630,40 @@ export function App({
   /** true once any tool of the run mutated the workbook */
   const runMutatedRef = useRef(false)
 
+  const agentTransportRef = useRef<ReturnType<typeof createElectronTransport> | null>(null)
+  if (!agentTransportRef.current) {
+    agentTransportRef.current = createElectronTransport(() => aiSettingsRef.current!, {
+      onStreamError: (error) => {
+        streamErrorRef.current = error
+      },
+      onSubscriptionUsage: setSubscriptionUsage,
+      onInputTruncated: () => setInputTruncated(true),
+    })
+  }
+
+  /**
+   * The project folder (spec 5): the chip under the input, the chat menu, the
+   * notices. With no project chosen the panel keeps the workbook's own chat.
+   */
+  const project = useProjectPanel({
+    editor: 'sheets',
+    lang: getLang(),
+    busy: aiBusy,
+    loop: () => agentLoopRef.current,
+    transport: () => agentTransportRef.current,
+    gate: () => sendGateRef.current.peek(),
+    onOpen: (opened, initial) => openProjectChat(opened, initial),
+    onRemoteMessage: (entry) => appendChat(storedChatMessageOf(entry)),
+    onNewChat: () => handleNewChat(),
+  })
+  projectRef.current = project
+  const sendGateRef = useRef(sendGate)
+  sendGateRef.current = sendGate
+
   const agentLoopRef = useRef<AgentLoop | null>(null)
   if (!agentLoopRef.current) {
     agentLoopRef.current = new AgentLoop({
-      transport: createElectronTransport(() => aiSettingsRef.current!, {
-        onStreamError: (error) => {
-          streamErrorRef.current = error
-        },
-        onSubscriptionUsage: setSubscriptionUsage,
-        onInputTruncated: () => setInputTruncated(true),
-      }),
+      transport: agentTransportRef.current,
       systemSuffix: aiLangDirective,
       // a local model that reported no tool support answers in text only
       toolsAllowed: () =>
@@ -1633,6 +1700,8 @@ export function App({
             }))
           },
         }),
+        // the chosen project folder: its context and its four app-run tools (spec 5.4, 5.5)
+        ...panelProjectSkill({ run: project.chat.run, lang: getLang }),
       ]),
       events: {
         onText: (text) => {
@@ -1747,6 +1816,7 @@ export function App({
             persistChatMessage('assistant', finalText, runToolsRef.current)
           }
           setAiRunScope(undefined)
+          projectRef.current?.finishSend()
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
         onError: (error) => {
@@ -1778,6 +1848,7 @@ export function App({
             return next
           })
           setAiRunScope(undefined)
+          projectRef.current?.finishSend()
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
       },
@@ -1841,13 +1912,16 @@ export function App({
     setMessage(t('appAiThinking'))
     appendChat({ role: 'assistant', text: '', tools: [], streaming: true })
     void collectImageAttachments(sentAttachments)
-      .then((images) => {
+      .then(
+        (images): AgentImage[] | null => images,
+        () => null,
+      )
+      .then(async (images) => {
+        // the chosen project's context, read now and fixed for this request (spec 5.4)
+        await projectRef.current?.prepareSend()
         runStartingRef.current = false
-        loop.run(instruction, images)
-      })
-      .catch(() => {
-        runStartingRef.current = false
-        loop.run(instruction)
+        if (images) loop.run(instruction, images)
+        else loop.run(instruction)
       })
   }
 
@@ -1915,7 +1989,8 @@ export function App({
     if (error !== null) setMessage(error)
   }
 
-  function handleNewChat(): void {
+  /** Today's "new chat": the screen, the loop and everything the conversation carried start over. */
+  function resetConversation(): void {
     sendGate.reset()
     agentLoopRef.current?.reset()
     setAiRunScope(undefined)
@@ -1932,7 +2007,37 @@ export function App({
     sentAttachmentsRef.current = []
     setPreview(null)
     lazyPreviewRef.current = null
+  }
+
+  /** "New chat": a new chat of the chosen project, or (no project) today's reset (spec 5.3.7) */
+  function handleNewChat(): void {
+    resetConversation()
+    if (projectRef.current?.chat.projectId) void projectRef.current.chat.newChat()
     setMessage(t('appNewConversation'))
+  }
+
+  /** A project chat, this workbook's earlier chat, or (no project) the workbook's own chat opened. */
+  function openProjectChat(opened: ProjectChatOpened, initial = false): void {
+    // a send made while the panel started (a request handed to this tab) keeps its chat
+    if (initial && (chat.length > 0 || agentLoopRef.current?.busy || runStartingRef.current)) return
+    resetConversation()
+    if (opened.kind === 'document') {
+      const ids = chatRefIdsRef.current
+      const api = (window as Window & { projectApi?: typeof window.projectApi }).projectApi
+      if (!ids || !api) return
+      void api
+        .loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
+        .then((stored) => {
+          if (stored.length === 0 || projectRef.current?.chat.chat) return
+          if (agentLoopRef.current?.busy) return
+          showStoredChat(stored)
+        })
+        .catch(() => {
+          /* silent */
+        })
+      return
+    }
+    showStoredChat(opened.entries)
   }
 
   /** DSL context the AgentSkill reads/writes through — reuses the exact same
@@ -5453,6 +5558,7 @@ export function App({
         }}
         chat={chat}
         historicChat={historicChat}
+        aiProject={project}
         renderSkillCard={skillCards.render}
         skillNotes={skillTemplates.notes}
         onTemplateSkill={(request) => skillTemplatesRef.current.onTemplateSkill(request)}

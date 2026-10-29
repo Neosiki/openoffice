@@ -83,7 +83,12 @@ import { stepFontSize } from './font-size-ladder'
 import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import type { AttachmentMeta } from '../shared/desktop-api'
-import { AiChatPanel, type AiChatMessage, type AiPanelSubscription } from './ai/AiChatPanel'
+import {
+  AiChatPanel,
+  type AiChatMessage,
+  type AiPanelProject,
+  type AiPanelSubscription,
+} from './ai/AiChatPanel'
 import { AiSelectionAsk } from './ai/AiSelectionAsk'
 import type { SelectionAskAnchor } from './ai/selection-ask'
 import {
@@ -256,6 +261,8 @@ interface ExcelShellProps {
   readonly aiSubscription: AiPanelSubscription
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
+  /** the project folder parts of the AI panel (chip, chat menu, notices) */
+  readonly aiProject?: AiPanelProject | undefined
   /** the skill card for a key a chat message carries */
   readonly renderSkillCard?: ((key: string) => ReactNode) | undefined
   /** the template flow's lines and its preview card, after the chat's messages */
@@ -489,6 +496,7 @@ export function ExcelShell({
   aiSubscription,
   chat,
   historicChat,
+  aiProject,
   renderSkillCard,
   skillNotes,
   onTemplateSkill,
@@ -1041,6 +1049,7 @@ export function ExcelShell({
           onCitation={onAiCitation}
           onExpand={aiDock.onExpand}
           onCollapse={() => setIsCopilotOpen(false)}
+          project={aiProject}
         />
         <div className="sheet-main">
           <section className="workbook-area">
