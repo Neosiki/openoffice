@@ -98,6 +98,7 @@
  *   asynchronous step ends, so every later draw asks again.
  */
 
+import { CLIPBOARD_HTML_MODULE } from '../studio-plugin/clipboard-html.mjs'
 import { HANCOM_KEYS_MODULE, studioCommandIds } from '../studio-plugin/hancom-keys.mjs'
 
 /** Must equal RENDERER_SCHEME in packages/electron-utils/src/renderer-scheme.ts. */
@@ -114,6 +115,9 @@ export { HANCOM_KEYS_MODULE }
 
 /** Module specifier the studio-format-copy patches import; build-studio.mjs aliases it. */
 export const FORMAT_COPY_MODULE = '@ieum/format-copy'
+
+/** Module specifier the studio-clipboard-objects patch imports; build-studio.mjs aliases it. */
+export { CLIPBOARD_HTML_MODULE }
 
 const PATCHES = {
   'sdk-scheme': {
@@ -633,6 +637,96 @@ const PATCHES = {
       },
     ],
   },
+  // a copied block's pictures and tables reach another document (studio-plugin/clipboard-html.mjs),
+  // and a picture or table copied in another editor is not taken for this one's own
+  'studio-clipboard-objects': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler-keyboard\.ts$/,
+    edits: [
+      {
+        find: "import { tableObjectClipboardTarget } from './table-object-clipboard-target';",
+        replace: [
+          "import { tableObjectClipboardTarget } from './table-object-clipboard-target';",
+          `import { ieumPasteHtmlInCell, ieumPictureHtml, ieumSelectionHtml } from '${CLIPBOARD_HTML_MODULE}';`,
+        ].join('\n'),
+      },
+      {
+        find: '          html = this.wasm.exportSelectionHtml(',
+        replace: '          html = ieumSelectionHtml(this.wasm,',
+      },
+      // the engine's HTML paste into a cell drops the pictures; the app puts them in the cell
+      {
+        find: [
+          '        result = wasm.pasteHtmlInCellByPath(',
+          '          p.sectionIndex, p.parentParaIndex!, JSON.stringify(p.cellPath), p.charOffset, htmlForCore,',
+          '        );',
+        ].join('\n'),
+        replace: [
+          '        result = ieumPasteHtmlInCell(wasm, p, htmlForCore, (part: string) => wasm.pasteHtmlInCellByPath(',
+          '          p.sectionIndex, p.parentParaIndex!, JSON.stringify(p.cellPath), p.charOffset, part,',
+          '        ));',
+        ].join('\n'),
+      },
+      {
+        find: [
+          '        result = wasm.pasteHtmlInCell(',
+          '          p.sectionIndex, p.parentParaIndex, p.controlIndex!,',
+          '          p.cellIndex!, p.cellParaIndex!, p.charOffset, htmlForCore,',
+          '        );',
+        ].join('\n'),
+        replace: [
+          '        result = ieumPasteHtmlInCell(wasm, p, htmlForCore, (part: string) => wasm.pasteHtmlInCell(',
+          '          p.sectionIndex, p.parentParaIndex!, p.controlIndex!,',
+          '          p.cellIndex!, p.cellParaIndex!, p.charOffset, part,',
+          '        ));',
+        ].join('\n'),
+      },
+      // the studio pastes its own engine clipboard when the plain text is the same "[그림]"/"[표]"
+      // as its last copied object, for a browser that drops the HTML; HTML marked by another
+      // editor (another tab) is that editor's copy
+      {
+        find: '    text === internalClipboardText;',
+        replace: [
+          '    text === internalClipboardText &&',
+          '    readRhwpClipboardToken(html) === null;',
+        ].join('\n'),
+      },
+      // a picture copied in another editor also lies on the clipboard as a picture file, at its
+      // own pixel size; that editor's HTML has the size the picture had in its document
+      {
+        find: ['  const items = clipboardData?.items;', '  if (items) {'].join('\n'),
+        replace: [
+          '  const items = clipboardData?.items;',
+          '  if (items && readRhwpClipboardToken(html) === null) {',
+        ].join('\n'),
+      },
+      // a picture file from the clipboard went in with insertPicture, floating at the paper's top
+      // left corner in the body and over the text in a cell; as HTML it goes in at the caret
+      {
+        find: '    // 스냅샷으로 삽입 (Undo 지원)\n',
+        replace: [
+          '    const ieumHtml = ieumPictureHtml(data, ext, wHwp, hHwp);',
+          '    if (ieumHtml) {',
+          "      pasteExternalHtml.call(this, ieumHtml, '', hasSelection);",
+          '      return;',
+          '    }',
+          '    // 스냅샷으로 삽입 (Undo 지원)',
+          '',
+        ].join('\n'),
+      },
+      // Hangul's document model is pasted in the body only; elsewhere the studio goes on to the
+      // HTML path. Its snapshot step said "skipped" with undefined, which the history takes for
+      // the caret's new place: the caret lost its cell and the HTML landed at the body's top.
+      // null is the history's "nothing changed"
+      {
+        find: '        if (p.parentParaIndex !== undefined) return undefined;',
+        replace: '        if (p.parentParaIndex !== undefined) return null;',
+      },
+      {
+        find: '        if (!parsed.ok) return undefined;',
+        replace: '        if (!parsed.ok) return hasSelection ? this.cursor.getPosition() : null;',
+      },
+    ],
+  },
   'studio-memo-command': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]commands[\\/]insert\.ts$/,
     find: "  stub('insert:comment', t('command.insert.comment.label'), 'icon-comment'),",
@@ -800,6 +894,7 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-format-copy-state',
   'studio-single-cell-resize',
   'studio-merged-row-below',
+  'studio-clipboard-objects',
   'studio-memo-command',
   'studio-memo-context-menu',
   'studio-memo-label-ko',
