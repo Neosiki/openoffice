@@ -13,7 +13,7 @@ Proyek adalah satu folder di PC Anda. Pilih proyek di panel AI, dan AI bekerja d
 
 ## Proyek baru dan Tambah folder
 
-- **Proyek baru**: ketik sebuah nama, lalu folder dengan nama itu dibuat di folder simpan bawaan Anda (awalnya `Dokumen\GenOffice`; bisa diubah di Pengaturan). **Tempat lain…** memungkinkan Anda memilih lokasi lain. Jika folder dengan nama itu sudah ada, Anda akan ditanya apakah folder itu mau dipakai sebagai proyek.
+- **Proyek baru**: ketik sebuah nama, lalu folder dengan nama itu dibuat di folder simpan bawaan Anda (awalnya `Dokumen\GenOffice`; bisa diubah di Pengaturan). **Buat di tempat lain…** memungkinkan Anda memilih lokasi lain. Jika folder dengan nama itu sudah ada, Anda akan ditanya apakah folder itu mau dipakai sebagai proyek.
 - **Tambah folder**: memakai folder yang sudah Anda punya. Subfoldernya ikut disertakan. Seluruh drive, seluruh folder pengguna Anda, dan folder yang berisi data login atau data aplikasi tidak dapat dipilih.
 - Jika Anda membuka dokumen di folder proyek yang belum ada di daftar, di bawah kotak masukan muncul "Dokumen ini ada di folder proyek '…'" beserta tombol **Gunakan**. Mengekliknya sama dengan Tambah folder.
 - Jika folder yang Anda terima dari orang lain sudah berisi instruksi atau memori, `AGENTS.md` atau `CLAUDE.md`, atau obrolan yang ditulis di PC lain, aplikasi menampilkannya sekali dan bertanya. **Gunakan** memakai semuanya. **Gunakan tanpa instruksi** menjauhkan instruksi dan memori itu dari AI, menyembunyikan obrolan dari PC lain, dan berhenti menambah memori; membaca file tetap bisa. Nanti Anda bisa beralih ke **Gunakan** di halaman proyek. Menutup pertanyaan itu tanpa memilih berarti folder tidak ditambahkan.

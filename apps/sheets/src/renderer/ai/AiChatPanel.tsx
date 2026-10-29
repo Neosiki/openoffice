@@ -271,13 +271,15 @@ export interface AiChatMessage {
   readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
 }
 
-/** The project folder parts of the panel (built in App.tsx, see ai/project-panel.tsx) */
+/** The project folder parts of the panel (built in App.tsx with `useProjectPanel` of @genoffice/ui) */
 export interface AiPanelProject {
   /** the chat menu beside the title; null without a chosen project */
-  readonly header: React.ReactNode
+  readonly chatMenu: React.ReactNode
   /** the project chip under the input */
-  readonly footer: React.ReactNode
-  /** hint, unwritable and context notices above the composer */
+  readonly picker: React.ReactNode
+  /** "this workbook is in the '…' project folder [Use]" above the composer */
+  readonly hint: React.ReactNode
+  /** unwritable, context and problem notices above the composer */
   readonly notices: React.ReactNode
   /** the other-editor summary and memory lines of one message */
   readonly messageParts: (message: AiChatMessage) => React.ReactNode
@@ -730,7 +732,7 @@ export function AiChatPanel({
           <AiMark size={22} />
           {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
-        {project?.header}
+        {project?.chatMenu}
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
@@ -970,6 +972,7 @@ export function AiChatPanel({
           localModelCapabilities(subscription.settings).tools === false && (
             <AiToolsUnsupportedNotice lang={lang} />
           )}
+        {project?.hint}
         {project?.notices}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
@@ -1125,7 +1128,7 @@ export function AiChatPanel({
               {onDrivePicked && <DocAttachButton lang={lang} onPicked={onDrivePicked} />}
             </>
           }
-          footerBelow={project?.footer}
+          footerBelow={project?.picker}
           textareaRef={inputRef}
           onChange={onPromptChange}
           onSend={send}

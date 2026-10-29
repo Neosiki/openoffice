@@ -36,6 +36,10 @@ import {
   ProjectNoticeList,
   ProjectPicker,
   ProjectToolSummaryLine,
+  ProjectProblemLine,
+  placeRemoteEntries,
+  projectAddProblem,
+  type ProjectProblem,
   SentSkillChips,
   panelProjectSkill,
   panelUserSkills,
@@ -163,6 +167,7 @@ export function KbAskPanel({
   aiSettings,
   noticeDue,
   onOpenAiSettings,
+  openChatRequest,
 }: {
   onOpenPath: (path: string) => void
   onGoToRecents: () => void
@@ -174,6 +179,11 @@ export function KbAskPanel({
   noticeDue: boolean
   /** open Settings on its AI section, where a connection is made */
   onOpenAiSettings: () => void
+  /**
+   * A project chat the home project screen asked to open here (main handed
+   * it to the home window, see ProjectsPanel); `seq` bumps on every request.
+   */
+  openChatRequest?: { projectId: ProjectId; chatId: ProjectId; seq: number } | null
 }): React.JSX.Element {
   const { t, lang } = useI18n()
   const [messages, setMessages] = useState<AskMessage[]>([])
@@ -260,6 +270,8 @@ export function KbAskPanel({
   const [consolidated, setConsolidated] = useState<ConsolidatedMemory | null>(null)
   const [consolidating, setConsolidating] = useState(false)
   const [consolidateFailed, setConsolidateFailed] = useState(false)
+  /** what the person asked for in the picker that did not happen (a refused folder, …) */
+  const [projectProblem, setProjectProblem] = useState<ProjectProblem | null>(null)
 
   const toolLabels = (): AskToolLabels => ({
     search: t('askToolSearch'),
@@ -294,6 +306,7 @@ export function KbAskPanel({
     setUnwritableNotice(false)
     setConsolidated(null)
     setConsolidateFailed(false)
+    setProjectProblem(null)
     if (opened.kind === 'document') {
       // back to the in-memory chat as it was before a project was chosen
       if (!showingProjectRef.current) return
@@ -322,11 +335,7 @@ export function KbAskPanel({
   /** another window recorded a message in the open chat: shown now, ahead of a run in flight */
   const showRemoteMessage = (entry: ProjectChatEntry): void => {
     const message = askMessageOf(entry)
-    setMessages((prev) =>
-      runActiveRef.current && prev.length >= 2
-        ? [...prev.slice(0, -2), message, ...prev.slice(-2)]
-        : [...prev, message],
-    )
+    setMessages((prev) => placeRemoteEntries(prev, [message], runActiveRef.current))
   }
 
   const projectChat = useProjectChat({
@@ -775,6 +784,8 @@ export function KbAskPanel({
   /** a folder became a project (added, created, relocated, adopted): choose it */
   const chooseAddedProject = (result: AddFolderResult | CreateProjectResult): void => {
     refreshProjects()
+    // refused or not made: say why (spec 5.1); a closed dialog says nothing
+    setProjectProblem(projectAddProblem(result))
     if (result.status !== 'added' && result.status !== 'created') return
     const once = result.status === 'added' ? result.notices : []
     void projectChat.selectProject(result.project.id).then(() => {
@@ -782,6 +793,16 @@ export function KbAskPanel({
       if (once.length > 0) setProjectNotices(once)
     })
   }
+
+  /** a bridge call the person made failed: say so instead of doing nothing */
+  const showActionFailed = (): void => setProjectProblem({ kind: 'action-failed' })
+
+  // the home project screen asked for a chat of a project: open it here
+  const openChatSeq = openChatRequest?.seq
+  useEffect(() => {
+    if (openChatRequest) projectChat.openChatRef(openChatRequest)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new request matters
+  }, [openChatSeq])
 
   const removeProjectFromList = (id: ProjectId): void => {
     const bridge = window.projectFolderApi
@@ -792,7 +813,7 @@ export function KbAskPanel({
         refreshProjects()
         if (projectChatRef.current.projectId === id) void projectChat.selectProject(null)
       })
-      .catch(() => undefined)
+      .catch(showActionFailed)
   }
 
   /** "[remove]" on a memory line: the entry leaves memory.md and the line says so */
@@ -1120,8 +1141,15 @@ export function KbAskPanel({
             void window.projectFolderApi
               ?.adoptFolderHint()
               .then(chooseAddedProject)
-              .catch(() => undefined)
+              .catch(showActionFailed)
           }
+        />
+      )}
+      {projectProblem && (
+        <ProjectProblemLine
+          lang={lang}
+          problem={projectProblem}
+          onDismiss={() => setProjectProblem(null)}
         />
       )}
       {projectId !== null && (
@@ -1194,19 +1222,19 @@ export function KbAskPanel({
                 void window.projectFolderApi
                   ?.createProject({ name, otherPlace })
                   .then(chooseAddedProject)
-                  .catch(() => undefined)
+                  .catch(showActionFailed)
               }
               onAddFolder={() =>
                 void window.projectFolderApi
                   ?.addFolder()
                   .then(chooseAddedProject)
-                  .catch(() => undefined)
+                  .catch(showActionFailed)
               }
               onRelocate={(id) =>
                 void window.projectFolderApi
                   ?.relocateProject({ projectId: id })
                   .then(chooseAddedProject)
-                  .catch(() => undefined)
+                  .catch(showActionFailed)
               }
               onSetPinned={(id, pinned) =>
                 void window.projectFolderApi

@@ -39,7 +39,8 @@ import {
   useComposerSkills,
   panelUserSkills,
   panelProjectSkill,
-  memoryLinesOf,
+  placeRemoteEntries,
+  useProjectPanel,
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
@@ -65,7 +66,9 @@ import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref, type PdfNavTarget } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
 import { withFollowUp, type FollowUpSelection } from '../reading/passage-cards'
-import { useProjectFolderPanel, type OtherEditorTools } from './project-folder-panel'
+
+/** Another editor's tool records on a reopened message, shown as one line */
+type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
 
 // Word-parity count (same as docs/markdown): Asian chars one by one + non-Asian words
 const ASIAN_RE =
@@ -264,14 +267,20 @@ export function AiPanel({
    * menu, the notices, and where the chat is recorded. Without a chosen
    * project everything below runs exactly as before.
    */
-  const projectPanel = useProjectFolderPanel({
+  const projectPanel = useProjectPanel({
     editor: 'pdf',
     lang,
     busy,
     loop: () => loopRef.current,
     onOpen: (opened) => openProjectChat(opened),
-    onRemoteMessages: (entries) =>
-      setChat((prev) => [...prev, ...entries.map((entry) => entryFromProject(entry))]),
+    onRemoteMessages: (entries, running) =>
+      setChat((prev) =>
+        placeRemoteEntries(
+          prev,
+          entries.map((entry) => entryFromProject(entry)),
+          running,
+        ),
+      ),
     onNewChat: () => startNewChat(),
     consolidation: async () => {
       // the same gate as a send: nothing goes out until a provider can run
@@ -1187,8 +1196,7 @@ export function AiPanel({
             >
               {hasTools && <ToolChipList tools={entry.tools!} />}
               <SkillUsedNotes tools={entry.tools} />
-              {projectPanel.toolSummary(entry.otherEditorTools)}
-              {projectPanel.memoryLines(entry.memory ?? memoryLinesOf(entry.tools))}
+              {projectPanel.messageParts(entry)}
               {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.usage && (
                 <div className="ai-message-usage">

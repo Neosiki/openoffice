@@ -6,6 +6,9 @@
  */
 import { htmlLang, type Lang } from '@genoffice/i18n'
 import type {
+  AddFolderResult,
+  CreateProjectResult,
+  FolderRefusalReason,
   LegacyDocumentChat,
   ProjectChatListItem,
   ProjectEditor,
@@ -15,6 +18,7 @@ import type {
   ProjectNotice,
   ProjectScreenSection,
 } from '@genoffice/project-store'
+import type { ProjectRunPrepared } from './project-skill'
 import { projectPanelText, type ProjectPanelStringKey } from './strings-project-panel'
 
 // ────────────────────────────────────────────────────────────
@@ -396,4 +400,123 @@ export function projectToolSummaryText(
     editor,
     count: summary.count,
   })
+}
+
+// ────────────────────────────────────────────────────────────
+// Problems: what the person asked for did not happen
+// ────────────────────────────────────────────────────────────
+
+/**
+ * Something the person should hear about because it did not go as asked:
+ * a folder that cannot be a project, a new project that was not made, a
+ * bridge call that failed, a send that went without the project's context,
+ * or a [Tidy up] that did not finish. One warning line says it (spec 5.1).
+ */
+export type ProjectProblem =
+  | { readonly kind: 'refused'; readonly reason: FolderRefusalReason }
+  /** "new project": a folder of that name exists and was not used */
+  | { readonly kind: 'exists'; readonly folderPath: string }
+  | { readonly kind: 'invalid-name' }
+  /** "new project": the folder or `project.json` could not be written */
+  | { readonly kind: 'create-unwritable' }
+  /** the bridge call itself failed */
+  | { readonly kind: 'action-failed' }
+  /** `prepareSend` did not find the project: this request went without its context */
+  | { readonly kind: 'context'; readonly status: 'missing' | 'unknown' | 'failed' }
+  | { readonly kind: 'consolidate-failed' }
+
+const REFUSAL_KEY: Record<FolderRefusalReason, ProjectPanelStringKey> = {
+  'drive-root': 'refusedDriveRoot',
+  'user-home': 'refusedUserHome',
+  protected: 'refusedProtected',
+  'contains-protected': 'refusedContainsProtected',
+  'not-a-folder': 'refusedNotFolder',
+  'different-project': 'refusedDifferentProject',
+}
+
+/**
+ * What an add-folder, relocate, adopt or new-project result has to say; null
+ * when it went through (`added`, `created`) or the person closed a dialog.
+ */
+export function projectAddProblem(
+  result: AddFolderResult | CreateProjectResult,
+): ProjectProblem | null {
+  switch (result.status) {
+    case 'added':
+    case 'created':
+    case 'cancelled':
+      return null
+    case 'refused':
+      return { kind: 'refused', reason: result.reason }
+    case 'exists':
+      return { kind: 'exists', folderPath: result.folderPath }
+    case 'invalid-name':
+      return { kind: 'invalid-name' }
+    case 'unwritable':
+      return { kind: 'create-unwritable' }
+  }
+}
+
+/** What a send's `prepareSend` outcome has to say; null when the context came (or no project is chosen) */
+export function projectPrepareProblem(prepared: ProjectRunPrepared): ProjectProblem | null {
+  switch (prepared.status) {
+    case 'none':
+    case 'ok':
+      return null
+    case 'missing':
+    case 'unknown':
+    case 'failed':
+      return { kind: 'context', status: prepared.status }
+  }
+}
+
+const CONTEXT_KEY = {
+  missing: 'contextMissing',
+  unknown: 'contextUnknown',
+  failed: 'contextFailed',
+} as const satisfies Record<string, ProjectPanelStringKey>
+
+/** The sentence of a problem line */
+export function projectProblemText(lang: Lang, problem: ProjectProblem): string {
+  switch (problem.kind) {
+    case 'refused':
+      return projectPanelText(lang, REFUSAL_KEY[problem.reason])
+    case 'exists':
+      return projectPanelText(lang, 'createExists', { path: problem.folderPath })
+    case 'invalid-name':
+      return projectPanelText(lang, 'createInvalidName')
+    case 'create-unwritable':
+      return projectPanelText(lang, 'createUnwritable')
+    case 'action-failed':
+      return projectPanelText(lang, 'actionFailed')
+    case 'context':
+      return projectPanelText(lang, CONTEXT_KEY[problem.status])
+    case 'consolidate-failed':
+      return projectPanelText(lang, 'consolidateFailed')
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Another window's messages
+// ────────────────────────────────────────────────────────────
+
+/**
+ * The transcript with another window's messages added (spec 5.3.3). They show
+ * at once. While this panel's own reply is on its way (the last entry is an
+ * assistant reply that is streaming, or `running`), they go in front of that
+ * question and its reply, so the two stay the last entries: the panel keeps
+ * writing the reply into the last entry, and stopping or retrying finds its
+ * question right before it.
+ */
+export function placeRemoteEntries<
+  T extends { readonly role: string; readonly streaming?: boolean | undefined },
+>(list: readonly T[], entries: readonly T[], running: boolean): T[] {
+  if (entries.length === 0) return [...list]
+  const last = list.at(-1)
+  let at = list.length
+  if (last?.role === 'assistant' && (running || last.streaming === true)) {
+    at -= 1
+    if (list[at - 1]?.role === 'user') at -= 1
+  }
+  return [...list.slice(0, at), ...entries, ...list.slice(at)]
 }

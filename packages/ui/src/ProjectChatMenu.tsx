@@ -43,7 +43,7 @@ export interface ProjectChatMenuProps {
   readonly onNewChat: () => void
   /** A non-empty, changed title */
   readonly onRename: (chatId: ProjectId, title: string) => void
-  /** Moves the chat's files to the OS trash (the caller may confirm first) */
+  /** Moves the chat's files to the OS trash; called only after the row's confirm step */
   readonly onDelete: (chatId: ProjectId) => void
   readonly onSelectLegacy?: (() => void) | undefined
 }
@@ -70,7 +70,8 @@ function initialIndex(
  * The panel header's `[chat title ▾]` for a panel with a project chosen, and
  * its menu: a search field, [New chat], this project's chats newest first
  * (title, when, the last editor's icon, an "Other PC" mark) with rename and
- * delete per row, and "Earlier chat of this document" at the bottom when the
+ * delete per row (delete asks once in the row first), and "Earlier chat of
+ * this document" at the bottom when the
  * document has one. The search field drives ↑/↓/Home/End/Enter/Esc. Every
  * action is a callback; nothing here reads or writes chats.
  */
@@ -80,18 +81,22 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const [renaming, setRenaming] = useState<{ id: ProjectId; draft: string } | null>(null)
+  /** the row asking "move this chat to the trash?" */
+  const [confirming, setConfirming] = useState<ProjectId | null>(null)
   const [openedAt, setOpenedAt] = useState(() => Date.now())
   const [popStyle, setPopStyle] = useState<React.CSSProperties>({})
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const popRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const renameRef = useRef<HTMLInputElement | null>(null)
+  const confirmRef = useRef<HTMLButtonElement | null>(null)
   const listId = `ai-project-chats-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`
 
   const items = useMemo(() => projectChatMenuItems(chats, query, legacy), [chats, query, legacy])
   const close = useCallback(() => {
     setOpen(false)
     setRenaming(null)
+    setConfirming(null)
   }, [])
   useDismissablePopover(open, close, { inside: () => [buttonRef.current, popRef.current] })
 
@@ -99,8 +104,11 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
   const now = props.now ?? openedAt
 
   useEffect(() => {
-    if (open && !renaming) inputRef.current?.focus()
-  }, [open, renaming])
+    if (open && !renaming && !confirming) inputRef.current?.focus()
+  }, [open, renaming, confirming])
+  useEffect(() => {
+    if (confirming) confirmRef.current?.focus()
+  }, [confirming])
   const renamingId = renaming?.id
   useEffect(() => {
     if (renamingId) renameRef.current?.select()
@@ -126,6 +134,7 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
     }
     setQuery('')
     setRenaming(null)
+    setConfirming(null)
     setOpenedAt(Date.now())
     setActive(initialIndex(projectChatMenuItems(chats, '', legacy), currentChatId, legacyActive))
     setOpen(true)
@@ -186,10 +195,57 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
     onMouseEnter: () => setActive(index),
   })
 
+  const confirmRow = (chat: ProjectChatListItem, index: number, title: string) => (
+    <div
+      key={chat.id}
+      {...optionProps(index)}
+      className={`ai-project-row ai-project-chat-row is-confirming${
+        index === current ? ' is-active' : ''
+      }`}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') return
+        e.preventDefault()
+        e.stopPropagation()
+        setConfirming(null)
+      }}
+    >
+      <span className="ai-project-row-main">
+        <span className="ai-project-confirm-text" dir="auto">
+          {projectPanelText(lang, 'deleteConfirm', { title })}
+        </span>
+        <span className="ai-project-confirm-actions">
+          <button
+            ref={confirmRef}
+            type="button"
+            className="ai-project-link ai-project-confirm-delete"
+            onClick={(e) => {
+              e.stopPropagation()
+              setConfirming(null)
+              props.onDelete(chat.id)
+            }}
+          >
+            {projectPanelText(lang, 'deleteChat')}
+          </button>
+          <button
+            type="button"
+            className="ai-project-link"
+            onClick={(e) => {
+              e.stopPropagation()
+              setConfirming(null)
+            }}
+          >
+            {projectPanelText(lang, 'cancel')}
+          </button>
+        </span>
+      </span>
+    </div>
+  )
+
   const chatRow = (chat: ProjectChatListItem, index: number) => {
     const chosen = !legacyActive && chat.id === currentChatId
     const editing = renaming?.id === chat.id
     const title = chat.title.trim() || projectPanelText(lang, 'untitledChat')
+    if (confirming === chat.id) return confirmRow(chat, index, title)
     const editorLabel = projectEditorLabel(lang, chat.lastEditor)
     const classes = [
       'ai-project-row',
@@ -275,6 +331,7 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 e.stopPropagation()
+                setConfirming(null)
                 setRenaming({ id: chat.id, draft: chat.title })
               }}
             >
@@ -289,7 +346,8 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 e.stopPropagation()
-                props.onDelete(chat.id)
+                setRenaming(null)
+                setConfirming(chat.id)
               }}
             >
               <IconTrash size={14} />

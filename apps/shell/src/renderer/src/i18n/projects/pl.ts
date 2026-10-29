@@ -8,17 +8,6 @@ export const pl = {
   newNameLabel: 'Nazwa nowego projektu',
   create: 'Utwórz',
   cancel: 'Anuluj',
-  createExists: 'Folder o tej nazwie już istnieje, więc niczego nie utworzono: {path}',
-  createInvalidName: 'Tej nazwy nie można użyć dla folderu. Wpisz inną nazwę.',
-  createUnwritable: 'Nie udało się utworzyć folderu. Spróbuj utworzyć go w innym miejscu.',
-  refusedDriveRoot: 'Cały dysk nie może być projektem. Wybierz folder na nim.',
-  refusedUserHome: 'Cały folder użytkownika nie może być projektem. Wybierz folder w nim.',
-  refusedProtected:
-    'Ten folder jest używany przez aplikację lub program AI, więc nie może być projektem.',
-  refusedContainsProtected:
-    'Ten folder zawiera folder używany przez aplikację lub program AI, więc nie może być projektem.',
-  refusedNotFolder: 'Nie można odczytać tego folderu.',
-  refusedDifferentProject: 'Ten folder należy do innego projektu, więc niczego nie zmieniono.',
   backToList: 'Wszystkie projekty',
   projectNameLabel: 'Nazwa projektu',
   saveName: 'Zapisz nazwę',
@@ -91,7 +80,6 @@ export const pl = {
   restoreAria: 'Cofnij: {name}',
   chatsDesc:
     'Czaty w tym projekcie. Kliknij, aby kontynuować czat w panelu AI dokumentu, w którym był ostatnio używany.',
-  deleteConfirm: 'Przenieść czat „{title}” do kosza?',
   actionFailed: 'Nie udało się. Spróbuj ponownie.',
   loadFailed: 'Nie udało się odczytać projektu.',
 } satisfies Record<keyof typeof zh, string>

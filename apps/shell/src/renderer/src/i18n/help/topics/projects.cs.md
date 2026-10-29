@@ -13,7 +13,7 @@ Projekt je jedna složka ve vašem počítači. Když v panelu AI vyberete proje
 
 ## Nový projekt a přidání složky
 
-- **Nový projekt**: zadejte název a ve výchozí složce pro ukládání vznikne složka s tímto názvem (zpočátku je to `Dokumenty\GenOffice`, změnit ji lze v Nastavení). Tlačítkem **Jinam…** zvolíte jiné umístění. Pokud složka s tímto názvem už existuje, aplikace se zeptá, zda ji použít jako projekt.
+- **Nový projekt**: zadejte název a ve výchozí složce pro ukládání vznikne složka s tímto názvem (zpočátku je to `Dokumenty\GenOffice`, změnit ji lze v Nastavení). Tlačítkem **Vytvořit jinde…** zvolíte jiné umístění. Pokud složka s tímto názvem už existuje, aplikace se zeptá, zda ji použít jako projekt.
 - **Přidat složku**: jako projekt poslouží složka, kterou už máte, i se všemi podsložkami. Nelze vybrat celý disk, celou uživatelskou složku ani složky s přihlašovacími údaji nebo s daty aplikace.
 - Když otevřete dokument ze složky projektu, který ve vašem seznamu není, objeví se pod vstupním polem „Tento dokument je ve složce projektu ‚…‘“ a tlačítko **Použít**. Kliknutí na něj má stejný účinek jako Přidat složku.
 - Pokud složka, kterou jste od někoho dostali, už obsahuje pokyny nebo paměť, soubory `AGENTS.md` či `CLAUDE.md` nebo konverzace z jiného počítače, aplikace vám je jednou ukáže a zeptá se. **Použít** převezme vše. **Použít bez pokynů** tyto pokyny a tuto paměť AI neposílá, skryje konverzace z jiných počítačů a do paměti nic nepřidává; čtení souborů funguje dál. Na stránce projektu můžete později přepnout na **Použít**. Když dotaz zavřete bez volby, složka se nepřidá.

@@ -70,4 +70,24 @@ export const id = {
   toolSummaryNoName: 'Alat dijalankan {count} kali di {editor}',
   toolSummaryNoNameOne: 'Alat dijalankan sekali di {editor}',
   dismiss: 'Tutup',
+  createExists: 'Sudah ada folder dengan nama itu, jadi tidak ada yang dibuat: {path}',
+  createInvalidName: 'Nama itu tidak bisa dipakai untuk folder. Masukkan nama lain.',
+  createUnwritable: 'Folder tidak dapat dibuat. Coba buat di tempat lain.',
+  refusedDriveRoot: 'Seluruh drive tidak bisa menjadi proyek. Pilih folder di dalamnya.',
+  refusedUserHome: 'Seluruh folder pengguna tidak bisa menjadi proyek. Pilih folder di dalamnya.',
+  refusedProtected:
+    'Folder ini dipakai oleh aplikasi atau program AI, jadi tidak bisa menjadi proyek.',
+  refusedContainsProtected:
+    'Folder ini berisi folder yang dipakai oleh aplikasi atau program AI, jadi tidak bisa menjadi proyek.',
+  refusedNotFolder: 'Folder ini tidak dapat dibaca.',
+  refusedDifferentProject: 'Folder itu milik proyek lain, jadi tidak ada yang diubah.',
+  deleteConfirm: 'Pindahkan obrolan “{title}” ke tempat sampah?',
+  cancel: 'Batal',
+  actionFailed: 'Tidak berhasil. Silakan coba lagi.',
+  consolidateFailed: 'Tidak dapat merapikan. Memori tidak berubah.',
+  contextMissing:
+    'Folder proyek tidak ditemukan, jadi permintaan ini dikirim tanpa konteks proyek.',
+  contextUnknown:
+    'Proyek tidak lagi ada di daftar, jadi permintaan ini dikirim tanpa konteks proyek.',
+  contextFailed: 'Konteks proyek tidak dapat dibaca, jadi permintaan ini dikirim tanpanya.',
 } satisfies Record<keyof typeof zh, string>

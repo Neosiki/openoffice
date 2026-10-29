@@ -8,16 +8,6 @@ export const he = {
   newNameLabel: 'שם הפרויקט החדש',
   create: 'יצירה',
   cancel: 'ביטול',
-  createExists: 'כבר קיימת תיקייה בשם הזה, ולכן לא נוצר דבר: {path}',
-  createInvalidName: 'אי אפשר להשתמש בשם הזה לתיקייה. הזינו שם אחר.',
-  createUnwritable: 'לא ניתן היה ליצור את התיקייה. נסו ליצור אותה במקום אחר.',
-  refusedDriveRoot: 'כונן שלם לא יכול להיות פרויקט. בחרו תיקייה בתוכו.',
-  refusedUserHome: 'תיקיית המשתמש כולה לא יכולה להיות פרויקט. בחרו תיקייה בתוכה.',
-  refusedProtected: 'התיקייה משמשת את האפליקציה או תוכנת AI, ולכן היא לא יכולה להיות פרויקט.',
-  refusedContainsProtected:
-    'בתיקייה יש תיקייה שמשמשת את האפליקציה או תוכנת AI, ולכן היא לא יכולה להיות פרויקט.',
-  refusedNotFolder: 'לא ניתן לקרוא את התיקייה.',
-  refusedDifferentProject: 'התיקייה שייכת לפרויקט אחר, ולכן לא שונה דבר.',
   backToList: 'כל הפרויקטים',
   projectNameLabel: 'שם הפרויקט',
   saveName: 'שמירת השם',
@@ -83,7 +73,6 @@ export const he = {
   restoreAria: 'ביטול: {name}',
   chatsDesc:
     'השיחות בפרויקט. לחצו על שיחה כדי להמשיך אותה בחלונית ה-AI של המסמך שבו נעשה בה שימוש לאחרונה.',
-  deleteConfirm: 'להעביר את השיחה „{title}” לסל המחזור?',
   actionFailed: 'זה לא הצליח. נסו שוב.',
   loadFailed: 'לא ניתן היה לקרוא את הפרויקט.',
 } satisfies Record<keyof typeof zh, string>

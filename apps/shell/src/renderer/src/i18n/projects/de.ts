@@ -9,22 +9,6 @@ export const de = {
   newNameLabel: 'Name des neuen Projekts',
   create: 'Erstellen',
   cancel: 'Abbrechen',
-  createExists:
-    'Ein Ordner mit diesem Namen existiert bereits, daher wurde nichts erstellt: {path}',
-  createInvalidName:
-    'Dieser Name kann nicht als Ordnername verwendet werden. Geben Sie einen anderen Namen ein.',
-  createUnwritable:
-    'Der Ordner konnte nicht erstellt werden. Versuchen Sie es an einem anderen Ort.',
-  refusedDriveRoot: 'Ein ganzes Laufwerk kann kein Projekt sein. Wählen Sie einen Ordner darin.',
-  refusedUserHome:
-    'Ihr ganzer Benutzerordner kann kein Projekt sein. Wählen Sie einen Ordner darin.',
-  refusedProtected:
-    'Diesen Ordner nutzt die App oder ein KI-Programm, daher kann er kein Projekt sein.',
-  refusedContainsProtected:
-    'Dieser Ordner enthält einen Ordner, den die App oder ein KI-Programm nutzt, daher kann er kein Projekt sein.',
-  refusedNotFolder: 'Dieser Ordner kann nicht gelesen werden.',
-  refusedDifferentProject:
-    'Dieser Ordner gehört zu einem anderen Projekt, daher wurde nichts geändert.',
   backToList: 'Alle Projekte',
   projectNameLabel: 'Projektname',
   saveName: 'Namen speichern',
@@ -99,7 +83,6 @@ export const de = {
   restoreAria: 'Rückgängig: {name}',
   chatsDesc:
     'Chats in diesem Projekt. Klicken Sie, um einen im KI-Bereich des zuletzt genutzten Dokuments fortzusetzen.',
-  deleteConfirm: 'Den Chat „{title}“ in den Papierkorb verschieben?',
   actionFailed: 'Das hat nicht geklappt. Bitte versuchen Sie es erneut.',
   loadFailed: 'Das Projekt konnte nicht gelesen werden.',
 } satisfies Record<keyof typeof zh, string>

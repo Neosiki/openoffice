@@ -72,4 +72,30 @@ export const de = {
   toolSummaryNoName: 'Werkzeuge {count}-mal in {editor} ausgeführt',
   toolSummaryNoNameOne: 'Werkzeug einmal in {editor} ausgeführt',
   dismiss: 'Schließen',
+  createExists:
+    'Ein Ordner mit diesem Namen existiert bereits, daher wurde nichts erstellt: {path}',
+  createInvalidName:
+    'Dieser Name kann nicht als Ordnername verwendet werden. Geben Sie einen anderen Namen ein.',
+  createUnwritable:
+    'Der Ordner konnte nicht erstellt werden. Versuchen Sie es an einem anderen Ort.',
+  refusedDriveRoot: 'Ein ganzes Laufwerk kann kein Projekt sein. Wählen Sie einen Ordner darin.',
+  refusedUserHome:
+    'Ihr ganzer Benutzerordner kann kein Projekt sein. Wählen Sie einen Ordner darin.',
+  refusedProtected:
+    'Diesen Ordner nutzt die App oder ein KI-Programm, daher kann er kein Projekt sein.',
+  refusedContainsProtected:
+    'Dieser Ordner enthält einen Ordner, den die App oder ein KI-Programm nutzt, daher kann er kein Projekt sein.',
+  refusedNotFolder: 'Dieser Ordner kann nicht gelesen werden.',
+  refusedDifferentProject:
+    'Dieser Ordner gehört zu einem anderen Projekt, daher wurde nichts geändert.',
+  deleteConfirm: 'Den Chat „{title}“ in den Papierkorb verschieben?',
+  cancel: 'Abbrechen',
+  actionFailed: 'Das hat nicht geklappt. Bitte versuchen Sie es erneut.',
+  consolidateFailed: 'Aufräumen nicht möglich. Die Erinnerungen sind unverändert.',
+  contextMissing:
+    'Der Projektordner wurde nicht gefunden, daher ging diese Anfrage ohne den Projektkontext hinaus.',
+  contextUnknown:
+    'Das Projekt steht nicht mehr in der Liste, daher ging diese Anfrage ohne den Projektkontext hinaus.',
+  contextFailed:
+    'Der Projektkontext konnte nicht gelesen werden, daher ging diese Anfrage ohne ihn hinaus.',
 } satisfies Record<keyof typeof zh, string>

@@ -72,4 +72,26 @@ export const fr = {
   toolSummaryNoName: 'Outils exécutés {count} fois dans {editor}',
   toolSummaryNoNameOne: 'Outil exécuté une fois dans {editor}',
   dismiss: 'Fermer',
+  createExists: 'Un dossier de ce nom existe déjà, rien n’a été créé : {path}',
+  createInvalidName: 'Ce nom ne peut pas servir de nom de dossier. Saisissez un autre nom.',
+  createUnwritable: 'Impossible de créer le dossier. Essayez de le créer ailleurs.',
+  refusedDriveRoot:
+    'Un lecteur entier ne peut pas être un projet. Choisissez un dossier à l’intérieur.',
+  refusedUserHome:
+    'Votre dossier utilisateur entier ne peut pas être un projet. Choisissez un dossier à l’intérieur.',
+  refusedProtected:
+    'Ce dossier est utilisé par l’application ou un programme d’IA, il ne peut pas être un projet.',
+  refusedContainsProtected:
+    'Ce dossier contient un dossier utilisé par l’application ou un programme d’IA, il ne peut pas être un projet.',
+  refusedNotFolder: 'Impossible de lire ce dossier.',
+  refusedDifferentProject: 'Ce dossier appartient à un autre projet, rien n’a été modifié.',
+  deleteConfirm: 'Mettre la conversation « {title} » à la corbeille ?',
+  cancel: 'Annuler',
+  actionFailed: 'Cela n’a pas fonctionné. Veuillez réessayer.',
+  consolidateFailed: 'Mise en ordre impossible. La mémoire est inchangée.',
+  contextMissing:
+    'Le dossier du projet est introuvable : cette demande est partie sans le contexte du projet.',
+  contextUnknown:
+    'Le projet n’est plus dans la liste : cette demande est partie sans le contexte du projet.',
+  contextFailed: 'Le contexte du projet n’a pas pu être lu : cette demande est partie sans lui.',
 } satisfies Record<keyof typeof zh, string>

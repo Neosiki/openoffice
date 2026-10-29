@@ -70,4 +70,23 @@ export const pl = {
   toolSummaryNoName: '{editor} – uruchomienia narzędzi: {count}',
   toolSummaryNoNameOne: '{editor} – jedno uruchomienie narzędzia',
   dismiss: 'Zamknij',
+  createExists: 'Folder o tej nazwie już istnieje, więc niczego nie utworzono: {path}',
+  createInvalidName: 'Tej nazwy nie można użyć dla folderu. Wpisz inną nazwę.',
+  createUnwritable: 'Nie udało się utworzyć folderu. Spróbuj utworzyć go w innym miejscu.',
+  refusedDriveRoot: 'Cały dysk nie może być projektem. Wybierz folder na nim.',
+  refusedUserHome: 'Cały folder użytkownika nie może być projektem. Wybierz folder w nim.',
+  refusedProtected:
+    'Ten folder jest używany przez aplikację lub program AI, więc nie może być projektem.',
+  refusedContainsProtected:
+    'Ten folder zawiera folder używany przez aplikację lub program AI, więc nie może być projektem.',
+  refusedNotFolder: 'Nie można odczytać tego folderu.',
+  refusedDifferentProject: 'Ten folder należy do innego projektu, więc niczego nie zmieniono.',
+  deleteConfirm: 'Przenieść czat „{title}” do kosza?',
+  cancel: 'Anuluj',
+  actionFailed: 'Nie udało się. Spróbuj ponownie.',
+  consolidateFailed: 'Nie udało się uporządkować. Pamięć bez zmian.',
+  contextMissing:
+    'Nie znaleziono folderu projektu, więc to żądanie wysłano bez kontekstu projektu.',
+  contextUnknown: 'Projektu nie ma już na liście, więc to żądanie wysłano bez kontekstu projektu.',
+  contextFailed: 'Nie udało się odczytać kontekstu projektu, więc to żądanie wysłano bez niego.',
 } satisfies Record<keyof typeof zh, string>

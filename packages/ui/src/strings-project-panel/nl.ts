@@ -72,4 +72,23 @@ export const nl = {
   toolSummaryNoName: 'Hulpmiddelen {count} keer uitgevoerd in {editor}',
   toolSummaryNoNameOne: 'Hulpmiddel één keer uitgevoerd in {editor}',
   dismiss: 'Sluiten',
+  createExists: 'Er bestaat al een map met die naam, dus er is niets gemaakt: {path}',
+  createInvalidName: 'Die naam kan niet voor een map worden gebruikt. Voer een andere naam in.',
+  createUnwritable: 'De map kon niet worden gemaakt. Probeer hem ergens anders te maken.',
+  refusedDriveRoot: 'Een heel station kan geen project zijn. Kies een map daarbinnen.',
+  refusedUserHome: 'Je hele gebruikersmap kan geen project zijn. Kies een map daarbinnen.',
+  refusedProtected:
+    'Deze map wordt gebruikt door de app of een AI-programma en kan dus geen project zijn.',
+  refusedContainsProtected:
+    'Deze map bevat een map die de app of een AI-programma gebruikt en kan dus geen project zijn.',
+  refusedNotFolder: 'Deze map kan niet worden gelezen.',
+  refusedDifferentProject: 'Die map hoort bij een ander project, dus er is niets gewijzigd.',
+  deleteConfirm: 'De chat ‘{title}’ naar de prullenbak verplaatsen?',
+  cancel: 'Annuleren',
+  actionFailed: 'Dat lukte niet. Probeer het opnieuw.',
+  consolidateFailed: 'Opruimen lukte niet. Het geheugen is ongewijzigd.',
+  contextMissing: 'De projectmap is niet gevonden, dus dit verzoek ging zonder de projectcontext.',
+  contextUnknown:
+    'Het project staat niet meer in de lijst, dus dit verzoek ging zonder de projectcontext.',
+  contextFailed: 'De projectcontext kon niet worden gelezen, dus dit verzoek ging zonder.',
 } satisfies Record<keyof typeof zh, string>

@@ -13,7 +13,7 @@ Un proyecto es una carpeta de tu PC. Si eliges un proyecto en un panel de IA, la
 
 ## Nuevo proyecto y Añadir carpeta
 
-- **Nuevo proyecto**: escribe un nombre y se crea una carpeta con ese nombre en tu carpeta de guardado predeterminada (al principio `Documentos\GenOffice`; puedes cambiarla en Configuración). Con **En otro lugar…** eliges otra ubicación. Si ya existe una carpeta con ese nombre, se te pregunta si quieres usarla como proyecto.
+- **Nuevo proyecto**: escribe un nombre y se crea una carpeta con ese nombre en tu carpeta de guardado predeterminada (al principio `Documentos\GenOffice`; puedes cambiarla en Configuración). Con **Crear en otro lugar…** eliges otra ubicación. Si ya existe una carpeta con ese nombre, se te pregunta si quieres usarla como proyecto.
 - **Añadir carpeta**: usa una carpeta que ya tienes. Sus subcarpetas también cuentan. No se puede elegir una unidad entera, tu carpeta de usuario completa ni carpetas que guardan datos de inicio de sesión o los datos de la app.
 - Si abres un documento que está dentro de la carpeta de un proyecto que no figura en tu lista, debajo del campo de entrada aparece «Este documento está en la carpeta del proyecto "…"» con un botón **Usar**. Pulsarlo equivale a Añadir carpeta.
 - Cuando una carpeta que te ha pasado otra persona ya trae instrucciones o memoria, `AGENTS.md` o `CLAUDE.md`, o chats escritos en otro PC, la app te los muestra una vez y te pregunta. **Usar** lo aprovecha todo. **Usar sin instrucciones** no deja que esas instrucciones ni esa memoria lleguen a la IA, oculta los chats de otros PC y deja de añadir memoria; la lectura de archivos sigue funcionando. Más adelante puedes pasar a **Usar** en la página del proyecto. Si cierras la pregunta sin elegir, la carpeta no se añade.

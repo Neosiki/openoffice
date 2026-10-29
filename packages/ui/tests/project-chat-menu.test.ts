@@ -177,13 +177,40 @@ describe('ProjectChatMenu', () => {
     expect(search()).not.toBeNull()
   })
 
-  it('deletes a chat without opening it', () => {
+  it('deletes a chat only after the row asks, without opening it', () => {
     const props = render()
     act(() => button().click())
-    const notes = rows().find((r) => r.textContent?.includes('Notes'))!
-    act(() => notes.querySelector<HTMLButtonElement>('[aria-label="Delete"]')!.click())
+    const notes = () => rows().find((r) => r.textContent?.includes('Notes'))!
+    act(() => notes().querySelector<HTMLButtonElement>('[aria-label="Delete"]')!.click())
+    // the row asks first; nothing is deleted yet
+    expect(props.onDelete).not.toHaveBeenCalled()
+    expect(notes().textContent).toContain('Notes')
+    const confirm = notes().querySelector<HTMLButtonElement>('.ai-project-confirm-delete')!
+    expect(document.activeElement).toBe(confirm)
+    act(() => confirm.click())
     expect(props.onDelete).toHaveBeenCalledWith('c')
     expect(props.onSelect).not.toHaveBeenCalled()
+    // the menu stays open, the row is back to normal
+    expect(host.querySelector('.ai-project-confirm-delete')).toBeNull()
+    expect(search()).not.toBeNull()
+  })
+
+  it('keeps the chat when the ask is cancelled or Esc is pressed', () => {
+    const props = render()
+    act(() => button().click())
+    const outline = () => rows().find((r) => r.textContent?.includes('Outline'))!
+    act(() => outline().querySelector<HTMLButtonElement>('[aria-label="Delete"]')!.click())
+    const cancel = [...outline().querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent === 'Cancel',
+    )!
+    act(() => cancel.click())
+    expect(host.querySelector('.ai-project-confirm-delete')).toBeNull()
+    act(() => outline().querySelector<HTMLButtonElement>('[aria-label="Delete"]')!.click())
+    key(host.querySelector('.ai-project-confirm-delete')!, 'Escape')
+    expect(host.querySelector('.ai-project-confirm-delete')).toBeNull()
+    // Esc on the ask closes the ask, not the menu
+    expect(search()).not.toBeNull()
+    expect(props.onDelete).not.toHaveBeenCalled()
   })
 
   it('closes on Esc', () => {

@@ -7,8 +7,8 @@ import type { Lang, Params } from '@genoffice/i18n'
 import type {
   AddFolderResult,
   CreateProjectResult,
-  FolderRefusalReason,
   ProjectChatListItem,
+  ProjectChatRef,
   ProjectDetail,
   ProjectFileEntry,
   ProjectFolderApi,
@@ -21,6 +21,8 @@ import {
   aiRunErrorText,
   aiSendGate,
   consolidateProjectMemory,
+  ProjectProblemLine,
+  projectAddProblem,
   projectConsolidatedText,
   projectEditorLabel,
   projectFullTime,
@@ -31,6 +33,7 @@ import {
   type ConsolidateProjectMemoryOptions,
   type ConsolidateProjectMemoryResult,
   type ProjectPanelStringKey,
+  type ProjectProblem,
 } from '@genoffice/ui'
 import { useI18n } from './locale'
 import { projectsText, type ProjectsStringKey } from './i18n/strings-projects'
@@ -83,15 +86,6 @@ const TAB_KEY: Record<Tab, ProjectsStringKey> = {
   memory: 'tabMemory',
   files: 'tabFiles',
   chats: 'tabChats',
-}
-
-const REFUSAL_KEY: Record<FolderRefusalReason, ProjectsStringKey> = {
-  'drive-root': 'refusedDriveRoot',
-  'user-home': 'refusedUserHome',
-  protected: 'refusedProtected',
-  'contains-protected': 'refusedContainsProtected',
-  'not-a-folder': 'refusedNotFolder',
-  'different-project': 'refusedDifferentProject',
 }
 
 /** Files read per page of the file list ("more" reads the next page) */
@@ -152,8 +146,8 @@ export interface ProjectsPanelProps {
   /** show the first-connection notice (a consolidation waits behind it) */
   onNoticeNeeded?: () => void
   onOpenAiSettings: () => void
-  /** a chat last used at home was opened: show the home ask panel, which opens it */
-  onOpenHomeAsk: () => void
+  /** main handed a chat to this home window (a home chat, or no document to open it in): show the ask panel with it */
+  onOpenHomeAsk: (chat: ProjectChatRef) => void
   /** the settings a consolidation runs with, read fresh at the click; tests inject one */
   readSettings?: () => Promise<AiSettings>
   /** the transport a consolidation runs on; tests inject one */
@@ -174,6 +168,8 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
     seq: 0,
   })
   const [note, setNote] = useState<Note | null>(null)
+  /** a folder refused or a project not made, and why (spec 5.1) */
+  const [problem, setProblem] = useState<ProjectProblem | null>(null)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [parentFolder, setParentFolder] = useState('')
@@ -209,12 +205,14 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
 
   const openProject = (id: ProjectId) => {
     setNote(null)
+    setProblem(null)
     setOpenId(id)
     setTabRequest((prev) => ({ tab: 'instructions', seq: prev.seq + 1 }))
   }
 
   /** what an add-folder style result does on the list screen */
   const afterAdd = async (result: AddFolderResult | CreateProjectResult): Promise<void> => {
+    setProblem(projectAddProblem(result))
     switch (result.status) {
       case 'added':
         await refresh()
@@ -226,24 +224,8 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
         await refresh()
         openProject(result.project.id)
         return
-      case 'cancelled':
-        return
-      case 'refused':
-        setNote({ from: 'screen', key: REFUSAL_KEY[result.reason], tone: 'warning' })
-        return
-      case 'exists':
-        setNote({
-          from: 'screen',
-          key: 'createExists',
-          params: { path: result.folderPath },
-          tone: 'warning',
-        })
-        return
-      case 'invalid-name':
-        setNote({ from: 'screen', key: 'createInvalidName', tone: 'warning' })
-        return
-      case 'unwritable':
-        setNote({ from: 'screen', key: 'createUnwritable', tone: 'warning' })
+      default:
+        // cancelled says nothing; the rest is the problem line set above
         return
     }
   }
@@ -262,6 +244,7 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
 
   const startCreate = () => {
     setNote(null)
+    setProblem(null)
     setCreating(true)
     if (!bridge) return
     void bridge
@@ -274,6 +257,7 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
     const name = newName.normalize('NFC').trim()
     if (!bridge || !name) return
     setNote(null)
+    setProblem(null)
     void run(async () => {
       await afterAdd(await bridge.createProject(otherPlace ? { name, otherPlace: true } : { name }))
     })
@@ -282,12 +266,14 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
   const addFolder = () => {
     if (!bridge) return
     setNote(null)
+    setProblem(null)
     void run(async () => afterAdd(await bridge.addFolder()))
   }
 
   const relocate = (id: ProjectId) => {
     if (!bridge) return
     setNote(null)
+    setProblem(null)
     void run(async () => afterAdd(await bridge.relocateProject({ projectId: id })))
   }
 
@@ -315,9 +301,14 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
 
   if (!bridge) return <main className="content projects-panel" />
 
+  const problemLine = problem && (
+    <ProjectProblemLine lang={lang} problem={problem} onDismiss={() => setProblem(null)} />
+  )
+
   if (openId) {
     return (
       <main className="content projects-panel">
+        {problemLine}
         <ProjectDetailView
           key={openId}
           bridge={bridge}
@@ -457,6 +448,7 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
         </form>
       )}
       {note && <NoteLine lang={lang} note={note} />}
+      {problemLine}
       {projects !== null && rows.length === 0 && <p className="projects-empty">{s('emptyHint')}</p>}
       {pinnedRows.length > 0 && (
         <section className="projects-group" aria-label={p('groupPinned')}>
@@ -504,7 +496,7 @@ interface DetailProps {
   noticeDue: boolean
   onNoticeNeeded: (() => void) | undefined
   onOpenAiSettings: () => void
-  onOpenHomeAsk: () => void
+  onOpenHomeAsk: (chat: ProjectChatRef) => void
   readSettings: (() => Promise<AiSettings>) | undefined
   createTransport: ((getSettings: () => AiSettings, lang: () => Lang) => AgentTransport) | undefined
   consolidate:
@@ -787,12 +779,25 @@ function ProjectDetailView(props: DetailProps) {
   }
 
   const openChat = async (chat: ProjectChatListItem) => {
+    const ref: ProjectChatRef = { projectId, chatId: chat.id }
+    // Main opens the chat in its latest document's editor, or hands it to this
+    // home window (a home chat, no document, one that cannot be opened). That
+    // hand-over arrives before the call returns while this window listens.
+    let handedHere = false
+    const stop =
+      typeof bridge.onOpenChat === 'function'
+        ? bridge.onOpenChat((event) => {
+            if (event.projectId === ref.projectId && event.chatId === ref.chatId) handedHere = true
+          })
+        : () => undefined
     try {
-      await bridge.openDocumentChat({ projectId, chatId: chat.id })
-      // main hands a home chat to the ask panel, which picks it up once shown
-      if (chat.lastEditor === 'home') props.onOpenHomeAsk()
+      await bridge.openDocumentChat(ref)
+      // the ask panel shows the chat; it opens it from the request
+      if (handedHere || chat.lastEditor === 'home') props.onOpenHomeAsk(ref)
     } catch {
       setListNote({ from: 'screen', key: 'actionFailed', tone: 'warning' })
+    } finally {
+      stop()
     }
   }
 
@@ -1332,7 +1337,7 @@ function ProjectDetailView(props: DetailProps) {
               if (event.key === 'Escape') setConfirmDelete(null)
             }}
           >
-            <p>{s('deleteConfirm', { title: chatTitle(confirmDelete) })}</p>
+            <p>{p('deleteConfirm', { title: chatTitle(confirmDelete) })}</p>
             <div className="modal-buttons">
               <button
                 type="button"

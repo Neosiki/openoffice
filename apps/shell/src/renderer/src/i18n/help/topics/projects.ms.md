@@ -13,7 +13,7 @@ Projek ialah satu folder pada PC anda. Pilih projek dalam panel AI dan AI akan b
 
 ## Projek baharu dan Tambah folder
 
-- **Projek baharu**: taip nama, dan folder dengan nama itu dicipta dalam folder simpanan lalai anda (pada mulanya `Dokumen\GenOffice`; boleh ditukar dalam Tetapan). **Tempat lain…** membolehkan anda memilih lokasi lain. Jika folder dengan nama itu sudah wujud, anda akan ditanya sama ada hendak menggunakannya sebagai projek.
+- **Projek baharu**: taip nama, dan folder dengan nama itu dicipta dalam folder simpanan lalai anda (pada mulanya `Dokumen\GenOffice`; boleh ditukar dalam Tetapan). **Cipta di tempat lain…** membolehkan anda memilih lokasi lain. Jika folder dengan nama itu sudah wujud, anda akan ditanya sama ada hendak menggunakannya sebagai projek.
 - **Tambah folder**: gunakan folder yang sudah anda ada. Subfoldernya turut disertakan. Keseluruhan pemacu, keseluruhan folder pengguna anda, dan folder yang menyimpan data log masuk atau data aplikasi tidak boleh dipilih.
 - Jika anda membuka dokumen dalam folder projek yang tiada dalam senarai, "Dokumen ini berada dalam folder projek '…'" dipaparkan di bawah kotak input bersama butang **Guna**. Mengkliknya sama seperti Tambah folder.
 - Jika folder yang anda terima daripada orang lain sudah mengandungi arahan atau ingatan, `AGENTS.md` atau `CLAUDE.md`, atau perbualan yang ditulis pada PC lain, aplikasi akan memaparkannya sekali dan bertanya. **Guna** menggunakan kesemuanya. **Guna tanpa arahan** menjauhkan arahan dan ingatan itu daripada AI, menyembunyikan perbualan dari PC lain dan berhenti menambah ingatan; membaca fail masih berfungsi. Anda boleh bertukar kepada **Guna** kemudian di halaman projek. Menutup soalan itu tanpa memilih bermakna folder itu tidak ditambah.

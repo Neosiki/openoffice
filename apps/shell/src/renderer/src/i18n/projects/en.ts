@@ -8,16 +8,6 @@ export const en = {
   newNameLabel: 'New project name',
   create: 'Create',
   cancel: 'Cancel',
-  createExists: 'A folder with that name already exists, so nothing was created: {path}',
-  createInvalidName: 'That name cannot be used for a folder. Enter another name.',
-  createUnwritable: 'The folder could not be created. Try creating it somewhere else.',
-  refusedDriveRoot: 'A whole drive cannot be a project. Choose a folder inside it.',
-  refusedUserHome: 'Your whole user folder cannot be a project. Choose a folder inside it.',
-  refusedProtected: 'This folder is used by the app or an AI program, so it cannot be a project.',
-  refusedContainsProtected:
-    'This folder holds a folder used by the app or an AI program, so it cannot be a project.',
-  refusedNotFolder: 'This folder cannot be read.',
-  refusedDifferentProject: 'That folder belongs to another project, so nothing was changed.',
   backToList: 'All projects',
   projectNameLabel: 'Project name',
   saveName: 'Save name',
@@ -88,7 +78,6 @@ export const en = {
   restoreAria: 'Undo: {name}',
   chatsDesc:
     'Chats in this project. Click one to continue it in the AI panel of the document it was last used in.',
-  deleteConfirm: 'Move the chat “{title}” to the trash?',
   actionFailed: 'That did not work. Please try again.',
   loadFailed: 'The project could not be read.',
 } satisfies Record<keyof typeof zh, string>

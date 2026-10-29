@@ -13,7 +13,9 @@ import {
   projectMemoryEventText,
   projectNoticeActionLabel,
   projectNoticeView,
+  projectProblemText,
   projectToolSummaryText,
+  type ProjectProblem,
 } from './project-panel-model'
 import { IconClose, IconProjectEditor, IconProjectFolder } from './project-icons'
 import { projectPanelText } from './strings-project-panel'
@@ -76,6 +78,31 @@ export function ProjectNoticeLine({
           {projectNoticeActionLabel(lang, action)}
         </button>
       )}
+      {onDismiss && <DismissButton lang={lang} onDismiss={onDismiss} />}
+    </div>
+  )
+}
+
+/**
+ * A warning line for something the person asked for that did not happen
+ * (spec 5.1): a folder refused and why, a new project not made, a failed
+ * action, a send that went without the project's context. Shared by the
+ * editors' AI panels, the home ask and the home project screen.
+ */
+export function ProjectProblemLine({
+  lang,
+  problem,
+  onDismiss,
+}: {
+  readonly lang: Lang
+  readonly problem: ProjectProblem
+  readonly onDismiss?: (() => void) | undefined
+}): React.JSX.Element {
+  return (
+    <div className="ai-project-notice warning" role="alert" data-problem={problem.kind}>
+      <span className="ai-project-notice-text" dir="auto">
+        {projectProblemText(lang, problem)}
+      </span>
       {onDismiss && <DismissButton lang={lang} onDismiss={onDismiss} />}
     </div>
   )

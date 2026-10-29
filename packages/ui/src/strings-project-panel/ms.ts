@@ -70,4 +70,23 @@ export const ms = {
   toolSummaryNoName: 'Alat dijalankan {count} kali dalam {editor}',
   toolSummaryNoNameOne: 'Alat dijalankan sekali dalam {editor}',
   dismiss: 'Tutup',
+  createExists: 'Folder dengan nama itu sudah wujud, jadi tiada apa-apa dicipta: {path}',
+  createInvalidName: 'Nama itu tidak boleh digunakan untuk folder. Masukkan nama lain.',
+  createUnwritable: 'Folder tidak dapat dicipta. Cuba cipta di tempat lain.',
+  refusedDriveRoot: 'Seluruh pemacu tidak boleh menjadi projek. Pilih folder di dalamnya.',
+  refusedUserHome: 'Seluruh folder pengguna tidak boleh menjadi projek. Pilih folder di dalamnya.',
+  refusedProtected:
+    'Folder ini digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
+  refusedContainsProtected:
+    'Folder ini mengandungi folder yang digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
+  refusedNotFolder: 'Folder ini tidak dapat dibaca.',
+  refusedDifferentProject: 'Folder itu milik projek lain, jadi tiada apa-apa diubah.',
+  deleteConfirm: 'Alihkan sembang “{title}” ke tong sampah?',
+  cancel: 'Batal',
+  actionFailed: 'Tidak berjaya. Sila cuba lagi.',
+  consolidateFailed: 'Tidak dapat mengemas. Memori tidak berubah.',
+  contextMissing: 'Folder projek tidak ditemui, jadi permintaan ini dihantar tanpa konteks projek.',
+  contextUnknown:
+    'Projek ini tiada lagi dalam senarai, jadi permintaan ini dihantar tanpa konteks projek.',
+  contextFailed: 'Konteks projek tidak dapat dibaca, jadi permintaan ini dihantar tanpanya.',
 } satisfies Record<keyof typeof zh, string>

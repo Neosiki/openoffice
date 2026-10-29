@@ -8,17 +8,6 @@ export const nl = {
   newNameLabel: 'Naam van het nieuwe project',
   create: 'Maken',
   cancel: 'Annuleren',
-  createExists: 'Er bestaat al een map met die naam, dus er is niets gemaakt: {path}',
-  createInvalidName: 'Die naam kan niet voor een map worden gebruikt. Voer een andere naam in.',
-  createUnwritable: 'De map kon niet worden gemaakt. Probeer hem ergens anders te maken.',
-  refusedDriveRoot: 'Een heel station kan geen project zijn. Kies een map daarbinnen.',
-  refusedUserHome: 'Je hele gebruikersmap kan geen project zijn. Kies een map daarbinnen.',
-  refusedProtected:
-    'Deze map wordt gebruikt door de app of een AI-programma en kan dus geen project zijn.',
-  refusedContainsProtected:
-    'Deze map bevat een map die de app of een AI-programma gebruikt en kan dus geen project zijn.',
-  refusedNotFolder: 'Deze map kan niet worden gelezen.',
-  refusedDifferentProject: 'Die map hoort bij een ander project, dus er is niets gewijzigd.',
   backToList: 'Alle projecten',
   projectNameLabel: 'Projectnaam',
   saveName: 'Naam opslaan',
@@ -92,7 +81,6 @@ export const nl = {
   restoreAria: 'Ongedaan maken: {name}',
   chatsDesc:
     'Chats in dit project. Klik op een chat om verder te gaan in het AI-paneel van het document waarin hij het laatst werd gebruikt.',
-  deleteConfirm: 'De chat ‘{title}’ naar de prullenbak verplaatsen?',
   actionFailed: 'Dat lukte niet. Probeer het opnieuw.',
   loadFailed: 'Het project kon niet worden gelezen.',
 } satisfies Record<keyof typeof zh, string>

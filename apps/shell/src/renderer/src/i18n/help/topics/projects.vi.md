@@ -13,7 +13,7 @@ Một dự án là một thư mục trên máy tính của bạn. Chọn dự á
 
 ## Dự án mới và Thêm thư mục
 
-- **Dự án mới**: gõ tên, một thư mục mang tên đó sẽ được tạo trong thư mục lưu mặc định của bạn (ban đầu là `Tài liệu\GenOffice`; có thể đổi trong Cài đặt). **Nơi khác…** cho phép chọn một vị trí khác. Nếu đã có thư mục trùng tên, ứng dụng sẽ hỏi bạn có muốn dùng thư mục đó làm dự án không.
+- **Dự án mới**: gõ tên, một thư mục mang tên đó sẽ được tạo trong thư mục lưu mặc định của bạn (ban đầu là `Tài liệu\GenOffice`; có thể đổi trong Cài đặt). **Tạo ở nơi khác…** cho phép chọn một vị trí khác. Nếu đã có thư mục trùng tên, ứng dụng sẽ hỏi bạn có muốn dùng thư mục đó làm dự án không.
 - **Thêm thư mục**: dùng một thư mục bạn đã có. Các thư mục con cũng được tính vào. Không thể chọn cả một ổ đĩa, toàn bộ thư mục người dùng, hay thư mục chứa dữ liệu đăng nhập hoặc dữ liệu của ứng dụng.
 - Khi bạn mở một tài liệu nằm trong một thư mục dự án chưa có trong danh sách, dòng "Tài liệu này nằm trong thư mục dự án '…'" sẽ hiện dưới ô nhập kèm nút **Dùng**. Nhấp vào nút này cũng giống như Thêm thư mục.
 - Khi một thư mục nhận từ người khác đã có sẵn chỉ dẫn hoặc ghi nhớ, `AGENTS.md` hoặc `CLAUDE.md`, hay các cuộc trò chuyện viết trên máy khác, ứng dụng cho bạn xem một lần và hỏi. **Dùng** sẽ dùng tất cả. **Dùng mà không theo chỉ dẫn** không gửi các chỉ dẫn và ghi nhớ đó cho AI, ẩn các cuộc trò chuyện từ máy khác và ngừng thêm ghi nhớ; việc đọc tệp vẫn hoạt động. Về sau bạn có thể chuyển sang **Dùng** trên trang của dự án. Đóng câu hỏi mà không chọn thì thư mục sẽ không được thêm.

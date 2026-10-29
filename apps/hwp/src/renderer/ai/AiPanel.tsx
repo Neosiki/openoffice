@@ -40,6 +40,9 @@ import {
   type ProjectChatEntry,
   type ProjectChatOpened,
   type ProjectMemoryLine,
+  placeRemoteEntries,
+  useProjectPanel,
+  type ProjectPanel,
 } from '@genoffice/ui'
 import { useEffect, useId, useRef, useState } from 'react'
 import type {
@@ -83,7 +86,6 @@ import { createHwpSkill, type HwpChange } from './hwp-skill'
 import { MemoApprovalGate, memoApprovalPreview } from './memo-approval'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
-import { useProjectPanel, type ProjectPanel } from './project-panel'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -648,16 +650,16 @@ export function AiPanel({
     lang,
     busy,
     loop: () => loopRef.current,
-    transport: () => {
+    consolidation: () => {
       // "[Tidy up]" goes the way the gate decided on, like a send would
       const live = sendGateRef.current.settings
       if (live && !loopRef.current?.busy) settingsRef.current = live
-      return transportRef.current
+      const transport = transportRef.current
+      return transport ? { transport, gate: () => sendGateRef.current.peek() } : null
     },
-    gate: () => sendGateRef.current.peek(),
     onOpen: (opened, initial) => openChat(opened, initial),
-    onRemoteMessage: (entry) => {
-      setChat((prev) => [...prev, chatEntryOf(entry)])
+    onRemoteMessages: (entries, running) => {
+      setChat((prev) => placeRemoteEntries(prev, entries.map(chatEntryOf), running))
     },
     onNewChat: () => startNewChat(),
   })
@@ -1251,7 +1253,7 @@ export function AiPanel({
           <AiMark size={22} />
           {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
-        {project.header}
+        {project.chatMenu}
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
@@ -1426,6 +1428,7 @@ export function AiPanel({
         {aiSettings !== null && localModelCapabilities(aiSettings).tools === false && (
           <AiToolsUnsupportedNotice lang={lang} />
         )}
+        {project.hint}
         {project.notices}
       </div>
 
@@ -1525,7 +1528,7 @@ export function AiPanel({
               <DocAttachButton lang={lang} onPicked={attachFromDrive} />
             </>
           }
-          footerBelow={project.footer}
+          footerBelow={project.picker}
           onPasteFiles={(files) => void onPasteFiles(files)}
           sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
           sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}

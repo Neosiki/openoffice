@@ -13,7 +13,7 @@ Een project is één map op je pc. Kies je in een AI-paneel een project, dan wer
 
 ## Nieuw project en Map toevoegen
 
-- **Nieuw project**: typ een naam en er wordt een map met die naam gemaakt in je standaard opslagmap (eerst `Documenten\GenOffice`; dit kun je wijzigen in Instellingen). Met **Elders…** kies je een andere plek. Bestaat er al een map met die naam, dan wordt gevraagd of je die als project wilt gebruiken.
+- **Nieuw project**: typ een naam en er wordt een map met die naam gemaakt in je standaard opslagmap (eerst `Documenten\GenOffice`; dit kun je wijzigen in Instellingen). Met **Ergens anders maken…** kies je een andere plek. Bestaat er al een map met die naam, dan wordt gevraagd of je die als project wilt gebruiken.
 - **Map toevoegen**: gebruik een map die je al hebt. De submappen horen erbij. Een hele schijf, je hele gebruikersmap en mappen met aanmeldgegevens of de gegevens van de app kun je niet kiezen.
 - Open je een document in een projectmap die niet in je lijst staat, dan verschijnt onder het invoerveld 'Dit document staat in de projectmap "…"' met een knop **Gebruiken**. Klikken daarop is hetzelfde als Map toevoegen.
 - Bevat een map die je van iemand anders hebt gekregen al instructies of geheugen, `AGENTS.md` of `CLAUDE.md`, of chats die op een andere pc zijn geschreven, dan laat de app die één keer zien en vraagt wat je wilt. **Gebruiken** neemt alles mee. **Gebruiken zonder instructies** houdt die instructies en dat geheugen weg bij de AI, verbergt chats van andere pc's en voegt geen geheugen meer toe; bestanden lezen werkt nog gewoon. Later kun je op de projectpagina overstappen naar **Gebruiken**. Sluit je de vraag zonder te kiezen, dan wordt de map niet toegevoegd.

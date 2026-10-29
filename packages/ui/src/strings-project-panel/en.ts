@@ -70,4 +70,23 @@ export const en = {
   toolSummaryNoName: 'Ran tools {count} times in {editor}',
   toolSummaryNoNameOne: 'Ran a tool once in {editor}',
   dismiss: 'Dismiss',
+  createExists: 'A folder with that name already exists, so nothing was created: {path}',
+  createInvalidName: 'That name cannot be used for a folder. Enter another name.',
+  createUnwritable: 'The folder could not be created. Try creating it somewhere else.',
+  refusedDriveRoot: 'A whole drive cannot be a project. Choose a folder inside it.',
+  refusedUserHome: 'Your whole user folder cannot be a project. Choose a folder inside it.',
+  refusedProtected: 'This folder is used by the app or an AI program, so it cannot be a project.',
+  refusedContainsProtected:
+    'This folder holds a folder used by the app or an AI program, so it cannot be a project.',
+  refusedNotFolder: 'This folder cannot be read.',
+  refusedDifferentProject: 'That folder belongs to another project, so nothing was changed.',
+  deleteConfirm: 'Move the chat “{title}” to the trash?',
+  cancel: 'Cancel',
+  actionFailed: 'That did not work. Please try again.',
+  consolidateFailed: 'Could not tidy up. The memory is unchanged.',
+  contextMissing:
+    'The project folder could not be found, so this request went without the project’s context.',
+  contextUnknown:
+    'The project is no longer in the list, so this request went without the project’s context.',
+  contextFailed: 'The project’s context could not be read, so this request went without it.',
 } satisfies Record<keyof typeof zh, string>

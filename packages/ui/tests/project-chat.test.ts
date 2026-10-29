@@ -393,6 +393,40 @@ describe('opening a chat on request (project screen, spec 5.12)', () => {
     // no extra empty chat was started on the way
     expect(fake.bridge.newChat).toHaveBeenCalledTimes(1)
   })
+  it('a request that comes before the selection is known waits for it, then opens', async () => {
+    const { controller, fake, opened } = setup({
+      selection: { projectId: null, initialChatId: null },
+      chats: { c9: [chatMessage({ seq: 1 }), chatMessage({ seq: 2, role: 'assistant' })] },
+    })
+    const started = controller.start()
+    // the home project screen handed it over before the window's selection came back
+    controller.openChatRef({ projectId: 'p1', chatId: 'c9' })
+    fake.emitOpenChat({ projectId: 'p1', chatId: 'c9' })
+    await started
+    expect(controller.getState().ready).toBe(true)
+    await vi.waitFor(() =>
+      expect(opened.at(-1)).toMatchObject({ kind: 'project', projectId: 'p1', chatId: 'c9' }),
+    )
+    expect(controller.getState().projectId).toBe('p1')
+  })
+})
+
+describe('a write outside the chat records fails (spec 5.7)', () => {
+  it('marks the chosen project unwritable and drops project_remember', async () => {
+    const { controller } = setup({ selection: P1 })
+    await controller.start()
+    expect(controller.getState().unwritable).toBe(false)
+    controller.markUnwritable()
+    expect(controller.getState().unwritable).toBe(true)
+    expect(controller.run?.unwritable).toBe(true)
+  })
+
+  it('does nothing with no project chosen', async () => {
+    const { controller } = setup()
+    await controller.start()
+    controller.markUnwritable()
+    expect(controller.getState().unwritable).toBe(false)
+  })
 })
 
 describe('the earlier chat of the document (spec 5.3.4)', () => {

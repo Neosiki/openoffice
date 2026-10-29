@@ -215,6 +215,18 @@ export interface ProjectChatController {
   documentSaved(): Promise<void>
   /** "[remove]" on a memory line */
   forgetMemory(line: ProjectMemoryLine): Promise<ProjectMemoryEditResult | null>
+  /**
+   * A write into the chosen project failed outside the chat records (a
+   * consolidation, its undo): chats and memory are not saved from now on and
+   * `project_remember` is left out (spec 5.7).
+   */
+  markUnwritable(): void
+  /**
+   * Open a chat as main's "open this chat" event does (the home project
+   * screen hands one over this way when it caught the event itself). Before
+   * the window's selection is known it waits for it.
+   */
+  openChatRef(ref: ProjectChatRef): void
 }
 
 const DEFAULT_MESSAGE_LIMIT = 200
@@ -288,6 +300,12 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
   /** records are written one after another, in the order they were handed over */
   let writes: Promise<void> = Promise.resolve()
   let unsubscribe: Array<() => void> = []
+  /** `start` read the window's selection (or gave way to a later choice) */
+  let started = false
+  /** bumped by every start and dispose: only the latest start finishes */
+  let startToken = 0
+  /** an "open this chat" that came before the selection was known */
+  let deferredOpen: ProjectChatRef | null = null
 
   const markUnwritable = () => {
     if (!state.unwritable) setState({ unwritable: true })
@@ -456,6 +474,11 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
   }
 
   const onOpenChat = (event: ProjectChatRef) => {
+    // the start's own selection would overwrite it: open it once that is known
+    if (!started) {
+      deferredOpen = event
+      return
+    }
     if (event.projectId === state.projectId) {
       void controller.openChat(event.chatId)
     } else {
@@ -481,13 +504,24 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       for (const off of unsubscribe) off()
       unsubscribe = [bridge.onChatMessageAppended(onAppended), bridge.onOpenChat(onOpenChat)]
       const mine = ++epoch
+      const token = ++startToken
+      started = false
+      const finishStart = () => {
+        if (token !== startToken) return
+        started = true
+        setState({ ready: true })
+        const open = deferredOpen
+        deferredOpen = null
+        if (open) onOpenChat(open)
+      }
       let selection: ProjectSelection
       try {
         selection = await bridge.getSelection()
       } catch {
         selection = { projectId: null, initialChatId: null }
       }
-      if (mine !== epoch) return
+      // a choice made meanwhile wins over the start's selection
+      if (mine !== epoch) return finishStart()
       setState({ projectId: selection.projectId, hint: selection.unregisteredProjectHint ?? null })
       if (selection.projectId) {
         if (selection.initialChatId) {
@@ -496,9 +530,12 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
           await startNewChat(selection.projectId, mine)
         }
       }
-      setState({ ready: true })
+      finishStart()
     },
     dispose() {
+      startToken++
+      started = false
+      deferredOpen = null
       epoch++
       for (const off of unsubscribe) off()
       unsubscribe = []
@@ -633,6 +670,12 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       if (result.status === 'refused' && result.reason === 'unwritable') markUnwritable()
       return result
     },
+    markUnwritable() {
+      if (state.projectId) markUnwritable()
+    },
+    openChatRef(ref) {
+      if (bridge) onOpenChat(ref)
+    },
   }
   return controller
 }
@@ -671,6 +714,8 @@ export function useProjectChat(options: ProjectChatOptions): ProjectChat {
       finishSend: controller.finishSend,
       documentSaved: controller.documentSaved,
       forgetMemory: controller.forgetMemory,
+      markUnwritable: controller.markUnwritable,
+      openChatRef: controller.openChatRef,
     }),
     [controller],
   )

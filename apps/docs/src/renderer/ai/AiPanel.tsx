@@ -35,6 +35,9 @@ import {
   type SkillUse,
   type ProjectChatEntry,
   type ProjectChatOpened,
+  placeRemoteEntries,
+  useProjectPanel,
+  type ProjectPanel,
   type ProjectMemoryLine,
 } from '@genoffice/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -98,7 +101,6 @@ import { currentDocGeneration } from '../file-actions'
 import { createFilesSkill } from './files-skill'
 import { boundChatHistory } from './chat-retention'
 import { createElectronTransport } from './transport'
-import { useProjectPanel, type ProjectPanel } from './project-panel'
 import {
   isBlockedRunCause,
   mergeSubscriptionUsage,
@@ -954,11 +956,15 @@ export function AiPanel({
     lang,
     busy,
     loop: () => loopRef.current,
-    transport: () => transportRef.current,
-    gate: () => sendGateRef.current.peek(),
+    consolidation: () => {
+      const transport = transportRef.current
+      return transport ? { transport, gate: () => sendGateRef.current.peek() } : null
+    },
     onOpen: (opened, initial) => openChat(opened, initial),
-    onRemoteMessage: (entry) => {
-      setChat((prev) => boundChatHistory([...prev, storedEntryOf(entry)]))
+    onRemoteMessages: (entries, running) => {
+      setChat((prev) =>
+        boundChatHistory(placeRemoteEntries(prev, entries.map(storedEntryOf), running)),
+      )
     },
     onNewChat: () => newChat(),
   })
@@ -1775,7 +1781,7 @@ export function AiPanel({
           <AiMark size={22} />
           {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
-        {project.header}
+        {project.chatMenu}
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
@@ -2060,6 +2066,7 @@ export function AiPanel({
         {localModelCapabilities(liveSettings).tools === false && (
           <AiToolsUnsupportedNotice lang={lang} />
         )}
+        {project.hint}
         {project.notices}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {activePartial && (
@@ -2231,7 +2238,7 @@ export function AiPanel({
           skills={skills.composer}
           docs={docMention}
           onPasteFiles={(files) => void onPasteFiles(files)}
-          footerBelow={project.footer}
+          footerBelow={project.picker}
           footerStart={
             <>
               <AiModelPicker

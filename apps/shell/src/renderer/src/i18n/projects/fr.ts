@@ -9,19 +9,6 @@ export const fr = {
   newNameLabel: 'Nom du nouveau projet',
   create: 'Créer',
   cancel: 'Annuler',
-  createExists: 'Un dossier de ce nom existe déjà, rien n’a été créé : {path}',
-  createInvalidName: 'Ce nom ne peut pas servir de nom de dossier. Saisissez un autre nom.',
-  createUnwritable: 'Impossible de créer le dossier. Essayez de le créer ailleurs.',
-  refusedDriveRoot:
-    'Un lecteur entier ne peut pas être un projet. Choisissez un dossier à l’intérieur.',
-  refusedUserHome:
-    'Votre dossier utilisateur entier ne peut pas être un projet. Choisissez un dossier à l’intérieur.',
-  refusedProtected:
-    'Ce dossier est utilisé par l’application ou un programme d’IA, il ne peut pas être un projet.',
-  refusedContainsProtected:
-    'Ce dossier contient un dossier utilisé par l’application ou un programme d’IA, il ne peut pas être un projet.',
-  refusedNotFolder: 'Impossible de lire ce dossier.',
-  refusedDifferentProject: 'Ce dossier appartient à un autre projet, rien n’a été modifié.',
   backToList: 'Tous les projets',
   projectNameLabel: 'Nom du projet',
   saveName: 'Enregistrer le nom',
@@ -96,7 +83,6 @@ export const fr = {
   restoreAria: 'Annuler : {name}',
   chatsDesc:
     'Les conversations de ce projet. Cliquez pour en reprendre une dans le panneau IA du dernier document qui l’a utilisée.',
-  deleteConfirm: 'Mettre la conversation « {title} » à la corbeille ?',
   actionFailed: 'Cela n’a pas fonctionné. Veuillez réessayer.',
   loadFailed: 'Impossible de lire le projet.',
 } satisfies Record<keyof typeof zh, string>

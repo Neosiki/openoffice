@@ -71,4 +71,26 @@ export const es = {
   toolSummaryNoName: 'Herramientas ejecutadas {count} veces en {editor}',
   toolSummaryNoNameOne: 'Herramienta ejecutada una vez en {editor}',
   dismiss: 'Cerrar',
+  createExists: 'Ya existe una carpeta con ese nombre, así que no se creó nada: {path}',
+  createInvalidName: 'Ese nombre no se puede usar para una carpeta. Escribe otro nombre.',
+  createUnwritable: 'No se pudo crear la carpeta. Prueba a crearla en otro lugar.',
+  refusedDriveRoot: 'Una unidad entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
+  refusedUserHome:
+    'Tu carpeta de usuario entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
+  refusedProtected:
+    'La app o un programa de IA usa esta carpeta, así que no puede ser un proyecto.',
+  refusedContainsProtected:
+    'Esta carpeta contiene una carpeta que usa la app o un programa de IA, así que no puede ser un proyecto.',
+  refusedNotFolder: 'No se puede leer esta carpeta.',
+  refusedDifferentProject: 'Esa carpeta pertenece a otro proyecto, así que no se cambió nada.',
+  deleteConfirm: '¿Mover el chat «{title}» a la papelera?',
+  cancel: 'Cancelar',
+  actionFailed: 'No funcionó. Inténtalo de nuevo.',
+  consolidateFailed: 'No se pudo ordenar. La memoria no ha cambiado.',
+  contextMissing:
+    'No se encontró la carpeta del proyecto, así que esta solicitud se envió sin el contexto del proyecto.',
+  contextUnknown:
+    'El proyecto ya no está en la lista, así que esta solicitud se envió sin el contexto del proyecto.',
+  contextFailed:
+    'No se pudo leer el contexto del proyecto, así que esta solicitud se envió sin él.',
 } satisfies Record<keyof typeof zh, string>

@@ -45,7 +45,8 @@ import {
   useComposerSkills,
   panelUserSkills,
   panelProjectSkill,
-  memoryLinesOf,
+  placeRemoteEntries,
+  useProjectPanel,
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
@@ -88,7 +89,9 @@ import {
   type EditQueueItem,
 } from './edit-queue'
 import { DOC_NAV_SCHEME, navigateToBlock, parseDocNavHref } from './doc-nav'
-import { useProjectFolderPanel, type OtherEditorTools } from './project-folder-panel'
+
+/** Another editor's tool records on a reopened message, shown as one line */
+type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
 
 // Word-parity count (docs word-count.ts): Asian chars one by one + non-Asian words
 const ASIAN_RE =
@@ -463,14 +466,20 @@ export function AiPanel({
    * menu, the notices, and where the chat is recorded. Without a chosen
    * project everything below runs exactly as before.
    */
-  const projectPanel = useProjectFolderPanel({
+  const projectPanel = useProjectPanel({
     editor: 'markdown',
     lang,
     busy,
     loop: () => loopRef.current,
     onOpen: (opened) => openProjectChat(opened),
-    onRemoteMessages: (entries) =>
-      setChat((prev) => [...prev, ...entries.map((entry) => entryFromProject(entry))]),
+    onRemoteMessages: (entries, running) =>
+      setChat((prev) =>
+        placeRemoteEntries(
+          prev,
+          entries.map((entry) => entryFromProject(entry)),
+          running,
+        ),
+      ),
     onNewChat: () => startNewChat(),
     consolidation: async () => {
       // the same gate as a send: nothing goes out until a provider can run
@@ -1387,8 +1396,7 @@ export function AiPanel({
                 />
               )}
               <SkillUsedNotes tools={entry.tools} />
-              {projectPanel.toolSummary(entry.otherEditorTools)}
-              {projectPanel.memoryLines(entry.memory ?? memoryLinesOf(entry.tools))}
+              {projectPanel.messageParts(entry)}
               {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.usage && (
                 <div className="ai-message-usage">

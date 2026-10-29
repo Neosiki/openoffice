@@ -13,7 +13,7 @@ Projekt to jeden folder na twoim komputerze. Gdy wybierzesz projekt w panelu AI,
 
 ## Nowy projekt i Dodaj folder
 
-- **Nowy projekt**: wpisz nazwę, a w domyślnym folderze zapisu (na początku `Dokumenty\GenOffice`; można to zmienić w Ustawieniach) powstanie folder o tej nazwie. **Gdzie indziej…** pozwala wybrać inne miejsce. Jeśli folder o tej nazwie już istnieje, aplikacja zapyta, czy użyć go jako projektu.
+- **Nowy projekt**: wpisz nazwę, a w domyślnym folderze zapisu (na początku `Dokumenty\GenOffice`; można to zmienić w Ustawieniach) powstanie folder o tej nazwie. **Utwórz w innym miejscu…** pozwala wybrać inne miejsce. Jeśli folder o tej nazwie już istnieje, aplikacja zapyta, czy użyć go jako projektu.
 - **Dodaj folder**: użyj folderu, który już masz. Jego podfoldery też się liczą. Nie można wybrać całego dysku, całego folderu użytkownika ani folderów z danymi logowania lub danymi aplikacji.
 - Gdy otworzysz dokument z folderu projektu, którego nie ma na twojej liście, pod polem wpisywania pojawi się „Ten dokument jest w folderze projektu »…«” z przyciskiem **Użyj**. Kliknięcie go działa tak samo jak Dodaj folder.
 - Jeśli folder otrzymany od kogoś innego zawiera już instrukcje lub pamięć, `AGENTS.md` albo `CLAUDE.md` czy rozmowy napisane na innym komputerze, aplikacja raz je pokazuje i pyta. **Użyj** korzysta ze wszystkiego. **Użyj bez instrukcji** nie przekazuje tych instrukcji ani tej pamięci do AI, ukrywa rozmowy z innych komputerów i przestaje dopisywać pamięć; czytanie plików nadal działa. Później możesz przełączyć się na **Użyj** na stronie projektu. Zamknięcie pytania bez wyboru nie dodaje folderu.

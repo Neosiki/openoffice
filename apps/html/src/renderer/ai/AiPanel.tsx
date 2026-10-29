@@ -39,6 +39,11 @@ import {
   ProjectNoticeList,
   ProjectPicker,
   ProjectToolSummaryLine,
+  ProjectProblemLine,
+  placeRemoteEntries,
+  projectAddProblem,
+  projectPrepareProblem,
+  type ProjectProblem,
   undoProjectMemoryConsolidation,
   useProjectChat,
   type ProjectChatEntry,
@@ -583,8 +588,8 @@ export function AiPanel({
   const consolidatingRef = useRef(false)
   /** memory entries the person removed with [Remove] in this panel */
   const [forgotten, setForgotten] = useState<ReadonlySet<string>>(() => new Set())
-  /** another window's messages that arrived while a reply runs: shown when it ends */
-  const remoteWaitingRef = useRef<ChatEntry[]>([])
+  /** what the person asked for that did not happen, or a send that went without the project */
+  const [projectProblem, setProjectProblem] = useState<ProjectProblem | null>(null)
   /** a reply runs (set at once by `send`, before the state renders) */
   const busyRef = useRef(busy)
   busyRef.current = busy
@@ -1649,7 +1654,6 @@ export function AiPanel({
     setAttachments([])
     setAttachNotice(null)
     sentAttachmentsRef.current = []
-    remoteWaitingRef.current = []
   }
 
   /** "New chat": a new chat of the chosen project, or the fresh start it always was (spec 5.3.7) */
@@ -1664,6 +1668,7 @@ export function AiPanel({
     if (busy || chat.length > 0) resetConversation()
     else loopRef.current?.reset()
     setProjectNotices([])
+    setProjectProblem(null)
     setConsolidated(null)
     if (opened.kind === 'document') {
       projectShownRef.current = false
@@ -1686,17 +1691,11 @@ export function AiPanel({
       .filter((a) => !seen.has(a.path) && !!seen.add(a.path))
   }
 
-  /** another window recorded a message in this chat: shown now, or once this reply ends */
+  /** another window recorded a message in this chat: shown now, ahead of a reply in flight (spec 5.3.3) */
   const showRemoteMessage = (entry: ProjectChatEntry): void => {
     const shown = chatEntryOf(entry)
-    if (busyRef.current) remoteWaitingRef.current.push(shown)
-    else setChat((prev) => [...prev, shown])
+    setChat((prev) => placeRemoteEntries(prev, [shown], busyRef.current))
   }
-  useEffect(() => {
-    if (busy || remoteWaitingRef.current.length === 0) return
-    const waiting = remoteWaitingRef.current.splice(0)
-    setChat((prev) => [...prev, ...waiting])
-  }, [busy])
 
   /** what the request's project context brought: changed rules or memory, long memory, a cut (spec 5.4, 5.10) */
   const showPreparedNotices = (prepared: ProjectRunPrepared): void => {
@@ -1704,6 +1703,8 @@ export function AiPanel({
     setProjectNotices(
       prepared.status === 'ok' ? prepared.notices.filter((n) => n.kind !== 'unwritable') : [],
     )
+    // a request that went without the project's context says so
+    setProjectProblem(projectPrepareProblem(prepared))
   }
 
   const refreshProjects = async (): Promise<void> => {
@@ -1735,14 +1736,24 @@ export function AiPanel({
   const takeAddedProject = async (
     result: AddFolderResult | CreateProjectResult | undefined,
   ): Promise<void> => {
-    if (!result || (result.status !== 'added' && result.status !== 'created')) return
+    if (!result) return
+    if (result.status !== 'added' && result.status !== 'created') {
+      // refused, not made: say why (spec 5.1); a closed dialog says nothing
+      if (mountedRef.current) setProjectProblem(projectAddProblem(result))
+      return
+    }
+    setProjectProblem(null)
     await refreshProjects()
     await projectChatRef.current.selectProject(result.project.id)
     // the addition's one-time notices (a sync folder) show after the switch cleared the old ones
     if (result.status === 'added' && result.notices.length > 0) setProjectNotices(result.notices)
   }
   const afterAdd = (pending: Promise<AddFolderResult | CreateProjectResult> | undefined): void => {
-    void pending?.then(takeAddedProject).catch(() => undefined)
+    void pending?.then(takeAddedProject).catch(showActionFailed)
+  }
+  /** a bridge call the person made failed: say so instead of doing nothing */
+  const showActionFailed = (): void => {
+    if (mountedRef.current) setProjectProblem({ kind: 'action-failed' })
   }
 
   const removeProjectFromList = (projectId: ProjectId): void => {
@@ -1754,7 +1765,7 @@ export function AiPanel({
           await projectChatRef.current.selectProject(null)
         }
       })
-      .catch(() => undefined)
+      .catch(showActionFailed)
   }
 
   /** "[View]": the home project screen at that section */
@@ -1792,9 +1803,14 @@ export function AiPanel({
       } else if (result.status === 'not-ready') {
         // nothing went out: the connect prompt or the first-connection notice says why
         sendGateRef.current.admitQueued(() => {})
+      } else if (result.status === 'unwritable') {
+        projectChatRef.current.markUnwritable()
+      } else if (result.status === 'failed') {
+        setProjectProblem({ kind: 'consolidate-failed' })
       }
     } catch {
-      /* the memory stays as it was */
+      // the memory stays as it was
+      if (mountedRef.current) setProjectProblem({ kind: 'consolidate-failed' })
     } finally {
       consolidatingRef.current = false
     }
@@ -1807,8 +1823,9 @@ export function AiPanel({
     void undoProjectMemoryConsolidation(api, done.projectId, done.backupName)
       .then((result) => {
         if (result.status === 'ok' && mountedRef.current) setConsolidated(null)
+        else if (result.status === 'unwritable') projectChatRef.current.markUnwritable()
       })
-      .catch(() => undefined)
+      .catch(showActionFailed)
   }
 
   /** "[Remove]" on a memory line: the entry leaves `memory.md` */
@@ -1887,6 +1904,13 @@ export function AiPanel({
   /** the project's lines above the input: the folder hint, "cannot be written", the context notices */
   const projectLines = (
     <>
+      {projectProblem && (
+        <ProjectProblemLine
+          lang={lang}
+          problem={projectProblem}
+          onDismiss={() => setProjectProblem(null)}
+        />
+      )}
       {projectChat.hint && (
         <ProjectFolderHintLine
           lang={lang}
@@ -1930,9 +1954,9 @@ export function AiPanel({
       onSelect={(chatId) => void projectChat.openChat(chatId)}
       onNewChat={newChat}
       onRename={(chatId, title) =>
-        void projectChat.renameChat(chatId, title).catch(() => undefined)
+        void projectChat.renameChat(chatId, title).catch(showActionFailed)
       }
-      onDelete={(chatId) => void projectChat.deleteChat(chatId).catch(() => undefined)}
+      onDelete={(chatId) => void projectChat.deleteChat(chatId).catch(showActionFailed)}
       onSelectLegacy={() => void projectChat.openLegacy()}
     />
   ) : null

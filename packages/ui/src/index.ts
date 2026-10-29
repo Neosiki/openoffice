@@ -448,6 +448,7 @@ export {
   ProjectMemoryEventLine,
   ProjectMemoryConsolidatedLine,
   ProjectToolSummaryLine,
+  ProjectProblemLine,
 } from './ProjectNotices'
 export {
   projectPickerItems,
@@ -466,6 +467,11 @@ export {
   projectMemoryEventText,
   projectConsolidatedText,
   projectToolSummaryText,
+  projectAddProblem,
+  projectPrepareProblem,
+  projectProblemText,
+  placeRemoteEntries,
+  type ProjectProblem,
   type ProjectPickerItem,
   type ProjectPickerAction,
   type ProjectChatMenuItem,
@@ -524,4 +530,12 @@ export type {
   ProjectMemoryBridge,
 } from './project-memory-consolidate'
 export { PROJECT_CHAT_STRINGS, projectChatText } from './strings-project-chat'
+export { useProjectPanel } from './use-project-panel'
+export type {
+  ProjectConsolidationRoute,
+  ProjectMessageParts,
+  ProjectPanel,
+  ProjectPanelOptions,
+  ProjectToolRecord,
+} from './use-project-panel'
 export type { ProjectChatStringKey } from './strings-project-chat'

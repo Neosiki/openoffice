@@ -1083,6 +1083,15 @@ export function Home({
   const [view, setView] = useState<'recent' | 'starred'>('recent')
   // the knowledge-base ask panel takes over the content area the same way
   const [askMode, setAskMode] = useState(false)
+  // a project chat the project screen handed to the ask panel; cleared when the panel goes
+  const [askOpenChat, setAskOpenChat] = useState<{
+    projectId: string
+    chatId: string
+    seq: number
+  } | null>(null)
+  useEffect(() => {
+    if (!askMode) setAskOpenChat(null)
+  }, [askMode])
   // Google Drive (decision 0033) takes over the content area the same way
   const [driveMode, setDriveMode] = useState(false)
   const driveState = useDriveState()
@@ -3487,9 +3496,10 @@ export function Home({
           noticeDue={noticeDue}
           onNoticeNeeded={() => setProjectsNoticeAsked(true)}
           onOpenAiSettings={() => setSettingsRequest({ section: 'aiModel' })}
-          onOpenHomeAsk={() => {
+          onOpenHomeAsk={(chat) => {
             setProjectsMode(false)
             setAskMode(true)
+            setAskOpenChat((prev) => ({ ...chat, seq: (prev?.seq ?? 0) + 1 }))
           }}
         />
       ) : askMode ? (
@@ -3498,6 +3508,7 @@ export function Home({
           aiSettings={aiSettings}
           noticeDue={noticeDue}
           onOpenAiSettings={() => setSettingsRequest({ section: 'aiModel' })}
+          openChatRequest={askOpenChat}
           onOpenPath={(path) => void window.aiOffice.openPath(path)}
           onGoToRecents={() => changeView('recent')}
         />

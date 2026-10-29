@@ -71,4 +71,28 @@ export const it = {
   toolSummaryNoName: 'Strumenti eseguiti {count} volte in {editor}',
   toolSummaryNoNameOne: 'Strumento eseguito una volta in {editor}',
   dismiss: 'Chiudi',
+  createExists: 'Esiste già una cartella con quel nome, quindi non è stato creato nulla: {path}',
+  createInvalidName: 'Quel nome non si può usare per una cartella. Inserisci un altro nome.',
+  createUnwritable: 'Impossibile creare la cartella. Prova a crearla altrove.',
+  refusedDriveRoot:
+    'Un’intera unità non può essere un progetto. Scegli una cartella al suo interno.',
+  refusedUserHome:
+    'L’intera cartella utente non può essere un progetto. Scegli una cartella al suo interno.',
+  refusedProtected:
+    'Questa cartella è usata dall’app o da un programma di IA, quindi non può essere un progetto.',
+  refusedContainsProtected:
+    'Questa cartella contiene una cartella usata dall’app o da un programma di IA, quindi non può essere un progetto.',
+  refusedNotFolder: 'Impossibile leggere questa cartella.',
+  refusedDifferentProject:
+    'Quella cartella appartiene a un altro progetto, quindi non è cambiato nulla.',
+  deleteConfirm: 'Spostare la chat «{title}» nel cestino?',
+  cancel: 'Annulla',
+  actionFailed: 'Non ha funzionato. Riprova.',
+  consolidateFailed: 'Impossibile riordinare. La memoria è invariata.',
+  contextMissing:
+    'La cartella del progetto non è stata trovata, quindi questa richiesta è partita senza il contesto del progetto.',
+  contextUnknown:
+    'Il progetto non è più nell’elenco, quindi questa richiesta è partita senza il contesto del progetto.',
+  contextFailed:
+    'Non è stato possibile leggere il contesto del progetto, quindi questa richiesta è partita senza.',
 } satisfies Record<keyof typeof zh, string>
