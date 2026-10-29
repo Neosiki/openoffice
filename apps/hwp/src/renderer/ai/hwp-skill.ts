@@ -1997,6 +1997,12 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         const table = call.input.table
         if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
         const fromRow = call.input.from_row
+        if (
+          fromRow !== undefined &&
+          (typeof fromRow !== 'number' || !Number.isInteger(fromRow) || fromRow < 1)
+        ) {
+          return bad(call, 'from_row must be a whole number from 1')
+        }
         const read = await bridge.readTable(table, typeof fromRow === 'number' ? fromRow : null)
         if (!read.ok) return bad(call, noSuchTable(table, read.count))
         const more = read.nextRow
