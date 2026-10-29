@@ -439,13 +439,33 @@ export interface KbCreateDeps {
   /** markdown → .docx at `out` (the bundled CLI) */
   markdownToDocx: (markdown: string, out: string) => Promise<void>
   recordRecent: (path: string) => void
+  /**
+   * A project chosen at home (spec 6): the document is made first (Word through
+   * `docxBytes`, never inside the folder) and then written by `write`, which
+   * picks a free name in the project folder through its write guard. Absent:
+   * the default save folder as before.
+   */
+  project?: {
+    write: (fileName: string, bytes: Uint8Array) => Promise<string>
+    docxBytes: (markdown: string) => Promise<Uint8Array>
+  }
 }
 
 export async function createKnowledgeDocument(
   deps: KbCreateDeps,
   req: KbCreateRequest,
 ): Promise<{ path: string }> {
-  const path = deps.uniquePath(deps.dir(), `${deps.sanitizeBase(req.title)}.${req.format}`)
+  const fileName = `${deps.sanitizeBase(req.title)}.${req.format}`
+  if (deps.project) {
+    const bytes =
+      req.format === 'md'
+        ? Buffer.from(req.content, 'utf8')
+        : await deps.project.docxBytes(req.content)
+    const written = await deps.project.write(fileName, bytes)
+    deps.recordRecent(written)
+    return { path: written }
+  }
+  const path = deps.uniquePath(deps.dir(), fileName)
   if (req.format === 'md') await deps.writeText(path, req.content)
   else await deps.markdownToDocx(req.content, path)
   deps.recordRecent(path)

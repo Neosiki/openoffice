@@ -100,6 +100,11 @@ interface RuntimePaths {
   /** the renderer's dev server, when one runs */
   rendererUrl?: string
   rendererFile?: string
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -478,7 +483,8 @@ async function resolveSaveTarget(
     ? join(dirname(current), basename(current))
     : (restoredPath ??
       join(
-        configuredDefaultSaveDir(app),
+        // an untitled map whose panel has a project starts in that folder (spec 6)
+        (await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app),
         `${fileNameBase(defaultName) || tm('untitledFile')}${MAP_EXTENSION}`,
       ))
   const picked = await showSaveDialogWithMemory(dialog, win, {

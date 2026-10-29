@@ -134,6 +134,11 @@ export interface ProjectIpcDeps {
   projectsChanged: () => void
   /** "not on this PC" for the project screen's ignored-files list (a cached detector) */
   resolveCloudOnly?: CloudOnlyResolver
+  /**
+   * The project a create flow opened this untitled window in (spec 5.2, 6), or
+   * null. Asked only while the window's own panel has chosen nothing yet.
+   */
+  presetProjectOf?: (sender: number) => Promise<ProjectId | null> | ProjectId | null
   platform?: NodeJS.Platform
 }
 
@@ -149,6 +154,12 @@ export interface ProjectIpcController {
   reset(sender: number): void
   /** the project an untitled document's panel chose (for saving new documents later) */
   untitledProject(sender: number): ProjectId | null
+  /**
+   * The project this window's AI panel has chosen now (spec 6): the panel's last
+   * answer when it has asked, else the starting selection main would give it.
+   * Null for "no project" and for anything that is not an AI window.
+   */
+  windowProject(sender: number): Promise<ProjectId | null>
 }
 
 /** a request that names no usable project or chat id */
@@ -223,6 +234,8 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
   const held = new Map<number, Map<ProjectFolderEventMethod, unknown>>()
   /** window of an untitled document → the project its panel chose */
   const untitled = new Map<number, ProjectId | null>()
+  /** window → the selection its panel was last given (getSelection / setSelection) */
+  const chosen = new Map<number, ProjectId | null>()
 
   let services: ProjectFolderServices | null = null
   const svc = (): ProjectFolderServices => {
@@ -257,6 +270,7 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     unwatch(sender)
     listening.delete(sender)
     untitled.delete(sender)
+    chosen.delete(sender)
   }
 
   const forget = (sender: number): void => {
@@ -295,10 +309,13 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
   const docPathOf = (win: ProjectWindow): string | null =>
     win.kind === 'editor' ? win.docPath : null
 
-  const targetOf = (sender: number, win: ProjectWindow): SelectionTarget => {
+  const targetOf = async (sender: number, win: ProjectWindow): Promise<SelectionTarget> => {
     if (win.kind === 'home') return { kind: 'home' }
     if (win.docPath) return { kind: 'document', path: win.docPath }
-    return { kind: 'untitled', projectId: untitled.get(sender) ?? null }
+    if (untitled.has(sender)) return { kind: 'untitled', projectId: untitled.get(sender) ?? null }
+    // a tab a create flow opened in a project starts in it (spec 5.2)
+    const preset = deps.presetProjectOf ? await deps.presetProjectOf(sender) : null
+    return { kind: 'untitled', projectId: preset ?? null }
   }
 
   /**
@@ -428,7 +445,9 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     // ---- selection for this window's document ----
     getSelection: async (sender) => {
       const win = windowOf(sender)
-      return withInitialChat(win, await svc().guide.getSelection(targetOf(sender, win)))
+      const selection = await svc().guide.getSelection(await targetOf(sender, win))
+      chosen.set(sender, selection.projectId)
+      return withInitialChat(win, selection)
     },
 
     setSelection: async (sender, raw) => {
@@ -436,9 +455,10 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
       const value = record(raw).projectId
       const projectId = value === null ? null : isValidProjectId(value) ? value : undefined
       if (projectId === undefined) throw new Error(PROJECT_IPC_BAD_REQUEST)
-      const target = targetOf(sender, win)
+      const target = await targetOf(sender, win)
       const selection = await svc().guide.setSelection(target, projectId)
       if (target.kind === 'untitled') untitled.set(sender, projectId)
+      chosen.set(sender, selection.projectId)
       if (projectId === null) unwatch(sender)
       return withInitialChat(win, selection)
     },
@@ -635,6 +655,16 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     forget,
     reset,
     untitledProject: (sender) => untitled.get(sender) ?? null,
+    windowProject: async (sender) => {
+      const win = deps.windowOf(sender)
+      if (!win) return null
+      if (chosen.has(sender)) return chosen.get(sender) ?? null
+      try {
+        return (await svc().guide.getSelection(await targetOf(sender, win))).projectId
+      } catch {
+        return null
+      }
+    },
   }
 }
 

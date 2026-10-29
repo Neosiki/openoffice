@@ -23,7 +23,7 @@ import { execFile } from 'node:child_process'
 import { readFile, writeFile, mkdir, open } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { cleanupExpiredGeneratedPages } from './generated-page-temp'
 import { exportSlidesPdf } from './pdf-export'
 import { printSlidesHtml } from './print-window'
@@ -4762,11 +4762,15 @@ export function registerSlidesIpc(): void {
     // and new blank decks alike); the AutoSave pass leaves it alone until then
     if (!session.path) {
       if (auto === true) return { ok: false, reason: 'external-modified' }
+      const firstName = session.firstSaveName || `${tm('untitledDeck')}.pptx`
+      // a deck whose panel has a project is offered in that folder (spec 6)
+      const projectDir = await runtime.newDocumentDir?.(e.sender.id)
       const picked = await showSaveDialogWithMemory(
         dialog,
         dialogParent(),
         {
-          defaultPath: session.firstSaveName || `${tm('untitledDeck')}.pptx`,
+          defaultPath:
+            projectDir && !isAbsolute(firstName) ? join(projectDir, firstName) : firstName,
           filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
         },
         getDraftsDir(),

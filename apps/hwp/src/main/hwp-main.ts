@@ -74,6 +74,11 @@ interface RuntimePaths {
   goHome?: () => void
   /** a new Hangul document in a tab (Hangul's Alt+N) */
   newDocument?: () => void
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -590,6 +595,8 @@ function registerHwpIpc(): void {
         const fallback: HwpFormat = currentFormat ?? copy?.format ?? 'hwp'
         const hwp = { name: tm('filterHwp'), extensions: ['hwp'] }
         const hwpx = { name: tm('filterHwpx'), extensions: ['hwpx'] }
+        // a new document whose panel has a project is offered in that folder (spec 6)
+        const newDir = current ? null : await runtime.newDocumentDir?.(wcId)
         const picked = await showSaveDialogWithMemory(dialog, win, {
           title: tm('dlgSaveTitle'),
           // a new document has no file yet: it is offered under the untitled name in the
@@ -598,7 +605,10 @@ function registerHwpIpc(): void {
             ? join(dirname(current), basename(current))
             : // a copy restored without its file is offered where that file was
               (hwpRecoverySaveAsDefault(wcId) ??
-              join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.hwp`)),
+              join(
+                newDir ?? configuredDefaultSaveDir(app),
+                copy?.name ?? `${tm('untitledFile')}.hwp`,
+              )),
           // one type per format, so the user can pick the other one; the document's
           // own format comes first, so it is the dialog's default type
           filters: fallback === 'hwpx' ? [hwpx, hwp] : [hwp, hwpx],
