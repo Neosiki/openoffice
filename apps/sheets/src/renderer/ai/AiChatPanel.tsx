@@ -10,6 +10,8 @@ import {
   SkillUsedNotes,
   useComposerSkills,
   type OnTemplateSkill,
+  type ProjectChatEntry,
+  type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -263,6 +265,22 @@ export interface AiChatMessage {
   readonly skillProposals?: readonly string[] | undefined
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   readonly usage?: AiTokenUsageView | undefined
+  /** memory lines a reopened project chat gave this message */
+  readonly memory?: readonly ProjectMemoryLine[] | undefined
+  /** tools another editor ran for this message (a reopened project chat) */
+  readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
+}
+
+/** The project folder parts of the panel (built in App.tsx, see ai/project-panel.tsx) */
+export interface AiPanelProject {
+  /** the chat menu beside the title; null without a chosen project */
+  readonly header: React.ReactNode
+  /** the project chip under the input */
+  readonly footer: React.ReactNode
+  /** hint, unwritable and context notices above the composer */
+  readonly notices: React.ReactNode
+  /** the other-editor summary and memory lines of one message */
+  readonly messageParts: (message: AiChatMessage) => React.ReactNode
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -344,6 +362,7 @@ export function AiChatPanel({
   onCitation,
   onExpand,
   onCollapse,
+  project,
 }: {
   readonly isOpen: boolean
   /** true suppresses even the collapsed rail (the "show the AI sidebar" setting is off) */
@@ -414,6 +433,8 @@ export function AiChatPanel({
   readonly onCitation: (href: string) => void
   readonly onExpand: () => void
   readonly onCollapse: () => void
+  /** the project folder parts; absent: the panel shows none */
+  readonly project?: AiPanelProject | undefined
 }): React.JSX.Element {
   const { t, lang } = useI18n()
   // A reply that stopped because its connection cannot go on: the queue is paused, so the next
@@ -709,6 +730,7 @@ export function AiChatPanel({
           <AiMark size={22} />
           {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
+        {project?.header}
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
@@ -758,6 +780,7 @@ export function AiChatPanel({
                 )}
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 <SkillUsedNotes tools={entry.tools} />
+                {project?.messageParts(entry)}
                 {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.text && (
                   <div dir="auto">
@@ -810,6 +833,7 @@ export function AiChatPanel({
               <>
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 <SkillUsedNotes tools={entry.tools} />
+                {project?.messageParts(entry)}
                 {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.usage && (
                   <div className="ai-message-usage">
@@ -946,6 +970,7 @@ export function AiChatPanel({
           localModelCapabilities(subscription.settings).tools === false && (
             <AiToolsUnsupportedNotice lang={lang} />
           )}
+        {project?.notices}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           queueStrip={
@@ -1100,6 +1125,7 @@ export function AiChatPanel({
               {onDrivePicked && <DocAttachButton lang={lang} onPicked={onDrivePicked} />}
             </>
           }
+          footerBelow={project?.footer}
           textareaRef={inputRef}
           onChange={onPromptChange}
           onSend={send}
