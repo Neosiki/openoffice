@@ -33,6 +33,19 @@ export function comparablePath(path: string, platform: NodeJS.Platform): string 
   return foldsCase(platform) ? normalized.toLowerCase() : normalized
 }
 
+/**
+ * One path segment as a person or the app could name it inside the folder: not
+ * empty, `.` or `..`, no control characters or `:` (a drive or an NTFS stream),
+ * and no trailing dot or space (Windows drops those, so such a name could stand
+ * for another entry).
+ */
+export function isPlainSegment(segment: string): boolean {
+  if (segment === '' || segment === '.' || segment === '..') return false
+  // eslint-disable-next-line no-control-regex -- control characters are the check
+  if (/[\u0000-\u001f:]/.test(segment)) return false
+  return !segment.endsWith('.') && !segment.endsWith(' ')
+}
+
 export function samePath(a: string, b: string, platform: NodeJS.Platform): boolean {
   return comparablePath(a, platform) === comparablePath(b, platform)
 }

@@ -9,6 +9,7 @@ import {
   utimesSync,
   writeFileSync,
 } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -25,6 +26,7 @@ import {
   readKnowledgeOrProjectPage,
   searchSavedKnowledgeWithProject,
 } from '../src/main/knowledge-base'
+import { createCachedFileLister, listVisibleFiles } from '../src/main/projects/project-files'
 import { ProjectGuide } from '../src/main/projects/project-guide'
 import {
   PROJECT_SCOPE_UNKNOWN,
@@ -283,6 +285,84 @@ describe('project_list_files', () => {
   })
 })
 
+describe('shared caches for lists (8 GB PCs)', () => {
+  it('marks list and search results with the list resolver, and asks afresh before a read', async () => {
+    const listCloud = vi.fn(
+      async (paths: readonly string[]) => new Map(paths.map((p) => [p, cloud.has(p)])),
+    )
+    const cached = makeTools({ listCloudOnly: listCloud as never })
+    const scope = await cached.openScope(WIN, { projectId })
+    await cached.listFiles(WIN, { scope })
+    const st = statSync(join(root, 'notes.md'))
+    store.upsert(
+      { path: join(root, 'notes.md'), mtimeMs: st.mtimeMs, sizeBytes: st.size },
+      'budget notes',
+      'ok',
+    )
+    await cached.search(WIN, { scope, query: 'budget' })
+    expect(listCloud).toHaveBeenCalledTimes(2)
+    expect(resolveCloud).not.toHaveBeenCalled()
+    await cached.read(WIN, { scope, relPath: 'notes.md' })
+    expect(resolveCloud).toHaveBeenCalledTimes(1)
+    expect(listCloud).toHaveBeenCalledTimes(2)
+  })
+
+  it('reuses one walk for a few seconds, keyed by the ignore rule', async () => {
+    let at = 0
+    const walk = vi.fn(listVisibleFiles)
+    const lister = createCachedFileLister({ ttlMs: 5_000, now: () => at, list: walk })
+    const cached = makeTools({ listFiles: lister })
+    const scope = await cached.openScope(WIN, { projectId })
+    const names = async () => (await cached.listFiles(WIN, { scope })).files.map((f) => f.relPath)
+
+    const first = await names()
+    put(root, 'fresh.md', 'new file', 1_700_000_900)
+    at = 1_000
+    expect(await names()).toEqual(first)
+    expect(walk).toHaveBeenCalledTimes(1)
+
+    // an ignore edit is a new rule: never served the old list
+    await guide.addIgnore(projectId, 'masked.md')
+    const afterIgnore = await names()
+    expect(afterIgnore).not.toContain('masked.md')
+    expect(afterIgnore).toContain('fresh.md')
+    expect(walk).toHaveBeenCalledTimes(2)
+
+    // invalidation drops it; so does the time limit
+    put(root, 'later.md', 'later', 1_700_000_950)
+    lister.invalidate(root)
+    expect(await names()).toContain('later.md')
+    put(root, 'latest.md', 'latest', 1_700_000_990)
+    at = 7_000
+    expect(await names()).toContain('latest.md')
+    expect(walk).toHaveBeenCalledTimes(4)
+  })
+
+  it('shares one walk between callers asking at once, and never keeps a failed one', async () => {
+    let fail = true
+    const walk = vi.fn(async (visibility: Parameters<typeof listVisibleFiles>[0]) => {
+      if (fail) {
+        fail = false
+        throw new Error('walk failed')
+      }
+      return listVisibleFiles(visibility)
+    })
+    const lister = createCachedFileLister({ list: walk })
+    const visibility = await guide.aiVisibility(projectId)
+    if (!visibility) throw new Error('no visibility')
+    await expect(lister(visibility)).rejects.toThrow('walk failed')
+    const [a, b] = await Promise.all([lister(visibility), lister(visibility)])
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+    expect(walk).toHaveBeenCalledTimes(2)
+    // a visibility without a rule key is never cached
+    const bare = { ...visibility, ruleKey: undefined }
+    await lister(bare)
+    await lister(bare)
+    expect(walk).toHaveBeenCalledTimes(4)
+  })
+})
+
 describe('project_read', () => {
   async function read(relPath: string, offset?: number) {
     const scope = await tools.openScope(WIN, { projectId })
@@ -380,6 +460,96 @@ describe('project_read', () => {
     ask.mockRejectedValueOnce(new Error('dialog failed'))
     expect(await read('reports/plan.md')).toEqual({ status: 'declined' })
   })
+})
+
+/** the 8.3 short name Windows made for `<dir>/<name>`, or null when short names are off */
+function shortNameOf(dir: string, name: string): string | null {
+  if (process.platform !== 'win32') return null
+  let listing: string
+  try {
+    listing = execFileSync('cmd', ['/d', '/c', 'dir', '/x', '/a', dir], { encoding: 'latin1' })
+  } catch {
+    return null
+  }
+  for (const line of listing.split(/\r?\n/)) {
+    const match = /\s(\S+~\d+\S*)\s+(\S+)\s*$/.exec(line)
+    if (match && match[2] === name) return match[1]!
+  }
+  return null
+}
+
+describe('project_read: other names for the same entry (Windows)', () => {
+  async function read(relPath: string) {
+    const scope = await tools.openScope(WIN, { projectId })
+    return tools.read(WIN, { scope, relPath })
+  }
+
+  it.runIf(process.platform === 'win32')(
+    'refuses a trailing dot or space that names a hidden or ignored entry',
+    async () => {
+      put(root, '.ieumoffice/memory.md', 'remembered secret')
+      for (const alias of [
+        'drafts./old.md',
+        'drafts /old.md',
+        'drafts/old.md.',
+        'drafts/old.md ',
+        '.ieumoffice./memory.md',
+        '.ieumoffice /memory.md',
+        'notes.md.',
+        'notes.md::$DATA',
+      ]) {
+        const result = await read(alias)
+        expect(result.status, alias).toBe('refused')
+      }
+      // an absolute path with the same alias is refused too
+      const absolute = await tools.readPath(
+        WIN,
+        projectId,
+        join(`${join(root, 'drafts')}.`, 'old.md'),
+        0,
+      )
+      expect(absolute.status).toBe('refused')
+    },
+  )
+
+  it.runIf(process.platform === 'win32')(
+    'judges an 8.3 short name by the real name it stands for',
+    async (ctx) => {
+      put(root, '.ieumoffice/memory.md', 'remembered secret')
+      put(root, 'confidential-folder/x.md', 'confidential body')
+      put(root, 'long-visible-name.md', 'visible body')
+      await guide.addIgnore(projectId, 'confidential-folder/')
+      const dataShort = shortNameOf(root, '.ieumoffice')
+      const confShort = shortNameOf(root, 'confidential-folder')
+      const fileShort = shortNameOf(root, 'long-visible-name.md')
+      if (!dataShort || !confShort || !fileShort) {
+        ctx.skip()
+        return
+      }
+      expect(await read(`${dataShort}/memory.md`)).toEqual({ status: 'refused', reason: 'hidden' })
+      expect(await read(`${confShort}/x.md`)).toEqual({ status: 'refused', reason: 'ignored' })
+      expect(await tools.readPath(WIN, projectId, join(root, dataShort, 'memory.md'), 0)).toEqual({
+        status: 'refused',
+        reason: 'hidden',
+      })
+      expect(await tools.readPath(WIN, projectId, join(root, confShort, 'x.md'), 0)).toEqual({
+        status: 'refused',
+        reason: 'ignored',
+      })
+      // a short name of a visible file reads, and its unsaved state is found by the real name
+      expect(await read(fileShort)).toMatchObject({ status: 'ok', text: 'visible body' })
+      setOpenFilesSource(() => [{ filePath: join(root, 'long-visible-name.md'), dirty: true }])
+      expect(await read(fileShort)).toEqual({ status: 'refused', reason: 'unsaved' })
+      // the download question names the real file
+      setOpenFilesSource(null)
+      cloud.add(join(root, 'long-visible-name.md'))
+      expect((await read(fileShort)).status).toBe('ok')
+      expect(ask.mock.calls[0]![0]).toMatchObject({
+        fileName: 'long-visible-name.md',
+        relPath: 'long-visible-name.md',
+      })
+    },
+  )
 })
 
 describe('project_search', () => {

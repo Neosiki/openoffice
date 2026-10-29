@@ -67,6 +67,17 @@ const SKILL_ID_MAX_CHARS = 512
 const SKILL_FIELD_MAX_CHARS = 200
 /** Opening messages held before the first reply; reaching it writes the file early instead of dropping */
 export const MAX_PENDING_OPENING_MESSAGES = 200
+
+/**
+ * Chats whose in-memory state is kept (tunable). A state with nothing unwritten
+ * is rebuilt from the folder when needed (its next `seq` from the last message
+ * on disk), so past this the least recently used idle ones are dropped; a chat
+ * with unwritten messages, a rename or a task running is never dropped.
+ */
+export const CHAT_STATE_CACHE_LIMIT = 64
+
+/** Foreign-message scans remembered (tunable); a dropped one is scanned again */
+export const FOREIGN_SCAN_CACHE_LIMIT = 512
 const DEFAULT_OPEN_LIMIT = 200
 const MAX_OPEN_LIMIT = 10_000
 const TAIL_READ_BYTES = 8 * 1024 * 1024
@@ -109,6 +120,10 @@ export interface ProjectChatStoreDeps {
   /** A new chat id; must match `PROJECT_ID_PATTERN` */
   newId?: () => string
   platform?: NodeJS.Platform
+  /** default `CHAT_STATE_CACHE_LIMIT` */
+  stateCacheLimit?: number
+  /** default `FOREIGN_SCAN_CACHE_LIMIT` */
+  foreignCacheLimit?: number
 }
 
 interface PendingEntry {
@@ -394,6 +409,41 @@ export class ProjectChatStore {
     this.now = deps.now ?? (() => new Date())
     this.newId = deps.newId ?? defaultNewId
     this.platform = deps.platform ?? process.platform
+    this.stateLimit = Math.max(1, deps.stateCacheLimit ?? CHAT_STATE_CACHE_LIMIT)
+    this.foreignLimit = Math.max(1, deps.foreignCacheLimit ?? FOREIGN_SCAN_CACHE_LIMIT)
+  }
+
+  private readonly stateLimit: number
+  private readonly foreignLimit: number
+
+  /** how many chat states are held now (for tests) */
+  heldStateCount(): number {
+    return this.states.size
+  }
+
+  /** how many foreign-message scans are remembered now (for tests) */
+  heldForeignScanCount(): number {
+    return this.foreignCache.size
+  }
+
+  /** nothing of this chat waits in memory, and no task for it is running or queued */
+  private isIdle(key: string, state: ChatState): boolean {
+    return (
+      state.pending.length === 0 &&
+      state.unrecorded.length === 0 &&
+      state.attachDocs.length === 0 &&
+      state.title === null &&
+      !this.queues.has(key)
+    )
+  }
+
+  /** drops the least recently used idle states past the limit */
+  private trimStates(keep: string): void {
+    if (this.states.size <= this.stateLimit) return
+    for (const [key, state] of this.states) {
+      if (this.states.size <= this.stateLimit) break
+      if (key !== keep && this.isIdle(key, state)) this.states.delete(key)
+    }
   }
 
   // ────────────────────────── events ──────────────────────────
@@ -458,7 +508,12 @@ export class ProjectChatStore {
   private async state(projectId: ProjectId, chatId: ProjectId, root: string): Promise<ChatState> {
     const key = `${projectId}/${chatId}`
     const known = this.states.get(key)
-    if (known) return known
+    if (known) {
+      // most recently used last
+      this.states.delete(key)
+      this.states.set(key, known)
+      return known
+    }
     const messagesPath = await plainFileIn(root, [dataDir, chatsDir, `${chatId}${chatMessagesExt}`])
     const rawInfo = await readFolderText(root, [dataDir, chatsDir, `${chatId}${chatInfoExt}`])
     const info = parseInfo(rawInfo, chatId)
@@ -482,6 +537,7 @@ export class ProjectChatStore {
       title: null,
     }
     this.states.set(key, state)
+    this.trimStates(key)
     return state
   }
 
@@ -494,9 +550,18 @@ export class ProjectChatStore {
     if (!stats) return false
     const { size, mtimeMs } = stats
     const cached = this.foreignCache.get(path)
-    if (cached && cached.size === size && cached.mtimeMs === mtimeMs) return cached.foreign
+    if (cached && cached.size === size && cached.mtimeMs === mtimeMs) {
+      this.foreignCache.delete(path)
+      this.foreignCache.set(path, cached)
+      return cached.foreign
+    }
     const foreign = await hasForeignMessage(root, info.id, installId)
+    this.foreignCache.delete(path)
     this.foreignCache.set(path, { size, mtimeMs, foreign })
+    for (const oldest of this.foreignCache.keys()) {
+      if (this.foreignCache.size <= this.foreignLimit) break
+      this.foreignCache.delete(oldest)
+    }
     return foreign
   }
 

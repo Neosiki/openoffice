@@ -310,6 +310,63 @@ describe('appending', () => {
     expect(saved.status === 'saved' && saved.message.seq).toBe(42)
   })
 
+  it('holds a bounded number of chat states and rebuilds a dropped one from the file', async () => {
+    const { id, root } = await addProject('p')
+    const store = makeStore({ stateCacheLimit: 2 })
+    const chats: Array<{ projectId: string; chatId: string }> = []
+    for (let i = 0; i < 5; i++) {
+      const ref = { projectId: id, ...(await store.newChat(id)) }
+      chats.push(ref)
+      await store.append(args(ref, 'user', `q${i}`), home)
+      await store.append(args(ref, 'assistant', `a${i}`), home)
+    }
+    expect(store.heldStateCount()).toBeLessThanOrEqual(2)
+    // the first chat's state was dropped: its next seq comes from the file again
+    const next = await store.append(args(chats[0]!, 'user', 'again'), home)
+    expect(next.status === 'saved' && next.message.seq).toBe(2)
+    expect(linesOf(root, chats[0]!.chatId).map((m) => m.seq)).toEqual([0, 1, 2])
+    expect(store.heldStateCount()).toBeLessThanOrEqual(2)
+  })
+
+  it('never drops a chat whose opening messages are still in memory', async () => {
+    const { id } = await addProject('p')
+    const store = makeStore({ stateCacheLimit: 1 })
+    const waiting = { projectId: id, ...(await store.newChat(id)) }
+    expect((await store.append(args(waiting, 'user', 'first question'), home)).status).toBe(
+      'pending',
+    )
+    for (let i = 0; i < 3; i++) {
+      const ref = { projectId: id, ...(await store.newChat(id)) }
+      await store.append(args(ref, 'user', `q${i}`), home)
+      await store.append(args(ref, 'assistant', `a${i}`), home)
+    }
+    const opened = await store.append(args(waiting, 'assistant', 'answer'), home)
+    expect(opened.status === 'saved' && opened.message.seq).toBe(1)
+    const read = await store.openChat({ projectId: id, chatId: waiting.chatId })
+    expect(read.status === 'ok' && read.messages.map((m) => m.text)).toEqual([
+      'first question',
+      'answer',
+    ])
+  })
+
+  it('remembers a bounded number of foreign-message scans', async () => {
+    const { id, root } = await addProject('p')
+    for (let i = 0; i < 6; i++) {
+      plantChat(root, `c${i}`, { projectId: id }, [msg(0, i % 2 ? { origin: 'otherPc' } : {})])
+    }
+    const store = makeStore({ foreignCacheLimit: 3 })
+    const first = await store.listChats(id)
+    expect(store.heldForeignScanCount()).toBeLessThanOrEqual(3)
+    // still correct after the scans were dropped
+    expect(await store.listChats(id)).toEqual(first)
+    expect(
+      first
+        .filter((c) => c.foreign)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(['c1', 'c3', 'c5'])
+  })
+
   it('starts a new line when the file does not end with a newline', async () => {
     const { id, root } = await addProject('p')
     plantChat(root, 'cut', { projectId: id }, [msg(0), msg(1)])

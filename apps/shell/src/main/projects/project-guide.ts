@@ -131,6 +131,8 @@ export interface ProjectAiVisibility {
   matcher: IgnoreMatcher
   /** Folder-relative path (either separator) is visible: inside, not hidden, not `.ieumoffice/`, not ignored */
   isVisible(relPath: string, isDir?: boolean): boolean
+  /** Same for the same rule (`ignore` text and case folding); a file list cache keys on it */
+  ruleKey?: string
 }
 
 export interface ContextFilesRequest {
@@ -162,7 +164,15 @@ export interface ProjectGuideDeps {
   language?: () => string
   /** The file names of a project for the context (spec 5.4 item 4); absent sends none */
   contextFiles?: (request: ContextFilesRequest) => Promise<ContextFiles>
+  /** At most one write of a project's use time per this long; default `PROJECT_TOUCH_WRITE_MS` */
+  touchWriteMs?: number
 }
+
+/**
+ * A project's "last used" time is written to `app-settings.json` at most once per
+ * this long (tunable); newer times are kept in memory meanwhile and flushed at quit.
+ */
+export const PROJECT_TOUCH_WRITE_MS = 60_000
 
 /** Writes into one project's `.ieumoffice/`, each through the write guard */
 interface DataWriter {
@@ -217,7 +227,15 @@ export class ProjectGuide {
   private readonly guard: ProjectWriteGuard
   /** Projects whose `.ieumoffice/` could not be written during this app run */
   private readonly unwritable = new Set<ProjectId>()
+  /** Copied folders listed under a new id whose `project.json` still names the original */
+  private readonly pendingIdFix = new Set<ProjectId>()
   private cachedInstallId: string | null = null
+  /** use times not written to the settings file yet (see `touch`) */
+  private readonly pendingTouches = new Map<ProjectId, string>()
+  /** when each project's use time was last written (ms) */
+  private readonly touchWrittenAt = new Map<ProjectId, number>()
+  private touchTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly touchWriteMs: number
 
   constructor(private readonly deps: ProjectGuideDeps) {
     this.platform = deps.platform ?? process.platform
@@ -226,6 +244,7 @@ export class ProjectGuide {
     this.newId = deps.newId ?? defaultNewId
     this.language = deps.language ?? (() => 'en')
     this.guard = new ProjectWriteGuard(this.platform)
+    this.touchWriteMs = deps.touchWriteMs ?? PROJECT_TOUCH_WRITE_MS
   }
 
   // ────────────────────────── settings ──────────────────────────
@@ -317,29 +336,78 @@ export class ProjectGuide {
       name: file?.name ?? basename(entry.path),
       path: entry.path,
       pinned: entry.pinned,
-      lastUsedAt: entry.lastUsedAt,
+      lastUsedAt: this.lastUsedOf(entry),
       missing,
       unwritable: this.unwritable.has(entry.id),
       syncFolder: this.isSyncFolder(entry.path),
     }
   }
 
+  /**
+   * Marks a project used now. Every send uses its project, so writing
+   * `app-settings.json` each time would rewrite the whole file per message: one
+   * project's time is written at most once per `touchWriteMs`; later times wait
+   * in memory (the list order already follows them) and are written when that
+   * interval is over or at `flushTouches` (app quit).
+   */
   private touch(id: ProjectId): void {
     const at = this.now().toISOString()
+    const nowMs = this.now().getTime()
+    const last = this.touchWrittenAt.get(id)
+    if (last === undefined || nowMs - last >= this.touchWriteMs) {
+      this.pendingTouches.set(id, at)
+      this.flushTouches()
+      return
+    }
+    this.pendingTouches.set(id, at)
+    if (!this.touchTimer) {
+      const timer = setTimeout(
+        () => {
+          this.touchTimer = null
+          this.flushTouches()
+        },
+        Math.max(0, last + this.touchWriteMs - nowMs),
+      )
+      timer.unref?.()
+      this.touchTimer = timer
+    }
+  }
+
+  /** Writes the use times still held in memory (call at app quit) */
+  flushTouches(): void {
+    if (this.touchTimer) {
+      clearTimeout(this.touchTimer)
+      this.touchTimer = null
+    }
+    if (this.pendingTouches.size === 0) return
+    const pending = new Map(this.pendingTouches)
+    this.pendingTouches.clear()
+    const nowMs = this.now().getTime()
     this.update((settings) => {
-      const entry = settings.list.find((item) => item.id === id)
-      if (entry) entry.lastUsedAt = at
+      for (const [id, at] of pending) {
+        const entry = settings.list.find((item) => item.id === id)
+        if (entry && at > entry.lastUsedAt) entry.lastUsedAt = at
+      }
     })
+    for (const id of pending.keys()) this.touchWrittenAt.set(id, nowMs)
+  }
+
+  /** `lastUsedAt` with a use time not written yet */
+  private lastUsedOf(entry: ProjectListEntry): string {
+    const pending = this.pendingTouches.get(entry.id)
+    return pending !== undefined && pending > entry.lastUsedAt ? pending : entry.lastUsedAt
   }
 
   // ────────────────────────── list ──────────────────────────
 
   /** Pinned projects first, then the rest; each group newest `lastUsedAt` first */
   async listProjects(): Promise<ProjectListItem[]> {
-    const entries = [...this.read().list].sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-      return b.lastUsedAt.localeCompare(a.lastUsedAt)
-    })
+    const entries = this.read()
+      .list.map((entry) => ({ ...entry, lastUsedAt: this.lastUsedOf(entry) }))
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+        return b.lastUsedAt.localeCompare(a.lastUsedAt)
+      })
     return Promise.all(entries.map((entry) => this.toItem(entry)))
   }
 
@@ -368,6 +436,7 @@ export class ProjectGuide {
   async removeFromList(id: ProjectId): Promise<void> {
     this.update((settings) => dropFromList(settings, id))
     this.unwritable.delete(id)
+    this.pendingIdFix.delete(id)
   }
 
   /** "Add folder" (spec 5.1): refusal rules, identity (5.11), trust (5.10) */
@@ -426,9 +495,11 @@ export class ProjectGuide {
         name,
         createdAt: this.now().toISOString(),
       }
-      await this.tryWrite(id, () =>
+      const wrote = await this.tryWrite(id, () =>
         this.guard.writeData(root, PROJECT_FOLDER_NAMES.projectFile, projectFileText(copyFile)),
       )
+      // the folder still names the original's id: the next write that succeeds fixes it
+      if (wrote.status !== 'ok') this.pendingIdFix.add(id)
     }
 
     const at = this.now().toISOString()
@@ -462,6 +533,7 @@ export class ProjectGuide {
       }
     })
 
+    if (finalId !== id) this.pendingIdFix.delete(id)
     const notices = this.takeSyncNotice(finalId, root)
     const entry = this.entry(finalId)
     if (!entry) throw new Error(`project ${finalId} was not listed`)
@@ -577,11 +649,34 @@ export class ProjectGuide {
     const entry = this.entry(id)
     if (!entry) throw new Error(`unknown project ${id}`)
     const fresh = projectFileText(await this.projectFileFor(id, entry.path))
-    return this.tryWrite(id, () =>
+    const result = await this.tryWrite(id, () =>
       this.guard
-        .updateData(entry.path, PROJECT_FOLDER_NAMES.projectFile, (current) => current ?? fresh)
+        .updateData(entry.path, PROJECT_FOLDER_NAMES.projectFile, (current) =>
+          current === null || this.idNeedsFix(id, entry.path, current) ? fresh : current,
+        )
         .then(() => undefined),
     )
+    if (result.status === 'ok') this.pendingIdFix.delete(id)
+    return result
+  }
+
+  /**
+   * `project.json` text at a listed project's folder names another id that must be
+   * replaced: a copy whose new id could not be written when it was added (this run),
+   * or, after a restart, a folder whose file still names a project listed at another
+   * folder (the original of the copy). Any other id is left alone.
+   */
+  private idNeedsFix(id: ProjectId, root: string, current: string): boolean {
+    let fileId: unknown
+    try {
+      fileId = (JSON.parse(current) as { id?: unknown } | null)?.id
+    } catch {
+      return false
+    }
+    if (fileId === id || !isValidProjectId(fileId)) return false
+    if (this.pendingIdFix.has(id)) return true
+    const original = this.entry(fileId)
+    return original !== undefined && !samePath(original.path, root, this.platform)
   }
 
   private async projectFileFor(id: ProjectId, root: string): Promise<ProjectFolderFile> {
@@ -628,8 +723,9 @@ export class ProjectGuide {
       if (identified) return
       identified = true
       await this.guard.updateData(root, PROJECT_FOLDER_NAMES.projectFile, (current) =>
-        current === null ? fresh : null,
+        current === null || this.idNeedsFix(id, root, current) ? fresh : null,
       )
+      this.pendingIdFix.delete(id)
     }
     const data: DataWriter = {
       root,
@@ -741,6 +837,7 @@ export class ProjectGuide {
       root,
       matcher,
       isVisible: (relPath, isDir = false) => isAiVisiblePath(root, relPath, matcher, isDir),
+      ruleKey: hashText(`${ignoreFoldsCase(this.platform) ? 'i' : 's'}:${text}`),
     }
   }
 

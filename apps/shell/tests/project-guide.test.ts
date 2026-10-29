@@ -19,13 +19,14 @@ import type {
   ProjectTrustAnswer,
   ProjectTrustPrompt,
 } from '@genoffice/project-store'
-import { readAppSettings, writeAppSetting } from '../src/main/app-settings'
+import { readAppSettings, readProjectsSettings, writeAppSetting } from '../src/main/app-settings'
 import {
   INSTRUCTIONS_LIMIT_CHARS,
   MEMORY_SOFT_LIMIT_CHARS,
   ProjectGuide,
   type ProjectGuideDeps,
 } from '../src/main/projects/project-guide'
+import { ProjectWriteGuard } from '../src/main/projects/write-guard'
 
 /** The project guide: registry, identity, trust, context, memory and selection (spec 3-5) */
 
@@ -226,6 +227,47 @@ describe('adding folders and identity (spec 5.11)', () => {
     const context = await guide.readContext(copied.project.id)
     expect(context.status === 'ok' && context.context.instructions?.text).toContain('Formal tone.')
     expect(context.status === 'ok' && context.context.notices).toEqual([])
+  })
+
+  async function copyWithFailedIdWrite(guide: ProjectGuide) {
+    const original = folder('original-id')
+    const added = await addOk(guide, original, never)
+    await guide.renameProject(added.project.id, 'Source')
+    const copy = join(base, 'copy-id')
+    cpSync(original, copy, { recursive: true })
+    const spy = vi
+      .spyOn(ProjectWriteGuard.prototype, 'writeData')
+      .mockRejectedValueOnce(new Error('EPERM: read-only'))
+    const copied = await addOk(guide, copy, never)
+    spy.mockRestore()
+    expect(copied.identity).toBe('copied')
+    expect(copied.project.id).not.toBe(added.project.id)
+    // the new id could not be written: the folder still names the original
+    expect(projectFile(copy).id).toBe(added.project.id)
+    expect(guide.isUnwritable(copied.project.id)).toBe(true)
+    return { original, copy, originalId: added.project.id, id: copied.project.id }
+  }
+
+  it('fixes a copy’s project.json on the next write that succeeds', async () => {
+    const guide = makeGuide()
+    const { original, copy, originalId, id } = await copyWithFailedIdWrite(guide)
+    expect(await guide.retryUnwritable(id)).toEqual({ status: 'ok' })
+    expect(projectFile(copy).id).toBe(id)
+    expect(projectFile(copy).name).toBe('Source')
+    expect(projectFile(original).id).toBe(originalId)
+  })
+
+  it('still fixes it after a restart, while the original is listed elsewhere', async () => {
+    const { original, copy, originalId, id } = await copyWithFailedIdWrite(makeGuide())
+    const restarted = makeGuide()
+    expect(await restarted.saveInstructions(id, 'Copy rules.')).toEqual({ status: 'ok' })
+    expect(projectFile(copy).id).toBe(id)
+    expect(projectFile(original).id).toBe(originalId)
+    // the original's own writes leave its id alone
+    expect(await restarted.saveInstructions(originalId, 'Original rules.')).toEqual({
+      status: 'ok',
+    })
+    expect(projectFile(original).id).toBe(originalId)
   })
 
   it('re-picks a missing project onto a folder without project.json', async () => {
@@ -494,6 +536,65 @@ describe('new project (spec 5.1)', () => {
 })
 
 describe('context for a send (spec 5.4)', () => {
+  it('writes a project’s use time at most once a minute and keeps the order in memory', async () => {
+    const guide = makeGuide({ touchWriteMs: 60_000 })
+    const a = await addOk(guide, folder('use-a'), never)
+    clock += 1_000
+    const b = await addOk(guide, folder('use-b'), never)
+    const storedAt = (id: string) =>
+      readProjectsSettings(settingsPath).list.find((item) => item.id === id)?.lastUsedAt
+    const order = async () => (await guide.listProjects()).map((item) => item.id)
+    expect(await order()).toEqual([b.project.id, a.project.id])
+
+    // the first use is written at once
+    clock += 1_000
+    await guide.readContext(a.project.id)
+    const firstWrite = storedAt(a.project.id)
+    expect(firstWrite).toBe(new Date(clock).toISOString())
+    expect(await order()).toEqual([a.project.id, b.project.id])
+
+    // b, then a again within the minute: b is written (its first use), a waits in memory
+    clock += 1_000
+    await guide.readContext(b.project.id)
+    clock += 1_000
+    await guide.readContext(a.project.id)
+    expect(storedAt(a.project.id)).toBe(firstWrite)
+    expect(await order()).toEqual([a.project.id, b.project.id])
+
+    // quitting writes what waited
+    guide.flushTouches()
+    expect(storedAt(a.project.id)).toBe(new Date(clock).toISOString())
+
+    // past the minute a use is written at once again
+    clock += 61_000
+    await guide.readContext(a.project.id)
+    expect(storedAt(a.project.id)).toBe(new Date(clock).toISOString())
+  })
+
+  it('writes a held use time when the minute is over', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const guide = makeGuide({ touchWriteMs: 60_000 })
+      const a = await addOk(guide, folder('use-timer'), never)
+      await guide.readContext(a.project.id)
+      clock += 5_000
+      await guide.readContext(a.project.id)
+      const held = new Date(clock).toISOString()
+      expect(
+        readProjectsSettings(settingsPath).list.find((item) => item.id === a.project.id)
+          ?.lastUsedAt,
+      ).not.toBe(held)
+      clock += 55_000
+      vi.advanceTimersByTime(55_000)
+      expect(
+        readProjectsSettings(settingsPath).list.find((item) => item.id === a.project.id)
+          ?.lastUsedAt,
+      ).toBe(held)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('reads instructions, root AGENTS.md / CLAUDE.md and memory without creating anything', async () => {
     const guide = makeGuide()
     const root = folder('ctx')

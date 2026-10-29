@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
-import type { Stats } from 'node:fs'
+import { realpath, type Stats } from 'node:fs'
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { promisify } from 'node:util'
 import {
   isValidProjectId,
   PROJECT_FOLDER_NAMES,
@@ -9,6 +10,10 @@ import {
   PROJECT_NAME_MAX_CHARS,
   type ProjectFolderFile,
 } from '@genoffice/project-store'
+import { relativeInside } from './paths'
+
+/** the OS's own resolution (long names on Windows), unlike the JS `realpath` */
+const realpathNative = promisify(realpath.native)
 
 /**
  * Reading what a project folder holds (spec 3). Reads never create anything and
@@ -48,6 +53,39 @@ export async function plainFileIn(
     if (last && (!info.isFile() || info.nlink > 1)) return null
   }
   return path
+}
+
+/** a file reached by `realPlainFileIn`: where it is on disk and its segments below the root */
+export interface RealFolderFile {
+  path: string
+  segments: string[]
+}
+
+/**
+ * `plainFileIn` for a path someone else named (the AI's read tool): the file as it
+ * is named on disk. On Windows one entry answers to several spellings: an 8.3 short
+ * name (`IEUMOF~1`), trailing dots or spaces, other letter case. A rule judged on
+ * the given spelling could pass a hidden or ignored entry, so the caller judges the
+ * segments returned here, which come from the file's real path. `root` is the
+ * project's canonical path. Null when the file is not plain or its real path does
+ * not lie below `root`.
+ */
+export async function realPlainFileIn(
+  root: string,
+  segments: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+): Promise<RealFolderFile | null> {
+  const path = await plainFileIn(root, segments)
+  if (!path) return null
+  let real: string
+  try {
+    real = (await realpathNative(path)).normalize('NFC')
+  } catch {
+    return null
+  }
+  const rel = relativeInside(root, real, platform)
+  if (rel === null) return null
+  return { path: real, segments: rel.split('/') }
 }
 
 /** The entry names of `<root>/<segments>` when it is a real folder (no link on the way); [] otherwise */
