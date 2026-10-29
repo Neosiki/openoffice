@@ -444,7 +444,48 @@ export function defaultAiSettings(
     headlessSubscriptionEnabled: false,
     headlessSubscriptionConsentVersion: 0,
     subscriptionNoticeSeen: false,
+    subscriptionNoticeVersion: 0,
+    pdfSendNoticeSeen: 0,
   }
+}
+
+/** The current wording of the first-connection notice: version 2 added the PDF sentence */
+export const AI_SUBSCRIPTION_NOTICE_VERSION = 2
+
+/** The notice version an older settings file without one had acknowledged */
+const LEGACY_SUBSCRIPTION_NOTICE_VERSION = 1
+
+/**
+ * A stored notice version, or the version an old boolean-only file implies.
+ * The app's settings reader migrates a truly old file to version 1 before it
+ * reaches this function, so a boolean-only value from a fresh default object
+ * means the current wording.
+ */
+export function subscriptionNoticeVersionOf(version: unknown, seen: unknown): number {
+  if (typeof version === 'number' && Number.isInteger(version) && version >= 0) {
+    return Math.min(version, AI_SUBSCRIPTION_NOTICE_VERSION)
+  }
+  return seen === true ? AI_SUBSCRIPTION_NOTICE_VERSION : 0
+}
+
+/** The version an old settings file is migrated to, so its user sees the added sentence once */
+export const LEGACY_NOTICE_VERSION_FOR_MIGRATION = LEGACY_SUBSCRIPTION_NOTICE_VERSION
+
+/**
+ * The settings object a file written before notice versions needs, or null
+ * when it already has one (or is not a settings object). The caller writes the
+ * returned object back; normalizing without this would treat the old boolean
+ * as the current wording and the user would never see the added sentence.
+ */
+export function withMigratedSubscriptionNoticeVersion(
+  raw: unknown,
+): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const value = raw as Record<string, unknown>
+  if (value.subscriptionNoticeSeen !== true) return null
+  const version = value.subscriptionNoticeVersion
+  if (typeof version === 'number' && Number.isInteger(version) && version >= 0) return null
+  return { ...value, subscriptionNoticeVersion: LEGACY_SUBSCRIPTION_NOTICE_VERSION }
 }
 
 /**
@@ -648,6 +689,16 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
     ),
     subscriptionNoticeSeen:
       (settings.subscriptionNoticeSeen ?? defaults.subscriptionNoticeSeen) === true,
+    subscriptionNoticeVersion: subscriptionNoticeVersionOf(
+      settings.subscriptionNoticeVersion,
+      settings.subscriptionNoticeSeen ?? defaults.subscriptionNoticeSeen,
+    ),
+    pdfSendNoticeSeen:
+      typeof settings.pdfSendNoticeSeen === 'number' &&
+      Number.isInteger(settings.pdfSendNoticeSeen) &&
+      settings.pdfSendNoticeSeen > 0
+        ? settings.pdfSendNoticeSeen
+        : 0,
     ...((settings.internetTools ?? defaults.internetTools) === false
       ? { internetTools: false }
       : {}),

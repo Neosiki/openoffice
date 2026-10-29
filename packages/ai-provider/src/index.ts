@@ -109,8 +109,10 @@ export type {
 export { AiRunError, aiStreamErrorFields } from './run-error'
 export {
   AI_PROVIDERS,
+  AI_SUBSCRIPTION_NOTICE_VERSION,
   DEFAULT_MAX_OUTPUT_TOKENS,
   HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
+  LEGACY_NOTICE_VERSION_FOR_MIGRATION,
   MAX_MAX_OUTPUT_TOKENS,
   MIN_MAX_OUTPUT_TOKENS,
   clampMaxOutputTokens,
@@ -118,6 +120,8 @@ export {
   headlessSubscriptionOn,
   maxOutputTokensOf,
   resolveAiSettings,
+  subscriptionNoticeVersionOf,
+  withMigratedSubscriptionNoticeVersion,
 } from './providers'
 export {
   activeCustomEndpoint,

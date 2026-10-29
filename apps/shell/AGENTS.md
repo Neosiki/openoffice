@@ -11,7 +11,7 @@
 - 홈 화면과 설정(`src/renderer/src/`): `Home.tsx`, `Onboarding.tsx`, `SettingsModal.tsx`, AI 설정 `SettingsAiSection.tsx`·`settings-ai.ts`(비공개 GitHub 읽기용 토큰 입력란 `set-read-url-token`, `readUrlGithubToken`·`withReadUrlGithubToken`), 통합 탭 `IntegrationsPane.tsx`, 별표 파일에 묻는 `KbAskPanel.tsx`, 앱 안 도움말(`i18n/help/`).
 - 의견 보내기(결정 0036, `src/main/feedback.ts`): 도움말 메뉴와 설정 → 정보의 같은 입구 하나. 제품 버전·운영체제·화면 언어를 대화 상자에 보여 주고 클립보드에 복사한 뒤 Google 설문을 브라우저로 연다. 문구는 `feedback.ts`의 21개 언어 표, 모든 탭의 도움말 메뉴에 끼워 넣는 일은 `withHelpItems`, 채널은 `home:open-feedback-survey`다.
 - 파일 색인과 지식 기반(`src/main/file-index/`, `knowledge-base.ts`), 최근 파일, 폴더 트리. 홈의 질문을 별표 그룹 하나로 좁히는 일(`knowledge-base.ts`의 `KbRunScopes`, `kb:open-scope`·`kb:close-scope`).
-- 문서로 새 문서 만들기(`src/main/generate/`): 만들기 창(`generate-window.ts`, 화면은 `src/renderer/generate.html`과 `src/renderer/src/generate/`), 창 하나의 상태와 동작(`session.ts`), 요청 검사(`request.ts`), 자료의 상태와 글 길이(`materials.ts`), 자료가 열린 탭과 그 저장(`open-materials.ts`), AI 없이 바꾸기(`convert.ts`, `converted-tab.ts`), 조정 가능한 값(`limits.ts`). 홈의 입구는 `generate:open-with-paths`·`generate:open-with-group`이다.
+- 문서로 새 문서 만들기(`src/main/generate/`): 만들기 창(`generate-window.ts`, 화면은 `src/renderer/generate.html`과 `src/renderer/src/generate/`), 창 하나의 상태와 동작(`session.ts`), 요청 검사(`request.ts`), 자료의 상태와 글 길이(`materials.ts`), 자료가 열린 탭과 그 저장(`open-materials.ts`), AI 없이 바꾸기(`convert.ts`, `converted-tab.ts`), 조정 가능한 값(`limits.ts`). 홈의 입구는 `generate:open-with-paths`·`generate:open-with-group`이다. Windows/Linux에서는 제목 표시줄을 직접 그린다(`titleBarStyle: 'hidden'` + `title-bar.ts`의 `generateTitleBarOverlay`, 헤더 높이는 `GENERATE_TITLE_BAR_HEIGHT`와 같다) — Windows는 앱 테마가 어두워도 네이티브 제목 표시줄을 밝게 그리기 때문이다.
 - PDF 도구 창(`src/main/pdf-tools/`, 결정 0030): 창과 대화 상자·저장(`pdf-tools-window.ts`), Electron 없이 도는 처리(`tools.ts`), 화면은 `src/renderer/pdf-tools.html`과 `src/renderer/src/pdf-tools/`, 문구는 `i18n/pdf-tools/`(도구 이름은 PDF 편집기 리본의 문구를 복사). 홈의 입구는 "PDF 도구" 카드와 `pdf-tools:open`이다.
 - 출처 기록(`document-links.ts`, 껍데기 쪽 배선 `document-links-shell.ts`)과 모든 에디터의 파일 메뉴에 붙는 "이 문서로 다른 문서 만들기"·"자료 보기"·"이 문서로 만든 문서"(`document-links-menu.ts`).
 - 열린 탭 가운데 저장하지 않은 문서의 목록을 에디터 뒷단에 알려 주는 일(`index.ts`에서 `setOpenFilesSource`).
@@ -93,7 +93,7 @@
 - **시작 목록이 떠 있는 동안 어떤 탭도 불러오지 않는다.** 홈을 앞에 두고, 답(또는 닫기 = 나중에)을 받은 뒤에 앞 탭과 나눔을 불러온다. 편집기 화면은 홈의 겹침 화면 위에 그려지고, 무엇을 불러올지가 답에 달렸다. 되살리기 반복(`crashLoop`)이면 아무 탭도 미리 불러오지 않는다.
 - **불러오지 않은 탭은 깨끗한 탭이다.** 저장 안 됨 계산, 닫기 확인, 저장 메뉴 대상에서 빠지고, 닫으면 편집기 정리 없이 사라져 사본이 남는다. 열린 문서의 화면이 필요한 MCP 길은 `webContentsForTab`이 아니라 `liveDocumentContents`(`ensureTabLoaded`)를 쓴다.
 
-- **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
+- **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`). **세션을 시작한 뒤 새로 연 문서는 프로그램의 권한 규칙에 들어가지 않는다.** 다음 메시지 전에 그 사실을 한 번 알리고(`documents-unprotected` 이벤트), 앱 쪽 권한 판단에는 새 목록을 넘긴다(`setOpenDocuments`). 보호를 받으려면 세션을 멈추고 다시 시작해야 한다.
 - **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).
 
 ## 이 모듈의 방식
