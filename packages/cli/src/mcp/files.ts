@@ -6,7 +6,7 @@ import { createWriteStream, existsSync, mkdirSync, rmSync, statSync } from 'node
 // undici's WebAssembly parser, and every command reaches this module.
 import type { IncomingMessage } from 'node:http'
 import { BlockList, isIP } from 'node:net'
-import { basename, extname, join } from 'node:path'
+import { basename, dirname, extname, join, resolve } from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
@@ -94,6 +94,7 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
 export class FileStore {
   private readonly entries = new Map<string, StoredFile & { touched: number }>()
   private readonly idsByPath = new Map<string, string>()
+  private readonly uploadDirectories = new Set<string>()
   private readonly sweeper: NodeJS.Timeout
 
   constructor(
@@ -109,6 +110,7 @@ export class FileStore {
   uploadTarget(name: string): string {
     const dir = join(this.root, 'uploads', newId())
     mkdirSync(dir, { recursive: true })
+    this.uploadDirectories.add(resolve(dir))
     return join(dir, safeName(name, 'upload.bin'))
   }
 
@@ -165,8 +167,9 @@ export class FileStore {
     if (!entry) return
     this.entries.delete(id)
     this.idsByPath.delete(entry.path)
-    if (entry.path.startsWith(join(this.root, 'uploads'))) {
-      rmSync(join(entry.path, '..'), { recursive: true, force: true })
+    const directory = dirname(resolve(entry.path))
+    if (this.uploadDirectories.delete(directory)) {
+      rmSync(directory, { recursive: true, force: true })
     }
   }
 }
