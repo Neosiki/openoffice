@@ -114,7 +114,11 @@ const EXTERNAL_WORKBOOK_PATTERN = /\[(?:\d+|[^[\]]*\.xl\w*)\]/i
 
 /// True when the formula uses an identifier that is not a function call —
 /// a defined name or an external reference the closure cannot resolve.
-export function containsUnresolvedNames(formula: string): boolean {
+/// Names in `resolvedNames` (lowercase) count as resolved.
+export function containsUnresolvedNames(
+  formula: string,
+  resolvedNames?: ReadonlySet<string>,
+): boolean {
   const segments = formula.split('"')
   for (let index = 0; index < segments.length; index += 2) {
     // [n]Sheet!ref / '[n]Sheet name'!ref / 'C:\dir\[Book.xlsx]Sheet'!ref is
@@ -133,10 +137,66 @@ export function containsUnresolvedNames(formula: string): boolean {
       const name = match[0]
       if (name === 'TRUE' || name === 'FALSE') continue
       const rest = stripped.slice(match.index + name.length)
-      if (!/^\s*\(/.test(rest)) return true
+      if (!/^\s*\(/.test(rest) && !resolvedNames?.has(name.toLowerCase())) return true
     }
   }
   return false
+}
+
+export interface DefinedNameInput {
+  readonly name: string
+  readonly formula: string
+  /// Set for sheet-scoped names.
+  readonly sheetIndex?: number | undefined
+}
+
+/// True when a reference in the formula is relative in any part (B1, $B1,
+/// C:C). Excel resolves a name's relative reference against the cell that
+/// uses the name; the engine pins it to the definition instead.
+function hasRelativeReference(formula: string): boolean {
+  const segments = formula.split('"')
+  for (let index = 0; index < segments.length; index += 2) {
+    for (const match of (segments[index] ?? '').matchAll(FORMULA_REFERENCE_PATTERN)) {
+      const parts = (match[3] ?? '').split(':')
+      if (parts.some((part) => !/^(?:\$[A-Z]{1,3})?(?:\$[0-9]+)?$/.test(part))) return true
+    }
+  }
+  return false
+}
+
+/// Lowercased defined names whose formulas the engine recalculates the way
+/// Excel does: a single workbook-scoped definition the engine accepted, with
+/// absolute references only, using no names outside this set. Names defined
+/// at more than one scope stay out (the engine keys names by text alone and
+/// ignores the sheet-scope precedence), as do names in a reference cycle.
+export function recalculableDefinedNames(
+  definedNames: readonly DefinedNameInput[],
+  rejected: ReadonlySet<string>,
+): Set<string> {
+  const byName = new Map<string, DefinedNameInput[]>()
+  for (const defined of definedNames) {
+    const key = defined.name.toLowerCase()
+    byName.set(key, [...(byName.get(key) ?? []), defined])
+  }
+  const pending = new Map<string, string>()
+  for (const [key, list] of byName) {
+    const only = list.length === 1 ? list[0] : undefined
+    if (!only || only.sheetIndex !== undefined || rejected.has(only.name)) continue
+    if (hasRelativeReference(only.formula)) continue
+    pending.set(key, only.formula)
+  }
+  // Accept names bottom-up: a name joins once every name its body uses has.
+  const accepted = new Set<string>()
+  for (let grew = true; grew;) {
+    grew = false
+    for (const [key, formula] of pending) {
+      if (containsUnresolvedNames(formula, accepted)) continue
+      accepted.add(key)
+      pending.delete(key)
+      grew = true
+    }
+  }
+  return accepted
 }
 
 export function computeFormulaClosure(

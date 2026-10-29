@@ -117,6 +117,7 @@ import {
   keyColumn,
   keyRow,
   recalcReadRanges,
+  recalculableDefinedNames,
   type ClosureSheetInput,
 } from './formula-closure'
 import { isPlainArithmeticFormula } from './formula-cached-fallback'
@@ -1116,6 +1117,7 @@ export function applyDefinedNames(
   file: WorkbookFile,
   state: LazyWorkbookState,
 ): void {
+  setRecalculableNames(new Set())
   const workbook = runtime?.univerAPI.getActiveWorkbook()
   if (!workbook) return
   // Excel allows one definition per (name, scope) and resolves sheet-scope
@@ -1170,6 +1172,7 @@ export function applyDefinedNames(
   } finally {
     journalSuppression.active = false
   }
+  setRecalculableNames(recalculableDefinedNames(file.definedNames, state.uninstalledDefinedNames))
 }
 
 /// An author-less comment carries no marker, so the marker is recognised by
@@ -4342,6 +4345,17 @@ export function setSupportedFunctionProbe(probe: SupportedFunctionProbe | null):
   keepsCacheMemo.clear()
 }
 
+/// The open workbook's defined names the engine recalculates like Excel
+/// (lowercase, see recalculableDefinedNames). A formula using any other
+/// name keeps the file's cached value.
+let recalculableNames: ReadonlySet<string> = new Set()
+
+export function setRecalculableNames(names: ReadonlySet<string>): void {
+  recalculableNames = names
+  // Verdicts memoised under the previous workbook's names are stale.
+  keepsCacheMemo.clear()
+}
+
 /// True when the formula calls a function the engine lacks. Recalculating
 /// such a formula yields #NAME? — or, when the author wrapped the call in
 /// IFERROR/ISERROR/IFNA/IFS/CHOOSE, the fallback literal (0, "") in place of
@@ -4361,7 +4375,7 @@ export function formulaKeepsCache(formula: string, hasCachedValue = true): boole
     const always =
       formula.includes('__xludf.') ||
       usesLocaleDependentFunction(formula) ||
-      containsUnresolvedNames(formula)
+      containsUnresolvedNames(formula, recalculableNames)
     const probe = supportedFunctionProbe
     const registryReady = probe === null || probe.ready()
     verdict = {
