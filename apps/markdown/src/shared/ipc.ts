@@ -54,6 +54,8 @@ export const MARKDOWN_CHANNELS = {
   exportDocx: 'markdown:export-docx',
   exportOdt: 'markdown:export-odt',
   exportPdf: 'markdown:export-pdf',
+  printPreview: 'markdown:print-preview',
+  printDocument: 'markdown:print-document',
   prepareImageExport: 'markdown:prepare-image-export',
   writeExportImage: 'markdown:write-export-image',
   finishImageExport: 'markdown:finish-image-export',
@@ -298,6 +300,26 @@ export interface ExportPdfRequest {
   outPath?: string
 }
 
+/** The print preview asks for the very PDF the PDF export writes. */
+export interface MarkdownPrintPreviewRequest {
+  html: string
+  /** paper and orientation chosen in the dialog; absent means A4 portrait */
+  options?: MarkdownPrintOptions
+}
+
+export type MarkdownPrintPreviewResult =
+  { ok: true; pdf: Uint8Array } | { ok: false; error: string }
+
+/** Print the same HTML the preview showed, optionally only a page range. */
+export interface MarkdownPrintDocumentRequest {
+  html: string
+  pages: MarkdownPageRange | null
+  options?: MarkdownPrintOptions
+}
+
+export type MarkdownPrintDocumentResult =
+  { ok: true; canceled?: boolean } | { ok: false; error: string }
+
 export type ImageExportPreparation =
   | { ok: true; id: string; pdfBase64: string }
   | { ok: true; canceled: true }
@@ -313,6 +335,7 @@ export interface ImageData {
 
 /** API exposed by preload to the renderer (window.markdownApi) */
 import type { MarkdownTheme } from './markdown-theme'
+import type { MarkdownPageRange, MarkdownPrintOptions } from './print-options'
 export interface MarkdownApi {
   /** Take the md path pending for this view (queued at tab creation); null = new untitled document */
   consumePending(): Promise<string | null>
@@ -445,6 +468,10 @@ export interface MarkdownApi {
   /** save dialog (.odt) → docx → ODT → confirmation when something changes → write */
   exportOdt(request: ExportOdtRequest): Promise<ExportResult>
   exportPdf(request: ExportPdfRequest): Promise<ExportResult>
+  /** the PDF the print preview shows; the same options the PDF export uses */
+  renderPrintPreview(request: MarkdownPrintPreviewRequest): Promise<MarkdownPrintPreviewResult>
+  /** print through the system dialog, using the same HTML and options as the preview */
+  printDocument(request: MarkdownPrintDocumentRequest): Promise<MarkdownPrintDocumentResult>
   prepareImageExport(request: Omit<ExportPdfRequest, 'outPath'>): Promise<ImageExportPreparation>
   writeExportImage(
     id: string,

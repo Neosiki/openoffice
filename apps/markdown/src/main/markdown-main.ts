@@ -40,6 +40,7 @@ import { createI18n, getUiLang } from '@genoffice/i18n'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { ImageExportSessions } from './image-export'
+import { printMarkdownDocument } from './print-document'
 import { printMarkdownPdf } from './print-pdf'
 import { atomicWriteFile } from './atomic-write'
 import {
@@ -87,10 +88,15 @@ import type {
   ImageExportPreparation,
   ExportResult,
   ImageData,
+  MarkdownPrintDocumentRequest,
+  MarkdownPrintDocumentResult,
+  MarkdownPrintPreviewRequest,
+  MarkdownPrintPreviewResult,
   SaveMarkdownRequest,
   SaveMarkdownResult,
   SaveMode,
 } from '../shared/ipc'
+import { MAX_PRINT_HTML_CHARS, normalizeMarkdownPrintOptions } from '../shared/print-options'
 
 const tDlg = createI18n({
   zh: {
@@ -1343,6 +1349,64 @@ function registerMarkdownIpc(): void {
         return { ok: true, path: picked.filePath }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    MARKDOWN_CHANNELS.printPreview,
+    async (_e, request: MarkdownPrintPreviewRequest): Promise<MarkdownPrintPreviewResult> => {
+      if (
+        typeof request?.html !== 'string' ||
+        !request.html ||
+        request.html.length > MAX_PRINT_HTML_CHARS
+      ) {
+        return { ok: false, error: 'markdown: bad print preview request' }
+      }
+      try {
+        const pdf = await printMarkdownPdf(
+          request.html,
+          normalizeMarkdownPrintOptions(request.options),
+        )
+        return { ok: true, pdf: new Uint8Array(pdf) }
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) }
+      }
+    },
+  )
+
+  const printingDocuments = new Set<number>()
+  ipcMain.handle(
+    MARKDOWN_CHANNELS.printDocument,
+    async (e, request: MarkdownPrintDocumentRequest): Promise<MarkdownPrintDocumentResult> => {
+      if (
+        typeof request?.html !== 'string' ||
+        !request.html ||
+        request.html.length > MAX_PRINT_HTML_CHARS
+      ) {
+        return { ok: false, error: 'markdown: bad print request' }
+      }
+      const pages = request.pages
+      if (
+        pages !== null &&
+        (!Number.isInteger(pages?.from) ||
+          !Number.isInteger(pages?.to) ||
+          pages.from < 1 ||
+          pages.to < pages.from)
+      ) {
+        return { ok: false, error: 'markdown: bad print range' }
+      }
+      const wcId = e.sender.id
+      if (printingDocuments.has(wcId)) return { ok: false, error: 'markdown: already printing' }
+      printingDocuments.add(wcId)
+      try {
+        return await printMarkdownDocument(
+          request.html,
+          pages,
+          normalizeMarkdownPrintOptions(request.options),
+        )
+      } finally {
+        printingDocuments.delete(wcId)
       }
     },
   )
