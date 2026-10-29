@@ -50,7 +50,7 @@ export const EPUB_CHANNELS = {
   readChapter: 'epub:read-chapter',
   /** main → renderer(requestId): send pending edits before an in-app MCP read */
   flushRequest: 'epub:flush-request',
-  /** renderer → main(requestId, ok): pending edits have finished flushing */
+  /** renderer → main(requestId, result): true, false, or 'composing' for a retryable refusal */
   flushResult: 'epub:flush-result',
   /** invoke(url) → boolean: open an outside link in the system browser (safe addresses only) */
   openLink: 'epub:open-link',
@@ -575,7 +575,7 @@ export interface EpubCoreApi {
   openFile(path: string): Promise<EpubOpenFileResult>
   readChapter(spineIndex: number): Promise<EpubChapterResult>
   onFlushRequest(handler: (requestId: string) => void): () => void
-  sendFlushResult(requestId: string, ok: boolean): void
+  sendFlushResult(requestId: string, result: boolean | 'composing'): void
   applyEdits(request: EpubApplyEditsRequest): Promise<EpubEditResult>
   replaceRanges(request: EpubReplaceRangesRequest): Promise<EpubEditResult>
   /** this tab's book translation started (true) or ended (false) */

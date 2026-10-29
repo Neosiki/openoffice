@@ -634,8 +634,12 @@ export default function App(): React.JSX.Element {
   useEffect(
     () =>
       api.onFlushRequest?.((requestId) => {
-        if (phaseRef.current.kind !== 'open' || editor.composing) {
+        if (phaseRef.current.kind !== 'open') {
           api.sendFlushResult(requestId, false)
+          return
+        }
+        if (editor.composing) {
+          api.sendFlushResult(requestId, 'composing')
           return
         }
         void editor.flush().then(

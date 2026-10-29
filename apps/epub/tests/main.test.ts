@@ -381,6 +381,18 @@ describe('MCP reads and pending renderer edits', () => {
     await rejected
   })
 
+  it('asks the caller to retry after input-method composition', async () => {
+    const { contents } = await openBook()
+    const reading = epubReadText(contents as never)
+    const requestId = contents.sent.at(-1)![1]
+    const rejected = expect(reading).rejects.toThrow('typing in progress, try again shortly')
+    call(EPUB_CHANNELS.flushResult, contents, requestId, 'composing')
+    await rejected
+    const retry = epubReadText(contents as never)
+    call(EPUB_CHANNELS.flushResult, contents, contents.sent.at(-1)![1], true)
+    await expect(retry).resolves.toContain('First paragraph.')
+  })
+
   it('matches concurrent reads by request id and sender, ignoring late replies', async () => {
     const { contents } = await openBook()
     const { contents: other } = await openBook({}, 'other.epub')

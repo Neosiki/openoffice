@@ -127,7 +127,7 @@ const closeSaveWaiters = new Map<number, (ok: boolean) => void>()
 /** Resolvers for menu-triggered saves, resolved when the renderer's save invoke completes */
 const saveWaiters = new Map<number, (ok: boolean) => void>()
 /** Each read waits for its own acknowledgement from the book's renderer. */
-const flushWaiters = new Map<number, Map<string, (ok: boolean) => void>>()
+const flushWaiters = new Map<number, Map<string, (result: boolean | 'composing') => void>>()
 /** The save running for each view; the next one waits for it */
 const saveChainByWc = new Map<number, Promise<EpubSaveResult>>()
 
@@ -349,7 +349,8 @@ export async function epubReadText(contents: WebContents): Promise<string> {
   if (!session) throw new Error('the file did not open, so there is no book to read')
   await new Promise<void>((resolve, reject) => {
     const requestId = randomBytes(16).toString('hex')
-    const waiters = flushWaiters.get(contents.id) ?? new Map<string, (ok: boolean) => void>()
+    const waiters =
+      flushWaiters.get(contents.id) ?? new Map<string, (result: boolean | 'composing') => void>()
     flushWaiters.set(contents.id, waiters)
     const finish = (error?: string): void => {
       clearTimeout(timer)
@@ -359,7 +360,15 @@ export async function epubReadText(contents: WebContents): Promise<string> {
       else resolve()
     }
     const timer = setTimeout(() => finish('timed out flushing the book'), 10_000)
-    waiters.set(requestId, (ok) => finish(ok ? undefined : 'could not flush the book'))
+    waiters.set(requestId, (result) =>
+      finish(
+        result === true
+          ? undefined
+          : result === 'composing'
+            ? 'typing in progress, try again shortly'
+            : 'could not flush the book',
+      ),
+    )
     try {
       contents.send(EPUB_CHANNELS.flushRequest, requestId)
     } catch {
@@ -705,9 +714,11 @@ function registerEpubIpc(): void {
     else rendererDirtyByWc.delete(e.sender.id)
   })
 
-  ipcMain.on(EPUB_CHANNELS.flushResult, (e, requestId: unknown, ok: unknown) => {
+  ipcMain.on(EPUB_CHANNELS.flushResult, (e, requestId: unknown, result: unknown) => {
     if (typeof requestId !== 'string') return
-    flushWaiters.get(e.sender.id)?.get(requestId)?.(ok === true)
+    flushWaiters.get(e.sender.id)?.get(requestId)?.(
+      result === 'composing' ? result : result === true,
+    )
   })
 
   ipcMain.on(EPUB_CHANNELS.closeSaveResult, (e, ok: unknown) => {

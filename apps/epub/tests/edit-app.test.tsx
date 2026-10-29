@@ -266,7 +266,7 @@ describe('saving what was typed', () => {
         .dispatchEvent(new win.Event('compositionstart', { bubbles: true }))
       flush?.('read-composing')
     })
-    expect(ack).toHaveBeenCalledWith('read-composing', false)
+    expect(ack).toHaveBeenCalledWith('read-composing', 'composing')
     expect(h.book.source(0)).toBe(original)
     expect(h.order).toEqual([])
     expect(h.saves).toEqual([])
