@@ -228,7 +228,7 @@ function flatten(obj: Record<string, unknown>, prefix: string, out: Values, igno
 }
 
 function textOf(v: Scalar): string {
-  return v === null ? '' : String(v).replace(/\0/g, '')
+  return v === null ? '' : String(v).replace(/\0/g, '').replace(/\r\n?/g, '\n')
 }
 
 function hits(text: string): Array<Pick<Hit, 'placeholder' | 'key'>> {
