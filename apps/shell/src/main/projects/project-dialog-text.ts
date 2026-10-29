@@ -102,7 +102,7 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     pickFolderButton: '選択',
   } satisfies Keys,
   ko: {
-    trustTitle: '이 폴더의 지침을 쓸까요?',
+    trustTitle: '이 폴더의 지침을 사용할까요?',
     trustMessage: '‘{name}’ 폴더에 이 PC의 앱이 쓰지 않은 지침·기억·대화가 있습니다.',
     trustHint:
       '읽어 보고 고르세요. [지침 없이 사용]을 고르면 AI는 폴더의 파일과 이 PC의 대화만 씁니다.',

@@ -143,7 +143,7 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         // shown once: the next request does not repeat it, and the first-time question does not come back
         await expect(notice).toHaveCount(0)
         expect(
-          (await recorded(app)).boxes.filter((b) => b.title === '이 폴더의 지침을 쓸까요?').length,
+          (await recorded(app)).boxes.filter((b) => b.title === '이 폴더의 지침을 사용할까요?').length,
         ).toBe(2)
       })
 
