@@ -11,6 +11,8 @@ import {
 import {
   createProjectRun,
   forgetMemoryLine,
+  memoryEntriesAfter,
+  memoryLineGone,
   memoryLinesOf,
   panelProjectSkill,
   windowProjectFolderBridge,
@@ -455,5 +457,30 @@ describe('memory lines (spec 5.6)', () => {
     })
     expect(out.isError).toBe(true)
     expect(fake.bridge.remember).not.toHaveBeenCalled()
+  })
+})
+
+describe('memory lines against the current memory', () => {
+  const added = (text: string) => ({ kind: 'added' as const, text })
+
+  it('counts an added entry as gone once the memory no longer has it, dates and spaces aside', () => {
+    expect(
+      memoryLineGone(added('회비는 2만 원 (2026-10-30)'), ['회비는  2만 원 (2026-10-31)']),
+    ).toBe(false)
+    expect(memoryLineGone(added('회비는 2만 원 (2026-10-30)'), ['다른 것 (2026-10-30)'])).toBe(true)
+    expect(memoryLineGone(added('a'), null)).toBe(false)
+    expect(memoryLineGone({ kind: 'changed', text: 'a' }, [])).toBe(false)
+  })
+
+  it('applies one change to the entries as main does', () => {
+    expect(memoryEntriesAfter(['a (2026-10-30)'], { op: 'add', text: 'a (2026-10-31)' })).toEqual([
+      'a (2026-10-30)',
+    ])
+    expect(memoryEntriesAfter([], { op: 'add', text: 'b' })).toEqual(['b'])
+    expect(memoryEntriesAfter(['a', 'b'], { op: 'remove', text: 'a' })).toEqual(['b'])
+    expect(memoryEntriesAfter(['a', 'b'], { op: 'replace', old: 'a', new: 'c' })).toEqual([
+      'b',
+      'c',
+    ])
   })
 })

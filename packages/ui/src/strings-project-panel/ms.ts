@@ -63,6 +63,8 @@ export const ms = {
   memoryReplaced: 'Memori diubah: {text}',
   memoryRemoved: 'Memori dipadam: {text}',
   removeMemory: 'Padam',
+  memoryAlreadyRemoved: 'Memori ini sudah dipadam',
+  alreadyListed: 'Projek ini sudah ada dalam senarai',
   memoryConsolidated: 'Memori dikemaskan ({before} → {after} item)',
   undo: 'Buat asal',
   toolSummary: 'Alat dijalankan {count} kali dalam {editor} “{name}”',

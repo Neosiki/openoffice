@@ -18,8 +18,13 @@ import type { HomeApi } from '../../shared/home-api'
 /** one tool a turn used, badge-shaped; the icon follows the kind */
 export interface ToolNote {
   label: string
-  /** 'skill': "<title> skill used"; 'create': a new document was made */
-  kind: 'search' | 'read' | 'skill' | 'create'
+  /**
+   * 'skill': "<title> skill used"; 'create': a new document is being made;
+   * 'created': it was saved in the chosen project's folder (`path`, [Open])
+   */
+  kind: 'search' | 'read' | 'skill' | 'create' | 'created'
+  /** the saved document, for a 'created' note */
+  path?: string
 }
 
 /** what `kb:open-scope` takes from the home ask with a project chosen (see parseKbOpenScope in main) */
@@ -129,4 +134,32 @@ export function toolRecordOf(call: AgentToolCall, execution: ToolExecution): Too
       ? { output: execution.output }
       : {}),
   }
+}
+
+/** Whether `path` lies inside `folder` (either separator, case-insensitive on Windows-style paths) */
+export function pathInsideFolder(path: string, folder: string): boolean {
+  const norm = (value: string) => value.replace(/[\\/]+/g, '/').replace(/\/$/, '')
+  const windowsLike = /^[A-Za-z]:/.test(folder) || folder.includes('\\')
+  const a = windowsLike ? norm(path).toLowerCase() : norm(path)
+  const b = windowsLike ? norm(folder).toLowerCase() : norm(folder)
+  return b !== '' && a.startsWith(`${b}/`)
+}
+
+/**
+ * The notes after `create_document` saved `path`. Inside the chosen project's
+ * folder the "making a document" note becomes "saved in the project folder:
+ * <name>" with the path to open (the step is done); anywhere else, or
+ * without a project, the notes stay as they were.
+ */
+export function notesAfterCreate(
+  notes: readonly ToolNote[],
+  path: string | undefined,
+  projectFolder: string | null | undefined,
+  savedLabel: (name: string) => string,
+): ToolNote[] | null {
+  if (!path || !projectFolder || !pathInsideFolder(path, projectFolder)) return null
+  const name = path.split(/[\\/]/).pop() || path
+  const done: ToolNote = { label: savedLabel(name), kind: 'created', path }
+  const at = notes.map((note) => note.kind).lastIndexOf('create')
+  return at < 0 ? [...notes, done] : notes.map((note, i) => (i === at ? done : note))
 }

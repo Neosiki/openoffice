@@ -4,7 +4,7 @@ export const en = {
   navProjects: 'Projects',
   intro:
     'Make a folder a project and its documents, instructions, memory and chats become the context of the AI panel. All of it is kept inside that folder.',
-  emptyHint: 'No projects yet. Create one, or add a folder you already use.',
+  emptyHint: 'No projects yet. Create one, or use an existing folder as a project.',
   newNameLabel: 'New project name',
   create: 'Create',
   cancel: 'Cancel',
@@ -14,11 +14,11 @@ export const en = {
   renameHint: 'The folder keeps its name.',
   openInExplorer: 'Open in File Explorer',
   openInFinder: 'Show in Finder',
-  trustUse: 'Instructions and memory are sent to the AI',
-  trustWithout: 'Used without instructions',
+  trustUse: 'sending instructions and memory to the AI',
+  trustWithout: 'using without instructions',
   trustWithoutDesc:
     'Instructions, memory and chats from other PCs are not sent to the AI, and no memory is kept.',
-  trustUnconfirmed: 'This folder has not been confirmed yet',
+  trustUnconfirmed: 'folder not confirmed yet',
   retry: 'Try again',
   relocate: 'Choose the folder again',
   missingNote: 'The folder cannot be found. If you moved it, choose its new location.',
@@ -54,7 +54,7 @@ export const en = {
   consolidateNotice: 'Read the AI connection notice first, then press again.',
   consolidateNothing: 'There is no memory to tidy up.',
   consolidateWithout:
-    'This project is used without instructions, so its memory cannot be sent to the AI. Switch to using instructions above to tidy it up.',
+    'This project is used without instructions, so its memory cannot be sent to the AI. Press [Use instructions too] above to tidy it up.',
   consolidateFailed: 'Could not tidy up. The memory is unchanged.',
   consolidateStopped: 'Stopped. The memory is unchanged.',
   consolidateUndone: 'Back to how it was before tidying up.',
@@ -80,4 +80,12 @@ export const en = {
     'Chats in this project. Click one to continue it in the AI panel of the document it was last used in.',
   actionFailed: 'That did not work. Please try again.',
   loadFailed: 'The project could not be read.',
+  addExistingFolder: 'Use an existing folder',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Use instructions too',
+  changedOutside:
+    'This file changed elsewhere while you were editing it. [Reload] reads the new version; [Save anyway] saves what you have here over it.',
+  reloadFile: 'Reload',
+  saveAnyway: 'Save anyway',
+  openFileAria: 'Open in the app: {name}',
 } satisfies Record<keyof typeof zh, string>

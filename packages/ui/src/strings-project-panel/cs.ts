@@ -63,6 +63,8 @@ export const cs = {
   memoryReplaced: 'Paměť upravena: {text}',
   memoryRemoved: 'Smazáno z paměti: {text}',
   removeMemory: 'Smazat',
+  memoryAlreadyRemoved: 'Už je z paměti smazáno',
+  alreadyListed: 'Tento projekt už v seznamu je',
   memoryConsolidated: 'Paměť uspořádána (položky: {before} → {after})',
   undo: 'Vrátit zpět',
   toolSummary: '{editor} „{name}“ – spuštění nástrojů: {count}',

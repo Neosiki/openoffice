@@ -83,7 +83,7 @@ describe('PROJECT_PANEL_STRINGS', () => {
     expect(projectPanelText('ko', 'folderHint', { name: '학급 운영' })).toBe(
       '이 문서는 ‘학급 운영’ 프로젝트 폴더에 있습니다',
     )
-    expect(projectPanelText('ko', 'useFolder')).toBe('쓰기')
+    expect(projectPanelText('ko', 'useFolder')).toBe('사용')
     expect(projectPanelText('ko', 'view')).toBe('보기')
     expect(projectPanelText('ko', 'consolidate')).toBe('정리하기')
     expect(projectPanelText('ko', 'removeMemory')).toBe('지우기')

@@ -4,7 +4,7 @@ export const pl = {
   navProjects: 'Projekty',
   intro:
     'Zrób z folderu projekt, a jego dokumenty, instrukcje, pamięć i czaty staną się kontekstem panelu AI. Wszystko jest przechowywane w tym folderze.',
-  emptyHint: 'Nie ma jeszcze projektów. Utwórz nowy albo dodaj folder, którego już używasz.',
+  emptyHint: 'Nie ma jeszcze projektów. Utwórz nowy albo użyj istniejącego folderu jako projektu.',
   newNameLabel: 'Nazwa nowego projektu',
   create: 'Utwórz',
   cancel: 'Anuluj',
@@ -14,11 +14,11 @@ export const pl = {
   renameHint: 'Folder zachowuje swoją nazwę.',
   openInExplorer: 'Otwórz w Eksploratorze plików',
   openInFinder: 'Pokaż w Finderze',
-  trustUse: 'Instrukcje i pamięć są wysyłane do AI',
-  trustWithout: 'Używany bez instrukcji',
+  trustUse: 'instrukcje i pamięć są wysyłane do AI',
+  trustWithout: 'używany bez instrukcji',
   trustWithoutDesc:
     'Instrukcje, pamięć i czaty z innych komputerów nie są wysyłane do AI, a pamięć nie jest gromadzona.',
-  trustUnconfirmed: 'Ten folder nie został jeszcze potwierdzony',
+  trustUnconfirmed: 'folder jeszcze niepotwierdzony',
   retry: 'Spróbuj ponownie',
   relocate: 'Wybierz folder ponownie',
   missingNote: 'Nie znaleziono folderu. Jeśli go przeniesiono, wybierz nowe miejsce.',
@@ -56,7 +56,7 @@ export const pl = {
   consolidateNotice: 'Najpierw przeczytaj informację o połączeniu z AI, a potem naciśnij ponownie.',
   consolidateNothing: 'Nie ma pamięci do uporządkowania.',
   consolidateWithout:
-    'Ten projekt jest używany bez instrukcji, więc jego pamięci nie można wysłać do AI. Przełącz powyżej na używanie instrukcji, aby ją uporządkować.',
+    'Ten projekt jest używany bez instrukcji, więc jego pamięci nie można wysłać do AI. Kliknij powyżej [Użyj też instrukcji], aby ją uporządkować.',
   consolidateFailed: 'Nie udało się uporządkować. Pamięć bez zmian.',
   consolidateStopped: 'Zatrzymano. Pamięć bez zmian.',
   consolidateUndone: 'Przywrócono stan sprzed porządkowania.',
@@ -82,4 +82,12 @@ export const pl = {
     'Czaty w tym projekcie. Kliknij, aby kontynuować czat w panelu AI dokumentu, w którym był ostatnio używany.',
   actionFailed: 'Nie udało się. Spróbuj ponownie.',
   loadFailed: 'Nie udało się odczytać projektu.',
+  addExistingFolder: 'Użyj istniejącego folderu',
+  trustStatus: 'Stan: {state}',
+  trustUseButton: 'Użyj też instrukcji',
+  changedOutside:
+    'W trakcie edycji ten plik został zmieniony w innym miejscu. [Wczytaj ponownie] odczyta nową wersję, a [Zapisz mimo to] zapisze na niej to, co masz tutaj.',
+  reloadFile: 'Wczytaj ponownie',
+  saveAnyway: 'Zapisz mimo to',
+  openFileAria: 'Otwórz w aplikacji: {name}',
 } satisfies Record<keyof typeof zh, string>

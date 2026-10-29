@@ -172,33 +172,84 @@ export function ProjectFolderHintLine({
   )
 }
 
+/** What a [Remove] on a memory line came to */
+export type ProjectMemoryRemoveOutcome = 'removed' | 'already-gone' | 'failed'
+
+/** How long "This memory was already removed" stays under the line */
+export const MEMORY_ALREADY_GONE_MS = 3_000
+
 /**
  * A memory line in the chat, written when `project_remember` changed
  * `memory.md`: "Remembered: … [Remove]", "Memory changed: …" or "Memory
- * removed: …". [Remove] shows only for an added entry and only with `onRemove`.
+ * removed: …". [Remove] shows only for an added entry that is still in the
+ * memory and only with `onRemove`. An added entry that is gone since (`gone`:
+ * removed here, in another window or outside the app) reads "Memory removed:
+ * …" with nothing to press. A [Remove] that finds the entry already gone says
+ * so for a moment.
  */
 export function ProjectMemoryEventLine({
   lang,
   change,
+  gone = false,
   onRemove,
 }: {
   readonly lang: Lang
   readonly change: ProjectMemoryOp
-  /** Removes the added entry from `memory.md` */
-  readonly onRemove?: (() => void) | undefined
+  /** The added entry is no longer in the project's memory */
+  readonly gone?: boolean | undefined
+  /** Removes the added entry from `memory.md`; may answer what came of it */
+  readonly onRemove?: (() => void | Promise<ProjectMemoryRemoveOutcome | void>) | undefined
 }): React.JSX.Element {
+  const [alreadyGone, setAlreadyGone] = React.useState(false)
+  const mounted = React.useRef(true)
+  React.useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  React.useEffect(() => {
+    if (!alreadyGone) return
+    const timer = setTimeout(() => setAlreadyGone(false), MEMORY_ALREADY_GONE_MS)
+    return () => clearTimeout(timer)
+  }, [alreadyGone])
+  const removed = change.op === 'add' && gone
+  const shown: ProjectMemoryOp = removed ? { op: 'remove', text: change.text } : change
+  const remove = (): void => {
+    if (!onRemove) return
+    void Promise.resolve(onRemove()).then(
+      (outcome) => {
+        if (outcome === 'already-gone' && mounted.current) setAlreadyGone(true)
+      },
+      () => undefined,
+    )
+  }
   return (
-    <div className="ai-project-event" data-memory-op={change.op}>
+    <div className="ai-project-event" data-memory-op={shown.op}>
       <span className="ai-project-event-text" dir="auto">
-        {projectMemoryEventText(lang, change)}
+        {projectMemoryEventText(lang, shown)}
       </span>
-      {change.op === 'add' && onRemove && (
-        <button type="button" className="ai-project-link" onClick={onRemove}>
+      {change.op === 'add' && !removed && onRemove && (
+        <button type="button" className="ai-project-link" onClick={remove}>
           {projectPanelText(lang, 'removeMemory')}
         </button>
       )}
+      {alreadyGone && (
+        <span className="ai-project-event-note" role="status">
+          {projectPanelText(lang, 'memoryAlreadyRemoved')}
+        </span>
+      )}
     </div>
   )
+}
+
+/** What a memory edit result means for the [Remove] that asked for it */
+export function memoryRemoveOutcome(
+  result: { status: 'ok' } | { status: 'refused'; reason: string } | null | undefined,
+): ProjectMemoryRemoveOutcome {
+  if (!result) return 'failed'
+  if (result.status === 'ok') return 'removed'
+  return result.reason === 'not-found' ? 'already-gone' : 'failed'
 }
 
 /** "Memory tidied up (N → M entries) [Undo]" after a person-triggered consolidation */

@@ -4,7 +4,7 @@ export const it = {
   navProjects: 'Progetti',
   intro:
     'Rendi una cartella un progetto: documenti, istruzioni, memoria e chat diventano il contesto del pannello IA. Tutto resta dentro quella cartella.',
-  emptyHint: 'Ancora nessun progetto. Creane uno o aggiungi una cartella che usi già.',
+  emptyHint: 'Ancora nessun progetto. Creane uno o usa una cartella esistente come progetto.',
   newNameLabel: 'Nome del nuovo progetto',
   create: 'Crea',
   cancel: 'Annulla',
@@ -14,11 +14,11 @@ export const it = {
   renameHint: 'La cartella mantiene il suo nome.',
   openInExplorer: 'Apri in Esplora file',
   openInFinder: 'Mostra nel Finder',
-  trustUse: 'Istruzioni e memoria vengono inviate all’IA',
-  trustWithout: 'In uso senza istruzioni',
+  trustUse: 'istruzioni e memoria inviate all’IA',
+  trustWithout: 'in uso senza istruzioni',
   trustWithoutDesc:
     'Istruzioni, memoria e chat di altri PC non vengono inviate all’IA, e non si raccoglie memoria.',
-  trustUnconfirmed: 'Questa cartella non è ancora stata confermata',
+  trustUnconfirmed: 'cartella non ancora confermata',
   retry: 'Riprova',
   relocate: 'Scegli di nuovo la cartella',
   missingNote: 'Cartella non trovata. Se l’hai spostata, scegli la nuova posizione.',
@@ -56,7 +56,7 @@ export const it = {
   consolidateNotice: 'Leggi prima l’avviso sulla connessione IA, poi premi di nuovo.',
   consolidateNothing: 'Non c’è memoria da riordinare.',
   consolidateWithout:
-    'Questo progetto è in uso senza istruzioni, quindi la sua memoria non può essere inviata all’IA. Passa all’uso delle istruzioni qui sopra per riordinarla.',
+    'Questo progetto è in uso senza istruzioni, quindi la sua memoria non può essere inviata all’IA. Premi [Usa anche le istruzioni] qui sopra per riordinarla.',
   consolidateFailed: 'Impossibile riordinare. La memoria è invariata.',
   consolidateStopped: 'Fermato. La memoria è invariata.',
   consolidateUndone: 'Tornato a com’era prima del riordino.',
@@ -83,4 +83,12 @@ export const it = {
     'Le chat di questo progetto. Fai clic su una per continuarla nel pannello IA dell’ultimo documento che l’ha usata.',
   actionFailed: 'Non ha funzionato. Riprova.',
   loadFailed: 'Impossibile leggere il progetto.',
+  addExistingFolder: 'Usa una cartella esistente',
+  trustStatus: 'Stato: {state}',
+  trustUseButton: 'Usa anche le istruzioni',
+  changedOutside:
+    'Mentre lo modificavi, questo file è stato cambiato altrove. [Ricarica] legge la nuova versione; [Salva comunque] la sovrascrive con quello che hai qui.',
+  reloadFile: 'Ricarica',
+  saveAnyway: 'Salva comunque',
+  openFileAria: 'Apri nell’app: {name}',
 } satisfies Record<keyof typeof zh, string>

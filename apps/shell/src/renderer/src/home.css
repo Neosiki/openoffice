@@ -2285,6 +2285,31 @@ html[dir='rtl'] .quick-title-row {
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
+.kb-ask-tool-note.is-done {
+  color: var(--text);
+}
+.kb-ask-tool-open {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 2px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.kb-ask-tool-open:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+.kb-ask-hero-project {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
 .kb-ask-actions {
   display: flex;
   flex-wrap: wrap;

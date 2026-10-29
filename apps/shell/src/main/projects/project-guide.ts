@@ -499,7 +499,10 @@ export class ProjectGuide {
     const refusal = locationRefusal(target, this.refusalContext())
     if (refusal) return { status: 'refused', reason: refusal }
     if (await exists(target)) {
-      return args.useExisting
+      // A folder of that name that is already a listed project just opens:
+      // there is nothing to ask (the result says `existing`).
+      const listed = this.read().list.some((item) => samePath(item.path, target, this.platform))
+      return args.useExisting || listed
         ? this.adopt(target, askTrust)
         : { status: 'exists', folderPath: target }
     }

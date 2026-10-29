@@ -62,6 +62,8 @@ export const ar = {
   memoryReplaced: 'تم تعديل الذاكرة: {text}',
   memoryRemoved: 'تم الحذف من الذاكرة: {text}',
   removeMemory: 'حذف',
+  memoryAlreadyRemoved: 'سبق حذف هذا من الذاكرة',
+  alreadyListed: 'هذا المشروع موجود في القائمة بالفعل',
   memoryConsolidated: 'رُتّبت الذاكرة (من {before} إلى {after} عنصرًا)',
   undo: 'تراجع',
   toolSummary: 'شُغّلت الأدوات {count} مرة في {editor} «{name}»',

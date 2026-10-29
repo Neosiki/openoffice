@@ -10,6 +10,7 @@ import type { AiSettings } from '@genoffice/ai-provider'
 import type { AgentStreamRequest, AgentTransport } from '@genoffice/agent-core'
 import type {
   OpenProjectScreenEvent,
+  ProjectChangedEvent,
   ProjectChatListItem,
   ProjectDetail,
   ProjectFileEntry,
@@ -17,6 +18,7 @@ import type {
   ProjectListItem,
 } from '@genoffice/project-store'
 import {
+  projectFilePath,
   ProjectsPanel,
   subscribeProjectScreen,
   type ProjectScreenRequest,
@@ -116,6 +118,7 @@ function fakeBridge(
     detailOf(PROJECTS.find((p) => p.id === id) ?? PROJECTS[0]!),
 ) {
   const screenListeners: Array<(event: OpenProjectScreenEvent) => void> = []
+  const changeListeners: Array<(event: ProjectChangedEvent) => void> = []
   const bridge = {
     listProjects: vi.fn(async () => PROJECTS),
     addFolder: vi.fn(async () => ({ status: 'cancelled', stage: 'dialog' })),
@@ -176,8 +179,21 @@ function fakeBridge(
       screenListeners.push(listener)
       return () => undefined
     }),
+    onProjectChanged: vi.fn((listener: (event: ProjectChangedEvent) => void) => {
+      changeListeners.push(listener)
+      return () => {
+        changeListeners.splice(changeListeners.indexOf(listener), 1)
+      }
+    }),
   } satisfies FakeBridge
-  return { bridge, api: bridge as unknown as ProjectFolderApi, screenListeners }
+  /** main says a window of the app wrote part of a project */
+  const announce = async (event: ProjectChangedEvent): Promise<void> => {
+    await act(async () => {
+      for (const listener of [...changeListeners]) listener(event)
+    })
+    await flush()
+  }
+  return { bridge, api: bridge as unknown as ProjectFolderApi, screenListeners, announce }
 }
 
 async function flush(): Promise<void> {
@@ -316,7 +332,7 @@ describe('project list', () => {
     const { bridge, api } = fakeBridge()
     bridge.addFolder.mockResolvedValue({ status: 'refused', reason: 'user-home' })
     await render({ bridge: api })
-    await click(buttonNamed('Add folder'))
+    await click(buttonNamed('Use an existing folder'))
     expect(bridge.addFolder).toHaveBeenCalledTimes(1)
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('user folder')
   })
@@ -343,15 +359,17 @@ describe('project header', () => {
     expect(bridge.renameProject).toHaveBeenCalledWith({ projectId: 'new', name: 'Spring plan' })
   })
 
-  it('offers "Use" when used without instructions, and retry when unwritable', async () => {
+  it('offers "Use instructions too" when used without them, and retry when unwritable', async () => {
     const { bridge, api } = fakeBridge((id) =>
       detailOf(item({ id, name: 'Shared', unwritable: true }), { trust: 'without' }),
     )
     bridge.listProjects.mockResolvedValue([item({ id: 'sh', name: 'Shared', unwritable: true })])
     await render({ bridge: api })
     await openProject('Shared')
-    expect(host.textContent).toContain('Used without instructions')
-    await click(buttonNamed('Use'))
+    expect(host.querySelector('.projects-trust-state')?.textContent).toBe(
+      'Status: using without instructions',
+    )
+    await click(buttonNamed('Use instructions too'))
     expect(bridge.decideTrust).toHaveBeenCalledWith({ projectId: 'sh', decision: 'use' })
     await click(buttonNamed('Try again'))
     expect(bridge.retryUnwritable).toHaveBeenCalledWith({ projectId: 'sh' })
@@ -654,5 +672,159 @@ describe('"show the project screen" requests', () => {
     // a later request for the same project moves to the other section
     await render({ bridge: api, request: { projectId: 'old', section: 'instructions', seq: 2 } })
     expect(selectedTab()).toBe('Instructions')
+  })
+})
+
+describe('the screen follows the folder (no stale text, no silent overwrite)', () => {
+  it('reads the project again for a new [View] request and shows what changed outside', async () => {
+    let instructions = 'Write formally.'
+    const { bridge, api } = fakeBridge((id) =>
+      detailOf(item({ id, name: 'Old report' }), { instructions }),
+    )
+    await render({ bridge: api, request: { projectId: 'old', section: 'instructions', seq: 1 } })
+    const box = () => host.querySelector<HTMLTextAreaElement>('.projects-textarea')!
+    expect(box().value).toBe('Write formally.')
+    instructions = 'Write formally.\nDates as 2026. 10. 30.'
+    const reads = bridge.getProjectDetail.mock.calls.length
+    await render({ bridge: api, request: { projectId: 'old', section: 'instructions', seq: 2 } })
+    expect(bridge.getProjectDetail.mock.calls.length).toBeGreaterThan(reads)
+    expect(box().value).toBe('Write formally.\nDates as 2026. 10. 30.')
+  })
+
+  it('shows memory another window wrote without leaving the screen', async () => {
+    let entries = ['The deadline is Friday. (2026-10-20)']
+    const { api, announce } = fakeBridge((id) =>
+      detailOf(item({ id, name: 'New plan' }), { memoryEntries: entries }),
+    )
+    await render({ bridge: api })
+    await openProject('New plan')
+    await openTab('Memory')
+    entries = [...entries, 'Approvals on Tuesday. (2026-10-30)']
+    await announce({ projectId: 'other', part: 'memory' })
+    expect(host.querySelector('.projects-memory-list')?.textContent).not.toContain('Tuesday')
+    await announce({ projectId: 'new', part: 'memory' })
+    expect(host.querySelector('.projects-memory-list')?.textContent).toContain('Tuesday')
+  })
+
+  it('reads again when the window comes back to the front', async () => {
+    const { bridge, api } = fakeBridge()
+    await render({ bridge: api })
+    await openProject('New plan')
+    const reads = bridge.getProjectDetail.mock.calls.length
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await flush()
+    expect(bridge.getProjectDetail.mock.calls.length).toBe(reads + 1)
+  })
+
+  it('keeps an edited draft when the file changes, and asks before writing over it', async () => {
+    let instructions = 'Write formally.'
+    const { bridge, api, announce } = fakeBridge((id) =>
+      detailOf(item({ id, name: 'New plan' }), { instructions }),
+    )
+    await render({ bridge: api })
+    await openProject('New plan')
+    const box = host.querySelector<HTMLTextAreaElement>('.projects-textarea')!
+    await type(box, 'Write formally. Use tables.')
+    // someone changes the file meanwhile; the edited draft stays as typed
+    instructions = 'Write formally. Dates as 2026. 10. 30.'
+    await announce({ projectId: 'new', part: 'instructions' })
+    expect(box.value).toBe('Write formally. Use tables.')
+    await click(buttonNamed('Save'))
+    expect(bridge.saveInstructions).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('This file changed elsewhere while you were editing it.')
+
+    await click(buttonNamed('Reload'))
+    expect(host.querySelector<HTMLTextAreaElement>('.projects-textarea')!.value).toBe(
+      'Write formally. Dates as 2026. 10. 30.',
+    )
+    expect(bridge.saveInstructions).not.toHaveBeenCalled()
+
+    await type(host.querySelector<HTMLTextAreaElement>('.projects-textarea')!, 'Mine.')
+    instructions = 'Theirs.'
+    await click(buttonNamed('Save'))
+    await click(buttonNamed('Save anyway'))
+    expect(bridge.saveInstructions).toHaveBeenCalledWith({ projectId: 'new', text: 'Mine.' })
+  })
+
+  it('saves at once when the file did not change, and follows the file while the draft is untouched', async () => {
+    let instructions = 'Write formally.'
+    const { bridge, api, announce } = fakeBridge((id) =>
+      detailOf(item({ id, name: 'New plan' }), { instructions }),
+    )
+    await render({ bridge: api })
+    await openProject('New plan')
+    instructions = 'Changed outside.'
+    await announce({ projectId: 'new', part: 'instructions' })
+    const box = host.querySelector<HTMLTextAreaElement>('.projects-textarea')!
+    expect(box.value).toBe('Changed outside.')
+    await type(box, 'Changed outside. Plus mine.')
+    await click(buttonNamed('Save'))
+    expect(bridge.saveInstructions).toHaveBeenCalledWith({
+      projectId: 'new',
+      text: 'Changed outside. Plus mine.',
+    })
+  })
+
+  it('asks before an "edit all" of the memory writes over a change made meanwhile', async () => {
+    let memory = '- a (2026-10-30)\n'
+    const { bridge, api } = fakeBridge((id) =>
+      detailOf(item({ id, name: 'New plan' }), { memory, memoryEntries: ['a (2026-10-30)'] }),
+    )
+    await render({ bridge: api })
+    await openProject('New plan')
+    await openTab('Memory')
+    await click(buttonNamed('Edit all'))
+    await type(host.querySelector<HTMLTextAreaElement>('.projects-textarea')!, '- mine\n')
+    memory = '- a (2026-10-30)\n- b (2026-10-30)\n'
+    await click(buttonNamed('Save'))
+    expect(bridge.saveMemory).not.toHaveBeenCalled()
+    await click(buttonNamed('Save anyway'))
+    expect(bridge.saveMemory).toHaveBeenCalledWith({ projectId: 'new', text: '- mine\n' })
+  })
+})
+
+describe('the rest of the first-use fixes', () => {
+  it('opens a project the create or add led to that was already listed, and says so', async () => {
+    const { bridge, api } = fakeBridge()
+    bridge.createProject.mockResolvedValueOnce({
+      status: 'added',
+      project: item({ id: 'old', name: 'Old report' }),
+      identity: 'existing',
+      notices: [],
+    } as never)
+    await render({ bridge: api })
+    await click(buttonNamed('New project'))
+    await type(host.querySelector<HTMLInputElement>('.projects-create input')!, 'Old report')
+    await click(buttonNamed('Create'))
+    expect(host.querySelector<HTMLInputElement>('.projects-name-field input')?.value).toBe(
+      'Old report',
+    )
+    expect(host.textContent).toContain('This project is already in the list')
+  })
+
+  it('opens a file of the file list in the app', async () => {
+    const { api } = fakeBridge()
+    const onOpenPath = vi.fn()
+    await render({ bridge: api, onOpenPath })
+    await openProject('New plan')
+    await openTab('Files')
+    await click(buttonNamed('Open in the app: cloud/notes.pdf'))
+    expect(onOpenPath).toHaveBeenCalledWith('D:\\work\\New plan\\cloud\\notes.pdf')
+  })
+
+  it('builds a file path from the folder and the relative path', () => {
+    expect(projectFilePath('D:\\work\\P', 'a/b.md')).toBe('D:\\work\\P\\a\\b.md')
+    expect(projectFilePath('/home/me/P/', 'a/../b.md')).toBe('/home/me/P/a/b.md')
+  })
+
+  it('says the trust state as a status line', async () => {
+    const { api } = fakeBridge()
+    await render({ bridge: api })
+    await openProject('New plan')
+    expect(host.querySelector('.projects-trust-state')?.textContent).toBe(
+      'Status: sending instructions and memory to the AI',
+    )
   })
 })

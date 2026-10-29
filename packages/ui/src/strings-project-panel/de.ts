@@ -65,6 +65,8 @@ export const de = {
   memoryReplaced: 'Erinnerung geändert: {text}',
   memoryRemoved: 'Erinnerung gelöscht: {text}',
   removeMemory: 'Löschen',
+  memoryAlreadyRemoved: 'Diese Erinnerung wurde bereits gelöscht',
+  alreadyListed: 'Dieses Projekt ist bereits in der Liste',
   memoryConsolidated: 'Gedächtnis aufgeräumt ({before} → {after} Einträge)',
   undo: 'Rückgängig',
   toolSummary: 'Werkzeuge {count}-mal in {editor} „{name}“ ausgeführt',

@@ -910,3 +910,75 @@ describe('waitForPageReturn', () => {
     expect(await waitForPageReturn(p.page)).toBe(false)
   })
 })
+
+describe('"the app wrote part of a project" (onProjectChanged)', () => {
+  const changesTo = (target: number) =>
+    t.sent
+      .filter((s) => s.target === target && s.channel === PROJECT_FOLDER_EVENTS.onProjectChanged)
+      .map((s) => s.payload)
+
+  it('tells every listening window, the writer included, when memory changed', async () => {
+    t.controller.listen(HOME, 'onProjectChanged', true)
+    t.controller.listen(DOCS, 'onProjectChanged', true)
+    await t.call('remember', DOCS, { scope: `scope-of-${DOCS}`, change: { op: 'add', text: 'x' } })
+    await t.call('editMemory', HOME, { projectId: 'p1', change: { op: 'remove', text: 'x' } })
+    expect(changesTo(HOME)).toEqual([
+      { projectId: 'p1', part: 'memory' },
+      { projectId: 'p1', part: 'memory' },
+    ])
+    expect(changesTo(DOCS)).toHaveLength(2)
+    // a window that does not listen hears nothing, and nothing is held for it
+    expect(changesTo(SHEETS)).toEqual([])
+    t.controller.listen(SHEETS, 'onProjectChanged', true)
+    expect(changesTo(SHEETS)).toEqual([])
+  })
+
+  it('says nothing when the write did not go through', async () => {
+    t.controller.listen(HOME, 'onProjectChanged', true)
+    t.guide.editMemory.mockResolvedValueOnce({ status: 'refused', reason: 'not-found' } as never)
+    await t.call('editMemory', HOME, { projectId: 'p1', change: { op: 'remove', text: 'x' } })
+    t.guide.saveInstructions.mockResolvedValueOnce({ status: 'unwritable' })
+    await t.call('saveInstructions', HOME, { projectId: 'p1', text: 'y' })
+    expect(changesTo(HOME)).toEqual([])
+  })
+
+  it('names the part: instructions, settings and chats', async () => {
+    t.controller.listen(HOME, 'onProjectChanged', true)
+    t.guide.saveInstructions.mockResolvedValueOnce({ status: 'ok' })
+    await t.call('saveInstructions', HOME, { projectId: 'p1', text: 'y' })
+    await t.call('setSettings', HOME, { projectId: 'p1', settings: { memoryEnabled: false } })
+    t.guide.decideTrust.mockResolvedValueOnce({ status: 'ok', trust: 'without' })
+    await t.call('decideTrust', HOME, { projectId: 'p1', decision: 'without' })
+    await t.call('renameChat', HOME, { projectId: 'p1', chatId: 'c1', title: 'New' })
+    await t.call('deleteChat', HOME, { projectId: 'p1', chatId: 'c1' })
+    expect(changesTo(HOME)).toEqual([
+      { projectId: 'p1', part: 'instructions' },
+      { projectId: 'p1', part: 'settings' },
+      { projectId: 'p1', part: 'settings' },
+      { projectId: 'p1', part: 'chats' },
+      { projectId: 'p1', part: 'chats' },
+    ])
+  })
+
+  it('announces a chat message only once it is saved in the folder', async () => {
+    t.controller.listen(HOME, 'onProjectChanged', true)
+    const message = { role: 'user', text: 'hi' }
+    await t.call('appendChat', DOCS, { projectId: 'p1', chatId: 'c1', ...message })
+    expect(changesTo(HOME)).toEqual([])
+    t.chats.append.mockResolvedValueOnce({ status: 'saved', message: {} } as never)
+    await t.call('appendChat', DOCS, { projectId: 'p1', chatId: 'c1', ...message })
+    expect(changesTo(HOME)).toEqual([{ projectId: 'p1', part: 'chats' }])
+  })
+
+  it('stops after the window stopped listening, and forgets a window that is gone', async () => {
+    t.controller.listen(HOME, 'onProjectChanged', true)
+    t.controller.listen(DOCS, 'onProjectChanged', true)
+    t.controller.listen(HOME, 'onProjectChanged', false)
+    t.gone.add(DOCS)
+    await t.call('saveMemory', SHEETS, { projectId: 'p1', text: '- a' })
+    t.gone.delete(DOCS)
+    await t.call('saveMemory', SHEETS, { projectId: 'p1', text: '- b' })
+    expect(changesTo(HOME)).toEqual([])
+    expect(changesTo(DOCS)).toEqual([])
+  })
+})

@@ -63,6 +63,8 @@ export const en = {
   memoryReplaced: 'Memory changed: {text}',
   memoryRemoved: 'Memory removed: {text}',
   removeMemory: 'Remove',
+  memoryAlreadyRemoved: 'This memory was already removed',
+  alreadyListed: 'This project is already in the list',
   memoryConsolidated: 'Memory tidied up ({before} → {after} entries)',
   undo: 'Undo',
   toolSummary: 'Ran tools {count} times in {editor} “{name}”',

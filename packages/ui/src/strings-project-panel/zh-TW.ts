@@ -62,6 +62,8 @@ export const zhTW = {
   memoryReplaced: '已修改記憶：{text}',
   memoryRemoved: '已刪除記憶：{text}',
   removeMemory: '刪除',
+  memoryAlreadyRemoved: '這則記憶已經刪除',
+  alreadyListed: '這個專案已在清單中',
   memoryConsolidated: '已整理記憶（{before} 項 → {after} 項）',
   undo: '復原',
   toolSummary: '在{editor}「{name}」中執行了 {count} 次工具',

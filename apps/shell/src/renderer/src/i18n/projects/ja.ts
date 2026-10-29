@@ -4,7 +4,8 @@ export const ja = {
   navProjects: 'プロジェクト',
   intro:
     'フォルダーをプロジェクトにすると、そのフォルダーの文書、指示、メモリー、会話が AI パネルの文脈になります。すべてそのフォルダーの中に保存されます。',
-  emptyHint: 'まだプロジェクトがありません。新しく作るか、使っているフォルダーを追加してください。',
+  emptyHint:
+    'まだプロジェクトがありません。新しく作るか、既存のフォルダーをプロジェクトとして使ってください。',
   newNameLabel: '新しいプロジェクトの名前',
   create: '作成',
   cancel: 'キャンセル',
@@ -14,10 +15,10 @@ export const ja = {
   renameHint: 'フォルダー名は変わりません。',
   openInExplorer: 'エクスプローラーで開く',
   openInFinder: 'Finder で表示',
-  trustUse: '指示とメモリーを AI に送ります',
+  trustUse: '指示とメモリーを AI に送信中',
   trustWithout: '指示なしで使用中',
   trustWithoutDesc: '指示・メモリーと他の PC で行った会話を AI に送らず、メモリーも記録しません。',
-  trustUnconfirmed: 'まだ確認していないフォルダーです',
+  trustUnconfirmed: 'まだ確認していないフォルダー',
   retry: '再試行',
   relocate: 'フォルダーを選び直す',
   missingNote: 'フォルダーが見つかりません。移動した場合は新しい場所を選んでください。',
@@ -51,7 +52,7 @@ export const ja = {
   consolidateNotice: '先に AI 接続の案内を確認してから、もう一度押してください。',
   consolidateNothing: '整理するメモリーがありません。',
   consolidateWithout:
-    '指示なしで使用中のため、メモリーを AI に送れません。上で指示を使うように切り替えると整理できます。',
+    '指示なしで使用中のため、メモリーを AI に送れません。上の「指示も使う」を押すと整理できます。',
   consolidateFailed: '整理できませんでした。メモリーはそのままです。',
   consolidateStopped: '停止しました。メモリーはそのままです。',
   consolidateUndone: '整理する前に戻しました。',
@@ -77,4 +78,12 @@ export const ja = {
     'このプロジェクトでの会話です。クリックすると、最後に使った文書の AI パネルで続けます。',
   actionFailed: 'できませんでした。もう一度お試しください。',
   loadFailed: 'プロジェクトを読み取れませんでした。',
+  addExistingFolder: '既存のフォルダーを使う',
+  trustStatus: '状態: {state}',
+  trustUseButton: '指示も使う',
+  changedOutside:
+    '編集中にこのファイルが別の場所で変更されました。「再読み込み」で変更後の内容を読み込み、「そのまま保存」でここの内容を上書き保存します。',
+  reloadFile: '再読み込み',
+  saveAnyway: 'そのまま保存',
+  openFileAria: 'アプリで開く: {name}',
 } satisfies Record<keyof typeof zh, string>

@@ -64,6 +64,8 @@ export const it = {
   memoryReplaced: 'Memoria modificata: {text}',
   memoryRemoved: 'Memoria cancellata: {text}',
   removeMemory: 'Cancella',
+  memoryAlreadyRemoved: 'Già cancellato dalla memoria',
+  alreadyListed: 'Questo progetto è già nell’elenco',
   memoryConsolidated: 'Memoria riordinata ({before} → {after} voci)',
   undo: 'Annulla',
   toolSummary: 'Strumenti eseguiti {count} volte in {editor} “{name}”',

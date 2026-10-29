@@ -450,6 +450,9 @@ export {
   ProjectMemoryConsolidatedLine,
   ProjectToolSummaryLine,
   ProjectProblemLine,
+  MEMORY_ALREADY_GONE_MS,
+  memoryRemoveOutcome,
+  type ProjectMemoryRemoveOutcome,
 } from './ProjectNotices'
 export {
   projectPickerItems,
@@ -488,6 +491,8 @@ export {
   PROJECT_TOOLS,
   createProjectRun,
   forgetMemoryLine,
+  memoryEntriesAfter,
+  memoryLineGone,
   memoryLinesOf,
   panelProjectSkill,
   projectSystemPrompt,

@@ -60,5 +60,6 @@ export function projectFolderBridge(ipc: ProjectFolderBridgeIpc): ProjectFolderA
     onChatMessageAppended: (listener) => subscribe('onChatMessageAppended', listener),
     onOpenChat: (listener) => subscribe('onOpenChat', listener),
     onOpenProjectScreen: (listener) => subscribe('onOpenProjectScreen', listener),
+    onProjectChanged: (listener) => subscribe('onProjectChanged', listener),
   }
 }

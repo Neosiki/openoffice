@@ -31,7 +31,12 @@ function fakeIpc() {
   return { ipc, emit, handlers }
 }
 
-const EVENT_METHODS = ['onChatMessageAppended', 'onOpenChat', 'onOpenProjectScreen'] as const
+const EVENT_METHODS = [
+  'onChatMessageAppended',
+  'onOpenChat',
+  'onOpenProjectScreen',
+  'onProjectChanged',
+] as const
 
 describe('projectFolderBridge', () => {
   it('has every method of the bridge contract', () => {
@@ -78,6 +83,20 @@ describe('projectFolderBridge', () => {
     off()
     emit(PROJECT_FOLDER_EVENTS.onOpenChat, { projectId: 'p1', chatId: 'c2' })
     expect(seen).toEqual([{ projectId: 'p1', chatId: 'c1' }])
+  })
+
+  it('delivers project changes on their own channel', () => {
+    const { ipc, emit } = fakeIpc()
+    const bridge = projectFolderBridge(ipc as unknown as ProjectFolderBridgeIpc)
+    const seen: unknown[] = []
+    const off = bridge.onProjectChanged((event) => seen.push(event))
+    expect(ipc.send).toHaveBeenLastCalledWith(PROJECT_FOLDER_LISTEN_CHANNEL, {
+      method: 'onProjectChanged',
+      listening: true,
+    })
+    emit(PROJECT_FOLDER_EVENTS.onProjectChanged, { projectId: 'p1', part: 'memory' })
+    off()
+    expect(seen).toEqual([{ projectId: 'p1', part: 'memory' }])
   })
 
   it('tells main when the first listener of an event comes and the last one goes', () => {

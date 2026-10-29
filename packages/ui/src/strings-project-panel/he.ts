@@ -62,6 +62,8 @@ export const he = {
   memoryReplaced: 'הזיכרון עודכן: {text}',
   memoryRemoved: 'נמחק מהזיכרון: {text}',
   removeMemory: 'מחיקה',
+  memoryAlreadyRemoved: 'זה כבר נמחק מהזיכרון',
+  alreadyListed: 'הפרויקט הזה כבר ברשימה',
   memoryConsolidated: 'הזיכרון סודר (מ-{before} ל-{after} פריטים)',
   undo: 'ביטול',
   toolSummary: 'כלים הופעלו {count} פעמים ב-{editor} ״{name}״',

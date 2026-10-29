@@ -65,6 +65,8 @@ export const fr = {
   memoryReplaced: 'Mémoire modifiée : {text}',
   memoryRemoved: 'Mémoire effacée : {text}',
   removeMemory: 'Effacer',
+  memoryAlreadyRemoved: 'Déjà effacé de la mémoire',
+  alreadyListed: 'Ce projet est déjà dans la liste',
   memoryConsolidated: 'Mémoire mise en ordre ({before} → {after} éléments)',
   undo: 'Annuler',
   toolSummary: 'Outils exécutés {count} fois dans {editor} « {name} »',

@@ -63,6 +63,8 @@ export const pt = {
   memoryReplaced: 'Memória alterada: {text}',
   memoryRemoved: 'Memória apagada: {text}',
   removeMemory: 'Apagar',
+  memoryAlreadyRemoved: 'Isto já foi apagado da memória',
+  alreadyListed: 'Este projeto já está na lista',
   memoryConsolidated: 'Memória organizada ({before} → {after} itens)',
   undo: 'Desfazer',
   toolSummary: 'Ferramentas executadas {count} vezes em {editor} “{name}”',

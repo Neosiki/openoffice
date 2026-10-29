@@ -6,8 +6,8 @@ import { queueTurns, recorded, scratch, shot, stubEverything } from './project-f
 
 /**
  * Problems a first-time user ran into with the project folder (decision 0088),
- * kept as tests that document them. Each `test.fail` passes while the problem
- * is there and starts failing once it is fixed: then drop the `.fail`.
+ * kept as regression tests now that they are fixed: each test asserts the
+ * fixed behavior.
  *
  * AI and native dialogs are stubs (project-folder-user-lib.ts).
  */
@@ -57,32 +57,44 @@ async function openDoc(s: Setup, file: string, urlPart: string): Promise<Page> {
 }
 
 test.describe('project folder problems a first-time user hit', () => {
-  // BUG: the home project screen reads memory once; what the AI remembers
-  // meanwhile only shows after leaving the project and opening it again.
-  test.fail('home project screen shows memory the AI just wrote', async () => {
+  // Was: the home project screen read memory once; what the AI remembered
+  // meanwhile only showed after leaving the project and opening it again.
+  test('home project screen shows memory the AI just wrote', async () => {
     const s = await setup('stale-memory')
     try {
       const md = await openDoc(s, 'a.md', '://markdown/')
       await queueTurns(s.app, [
-        { toolCalls: [{ id: 'm', name: 'project_remember', input: { op: 'add', text: '결재는 화요일 (2026-10-30)' } }] },
+        {
+          toolCalls: [
+            {
+              id: 'm',
+              name: 'project_remember',
+              input: { op: 'add', text: '결재는 화요일 (2026-10-30)' },
+            },
+          ],
+        },
         { text: '기억했습니다.' },
       ])
       await send(md, '결재는 화요일이야. 기억해 줘')
       await expect(md.locator('.ai-project-event-text', { hasText: '기억함' })).toBeVisible()
-      expect(await readFile(join(s.proj, '.ieumoffice', 'memory.md'), 'utf8')).toContain('결재는 화요일')
+      expect(await readFile(join(s.proj, '.ieumoffice', 'memory.md'), 'utf8')).toContain(
+        '결재는 화요일',
+      )
       await s.page.locator('.tab-bar .tab-home').click()
       await s.page.locator('.projects-tabs [role=tab]', { hasText: '기억' }).click()
       await shot(s.page, 'b01-home-memory-stale')
-      await expect(s.page.locator('.projects-pane')).toContainText('결재는 화요일', { timeout: 5_000 })
+      await expect(s.page.locator('.projects-pane')).toContainText('결재는 화요일', {
+        timeout: 5_000,
+      })
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-stale-memory')
     }
   })
 
-  // BUG: "지침이 바뀌었습니다 [보기]" opens the project screen with the OLD
-  // instructions; editing and saving there silently throws away the change
+  // Was: "지침이 바뀌었습니다 [보기]" opened the project screen with the OLD
+  // instructions; editing and saving there silently threw away the change
   // made outside the app.
-  test.fail('[보기] after an outside change shows the new instructions and saving keeps them', async () => {
+  test('[보기] after an outside change shows the new instructions and saving keeps them', async () => {
     const s = await setup('stale-instructions')
     try {
       await s.page.locator('.projects-textarea').fill('개조식으로 쓴다.')
@@ -99,7 +111,9 @@ test.describe('project folder problems a first-time user hit', () => {
       expect((await recorded(s.app)).streams[1]).toContain('날짜는 2026. 10. 30.')
       const notice = md.locator('.ai-project-notice', { hasText: '지침이 바뀌었습니다' })
       await notice.getByRole('button', { name: '보기' }).click()
-      await shot(s.page, 'b02-view-shows-old-instructions')
+      // the screen reads the folder again for the request
+      await expect(s.page.locator('.projects-textarea')).toHaveValue(/날짜는 2026\. 10\. 30\./)
+      await shot(s.page, 'b02-view-shows-new-instructions')
       const shown = await s.page.locator('.projects-textarea').inputValue()
       console.log('instructions shown after [보기]:', JSON.stringify(shown))
       // the person adds one more rule on the screen [보기] opened and saves
@@ -115,14 +129,22 @@ test.describe('project folder problems a first-time user hit', () => {
     }
   })
 
-  // BUG: a memory removed in one window still shows "기억함: … [지우기]" in the
-  // same chat opened in another editor; pressing it does nothing visible.
-  test.fail('a memory removed in one editor is not offered for removal again in another', async () => {
+  // Was: a memory removed in one window still showed "기억함: … [지우기]" in
+  // the same chat opened in another editor; pressing it did nothing visible.
+  test('a memory removed in one editor is not offered for removal again in another', async () => {
     const s = await setup('stale-memory-line')
     try {
       const md = await openDoc(s, 'a.md', '://markdown/')
       await queueTurns(s.app, [
-        { toolCalls: [{ id: 'm', name: 'project_remember', input: { op: 'add', text: '회비는 2만 원 (2026-10-30)' } }] },
+        {
+          toolCalls: [
+            {
+              id: 'm',
+              name: 'project_remember',
+              input: { op: 'add', text: '회비는 2만 원 (2026-10-30)' },
+            },
+          ],
+        },
         { text: '첫 답' },
       ])
       await send(md, '첫 질문')
@@ -131,22 +153,29 @@ test.describe('project folder problems a first-time user hit', () => {
       await expect
         .poll(async () => readFile(join(s.proj, '.ieumoffice', 'memory.md'), 'utf8'))
         .not.toContain('회비는')
+      // the same window: the line now says it was removed
+      await expect(line).toContainText('기억 지움: 회비는 2만 원')
+      await expect(line.getByRole('button', { name: '지우기' })).toHaveCount(0)
       const html = await openDoc(s, 'b.html', '://html/')
       await html.locator('.ai-project-chat-menu button').first().click()
-      await html.locator('.ai-project-chat-menu .ai-project-list > *', { hasText: '첫 질문' }).first().click()
+      await html
+        .locator('.ai-project-chat-menu .ai-project-list > *', { hasText: '첫 질문' })
+        .first()
+        .click()
       await expect(html.getByText('첫 답')).toBeVisible()
       const other = html.locator('.ai-project-event', { hasText: '회비는 2만 원' })
-      await shot(html, 'b03-removed-memory-still-offered')
-      // either the line says it was removed, or there is nothing to press
+      await shot(html, 'b03-removed-memory-line')
+      // the other editor's line says it was removed and has nothing to press
+      await expect(other).toContainText('기억 지움: 회비는 2만 원')
       await expect(other.getByRole('button', { name: '지우기' })).toHaveCount(0, { timeout: 3_000 })
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-stale-memory-line')
     }
   })
 
-  // BUG: with a long chat title the markdown AI panel header grows wider than
-  // the panel: the panel buttons at the right end are pushed out of view.
-  test.fail('a long chat title keeps the AI panel header buttons inside the panel', async () => {
+  // Was: with a long chat title the markdown AI panel header grew wider than
+  // the panel and pushed the panel buttons at the right end out of view.
+  test('a long chat title keeps the AI panel header buttons inside the panel', async () => {
     const s = await setup('long-title')
     try {
       const md = await openDoc(s, 'a.md', '://markdown/')
@@ -177,6 +206,7 @@ test.describe('project folder problems a first-time user hit', () => {
         expect(b.right, `${b.label} inside the panel`).toBeLessThanOrEqual(geo.panelRight)
         expect(b.left, `${b.label} inside the panel`).toBeGreaterThanOrEqual(geo.panelLeft)
       }
+      expect(geo.scrolled, 'nothing in the panel scrolled sideways').toEqual([])
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-long-title')
     }

@@ -2,7 +2,7 @@ export const zh = {
   navProjects: '项目',
   intro:
     '把一个文件夹设为项目后，该文件夹中的文档、指引、记忆和对话会成为 AI 面板的上下文。这些都保存在该文件夹内。',
-  emptyHint: '还没有项目。新建一个，或添加你正在使用的文件夹。',
+  emptyHint: '还没有项目。新建一个，或把已有文件夹用作项目。',
   newNameLabel: '新项目名称',
   create: '创建',
   cancel: '取消',
@@ -12,10 +12,10 @@ export const zh = {
   renameHint: '文件夹名称保持不变。',
   openInExplorer: '在文件资源管理器中打开',
   openInFinder: '在 Finder 中显示',
-  trustUse: '指引和记忆会发送给 AI',
+  trustUse: '正在把指引和记忆发送给 AI',
   trustWithout: '正在不带指引使用',
   trustWithoutDesc: '不会把指引、记忆以及在其他电脑上进行的对话发送给 AI，也不会积累记忆。',
-  trustUnconfirmed: '此文件夹尚未确认',
+  trustUnconfirmed: '文件夹尚未确认',
   retry: '重试',
   relocate: '重新选择文件夹',
   missingNote: '找不到该文件夹。如果你移动了它，请选择新位置。',
@@ -48,7 +48,7 @@ export const zh = {
   consolidateNotice: '请先查看 AI 连接说明，然后再按一次。',
   consolidateNothing: '没有需要整理的记忆。',
   consolidateWithout:
-    '此项目正在不带指引使用，因此无法把记忆发送给 AI。在上方改为使用指引后即可整理。',
+    '此项目正在不带指引使用，因此无法把记忆发送给 AI。在上方点“也使用指引”后即可整理。',
   consolidateFailed: '未能整理。记忆保持不变。',
   consolidateStopped: '已停止。记忆保持不变。',
   consolidateUndone: '已恢复到整理之前。',
@@ -71,4 +71,12 @@ export const zh = {
   chatsDesc: '此项目中的对话。点击即可在最后使用它的文档的 AI 面板中继续。',
   actionFailed: '操作未完成。请重试。',
   loadFailed: '无法读取项目。',
+  addExistingFolder: '把已有文件夹用作项目',
+  trustStatus: '状态：{state}',
+  trustUseButton: '也使用指引',
+  changedOutside:
+    '你编辑期间，这个文件在别处被修改了。点“重新载入”读取修改后的内容；点“仍然保存”用这里的内容覆盖它。',
+  reloadFile: '重新载入',
+  saveAnyway: '仍然保存',
+  openFileAria: '在应用中打开：{name}',
 }

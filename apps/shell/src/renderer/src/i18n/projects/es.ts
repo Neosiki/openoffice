@@ -4,7 +4,7 @@ export const es = {
   navProjects: 'Proyectos',
   intro:
     'Convierte una carpeta en proyecto y sus documentos, instrucciones, memoria y chats pasan a ser el contexto del panel de IA. Todo se guarda dentro de esa carpeta.',
-  emptyHint: 'Aún no hay proyectos. Crea uno o añade una carpeta que ya uses.',
+  emptyHint: 'Aún no hay proyectos. Crea uno o usa una carpeta existente como proyecto.',
   newNameLabel: 'Nombre del nuevo proyecto',
   create: 'Crear',
   cancel: 'Cancelar',
@@ -14,11 +14,11 @@ export const es = {
   renameHint: 'La carpeta conserva su nombre.',
   openInExplorer: 'Abrir en el Explorador de archivos',
   openInFinder: 'Mostrar en el Finder',
-  trustUse: 'Las instrucciones y la memoria se envían a la IA',
-  trustWithout: 'En uso sin instrucciones',
+  trustUse: 'enviando instrucciones y memoria a la IA',
+  trustWithout: 'en uso sin instrucciones',
   trustWithoutDesc:
     'No se envían a la IA las instrucciones, la memoria ni los chats de otros PC, y no se guarda memoria.',
-  trustUnconfirmed: 'Esta carpeta aún no se ha confirmado',
+  trustUnconfirmed: 'carpeta aún sin confirmar',
   retry: 'Reintentar',
   relocate: 'Elegir la carpeta de nuevo',
   missingNote: 'No se encuentra la carpeta. Si la moviste, elige su nueva ubicación.',
@@ -56,7 +56,7 @@ export const es = {
   consolidateNotice: 'Lee primero el aviso de conexión de IA y vuelve a pulsar.',
   consolidateNothing: 'No hay memoria que ordenar.',
   consolidateWithout:
-    'Este proyecto se usa sin instrucciones, así que su memoria no se puede enviar a la IA. Cambia arriba a usar las instrucciones para ordenarla.',
+    'Este proyecto se usa sin instrucciones, así que su memoria no se puede enviar a la IA. Pulsa [Usar también las instrucciones] arriba para ordenarla.',
   consolidateFailed: 'No se pudo ordenar. La memoria no ha cambiado.',
   consolidateStopped: 'Detenido. La memoria no ha cambiado.',
   consolidateUndone: 'Se volvió a como estaba antes de ordenar.',
@@ -83,4 +83,12 @@ export const es = {
     'Chats de este proyecto. Haz clic en uno para seguirlo en el panel de IA del último documento que lo usó.',
   actionFailed: 'No funcionó. Inténtalo de nuevo.',
   loadFailed: 'No se pudo leer el proyecto.',
+  addExistingFolder: 'Usar una carpeta existente',
+  trustStatus: 'Estado: {state}',
+  trustUseButton: 'Usar también las instrucciones',
+  changedOutside:
+    'Este archivo cambió en otro lugar mientras lo editabas. [Volver a cargar] lee la versión nueva; [Guardar de todos modos] la sobrescribe con lo que tienes aquí.',
+  reloadFile: 'Volver a cargar',
+  saveAnyway: 'Guardar de todos modos',
+  openFileAria: 'Abrir en la aplicación: {name}',
 } satisfies Record<keyof typeof zh, string>

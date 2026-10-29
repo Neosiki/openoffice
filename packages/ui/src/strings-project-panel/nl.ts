@@ -65,6 +65,8 @@ export const nl = {
   memoryReplaced: 'Geheugen gewijzigd: {text}',
   memoryRemoved: 'Geheugen gewist: {text}',
   removeMemory: 'Wissen',
+  memoryAlreadyRemoved: 'Dit is al uit het geheugen gewist',
+  alreadyListed: 'Dit project staat al in de lijst',
   memoryConsolidated: 'Geheugen opgeruimd ({before} → {after} items)',
   undo: 'Ongedaan maken',
   toolSummary: 'Hulpmiddelen {count} keer uitgevoerd in {editor} ‘{name}’',

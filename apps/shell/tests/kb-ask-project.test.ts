@@ -26,6 +26,8 @@ import { projectPanelText } from '@genoffice/ui'
 import type { HomeApi } from '../src/shared/home-api'
 import { KbAskPanel } from '../src/renderer/src/KbAskPanel'
 import {
+  notesAfterCreate,
+  pathInsideFolder,
   askScopeFailure,
   openAskScope,
   storedToolNotes,
@@ -683,5 +685,108 @@ describe('kb-ask-project helpers', () => {
       { label: 'Searched the project: plan', kind: 'search' },
       { label: 'Used the lease skill', kind: 'skill' },
     ])
+  })
+})
+
+describe('the home ask names the chosen project (first-use fixes)', () => {
+  const placeholder = () => host.querySelector<HTMLTextAreaElement>('textarea')!.placeholder
+
+  it('says the project in the head, the first line and the input hint', async () => {
+    selection = { projectId: 'p1', initialChatId: null }
+    await renderPanel()
+    const head = host.querySelector('.kb-ask-headbar')!.textContent!
+    expect(head).toContain(kbAskProjectText('en', 'askProjectTitle', { name: PROJECT.name }))
+    expect(head).not.toContain('Ask your knowledge base')
+    expect(placeholder()).toBe(
+      kbAskProjectText('en', 'askProjectStarsPlaceholder', { name: PROJECT.name }),
+    )
+    expect(host.querySelector('.kb-ask-hint')!.textContent).toBe(
+      kbAskProjectText('en', 'askProjectIntro', { name: PROJECT.name }),
+    )
+  })
+
+  it('leaves the star count out with a project and nothing starred', async () => {
+    selection = { projectId: 'p1', initialChatId: null }
+    starred = []
+    await renderPanel()
+    expect(host.querySelector('.kb-ask-headbar')!.textContent).not.toContain('starred files')
+    expect(placeholder()).toBe(
+      kbAskProjectText('en', 'askProjectPlaceholder', { name: PROJECT.name }),
+    )
+  })
+
+  it('without a project, points to the picker from the empty-stars guide and keeps its words', async () => {
+    starred = []
+    await renderPanel()
+    expect(host.querySelector('.kb-ask-hero')!.textContent).toContain(
+      kbAskProjectText('en', 'askHeroProjectHint'),
+    )
+    expect(placeholder()).toBe(strings.en.askPlaceholder)
+  })
+
+  it('a document made into the project folder says where it went, opens, and needs no "save as"', async () => {
+    selection = { projectId: 'p1', initialChatId: null }
+    const created = '/work/annual-report/October minutes.md'
+    ;(window.aiOffice as unknown as Record<string, unknown>).kbCreateDocument = vi.fn(async () => ({
+      path: created,
+    }))
+    const onOpenPath = vi.fn()
+    await act(async () => {
+      root.render(
+        createElement(
+          LocaleProvider,
+          { initial: 'en' },
+          createElement(KbAskPanel, {
+            connection,
+            aiSettings: stored,
+            noticeDue: false,
+            onOpenAiSettings: vi.fn(),
+            onOpenPath,
+            onGoToRecents: vi.fn(),
+          }),
+        ),
+      )
+      await settle()
+    })
+    await ask('Make the October minutes')
+    await answer([
+      {
+        type: 'tool-call',
+        toolCall: {
+          id: 'c1',
+          name: 'create_document',
+          input: { title: 'October minutes', format: 'md', content: '# Minutes\n' },
+        },
+      },
+      { type: 'done' },
+    ])
+    await answer([{ type: 'delta', text: 'Made it.' }, { type: 'done' }])
+    const note = host.querySelector('.kb-ask-tool-note.is-done')!
+    expect(note.textContent).toContain(
+      kbAskProjectText('en', 'askSavedToProject', { name: 'October minutes.md' }),
+    )
+    expect(host.textContent).not.toContain(strings.en.askToolCreate)
+    expect(host.querySelector('.kb-ask-actions')).toBeNull()
+    await click(note.querySelector('button'))
+    expect(onOpenPath).toHaveBeenCalledWith(created)
+  })
+})
+
+describe('a created document and the project folder', () => {
+  const labels = (name: string) => `saved: ${name}`
+
+  it('turns the "making" note into a done one only inside the project folder', () => {
+    const notes = [
+      { label: 'Searching', kind: 'search' as const },
+      { label: 'Making a document', kind: 'create' as const },
+    ]
+    expect(notesAfterCreate(notes, 'D:\\Work\\P\\a.md', 'd:\\work\\p', labels)).toEqual([
+      notes[0],
+      { label: 'saved: a.md', kind: 'created', path: 'D:\\Work\\P\\a.md' },
+    ])
+    expect(notesAfterCreate(notes, 'D:\\Work\\Other\\a.md', 'D:\\Work\\P', labels)).toBeNull()
+    expect(notesAfterCreate(notes, '/home/me/P/a.md', null, labels)).toBeNull()
+    expect(notesAfterCreate(notes, undefined, '/home/me/P', labels)).toBeNull()
+    expect(pathInsideFolder('/home/me/Project2/a.md', '/home/me/Project')).toBe(false)
   })
 })

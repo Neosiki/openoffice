@@ -5,7 +5,7 @@ export const de = {
   intro:
     'Machen Sie einen Ordner zum Projekt: Seine Dokumente, Anweisungen, Erinnerungen und Chats werden zum Kontext des KI-Bereichs. Alles bleibt in diesem Ordner.',
   emptyHint:
-    'Noch keine Projekte. Erstellen Sie eines oder fügen Sie einen Ordner hinzu, den Sie schon nutzen.',
+    'Noch keine Projekte. Erstellen Sie eines oder verwenden Sie einen vorhandenen Ordner als Projekt.',
   newNameLabel: 'Name des neuen Projekts',
   create: 'Erstellen',
   cancel: 'Abbrechen',
@@ -15,11 +15,11 @@ export const de = {
   renameHint: 'Der Ordner behält seinen Namen.',
   openInExplorer: 'Im Datei-Explorer öffnen',
   openInFinder: 'Im Finder zeigen',
-  trustUse: 'Anweisungen und Erinnerungen werden an die KI gesendet',
-  trustWithout: 'Ohne Anweisungen in Verwendung',
+  trustUse: 'Anweisungen und Erinnerungen gehen an die KI',
+  trustWithout: 'ohne Anweisungen in Verwendung',
   trustWithoutDesc:
     'Anweisungen, Erinnerungen und Chats von anderen PCs werden nicht an die KI gesendet, und es werden keine Erinnerungen gesammelt.',
-  trustUnconfirmed: 'Dieser Ordner wurde noch nicht bestätigt',
+  trustUnconfirmed: 'Ordner noch nicht bestätigt',
   retry: 'Erneut versuchen',
   relocate: 'Ordner erneut wählen',
   missingNote:
@@ -58,7 +58,7 @@ export const de = {
   consolidateNotice: 'Lesen Sie zuerst den Hinweis zur KI-Verbindung und drücken Sie dann erneut.',
   consolidateNothing: 'Es gibt keine Erinnerungen zum Aufräumen.',
   consolidateWithout:
-    'Dieses Projekt wird ohne Anweisungen verwendet, daher können seine Erinnerungen nicht an die KI gesendet werden. Wechseln Sie oben zur Verwendung der Anweisungen, um aufzuräumen.',
+    'Dieses Projekt wird ohne Anweisungen verwendet, daher können seine Erinnerungen nicht an die KI gesendet werden. Klicken Sie oben auf [Anweisungen auch verwenden], um aufzuräumen.',
   consolidateFailed: 'Aufräumen nicht möglich. Die Erinnerungen sind unverändert.',
   consolidateStopped: 'Angehalten. Die Erinnerungen sind unverändert.',
   consolidateUndone: 'Auf den Stand vor dem Aufräumen zurückgesetzt.',
@@ -85,4 +85,12 @@ export const de = {
     'Chats in diesem Projekt. Klicken Sie, um einen im KI-Bereich des zuletzt genutzten Dokuments fortzusetzen.',
   actionFailed: 'Das hat nicht geklappt. Bitte versuchen Sie es erneut.',
   loadFailed: 'Das Projekt konnte nicht gelesen werden.',
+  addExistingFolder: 'Vorhandenen Ordner verwenden',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Anweisungen auch verwenden',
+  changedOutside:
+    'Diese Datei wurde anderswo geändert, während Sie sie bearbeitet haben. [Neu laden] liest die neue Fassung; [Trotzdem speichern] überschreibt sie mit Ihrem Stand hier.',
+  reloadFile: 'Neu laden',
+  saveAnyway: 'Trotzdem speichern',
+  openFileAria: 'In der App öffnen: {name}',
 } satisfies Record<keyof typeof zh, string>

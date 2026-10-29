@@ -4,7 +4,7 @@ export const pt = {
   navProjects: 'Projetos',
   intro:
     'Transforme uma pasta em projeto e os documentos, instruções, memória e conversas dela passam a ser o contexto do painel de IA. Tudo fica guardado dentro dessa pasta.',
-  emptyHint: 'Ainda não há projetos. Crie um ou adicione uma pasta que você já usa.',
+  emptyHint: 'Ainda não há projetos. Crie um ou use uma pasta existente como projeto.',
   newNameLabel: 'Nome do novo projeto',
   create: 'Criar',
   cancel: 'Cancelar',
@@ -14,11 +14,11 @@ export const pt = {
   renameHint: 'A pasta mantém o nome.',
   openInExplorer: 'Abrir no Explorador de Arquivos',
   openInFinder: 'Mostrar no Finder',
-  trustUse: 'As instruções e a memória são enviadas à IA',
-  trustWithout: 'Em uso sem instruções',
+  trustUse: 'enviando instruções e memória à IA',
+  trustWithout: 'em uso sem instruções',
   trustWithoutDesc:
     'Instruções, memória e conversas de outros PCs não são enviadas à IA, e nenhuma memória é guardada.',
-  trustUnconfirmed: 'Esta pasta ainda não foi confirmada',
+  trustUnconfirmed: 'pasta ainda não confirmada',
   retry: 'Tentar de novo',
   relocate: 'Escolher a pasta de novo',
   missingNote: 'A pasta não foi encontrada. Se você a moveu, escolha o novo local.',
@@ -56,7 +56,7 @@ export const pt = {
   consolidateNotice: 'Leia primeiro o aviso de conexão de IA e pressione de novo.',
   consolidateNothing: 'Não há memória para organizar.',
   consolidateWithout:
-    'Este projeto está em uso sem instruções, então a memória dele não pode ser enviada à IA. Passe a usar as instruções acima para organizá-la.',
+    'Este projeto está em uso sem instruções, então a memória dele não pode ser enviada à IA. Clique em [Usar também as instruções] acima para organizá-la.',
   consolidateFailed: 'Não foi possível organizar. A memória não mudou.',
   consolidateStopped: 'Parado. A memória não mudou.',
   consolidateUndone: 'Voltou ao que era antes de organizar.',
@@ -82,4 +82,12 @@ export const pt = {
     'Conversas deste projeto. Clique em uma para continuá-la no painel de IA do último documento que a usou.',
   actionFailed: 'Não deu certo. Tente de novo.',
   loadFailed: 'Não foi possível ler o projeto.',
+  addExistingFolder: 'Usar uma pasta existente',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Usar também as instruções',
+  changedOutside:
+    'Este arquivo foi alterado em outro lugar enquanto você o editava. [Recarregar] lê a nova versão; [Salvar mesmo assim] grava por cima dela o que você tem aqui.',
+  reloadFile: 'Recarregar',
+  saveAnyway: 'Salvar mesmo assim',
+  openFileAria: 'Abrir no aplicativo: {name}',
 } satisfies Record<keyof typeof zh, string>

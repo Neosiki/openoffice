@@ -63,6 +63,8 @@ export const pl = {
   memoryReplaced: 'Zmieniono w pamięci: {text}',
   memoryRemoved: 'Usunięto z pamięci: {text}',
   removeMemory: 'Usuń',
+  memoryAlreadyRemoved: 'To już usunięto z pamięci',
+  alreadyListed: 'Ten projekt już jest na liście',
   memoryConsolidated: 'Uporządkowano pamięć (wpisy: {before} → {after})',
   undo: 'Cofnij',
   toolSummary: '{editor} „{name}” – uruchomienia narzędzi: {count}',

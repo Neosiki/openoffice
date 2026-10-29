@@ -4,7 +4,7 @@ export const nl = {
   navProjects: 'Projecten',
   intro:
     'Maak van een map een project: de documenten, instructies, het geheugen en de chats worden de context van het AI-paneel. Alles blijft in die map.',
-  emptyHint: 'Nog geen projecten. Maak er een of voeg een map toe die je al gebruikt.',
+  emptyHint: 'Nog geen projecten. Maak er een of gebruik een bestaande map als project.',
   newNameLabel: 'Naam van het nieuwe project',
   create: 'Maken',
   cancel: 'Annuleren',
@@ -14,11 +14,11 @@ export const nl = {
   renameHint: 'De map houdt zijn naam.',
   openInExplorer: 'Openen in Verkenner',
   openInFinder: 'Tonen in Finder',
-  trustUse: 'Instructies en geheugen worden naar de AI gestuurd',
-  trustWithout: 'In gebruik zonder instructies',
+  trustUse: 'instructies en geheugen gaan naar de AI',
+  trustWithout: 'in gebruik zonder instructies',
   trustWithoutDesc:
     'Instructies, geheugen en chats van andere pc’s worden niet naar de AI gestuurd, en er wordt geen geheugen bijgehouden.',
-  trustUnconfirmed: 'Deze map is nog niet bevestigd',
+  trustUnconfirmed: 'map nog niet bevestigd',
   retry: 'Opnieuw proberen',
   relocate: 'Map opnieuw kiezen',
   missingNote: 'De map is niet gevonden. Heb je hem verplaatst, kies dan de nieuwe locatie.',
@@ -56,7 +56,7 @@ export const nl = {
   consolidateNotice: 'Lees eerst de melding over de AI-verbinding en druk dan opnieuw.',
   consolidateNothing: 'Er is geen geheugen om op te ruimen.',
   consolidateWithout:
-    'Dit project wordt zonder instructies gebruikt, dus het geheugen kan niet naar de AI. Schakel hierboven over naar het gebruik van instructies om op te ruimen.',
+    'Dit project wordt zonder instructies gebruikt, dus het geheugen kan niet naar de AI. Klik hierboven op [Instructies ook gebruiken] om op te ruimen.',
   consolidateFailed: 'Opruimen lukte niet. Het geheugen is ongewijzigd.',
   consolidateStopped: 'Gestopt. Het geheugen is ongewijzigd.',
   consolidateUndone: 'Terug naar hoe het was vóór het opruimen.',
@@ -83,4 +83,12 @@ export const nl = {
     'Chats in dit project. Klik op een chat om verder te gaan in het AI-paneel van het document waarin hij het laatst werd gebruikt.',
   actionFailed: 'Dat lukte niet. Probeer het opnieuw.',
   loadFailed: 'Het project kon niet worden gelezen.',
+  addExistingFolder: 'Bestaande map gebruiken',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Instructies ook gebruiken',
+  changedOutside:
+    'Dit bestand is ergens anders gewijzigd terwijl je het bewerkte. [Opnieuw laden] leest de nieuwe versie; [Toch opslaan] zet jouw versie van hier eroverheen.',
+  reloadFile: 'Opnieuw laden',
+  saveAnyway: 'Toch opslaan',
+  openFileAria: 'Openen in de app: {name}',
 } satisfies Record<keyof typeof zh, string>

@@ -4,7 +4,7 @@ export const id = {
   navProjects: 'Proyek',
   intro:
     'Jadikan folder sebagai proyek, dan dokumen, instruksi, memori, serta obrolannya menjadi konteks panel AI. Semuanya disimpan di dalam folder itu.',
-  emptyHint: 'Belum ada proyek. Buat yang baru atau tambahkan folder yang sudah Anda pakai.',
+  emptyHint: 'Belum ada proyek. Buat yang baru atau gunakan folder yang ada sebagai proyek.',
   newNameLabel: 'Nama proyek baru',
   create: 'Buat',
   cancel: 'Batal',
@@ -14,11 +14,11 @@ export const id = {
   renameHint: 'Nama folder tetap sama.',
   openInExplorer: 'Buka di File Explorer',
   openInFinder: 'Tampilkan di Finder',
-  trustUse: 'Instruksi dan memori dikirim ke AI',
-  trustWithout: 'Dipakai tanpa instruksi',
+  trustUse: 'mengirim instruksi dan memori ke AI',
+  trustWithout: 'dipakai tanpa instruksi',
   trustWithoutDesc:
     'Instruksi, memori, dan obrolan dari PC lain tidak dikirim ke AI, dan memori tidak ditambah.',
-  trustUnconfirmed: 'Folder ini belum dikonfirmasi',
+  trustUnconfirmed: 'folder belum dikonfirmasi',
   retry: 'Coba lagi',
   relocate: 'Pilih folder lagi',
   missingNote: 'Folder tidak ditemukan. Jika Anda memindahkannya, pilih lokasi barunya.',
@@ -55,7 +55,7 @@ export const id = {
   consolidateNotice: 'Baca dulu pemberitahuan koneksi AI, lalu tekan lagi.',
   consolidateNothing: 'Tidak ada memori untuk dirapikan.',
   consolidateWithout:
-    'Proyek ini dipakai tanpa instruksi, jadi memorinya tidak bisa dikirim ke AI. Beralihlah ke penggunaan instruksi di atas untuk merapikannya.',
+    'Proyek ini dipakai tanpa instruksi, jadi memorinya tidak bisa dikirim ke AI. Tekan [Gunakan instruksi juga] di atas untuk merapikannya.',
   consolidateFailed: 'Tidak dapat merapikan. Memori tidak berubah.',
   consolidateStopped: 'Dihentikan. Memori tidak berubah.',
   consolidateUndone: 'Dikembalikan seperti sebelum dirapikan.',
@@ -81,4 +81,12 @@ export const id = {
     'Obrolan di proyek ini. Klik salah satu untuk melanjutkannya di panel AI dokumen tempat obrolan itu terakhir dipakai.',
   actionFailed: 'Tidak berhasil. Silakan coba lagi.',
   loadFailed: 'Proyek tidak dapat dibaca.',
+  addExistingFolder: 'Gunakan folder yang ada',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Gunakan instruksi juga',
+  changedOutside:
+    'File ini diubah di tempat lain saat Anda mengeditnya. [Muat ulang] membaca versi baru; [Tetap simpan] menimpanya dengan isi Anda di sini.',
+  reloadFile: 'Muat ulang',
+  saveAnyway: 'Tetap simpan',
+  openFileAria: 'Buka di aplikasi: {name}',
 } satisfies Record<keyof typeof zh, string>

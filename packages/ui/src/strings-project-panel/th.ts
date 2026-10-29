@@ -63,6 +63,8 @@ export const th = {
   memoryReplaced: 'แก้ความจำ: {text}',
   memoryRemoved: 'ลบความจำ: {text}',
   removeMemory: 'ลบ',
+  memoryAlreadyRemoved: 'ความจำนี้ถูกลบไปแล้ว',
+  alreadyListed: 'โปรเจกต์นี้อยู่ในรายการแล้ว',
   memoryConsolidated: 'จัดระเบียบความจำแล้ว ({before} → {after} รายการ)',
   undo: 'เลิกทำ',
   toolSummary: 'เรียกใช้เครื่องมือ {count} ครั้งใน{editor} “{name}”',

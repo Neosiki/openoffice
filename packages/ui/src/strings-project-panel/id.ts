@@ -63,6 +63,8 @@ export const id = {
   memoryReplaced: 'Memori diubah: {text}',
   memoryRemoved: 'Memori dihapus: {text}',
   removeMemory: 'Hapus',
+  memoryAlreadyRemoved: 'Memori ini sudah dihapus',
+  alreadyListed: 'Proyek ini sudah ada di daftar',
   memoryConsolidated: 'Memori dirapikan ({before} → {after} butir)',
   undo: 'Urungkan',
   toolSummary: 'Alat dijalankan {count} kali di {editor} “{name}”',

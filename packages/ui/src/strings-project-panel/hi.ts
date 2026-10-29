@@ -62,6 +62,8 @@ export const hi = {
   memoryReplaced: 'स्मृति बदली: {text}',
   memoryRemoved: 'स्मृति से हटाया: {text}',
   removeMemory: 'हटाएँ',
+  memoryAlreadyRemoved: 'यह स्मृति पहले ही हटाई जा चुकी है',
+  alreadyListed: 'यह प्रोजेक्ट पहले से सूची में है',
   memoryConsolidated: 'स्मृति व्यवस्थित की गई ({before} → {after} प्रविष्टियाँ)',
   undo: 'पूर्ववत करें',
   toolSummary: '{editor} “{name}” में टूल {count} बार चलाए गए',

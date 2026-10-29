@@ -63,6 +63,8 @@ export const vi = {
   memoryReplaced: 'Đã sửa ghi nhớ: {text}',
   memoryRemoved: 'Đã xóa ghi nhớ: {text}',
   removeMemory: 'Xóa',
+  memoryAlreadyRemoved: 'Ghi nhớ này đã được xóa',
+  alreadyListed: 'Dự án này đã có trong danh sách',
   memoryConsolidated: 'Đã sắp xếp lại bộ nhớ ({before} → {after} mục)',
   undo: 'Hoàn tác',
   toolSummary: 'Đã chạy công cụ {count} lần trong {editor} “{name}”',
