@@ -110,6 +110,14 @@ async function read(
       { reason: 'out_of_range' },
     )
   }
+  const high = text.charCodeAt(offset - 1)
+  const low = text.charCodeAt(offset)
+  if (high >= 0xd800 && high <= 0xdbff && low >= 0xdc00 && low <= 0xdfff) {
+    throw new CliError(EXIT.usage, `--offset ${offset} splits a Unicode character`, undefined, {
+      reason: 'invalid_argument',
+      suggestion: `use --offset ${offset - 1} or --offset ${offset + 1}`,
+    })
+  }
   const end = Math.min(text.length, cutIndex(text, offset, offset + max))
   const detail: Record<string, unknown> = {
     format: ext,
