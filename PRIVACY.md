@@ -1,6 +1,6 @@
 # IeumOffice Privacy
 
-Last updated: October 28, 2026
+Last updated: October 29, 2026
 
 IeumOffice opens, edits and saves documents on your own PC. The project runs
 no server of its own: nothing is sent to IeumOffice or to its maintainers, and
@@ -34,6 +34,7 @@ by that service's own terms and by your account settings there.
 | You send any request to AI from an AI panel while some skills are set to **AI decides** (Settings → Skills)                                                                                      | The list of those skills, with every request: each one's identifier (where it is from and its name), title and description (up to 300 characters; past the first 100 skills, identifier and title only). Their text is not sent until it is used (next row)                                                                                                                                                                                                                                                                                                                                                                                                        | The AI provider that chat uses, as for chat                                                                                                                                                                                                                 |
 | You call a skill with `/` or `$` in an AI panel, or the AI uses a skill that is turned on                                                                                                        | The skill's text (its `SKILL.md` and the list of its files), and any text file of the skill the AI reads; script files are never run in the AI panel                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | The AI provider that chat uses, as for chat                                                                                                                                                                                                                 |
 | You attach files or documents in an AI panel (from this PC, Google Drive, **Attach from IeumOffice documents**, or by typing `@` in the input)                                                   | The attachment list with each attachment's file name, type and size, and an attachment's text when the AI reads it. When two attachments share a file name, the name of the folder each one sits in directly is added to its line (that one folder name only, never the full path; nothing for the app's own Drive copy folders)                                                                                                                                                                                                                                                                                                                                   | The AI provider that chat uses, as for chat                                                                                                                                                                                                                 |
+| You pick a **project** (a folder on your PC) under an AI panel's input, or in Home's Ask AI, and send a request                                                                                  | With every request: the project's name, its instructions and memory (unless you chose **Use without instructions**), and a list of the folder's files (path inside the folder, type, date changed; up to 500). When the AI reads a file of the folder, that file's text, read the same way as an attachment (parts hidden from AI stay hidden). File contents are not sent unless the AI reads them                                                                                                                                                                                                                                                                | The AI provider that chat uses, as for chat                                                                                                                                                                                                                 |
 | You add a skill from a GitHub link (Settings → Skills → Add), confirm an install the agent proposes, or press **Check for updates** on a skill installed from GitHub                             | Requests for the public repository's current commit and an archive of it; no cookies and no sign-in data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | **GitHub** (`github.com`, `api.github.com` and `codeload.github.com` only)                                                                                                                                                                                  |
 | You press "Make" in the "Make a new document" window                                                                                                                                             | What you typed (or the default request) and the files listed as material                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The AI provider in use, through the new document's AI panel like any request there. "Convert without AI" sends nothing                                                                                                                                      |
 | The AI, or the `ieumoffice search` command, searches the web or looks for images                                                                                                                 | The search query                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | By default **Parallel**'s free search and **DuckDuckGo**, no key needed. If you chose a key-based search provider under Advanced (Serper, Serply, Tavily, Parallel, Exa or Firecrawl), that provider instead                                                |
@@ -137,7 +138,10 @@ app's own features:
 ## What IeumOffice never does
 
 - It has no usage analytics and no telemetry: no launch counts, no file
-  statistics, no install identifier.
+  statistics, and no install identifier that is sent anywhere. To tell which
+  PC wrote a project chat, the app makes one random value per installation;
+  it is written only in `app-settings.json` and in the chat files of your
+  project folders (see **Project folders** below).
 - It never reads, copies or stores your Claude or Codex login: not
   `~/.codex/auth.json`, not the Claude credential store, not a session token.
   It has no Claude or ChatGPT sign-in form of its own. It only starts the
@@ -216,6 +220,64 @@ there, as everything else you send to the AI does.
 You can remove the app's access at any time with **Disconnect**, or from your
 Google Account's security settings.
 
+## Project folders
+
+A project is a folder on your PC that you pick under an AI panel's input
+(**Add folder** or **New project**). Picking one is up to you; with **No
+project** the AI panel works as before.
+
+What is sent with a project request is in the table above. The app reads the
+project's files only inside that folder, never a file you listed in its
+`ignore` file, never hidden files, and never a document open with unsaved
+changes.
+
+What the app writes into the project folder, in a `.ieumoffice` folder inside
+it, and nowhere else in your folders:
+
+- `project.json` (the project's name and identifier), `instructions.md` (the
+  instructions you write), `memory.md` (the memory), up to three backups of
+  the memory from before you pressed **Tidy up**, `ignore` (files the AI should
+  not see), and `chats/` (the project's chats: what you typed, the AI's
+  answers, the tools used, and which editor and which PC wrote each one).
+- New documents the AI makes in a project are saved in that folder, without
+  replacing any file.
+- The `.ieumoffice` folder is created only when something has to be written,
+  not when you merely pick the folder. Moving or copying the folder takes all
+  of this with it. Anyone who can open the folder can read it.
+
+Things to know:
+
+- **What you type can end up in the memory.** The AI writes facts, choices
+  and decisions from the chat into `memory.md` on its own, without asking.
+  Each time it does, the AI panel shows what it wrote with a **Delete**
+  button, and you can see and edit the whole memory in the project's page on
+  Home or in any text editor. Parts hidden from AI never reach the AI, so it
+  can only write their labels; text you typed into the chat yourself can be
+  written down. You can turn memory off per project.
+- **Synced folders upload it.** If the project folder is inside OneDrive,
+  Google Drive for desktop or a similar synced folder, that service uploads
+  the instructions, memory and chats along with your other files. The app
+  says so once, the first time you pick such a folder. Files that are only
+  online are not downloaded by the app on its own: when the AI wants to read
+  one, the app asks you first, and the download is done by that service.
+- **A folder from someone else is checked once.** When you add a folder that
+  already holds instructions, memory, `AGENTS.md` or `CLAUDE.md` this
+  installation did not write, or chats written on another PC, the app shows
+  them and asks whether to use them. With **Use without instructions**, none
+  of them is sent and chats from other PCs are not listed. After that it does
+  not ask again; when instructions or memory change outside the app, the AI
+  panel says so once.
+- **A folder the app cannot write to** (read-only, removed drive, no
+  permission) is still read, but its chats and memory are not saved, and the
+  app does not save them anywhere else instead. The AI panel says so.
+- **Agent mode** can change files in its project folder, the `.ieumoffice`
+  folder included.
+
+What stays on this PC only, in `app-settings.json` in the data folder: the
+list of your projects (paths, pinned, last used), your answer to the check
+above with fingerprints of the instructions and memory the app last saw,
+which project each document uses, and the random installation value.
+
 ## Whether your content is used for AI training
 
 IeumOffice does not decide this. When you use a subscription, your content is
@@ -244,7 +306,9 @@ Nothing in this list is uploaded by the app.
 - **Your documents**, wherever you save them, together with the helper files
   some editors keep next to a document.
 - **AI chat history**, kept in the app's data folder
-  (`%APPDATA%\IeumOffice`).
+  (`%APPDATA%\IeumOffice`). Chats in a project are kept in that project folder
+  instead (see **Project folders**); a synced project folder is uploaded by
+  its sync service.
 - **Your Google Drive sign-in**, if you connected Drive (`google-drive.json`
   in the data folder), encrypted with Windows' own protection for your user
   account. It is deleted when you disconnect. If this PC cannot encrypt it,
