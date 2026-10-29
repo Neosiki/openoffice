@@ -18,6 +18,8 @@ export type AgentBridgeEditor = Pick<RhwpEditor, 'plugins'>
 const METHODS = [
   'foreignChanges',
   'readText',
+  'listPictures',
+  'readPicture',
   'findText',
   'replaceText',
   'replaceAllText',

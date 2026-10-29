@@ -45,6 +45,14 @@ const MAX_SPLIT = 10
 const MAX_FORMATTED_CELLS = 500
 /** Rows or columns one call adds to or removes from a table. */
 const MAX_TABLE_LINES = 50
+/** Pictures one listPictures call lists. */
+const MAX_LISTED_PICTURES = 100
+/** Largest picture readPicture hands back to the AI panel, in bytes. */
+const MAX_PICTURE_BYTES = 10 * 1024 * 1024
+/** Characters of the text around a picture shown with it in the list. */
+const PICTURE_CONTEXT_CHARS = 60
+/** Objects tried in one cell paragraph when looking for a picture (the engine does not list them). */
+const PICTURE_CELL_CONTROLS = 8
 /** Cells one checkBoxes call ticks. */
 const MAX_CHECKED_CELLS = 400
 /**
@@ -1952,6 +1960,149 @@ function textOf(doc) {
 }
 
 /**
+ * The pictures of the document in reading order, with the text beside each one: first the
+ * pictures of body paragraphs, then those inside table cells. A picture in a text box, a
+ * header, a footer or the page background is not reached this way and is not listed. `sec`
+ * and `para` are the body paragraph that holds it, `control` its place among that
+ * paragraph's objects: the engine addresses the image by them (and by `cellPath` inside a
+ * table).
+ */
+function picturesOf(doc) {
+  const pictures = []
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections && pictures.length < MAX_LISTED_PICTURES; sec++) {
+    const paragraphs = doc.getParagraphCount(sec)
+    for (let para = 0; para < paragraphs && pictures.length < MAX_LISTED_PICTURES; para++) {
+      let positions
+      try {
+        positions = parse(doc.getControlTextPositions(sec, para))
+      } catch {
+        continue
+      }
+      for (let control = 0; control < positions.length; control++) {
+        let mime
+        try {
+          mime = doc.getControlImageMime(sec, para, '[]', control)
+        } catch {
+          continue // not a picture: a table, a field, a section definition
+        }
+        if (!mime.startsWith('image/')) continue
+        pictures.push(pictureAt(doc, sec, para, control, positions[control], mime))
+      }
+    }
+  }
+  // Pictures inside table cells: the engine does not list the objects of a cell paragraph,
+  // so each cell paragraph is asked for the objects a picture can sit in. A form's photo or
+  // seal is usually there rather than in the body text.
+  if (pictures.length >= MAX_LISTED_PICTURES) return pictures
+  const { tables } = tablesOf(doc)
+  tables.forEach((table, index) => {
+    if (pictures.length >= MAX_LISTED_PICTURES) return
+    for (let cell = 0; cell < table.cells; cell++) {
+      let count
+      try {
+        count = doc.getCellParagraphCountByPath(
+          table.sec,
+          table.para,
+          JSON.stringify(cellAt(table.path, cell, 0)),
+        )
+      } catch {
+        continue
+      }
+      for (let k = 0; k < count && pictures.length < MAX_LISTED_PICTURES; k++) {
+        const cellPath = cellAt(table.path, cell, k)
+        for (let control = 0; control < PICTURE_CELL_CONTROLS; control++) {
+          let mime
+          try {
+            mime = doc.getControlImageMime(table.sec, table.para, JSON.stringify(cellPath), control)
+          } catch {
+            continue
+          }
+          if (!mime.startsWith('image/')) continue
+          pictures.push(
+            pictureAt(doc, table.sec, table.para, control, 0, mime, {
+              table: index + 1,
+              cell,
+              cellPath,
+            }),
+          )
+        }
+      }
+    }
+  })
+  return pictures
+}
+
+/**
+ * One picture as picturesOf lists it: where it is and the words to recognize it by. `cell`
+ * names the table and cell it sits in (table cells only); its text is read from the cell.
+ */
+function pictureAt(doc, sec, para, control, offset, mime, cell = null) {
+  let near = ''
+  try {
+    if (cell) {
+      const json = JSON.stringify(cell.cellPath)
+      const length = doc.getCellParagraphLengthByPath(sec, para, json)
+      if (length > 0) {
+        near = clip(
+          squash(
+            doc.getTextInCellByPath(
+              sec,
+              para,
+              json,
+              0,
+              Math.min(length, PICTURE_CONTEXT_CHARS * 2),
+            ),
+          ),
+          PICTURE_CONTEXT_CHARS * 2,
+        )
+      }
+    } else {
+      const length = doc.getParagraphLength(sec, para)
+      const start = Math.max(0, offset - PICTURE_CONTEXT_CHARS)
+      const count = Math.min(length - start, PICTURE_CONTEXT_CHARS * 2)
+      if (count > 0) {
+        near = clip(squash(doc.getTextRange(sec, para, start, count)), PICTURE_CONTEXT_CHARS * 2)
+      }
+    }
+  } catch {
+    // the words are a courtesy; the picture itself is still listed
+  }
+  // the page the paragraph starts on, numbered as the document numbers its pages
+  let page = null
+  try {
+    const at = parse(doc.getPageOfPosition(sec, para))
+    if (at.ok && Number.isInteger(at.page)) {
+      const info = parse(doc.getPageInfo(at.page))
+      page = Number.isInteger(info.pageNumber) ? info.pageNumber : at.page + 1
+    }
+  } catch {
+    // no page: the list still names the picture
+  }
+  return {
+    sec,
+    para,
+    control,
+    offset,
+    mime,
+    near,
+    page,
+    table: cell ? cell.table : null,
+    cellPath: cell ? cell.cellPath : null,
+  }
+}
+
+/** Base64 of picture bytes, a chunk at a time so a large picture does not overflow the stack. */
+function base64Of(bytes) {
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+/**
  * A table is named by a path like a cell is: one entry per nesting level, the last one
  * holding the table's place among the objects of its paragraph. This is the address of
  * paragraph `k` of cell `cell` of that table.
@@ -2944,6 +3095,8 @@ export const agentPlugin = {
     let own = false
     // the text is read for every request; it only changes when the document does
     let text = null
+    // the pictures of the document, in reading order, as the last listPictures read them
+    let pictures = null
     // the places this plugin changed since the panel last cleared them, as they are now
     let marks = []
     // the memo panel: the memos as last read, whether its anchors are shown, which one is
@@ -3347,6 +3500,7 @@ export const agentPlugin = {
 
     host.events.on('document-changed', () => {
       text = null
+      pictures = null
       if (!own) {
         foreign += 1
         // an edit of the user's own moves text under the marks: they would point astray
@@ -3679,6 +3833,7 @@ export const agentPlugin = {
       // not left to the editor's event alone: a stale text would send the model after
       // words that are no longer there
       text = null
+      pictures = null
       try {
         let done
         try {
@@ -3825,6 +3980,13 @@ export const agentPlugin = {
       // no document yet: the first read fills it
     }
 
+    /** The pictures of the document, read again after the document changed. */
+    const pictureList = () =>
+      host.read((doc) => {
+        pictures ??= picturesOf(doc)
+        return pictures
+      })
+
     const api = {
       foreignChanges: () => foreign,
 
@@ -3832,6 +3994,43 @@ export const agentPlugin = {
       readText: guarded(() => {
         text ??= host.read(textOf)
         return text
+      }),
+
+      /** The pictures of the document, in reading order, with the words beside each one. */
+      listPictures: guarded(() => {
+        const all = pictureList()
+        return {
+          count: all.length,
+          limited: all.length >= MAX_LISTED_PICTURES,
+          pictures: all.map((picture, index) => ({
+            picture: index + 1,
+            type: picture.mime,
+            page: picture.page,
+            near: picture.near,
+            table: picture.table,
+          })),
+        }
+      }),
+
+      /** One picture (its number from listPictures) as base64, for the model to look at. */
+      readPicture: guarded((number) => {
+        if (!Number.isInteger(number) || number < 1) {
+          throw fail('BAD_ARGUMENT', 'picture must be a positive integer from listPictures')
+        }
+        const picture = pictureList()[number - 1]
+        if (!picture) return { ok: false, reason: 'no_such_picture', count: pictureList().length }
+        return host.read((doc) => {
+          const bytes = doc.getControlImageData(
+            picture.sec,
+            picture.para,
+            JSON.stringify(picture.cellPath ?? []),
+            picture.control,
+          )
+          if (bytes.length > MAX_PICTURE_BYTES) {
+            return { ok: false, reason: 'too_large', bytes: bytes.length }
+          }
+          return { ok: true, mime: picture.mime, base64: base64Of(bytes) }
+        })
       }),
 
       /** Where a piece of text occurs. Exact, case-sensitive. */

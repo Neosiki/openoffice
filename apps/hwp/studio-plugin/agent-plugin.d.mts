@@ -732,10 +732,40 @@ export type AgentRefreshTocResult =
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
 
+/** One picture of the document, as listPictures lists it. */
+export interface AgentPicture {
+  /** 1-based position in reading order; what readPicture takes */
+  picture: number
+  /** image MIME type, for example image/png */
+  type: string
+  /** the page its paragraph starts on, as the document numbers pages; null when unknown */
+  page: number | null
+  /** the text beside it, cut short; empty when its paragraph holds no text */
+  near: string
+  /** the table it sits in, as listTables numbers tables; null when it is in the body text */
+  table: number | null
+}
+
+export interface AgentPictureList {
+  count: number
+  /** more pictures exist than the list holds: `pictures` is the first ones */
+  limited: boolean
+  pictures: AgentPicture[]
+}
+
+export type AgentReadPictureResult =
+  | { ok: true; mime: string; base64: string }
+  /** the number is not in the current list */
+  | { ok: false; reason: 'no_such_picture'; count: number }
+  /** larger than the panel sends to the model */
+  | { ok: false; reason: 'too_large'; bytes: number }
+
 /** What the plugin answers to, by method name (the studio's `plugins.invoke`). */
 export interface AgentPluginSurface {
   foreignChanges(): number
   readText(): string
+  listPictures(): AgentPictureList
+  readPicture(picture: number): AgentReadPictureResult
   findText(find: string): AgentFindResult
   replaceText(
     find: string,
