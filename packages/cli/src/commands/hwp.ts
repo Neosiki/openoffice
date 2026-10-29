@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
-import { flagBool, flagString } from '../args'
+import { flagBool } from '../args'
 import { BATCH_OPTIONS, batchCounts, batchMode, batchResult, failedBatch } from '../batch'
 import { HWP_PREVIEW_CHARS, hwpText } from '../formats/hwp'
 import type { HwpEditSession } from '../formats/hwp-edit'
@@ -293,8 +293,13 @@ async function apply(
   ctx: CommandContext,
 ): Promise<CommandResult> {
   const { path } = hwpInput(file, ctx)
+  const out = args.flags.out
+  if (out === true) {
+    throw new CliError(EXIT.usage, 'missing --out <path>', undefined, {
+      reason: 'missing_argument',
+    })
+  }
   const ops = hwpOpsOf(args, ctx)
-  const out = flagString(args, 'out')
   const output = resolveOutput(out, ctx, {
     fallback: path,
     force: flagBool(args, 'force'),
