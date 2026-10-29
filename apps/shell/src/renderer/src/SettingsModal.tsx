@@ -20,6 +20,7 @@ import type {
   DecisionEndpoint,
   DefaultAppStatus,
   FileSearchSettings,
+  HwpDefaultFormat,
 } from '../../shared/home-api'
 import { AUTHOR_NAME_MAX } from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
@@ -1639,6 +1640,7 @@ export function SettingsModal({
   const [theme, setTheme] = useState<UiTheme>('system')
   const [docTheme, setDocTheme] = useState<DocTheme>('follow')
   const [saveDir, setSaveDir] = useState('')
+  const [hwpFormat, setHwpFormat] = useState<HwpDefaultFormat>('hwp')
   const [autoSaveOn, setAutoSaveOn] = useState(false)
   const [autoUpdateCheckOn, setAutoUpdateCheckOn] = useState(true)
   const [defaultApp, setDefaultApp] = useState<DefaultAppStatus | null>(null)
@@ -1663,6 +1665,11 @@ export function SettingsModal({
     void window.aiOffice.getDefaultSaveDir?.().then((dir) => {
       if (alive && dir) setSaveDir(dir)
     })
+    void Promise.resolve(window.aiOffice.getHwpDefaultFormat?.())
+      .then((format) => {
+        if (alive && format) setHwpFormat(format)
+      })
+      .catch(() => undefined)
     void window.aiOffice.getAutoSaveDefault?.().then((v) => {
       if (alive) setAutoSaveOn(v.on)
     })
@@ -2019,6 +2026,32 @@ export function SettingsModal({
                     </button>
                   }
                 />
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <label className="set-field-label">{t('setHwpSaveFormat')}</label>
+                      <div className="set-field-desc">{t('setHwpSaveFormatDesc')}</div>
+                    </div>
+                  </div>
+                  <Dropdown
+                    className="set-dd"
+                    value={hwpFormat}
+                    ariaLabel={t('setHwpSaveFormat')}
+                    options={[
+                      { value: 'hwp', label: 'HWP (.hwp)' },
+                      { value: 'hwpx', label: 'HWPX (.hwpx)' },
+                    ]}
+                    onPick={(v) => {
+                      const next: HwpDefaultFormat = v === 'hwpx' ? 'hwpx' : 'hwp'
+                      setHwpFormat(next)
+                      void Promise.resolve(window.aiOffice.setHwpDefaultFormat?.(next))
+                        .then((saved) => {
+                          if (saved) setHwpFormat(saved)
+                        })
+                        .catch(() => undefined)
+                    }}
+                  />
+                </div>
                 <div className="set-field">
                   <div className="set-field-text">
                     <div className="set-field-stack">
