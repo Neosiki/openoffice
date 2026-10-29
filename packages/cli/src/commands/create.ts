@@ -372,7 +372,7 @@ function readTables(
   }
   let parsed: unknown
   try {
-    parsed = JSON.parse(readFileSync(source, 'utf-8'))
+    parsed = JSON.parse(readFileSync(source, 'utf-8').replace(/^\uFEFF/, ''))
   } catch (err) {
     throw new CliError(
       EXIT.usage,
