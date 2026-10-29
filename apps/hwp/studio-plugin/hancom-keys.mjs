@@ -16,6 +16,8 @@
  * (hancomHooks), and a release that renames one fails the build.
  */
 
+import { openDocumentInfo } from './document-info.mjs'
+
 export const HANCOM_KEYS_MODULE = '@ieum/hancom-keys'
 
 /**
@@ -52,6 +54,9 @@ export const CHORDS = {
     f: 'edit:find',
     a: 'edit:find-replace',
     l: 'ieum:find-backward',
+    // Hangul's 문서 정보, under both keys its help names
+    i: 'ieum:document-info',
+    d: 'ieum:document-info',
   },
   // Hangul's Ctrl+M sequences colour the text
   m: {
@@ -357,6 +362,44 @@ export function letterOf(e) {
   const key = (e.key ?? '').toLowerCase()
   if (/^[a-z0-9]$/.test(key)) return key
   return JAMO[e.key] ?? null
+}
+
+/** A blank that Hangul counts as an opening quote's neighbour: space, tab, no-break space. */
+const QUOTE_OPENS_AFTER = /^\s$/
+
+/**
+ * Hangul's 빠른 교정 for quotes (도구 → 빠른 교정 → 빠른 교정 내용 → 입력 자동 서식): a straight
+ * quote typed into the document becomes a curly one — opening after a blank or at the start of a
+ * paragraph, closing after any other character. What is pasted or dropped keeps what it carries,
+ * and so does what an input method is still composing.
+ *
+ * Called from the studio's own input handling (build patch studio-quick-correct) with the text its
+ * hidden input holds and the input event's type; the answer is the text to put in the document.
+ */
+export function quickCorrectTyped(ih, value, inputType) {
+  if (value !== '"' && value !== "'") return value
+  if (inputType && inputType !== 'insertText') return value
+  if (ih?.isComposing) return value
+  const cursor = ih?.cursor
+  if (!cursor) return value
+  // a header, a footer and a note keep the character they were given: the caret's offset there is
+  // not the one the paragraph's text is read from
+  if (cursor.isInHeaderFooter?.() || cursor.isInFootnote?.()) return value
+  const before = characterBefore(ih)
+  const opening = before === '' || QUOTE_OPENS_AFTER.test(before)
+  if (value === '"') return opening ? '\u201C' : '\u201D'
+  return opening ? '\u2018' : '\u2019'
+}
+
+/** The character just before the caret; '' at a paragraph's start, and when it cannot be read. */
+function characterBefore(ih) {
+  try {
+    const pos = ih.getCursorPosition?.()
+    if (!pos || !(pos.charOffset > 0)) return ''
+    return ih.getTextAt?.({ ...pos, charOffset: pos.charOffset - 1 }, 1) ?? ''
+  } catch {
+    return ''
+  }
 }
 
 /**
@@ -1997,6 +2040,17 @@ export function hancomCommands(locale, studio = {}) {
       },
     },
     {
+      // Hangul: 파일 → 문서 정보 (Ctrl+Q,I). Reads the counts when it opens, not before.
+      id: 'ieum:document-info',
+      opensDialog: true,
+      label: ko ? '문서 정보' : 'Document Information',
+      shortcutLabel: 'Ctrl+Q,I',
+      canExecute: (ctx) => ctx.hasDocument,
+      execute(services) {
+        openDocumentInfo(studio, services, ko)
+      },
+    },
+    {
       id: 'ieum:page-number',
       opensDialog: true,
       label: ko ? '쪽 번호 매기기' : 'Page Numbering',
@@ -2130,6 +2184,8 @@ export const MENU_ITEMS = [
   ['ieum:find-backward', 'edit:find-again', '거꾸로 찾기', 'Find Backward'],
   ['ieum:insert-date', 'insert:symbols', '날짜/시간 문자열', 'Date String'],
   ['ieum:table-transpose', 'table:transpose-copy', '표 뒤집기', 'Flip Table'],
+  // Hangul keeps 문서 정보 at the end of its File menu, after printing
+  ['ieum:document-info', 'file:print', '문서 정보', 'Document Information'],
 ]
 
 /**

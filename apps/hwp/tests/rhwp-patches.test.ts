@@ -572,6 +572,7 @@ describe('the studio source the build fetched', () => {
     'src/core/wasm-bridge.ts',
     'src/engine/input-handler.ts',
     'src/engine/input-handler-keyboard.ts',
+    'src/engine/input-handler-text.ts',
     'src/engine/command.ts',
     'src/command/commands/edit.ts',
     'src/command/commands/insert.ts',

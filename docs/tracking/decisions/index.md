@@ -84,3 +84,4 @@
 | [0081](0081-chatgpt-direct-connection.md)                     | ChatGPT는 앱이 직접 로그인해 요금제로 연결하고, Codex 프로그램은 그 안의 다른 길로 남긴다       | 2026-10-28 |
 | [0082](0082-claude-structured-output-tool.md)                 | Claude의 문서 편집 차례는 응답 형식을 프로그램에 맡기고, 그 도구 하나만 허용한다                | 2026-10-28 |
 | [0083](0083-command-line-archive.md)                          | 데스크톱 앱 없이 도는 명령줄 묶음을 따로 내고, Node는 설치 스크립트가 받는다                    | 2026-10-27 |
+| [0084](0084-hwp-document-info-and-quick-correct.md)           | 한글 탭에 한컴식 문서 정보(글자 수·문단·원고지)와 빠른 교정(곡선따옴표)을 넣는다                | 2026-10-29 |
