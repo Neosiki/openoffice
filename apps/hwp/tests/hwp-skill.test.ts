@@ -85,6 +85,7 @@ function setup(
     insertTable: vi.fn(async () => ({ ok: true as const, rows: 2, cols: 3, inTable: false })),
     insertPicture: vi.fn(async () => ({ ok: true as const, inTable: false, place: PLACE })),
     formatText: vi.fn(async () => ({ ok: true as const, count: 1 })),
+    replaceFont: vi.fn(async () => ({ ok: true as const, ranges: 3, paragraphs: 2 })),
     formatParagraph: vi.fn(async () => ({ ok: true as const, inTable: false })),
     listTables: vi.fn(async () => ({ count: 0, partial: false, tables: [] })),
     readTable: vi.fn(async () => ({
@@ -1044,6 +1045,32 @@ describe('merge_cells and split_cell', () => {
     expect(bridge.mergeCells).not.toHaveBeenCalled()
   })
 
+  it('replaces a font everywhere, and says how much it changed', async () => {
+    const { call, bridge, changes } = setup()
+    const result = await call('replace_font', { from: '휴먼명조', to: '함초롬바탕' })
+    expect(bridge.replaceFont).toHaveBeenCalledWith('휴먼명조', '함초롬바탕')
+    expect(result.mutated).toBe(true)
+    expect(result.output).toContain('3 run(s)')
+    expect(changes[0]).toMatchObject({ kind: 'format', from: '휴먼명조', to: '함초롬바탕' })
+  })
+
+  it('says nothing changed when no text uses the font', async () => {
+    const { call, changes } = setup({
+      replaceFont: async () => ({ ok: true, ranges: 0, paragraphs: 0 }),
+    })
+    const result = await call('replace_font', { from: '없는글꼴', to: '함초롬바탕' })
+    expect(result.mutated).toBe(false)
+    expect(result.output).toContain('No text uses the font')
+    expect(changes).toEqual([])
+  })
+
+  it('needs both font names', async () => {
+    const { call, bridge } = setup()
+    const result = await call('replace_font', { from: '휴먼명조' })
+    expect(result.isError).toBe(true)
+    expect(bridge.replaceFont).not.toHaveBeenCalled()
+  })
+
   it('splits a cell into rows and columns, or a merged cell back', async () => {
     const { call, changes, bridge } = setup()
     await call('split_cell', { table: 1, row: 2, col: 2, rows: 2, cols: 3 })
@@ -1949,6 +1976,7 @@ describe('the skill as the model sees it', () => {
       'insert_image',
       'generate_image',
       'format_text',
+      'replace_font',
       'format_paragraph',
       'replace_selection',
       'read_selection',

@@ -18,6 +18,7 @@ export type AgentBridgeEditor = Pick<RhwpEditor, 'plugins'>
 const METHODS = [
   'foreignChanges',
   'readText',
+  'documentProfile',
   'findText',
   'replaceText',
   'replaceAllText',
@@ -26,6 +27,7 @@ const METHODS = [
   'insertTable',
   'insertPicture',
   'formatText',
+  'replaceFont',
   'formatParagraph',
   'listTables',
   'readTable',

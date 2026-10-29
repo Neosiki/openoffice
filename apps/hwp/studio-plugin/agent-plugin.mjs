@@ -19,6 +19,20 @@ export const AGENT_PLUGIN_ID = 'ieum-agent'
 
 /** Matches listed back to the caller when a search is ambiguous. */
 const MAX_LISTED_MATCHES = 20
+/** Text runs one replaceFont call changes; beyond this it says it stopped early. */
+const MAX_FONT_RANGES = 5000
+/** Paragraphs one documentProfile call reads; beyond this the profile says it is partial. */
+const MAX_PROFILE_PARAGRAPHS = 20000
+/** Tables one documentProfile call reports. */
+const MAX_PROFILE_TABLES = 500
+/** Cells one table reports to the merge check. */
+const MAX_PROFILE_CELLS = 2000
+/** Character-shape reads one documentProfile call makes, body and cells together. */
+const MAX_PROFILE_SHAPES = 60000
+/** Cell paragraphs one documentProfile call reads fonts from. */
+const MAX_PROFILE_CELL_PARAGRAPHS = 4000
+/** Pictures one documentProfile call reports. */
+const MAX_PROFILE_PICTURES = 100
 /** Characters of surrounding text shown with each listed match. */
 const CONTEXT_CHARS = 30
 /** Most history steps one undo call takes back. */
@@ -2188,6 +2202,264 @@ function paragraphsOf(box) {
   return texts
 }
 
+/** The text of one body paragraph, folded to one line, without control characters. */
+function paragraphTextOf(doc, sec, para) {
+  try {
+    const length = doc.getParagraphLength(sec, para)
+    if (length <= 0) return ''
+    return foldText(doc.getTextRange(sec, para, 0, length))
+  } catch {
+    return ''
+  }
+}
+
+function foldText(text) {
+  return String(text)
+    .replace(/[\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * The closest text above a paragraph, skipping empty lines: Korean reports put a title
+ * line, a blank line and the table under it, so a blank line is not "no title".
+ */
+function textAbove(doc, sec, para, textAt) {
+  const own = textAt(sec, para)
+  if (own) return own
+  for (let k = para - 1; k >= 0; k--) {
+    const above = textAt(sec, k)
+    if (above) return above
+  }
+  return ''
+}
+
+/** The Hangul font name of a character shape, or '' when the engine gave none. */
+function hangulFontOf(props) {
+  const families = props && Array.isArray(props.fontFamilies) ? props.fontFamilies : []
+  const name = typeof families[0] === 'string' ? families[0] : ''
+  return name.trim()
+}
+
+/**
+ * What the document is made of, for the format checks of `@genoffice/doc-rules`: the
+ * paragraphs, the tables with their cells, the pictures, and every character shape in use
+ * with the fonts it names. Reads only — it never changes the document, and it calls no
+ * model. A cap that is reached sets `truncated`, so the panel can say it saw part of it.
+ */
+function profileOf(doc) {
+  const shapes = new Map()
+  const paragraphs = []
+  const tables = []
+  const pictures = []
+  const texts = new Map()
+  let truncated = false
+  let shapeReads = 0
+  let cellParagraphs = 0
+
+  const textAt = (sec, para) => {
+    const key = `${sec}:${para}`
+    let text = texts.get(key)
+    if (text === undefined) {
+      text = paragraphTextOf(doc, sec, para)
+      texts.set(key, text)
+    }
+    return text
+  }
+
+  /** One character shape seen at a place: its fonts, how often it is used, and where first. */
+  const noteShape = (props, anchor) => {
+    const id = props && props.charShapeId != null ? String(props.charShapeId) : ''
+    const fonts = Array.isArray(props && props.fontFamilies)
+      ? props.fontFamilies.filter((name) => typeof name === 'string' && name.trim() !== '')
+      : typeof (props && props.fontFamily) === 'string' && props.fontFamily.trim() !== ''
+        ? [props.fontFamily]
+        : []
+    let entry = shapes.get(id)
+    if (!entry) {
+      entry = { id, fonts: [...new Set(fonts)], uses: 0 }
+      shapes.set(id, entry)
+    }
+    entry.uses += 1
+    if (!entry.first) entry.first = anchor
+  }
+
+  /** The character shapes of one range of one paragraph, body or cell. */
+  const noteRuns = (runs, propsAt, anchor) => {
+    for (const run of Array.isArray(runs) ? runs : []) {
+      if (shapeReads >= MAX_PROFILE_SHAPES) {
+        truncated = true
+        return
+      }
+      shapeReads += 1
+      try {
+        noteShape(parse(propsAt(run.startOffset ?? 0)), anchor)
+      } catch {
+        // a shape the engine will not read is left out of the font check
+      }
+    }
+  }
+
+  const sections = doc.getSectionCount()
+  for (let sec = 0; sec < sections; sec++) {
+    const count = doc.getParagraphCount(sec)
+    for (let para = 0; para < count; para++) {
+      if (paragraphs.length >= MAX_PROFILE_PARAGRAPHS) {
+        truncated = true
+        break
+      }
+      paragraphs.push({ index: para, section: sec, text: textAt(sec, para) })
+      let length = 0
+      try {
+        length = doc.getParagraphLength(sec, para)
+      } catch {
+        length = 0
+      }
+      if (length <= 0) continue
+      let runs = []
+      try {
+        runs = parse(doc.getCharShapeRuns(sec, para, 0, length))
+      } catch {
+        runs = []
+      }
+      noteRuns(runs, (offset) => doc.getCharPropertiesAt(sec, para, offset), { section: sec, para })
+    }
+    if (paragraphs.length >= MAX_PROFILE_PARAGRAPHS) break
+  }
+
+  const found = tablesOf(doc)
+  if (found.partial) truncated = true
+  if (found.tables.length > MAX_PROFILE_TABLES) truncated = true
+  for (const table of found.tables.slice(0, MAX_PROFILE_TABLES)) {
+    const cells = []
+    try {
+      for (const cell of gridOf(doc, table)) {
+        if (cells.length >= MAX_PROFILE_CELLS) {
+          truncated = true
+          break
+        }
+        cells.push({ row: cell.row, col: cell.col, rowSpan: cell.rowSpan, colSpan: cell.colSpan })
+      }
+    } catch {
+      // a table whose cells the engine will not read is reported without them
+    }
+    const info = {
+      index: tables.length,
+      anchor: { section: table.sec, para: table.para, path: table.path },
+      rows: table.rows,
+      cols: table.cols,
+      // a table inside a cell is part of that cell's content: it has no title of its own
+      titleAbove: table.parent === null ? textAbove(doc, table.sec, table.para, textAt) : '',
+      nested: table.parent !== null,
+      cells,
+    }
+    // a one-cell table may be a title box: its text is what the check reports
+    if (table.rows === 1 && table.cols === 1 && cells[0]) {
+      try {
+        const cellPath = cellAt(table.path, 0, 0)
+        const length = doc.getCellParagraphLengthByPath(
+          table.sec,
+          table.para,
+          JSON.stringify(cellPath),
+        )
+        const text =
+          length > 0
+            ? doc.getTextInCellByPath(table.sec, table.para, JSON.stringify(cellPath), 0, length)
+            : ''
+        cells[0].text = foldText(text).slice(0, 80)
+      } catch {
+        // no text to report
+      }
+    }
+    tables.push(info)
+
+    // the fonts inside the table, cell by cell: a form's text is mostly in cells
+    for (
+      let cell = 0;
+      cell < table.cells &&
+      shapeReads < MAX_PROFILE_SHAPES &&
+      cellParagraphs < MAX_PROFILE_CELL_PARAGRAPHS;
+      cell++
+    ) {
+      let count = 0
+      try {
+        count = doc.getCellParagraphCountByPath(
+          table.sec,
+          table.para,
+          JSON.stringify(cellAt(table.path, cell, 0)),
+        )
+      } catch {
+        continue
+      }
+      for (let k = 0; k < count && shapeReads < MAX_PROFILE_SHAPES; k++) {
+        if (cellParagraphs >= MAX_PROFILE_CELL_PARAGRAPHS) {
+          truncated = true
+          break
+        }
+        cellParagraphs += 1
+        const path = cellAt(table.path, cell, k)
+        const json = JSON.stringify(path)
+        let length = 0
+        try {
+          length = doc.getCellParagraphLengthByPath(table.sec, table.para, json)
+        } catch {
+          length = 0
+        }
+        if (length <= 0) continue
+        let runs = []
+        try {
+          runs = parse(doc.getCharShapeRunsInCellByPath(table.sec, table.para, json, 0, length))
+        } catch {
+          runs = []
+        }
+        noteRuns(
+          runs,
+          (offset) => doc.getCellCharPropertiesAtByPath(table.sec, table.para, json, offset),
+          { section: table.sec, para: table.para, path },
+        )
+      }
+    }
+  }
+
+  // the body's pictures, in reading order; a picture inside a cell belongs to that cell
+  for (let sec = 0; sec < doc.getSectionCount(); sec++) {
+    const count = doc.getParagraphCount(sec)
+    for (let para = 0; para < count && pictures.length < MAX_PROFILE_PICTURES; para++) {
+      let positions = []
+      try {
+        positions = parse(doc.getControlTextPositions(sec, para))
+      } catch {
+        positions = []
+      }
+      for (let control = 0; control < positions.length; control++) {
+        if (pictures.length >= MAX_PROFILE_PICTURES) break
+        let mime = ''
+        try {
+          mime = doc.getControlImageMime(sec, para, '[]', control)
+        } catch {
+          continue // not a picture: a table, a field, a section definition
+        }
+        if (!mime.startsWith('image/')) continue
+        pictures.push({
+          index: pictures.length,
+          anchor: { section: sec, para },
+          titleAbove: textAbove(doc, sec, para, textAt),
+        })
+      }
+    }
+  }
+  if (pictures.length >= MAX_PROFILE_PICTURES) truncated = true
+
+  const profile = {
+    charShapes: [...shapes.values()],
+    paragraphs,
+    tables,
+    pictures,
+  }
+  if (truncated) profile.truncated = true
+  return profile
+}
+
 /**
  * Whether a cell holds an object: a picture, a shape, a table of its own. Such a cell can
  * be without a single character and still not be empty, and text written into it lands on
@@ -3834,6 +4106,13 @@ export const agentPlugin = {
         return text
       }),
 
+      /**
+       * What the document is made of, for the format checks (`@genoffice/doc-rules`):
+       * paragraphs, tables with their cells, pictures, and every character shape in use.
+       * Reads only; no model is called.
+       */
+      documentProfile: guarded(() => host.read(profileOf)),
+
       /** Where a piece of text occurs. Exact, case-sensitive. */
       findText: guarded((find) =>
         host.read((doc) => {
@@ -4138,6 +4417,132 @@ export const agentPlugin = {
        * Change the character formatting of one occurrence of `find`, or with `all` of every
        * occurrence. Only the named properties change; the text itself is not touched.
        */
+      /**
+       * Change every run of text whose Hangul font is `from` to `to`, in the body and in
+       * table cells. The format check's font fix: one transaction, so one undo step, and
+       * only character shapes change. Says how many runs it changed, and whether it
+       * stopped early at the cap.
+       */
+      replaceFont: guarded((from, to) => {
+        const fromName = typeof from === 'string' ? from.trim() : ''
+        const toName = typeof to === 'string' ? to.trim() : ''
+        if (fromName === '' || toName === '') {
+          throw fail('BAD_ARGUMENT', 'both font names are needed')
+        }
+        if (fromName === toName) return { ok: true, ranges: 0, paragraphs: 0 }
+        return change('replace-font', (doc) => {
+          const chars = resolveFormat(doc, { chars: {}, font: toName }).chars
+          let ranges = 0
+          let paragraphs = 0
+          let truncated = false
+
+          /** Runs of one paragraph or cell paragraph that name the font, changed one by one. */
+          const applyRuns = (runs, read, format) => {
+            let touched = false
+            for (const run of Array.isArray(runs) ? runs : []) {
+              if (ranges >= MAX_FONT_RANGES) {
+                truncated = true
+                break
+              }
+              const start = run.startOffset ?? 0
+              const end = run.endOffset ?? 0
+              if (end <= start) continue
+              let props
+              try {
+                props = parse(read(start))
+              } catch {
+                continue
+              }
+              if (hangulFontOf(props) !== fromName) continue
+              format(start, end)
+              ranges += 1
+              touched = true
+            }
+            if (touched) paragraphs += 1
+          }
+
+          for (let sec = 0; sec < doc.getSectionCount(); sec++) {
+            const count = doc.getParagraphCount(sec)
+            for (let para = 0; para < count; para++) {
+              let length = 0
+              try {
+                length = doc.getParagraphLength(sec, para)
+              } catch {
+                length = 0
+              }
+              if (length <= 0) continue
+              let runs = []
+              try {
+                runs = parse(doc.getCharShapeRuns(sec, para, 0, length))
+              } catch {
+                runs = []
+              }
+              applyRuns(
+                runs,
+                (offset) => doc.getCharPropertiesAt(sec, para, offset),
+                (start, end) =>
+                  expectOk(doc.applyCharFormat(sec, para, start, end, chars), 'change the font'),
+              )
+            }
+          }
+
+          for (const table of tablesOf(doc).tables) {
+            for (let cell = 0; cell < table.cells; cell++) {
+              let count = 0
+              try {
+                count = doc.getCellParagraphCountByPath(
+                  table.sec,
+                  table.para,
+                  JSON.stringify(cellAt(table.path, cell, 0)),
+                )
+              } catch {
+                continue
+              }
+              for (let k = 0; k < count; k++) {
+                const path = cellAt(table.path, cell, k)
+                const json = JSON.stringify(path)
+                let length = 0
+                try {
+                  length = doc.getCellParagraphLengthByPath(table.sec, table.para, json)
+                } catch {
+                  length = 0
+                }
+                if (length <= 0) continue
+                let runs = []
+                try {
+                  runs = parse(
+                    doc.getCharShapeRunsInCellByPath(table.sec, table.para, json, 0, length),
+                  )
+                } catch {
+                  runs = []
+                }
+                applyRuns(
+                  runs,
+                  (offset) =>
+                    doc.getCellCharPropertiesAtByPath(table.sec, table.para, json, offset),
+                  (start, end) =>
+                    expectOk(
+                      doc.applyCharFormatInCellByPath(
+                        table.sec,
+                        table.para,
+                        json,
+                        start,
+                        end,
+                        chars,
+                      ),
+                      'change the font',
+                    ),
+                )
+              }
+            }
+          }
+
+          const result = { ok: true, ranges, paragraphs }
+          if (truncated) result.truncated = true
+          return result
+        })
+      }),
+
       formatText: guarded((find, occurrence, all, format, options) => {
         const spec = formatOf(format, false)
         const targets = (doc) => {

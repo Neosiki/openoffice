@@ -159,6 +159,7 @@ export function AiPanel({
   onCollapse,
   templateDocument,
   onSkillHandoff,
+  prefill,
 }: {
   /** the document operations of the open editor */
   bridge: AgentBridge
@@ -169,6 +170,8 @@ export function AiPanel({
   templateDocument?: TemplateDocument | null
   /** this tab took a request handed over by the template flow: show the panel */
   onSkillHandoff?: () => void
+  /** a request from the document check: fills the input box, never sends it */
+  prefill?: { text: string; nonce: number } | null
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -177,6 +180,13 @@ export function AiPanel({
   chatNowRef.current = chat
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // a request handed over by the document check: it waits in the input box for the user
+  useEffect(() => {
+    if (!prefill) return
+    setPrompt(prefill.text)
+  }, [prefill])
+
   /** an undo of a run is on its way to the editor */
   const [reverting, setReverting] = useState(false)
   /** the editor shows marks over what the last run changed */

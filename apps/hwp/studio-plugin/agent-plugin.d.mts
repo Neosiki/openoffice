@@ -1,4 +1,12 @@
-export declare const AGENT_PLUGIN_ID: 'ieum-agent'
+﻿export declare const AGENT_PLUGIN_ID: 'ieum-agent'
+
+import type { DocumentProfile } from '@genoffice/doc-rules'
+
+/**
+ * What the document is made of, for the format checks of `@genoffice/doc-rules`. The
+ * editor does not know the file's extension, so the app fills `format` in.
+ */
+export type AgentDocumentProfile = Omit<DocumentProfile, 'format'>
 
 /** One place a searched text occurs. */
 export interface AgentMatch {
@@ -228,6 +236,15 @@ export type AgentFormatTextResult =
       matches?: AgentMatch[]
     }
   | AgentNoSuchStyle
+
+/** What replaceFont changed: runs of text, and paragraphs holding at least one. */
+export interface AgentReplaceFontResult {
+  ok: true
+  ranges: number
+  paragraphs: number
+  /** the cap stopped it: some text still uses the old font */
+  truncated?: true
+}
 
 export type AgentFormatParagraphResult =
   | {
@@ -736,6 +753,8 @@ export type AgentUndoResult =
 export interface AgentPluginSurface {
   foreignChanges(): number
   readText(): string
+  /** What the document is made of (paragraphs, tables, pictures, fonts); reads only. */
+  documentProfile(): AgentDocumentProfile
   findText(find: string): AgentFindResult
   replaceText(
     find: string,
@@ -788,6 +807,8 @@ export interface AgentPluginSurface {
     format: AgentTextFormat,
     options?: AgentChangeOptions,
   ): AgentFormatTextResult
+  /** every run of text whose Hangul font is `from` becomes `to`; one undo step */
+  replaceFont(from: string, to: string): AgentReplaceFontResult
   formatParagraph(
     find: string,
     occurrence: number | null,
