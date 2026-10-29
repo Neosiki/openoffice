@@ -386,7 +386,12 @@ function parseIgnore(spec: string | undefined): (typeof COMPARE_IGNORES)[number]
 function parseDate(spec: string | undefined): string {
   if (spec === undefined) return new Date().toISOString()
   const value = spec.trim()
-  if (!ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
+  // Date.parse normalizes dates such as February 30; compare the civil date independently of its offset.
+  if (
+    !ISO_DATE.test(value) ||
+    Number.isNaN(Date.parse(value)) ||
+    new Date(`${value.slice(0, 10)}T00:00:00Z`).toISOString().slice(0, 10) !== value.slice(0, 10)
+  ) {
     throw new CliError(
       EXIT.usage,
       '--date must be an ISO timestamp, e.g. 2026-10-16T00:00:00Z',
