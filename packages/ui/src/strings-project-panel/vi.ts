@@ -70,4 +70,24 @@ export const vi = {
   toolSummaryNoName: 'Đã chạy công cụ {count} lần trong {editor}',
   toolSummaryNoNameOne: 'Đã chạy công cụ 1 lần trong {editor}',
   dismiss: 'Đóng',
+  createExists: 'Đã có thư mục cùng tên nên không tạo gì: {path}',
+  createInvalidName: 'Không thể dùng tên này cho thư mục. Hãy nhập tên khác.',
+  createUnwritable: 'Không tạo được thư mục. Hãy thử tạo ở nơi khác.',
+  refusedDriveRoot: 'Không thể dùng cả ổ đĩa làm dự án. Hãy chọn một thư mục bên trong.',
+  refusedUserHome:
+    'Không thể dùng cả thư mục người dùng làm dự án. Hãy chọn một thư mục bên trong.',
+  refusedProtected: 'Ứng dụng hoặc chương trình AI đang dùng thư mục này nên không thể làm dự án.',
+  refusedContainsProtected:
+    'Thư mục này chứa thư mục mà ứng dụng hoặc chương trình AI đang dùng nên không thể làm dự án.',
+  refusedNotFolder: 'Không đọc được thư mục này.',
+  refusedDifferentProject: 'Thư mục đó thuộc dự án khác nên không thay đổi gì.',
+  deleteConfirm: 'Chuyển cuộc trò chuyện “{title}” vào thùng rác?',
+  cancel: 'Hủy',
+  actionFailed: 'Không thực hiện được. Vui lòng thử lại.',
+  consolidateFailed: 'Không sắp xếp được. Bộ nhớ vẫn như cũ.',
+  contextMissing:
+    'Không tìm thấy thư mục dự án, nên yêu cầu này được gửi mà không có ngữ cảnh của dự án.',
+  contextUnknown:
+    'Dự án không còn trong danh sách, nên yêu cầu này được gửi mà không có ngữ cảnh của dự án.',
+  contextFailed: 'Không đọc được ngữ cảnh của dự án, nên yêu cầu này được gửi mà không có nó.',
 } satisfies Record<keyof typeof zh, string>

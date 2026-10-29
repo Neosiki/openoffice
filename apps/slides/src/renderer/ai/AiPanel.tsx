@@ -26,7 +26,8 @@ import {
   type AiComposerDocs,
   panelUserSkills,
   panelProjectSkill,
-  memoryLinesOf,
+  placeRemoteEntries,
+  useProjectPanel,
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
@@ -125,7 +126,9 @@ import fileVoiceIcon from '../assets/file-voice.png'
 import fileDocumentIcon from '../assets/file-document.png'
 import fileGeneralIcon from '../assets/file-general.png'
 import { IconNewChat, IconSidebarCollapseLeft } from '../components/icons'
-import { useProjectFolderPanel, type OtherEditorTools } from './project-folder-panel'
+
+/** Another editor's tool records on a reopened message, shown as one line */
+type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
 
 interface ToolActivity {
   name: string
@@ -824,14 +827,20 @@ export function AiPanel({
    * menu, the notices, and where the chat is recorded. Without a chosen
    * project everything below runs exactly as before.
    */
-  const projectPanel = useProjectFolderPanel({
+  const projectPanel = useProjectPanel({
     editor: 'slides',
     lang,
     busy,
     loop: () => loopRef.current,
     onOpen: (opened) => openProjectChat(opened),
-    onRemoteMessages: (entries) =>
-      setChat((prev) => [...prev, ...entries.map((entry) => entryFromStored(entry))]),
+    onRemoteMessages: (entries, running) =>
+      setChat((prev) =>
+        placeRemoteEntries(
+          prev,
+          entries.map((entry) => entryFromStored(entry)),
+          running,
+        ),
+      ),
     onNewChat: () => newChat(),
     consolidation: async () => {
       // the same gate as a send: nothing goes out until a provider can run
@@ -2577,8 +2586,7 @@ export function AiPanel({
                 )}
                 {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 <SkillUsedNotes tools={entry.tools} />
-                {projectPanel.toolSummary(entry.otherEditorTools)}
-                {projectPanel.memoryLines(entry.memory ?? memoryLinesOf(entry.tools))}
+                {projectPanel.messageParts(entry)}
                 {entry.skillProposals?.map((key) => skillCards.render(key))}
                 {entry.text && (
                   <div dir="auto">
@@ -2666,8 +2674,7 @@ export function AiPanel({
               )}
               {entry.tools && entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
               <SkillUsedNotes tools={entry.tools} />
-              {projectPanel.toolSummary(entry.otherEditorTools)}
-              {projectPanel.memoryLines(entry.memory ?? memoryLinesOf(entry.tools))}
+              {projectPanel.messageParts(entry)}
               {entry.skillProposals?.map((key) => skillCards.render(key))}
               {entry.role === 'assistant' && entry.usage && (
                 <div className="ai-message-usage">

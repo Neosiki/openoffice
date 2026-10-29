@@ -22,6 +22,10 @@ import {
   projectPickerItems,
   projectRelativeTime,
   projectToolSummaryText,
+  placeRemoteEntries,
+  projectAddProblem,
+  projectPrepareProblem,
+  projectProblemText,
   stepIndex,
   type ProjectPickerItem,
 } from '../src/project-panel-model'
@@ -311,5 +315,88 @@ describe('notice and event text', () => {
     expect(projectToolSummaryText('en', { editor: 'docs', documentName: '  ', count: 4 })).toBe(
       'Ran tools 4 times in Docs',
     )
+  })
+})
+
+describe('problem lines', () => {
+  it('says why a folder was refused, and nothing for one that went through or a closed dialog', () => {
+    expect(projectAddProblem({ status: 'refused', reason: 'drive-root' })).toEqual({
+      kind: 'refused',
+      reason: 'drive-root',
+    })
+    expect(projectAddProblem({ status: 'cancelled', stage: 'dialog' })).toBeNull()
+    expect(projectAddProblem({ status: 'cancelled', stage: 'trust' })).toBeNull()
+    expect(projectAddProblem({ status: 'created', project: project({ id: 'p1' }) })).toBeNull()
+    expect(projectAddProblem({ status: 'invalid-name' })).toEqual({ kind: 'invalid-name' })
+    expect(projectAddProblem({ status: 'unwritable' })).toEqual({ kind: 'create-unwritable' })
+    expect(projectAddProblem({ status: 'exists', folderPath: 'C:/Work/A' })).toEqual({
+      kind: 'exists',
+      folderPath: 'C:/Work/A',
+    })
+  })
+
+  it('has a sentence for every refusal in every reason', () => {
+    const reasons = [
+      'drive-root',
+      'user-home',
+      'protected',
+      'contains-protected',
+      'not-a-folder',
+      'different-project',
+    ] as const
+    const texts = reasons.map((reason) => projectProblemText('en', { kind: 'refused', reason }))
+    expect(new Set(texts).size).toBe(reasons.length)
+    expect(projectProblemText('ko', { kind: 'refused', reason: 'drive-root' })).toContain(
+      '드라이브 전체',
+    )
+    expect(projectProblemText('en', { kind: 'exists', folderPath: 'C:/Work/A' })).toContain(
+      'C:/Work/A',
+    )
+  })
+
+  it('says a send went without the project when its context was not there', () => {
+    expect(projectPrepareProblem({ status: 'none' })).toBeNull()
+    expect(projectPrepareProblem({ status: 'missing' })).toEqual({
+      kind: 'context',
+      status: 'missing',
+    })
+    expect(projectPrepareProblem({ status: 'failed', error: 'x' })).toEqual({
+      kind: 'context',
+      status: 'failed',
+    })
+    const missing = projectProblemText('ko', { kind: 'context', status: 'missing' })
+    expect(missing).toContain('이번 요청에는 프로젝트 내용을 넣지 못했습니다')
+    expect(projectProblemText('en', { kind: 'context', status: 'unknown' })).not.toBe(
+      projectProblemText('en', { kind: 'context', status: 'failed' }),
+    )
+  })
+})
+
+describe('placeRemoteEntries', () => {
+  type E = { role: 'user' | 'assistant'; text: string; streaming?: boolean }
+  const q: E = { role: 'user', text: 'q' }
+  const a: E = { role: 'assistant', text: 'a' }
+  const r1: E = { role: 'user', text: 'r1' }
+  const r2: E = { role: 'assistant', text: 'r2' }
+
+  it('appends when no reply of this panel is on its way', () => {
+    expect(placeRemoteEntries([q, a], [r1, r2], false)).toEqual([q, a, r1, r2])
+    expect(placeRemoteEntries([], [r1], false)).toEqual([r1])
+  })
+
+  it('puts them in front of the question and reply in flight, which stay last', () => {
+    const live: E = { role: 'assistant', text: '', streaming: true }
+    const ask: E = { role: 'user', text: 'ask' }
+    expect(placeRemoteEntries([q, a, ask, live], [r1, r2], false)).toEqual([
+      q,
+      a,
+      r1,
+      r2,
+      ask,
+      live,
+    ])
+    // the running flag alone is enough, and later ones keep their order
+    const once = placeRemoteEntries([ask, a], [r1], true)
+    expect(placeRemoteEntries(once, [r2], true)).toEqual([r1, r2, ask, a])
   })
 })

@@ -94,6 +94,9 @@ import {
   type ProjectChatEntry,
   type ProjectChatOpened,
   type ProjectMemoryLine,
+  placeRemoteEntries,
+  useProjectPanel,
+  type ProjectPanel,
 } from '@genoffice/ui'
 
 import {
@@ -213,7 +216,6 @@ import {
 import { moveOutlineEntries, shiftOutlineEntries } from './outline-model'
 import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { createElectronTransport } from './ai/transport'
-import { useProjectPanel, type ProjectPanel } from './ai/project-panel'
 import { useSubscriptionConnection } from './ai/subscription-client'
 import {
   aiBlockedRunOf,
@@ -1650,10 +1652,15 @@ export function App({
     lang: getLang(),
     busy: aiBusy,
     loop: () => agentLoopRef.current,
-    transport: () => agentTransportRef.current,
-    gate: () => sendGateRef.current.peek(),
+    consolidation: () => {
+      const transport = agentTransportRef.current
+      return transport ? { transport, gate: () => sendGateRef.current.peek() } : null
+    },
     onOpen: (opened, initial) => openProjectChat(opened, initial),
-    onRemoteMessage: (entry) => appendChat(storedChatMessageOf(entry)),
+    onRemoteMessages: (entries, running) =>
+      setChat((previous) =>
+        placeRemoteEntries(previous, entries.map(storedChatMessageOf), running),
+      ),
     onNewChat: () => handleNewChat(),
   })
   projectRef.current = project

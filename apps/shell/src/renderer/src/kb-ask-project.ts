@@ -34,10 +34,7 @@ export interface KbProjectScopeRequest {
  * unscoped ask, as before) or the group's scope. With a project: always a
  * scope, covering the project folder plus the starred part (All or the
  * group), so every knowledge call of the run can also reach the folder.
- *
- * Main's `kb:open-scope` accepts `{ group, projectId }` (parseKbOpenScope)
- * and the preload hands its argument over unchanged; the bridge's type still
- * names the group-only form, hence the cast.
+ * Main's `kb:open-scope` takes `{ group, projectId }` for that (parseKbOpenScope).
  */
 export async function openAskScope(
   api: Pick<HomeApi, 'kbOpenScope'>,
@@ -46,7 +43,7 @@ export async function openAskScope(
 ): Promise<string | undefined> {
   if (projectId === null) return group === null ? undefined : api.kbOpenScope(group)
   const request: KbProjectScopeRequest = { group, projectId }
-  return api.kbOpenScope(request as unknown as string)
+  return api.kbOpenScope(request)
 }
 
 /** main's refusal of a group with no starred files (KB_GROUP_EMPTY in knowledge-base.ts) */

@@ -8,20 +8,6 @@ export const it = {
   newNameLabel: 'Nome del nuovo progetto',
   create: 'Crea',
   cancel: 'Annulla',
-  createExists: 'Esiste già una cartella con quel nome, quindi non è stato creato nulla: {path}',
-  createInvalidName: 'Quel nome non si può usare per una cartella. Inserisci un altro nome.',
-  createUnwritable: 'Impossibile creare la cartella. Prova a crearla altrove.',
-  refusedDriveRoot:
-    'Un’intera unità non può essere un progetto. Scegli una cartella al suo interno.',
-  refusedUserHome:
-    'L’intera cartella utente non può essere un progetto. Scegli una cartella al suo interno.',
-  refusedProtected:
-    'Questa cartella è usata dall’app o da un programma di IA, quindi non può essere un progetto.',
-  refusedContainsProtected:
-    'Questa cartella contiene una cartella usata dall’app o da un programma di IA, quindi non può essere un progetto.',
-  refusedNotFolder: 'Impossibile leggere questa cartella.',
-  refusedDifferentProject:
-    'Quella cartella appartiene a un altro progetto, quindi non è cambiato nulla.',
   backToList: 'Tutti i progetti',
   projectNameLabel: 'Nome del progetto',
   saveName: 'Salva nome',
@@ -95,7 +81,6 @@ export const it = {
   restoreAria: 'Annulla: {name}',
   chatsDesc:
     'Le chat di questo progetto. Fai clic su una per continuarla nel pannello IA dell’ultimo documento che l’ha usata.',
-  deleteConfirm: 'Spostare la chat «{title}» nel cestino?',
   actionFailed: 'Non ha funzionato. Riprova.',
   loadFailed: 'Impossibile leggere il progetto.',
 } satisfies Record<keyof typeof zh, string>

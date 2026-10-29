@@ -570,6 +570,31 @@ describe('chats', () => {
     await click(home.querySelector<HTMLButtonElement>('.projects-row-main')!)
     expect(bridge.openDocumentChat).toHaveBeenCalledWith({ projectId: 'new', chatId: 'c2' })
     expect(props.onOpenHomeAsk).toHaveBeenCalledTimes(1)
+    expect(props.onOpenHomeAsk).toHaveBeenCalledWith({ projectId: 'new', chatId: 'c2' })
+  })
+
+  it('shows the ask panel when main hands an editor chat to the home window', async () => {
+    const { bridge, api } = fakeBridge()
+    // main finds no document to open the chat in and hands it here while the call runs
+    let listener: ((event: { projectId: string; chatId: string }) => void) | null = null
+    bridge.onOpenChat.mockImplementation((next: typeof listener) => {
+      listener = next
+      return () => {
+        listener = null
+      }
+    })
+    bridge.openDocumentChat.mockImplementation(
+      async (ref: { projectId: string; chatId: string }) => {
+        listener?.(ref)
+      },
+    )
+    const props = await render({ bridge: api })
+    await openProject('New plan')
+    await openTab('Chats')
+    await click(rowOf('data-chat-id', 'c1').querySelector<HTMLButtonElement>('.projects-row-main')!)
+    expect(props.onOpenHomeAsk).toHaveBeenCalledWith({ projectId: 'new', chatId: 'c1' })
+    // it listened only while asking
+    expect(listener).toBeNull()
   })
 
   it('renames a chat and deletes one only after the confirm', async () => {

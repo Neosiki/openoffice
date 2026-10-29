@@ -18,7 +18,7 @@ import {
   type AiChatMessage,
   type AiPanelSubscription,
 } from '../src/renderer/ai/AiChatPanel'
-import { useProjectPanel, type ProjectPanel } from '../src/renderer/ai/project-panel'
+import { useProjectPanel, type ProjectPanel } from '@genoffice/ui'
 import { t } from '../src/renderer/i18n/locale'
 import { fakeProjectFolder, type FakeProjectFolder } from './fake-project-folder'
 
@@ -92,10 +92,9 @@ function Harness({
     lang: 'en',
     busy: false,
     loop: () => ({ busy: false, appendHistory: () => 0 }),
-    transport: () => null,
-    gate: () => ({ kind: 'checking' }),
+    consolidation: () => null,
     onOpen: () => undefined,
-    onRemoteMessage: () => undefined,
+    onRemoteMessages: () => undefined,
     onNewChat,
   })
   useEffect(() => {

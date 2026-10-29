@@ -166,6 +166,7 @@ beforeEach(() => {
   let messageSeq = 0
   const fake: Partial<Record<keyof ProjectFolderApi, (...args: never[]) => unknown>> = {
     listProjects: async () => [PROJECT],
+    addFolder: async () => ({ status: 'refused', reason: 'protected' }),
     getDefaultParentFolder: async () => '/docs/IeumOffice',
     getSelection: async () => selection,
     setSelection: async (args: { projectId: string | null }) => {
@@ -293,7 +294,9 @@ const settle = async (rounds = 10): Promise<void> => {
   for (let i = 0; i < rounds; i++) await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
-async function renderPanel(): Promise<void> {
+async function renderPanel(
+  extra: { openChatRequest?: { projectId: string; chatId: string; seq: number } } = {},
+): Promise<void> {
   await act(async () => {
     root.render(
       createElement(
@@ -306,6 +309,7 @@ async function renderPanel(): Promise<void> {
           onOpenAiSettings: vi.fn(),
           onOpenPath: vi.fn(),
           onGoToRecents: vi.fn(),
+          ...extra,
         }),
       ),
     )
@@ -597,6 +601,32 @@ describe('choosing in the picker', () => {
     await ask('And cats?')
     expect(JSON.stringify(lastRequest().messages)).toContain('Allowed.')
     expect(bridge.appendChat).not.toHaveBeenCalled()
+  })
+})
+
+describe('what the picker could not do', () => {
+  it('says why a folder was refused (spec 5.1)', async () => {
+    await renderPanel()
+    await chooseInPicker('.ai-project-row-add-folder')
+    expect(bridge.addFolder).toHaveBeenCalledTimes(1)
+    const line = host.querySelector('[data-problem="refused"]')
+    expect(line?.getAttribute('role')).toBe('alert')
+    expect(line?.textContent).toBe(projectPanelText('en', 'refusedProtected'))
+    // the choice stays where it was
+    expect(bridge.setSelection).not.toHaveBeenCalled()
+  })
+})
+
+describe('a chat the project screen handed over', () => {
+  it('opens it once the ask panel is shown', async () => {
+    await renderPanel({ openChatRequest: { projectId: 'p1', chatId: 'old-chat', seq: 1 } })
+    await act(async () => {
+      await settle()
+    })
+    expect(bridge.openChat).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'p1', chatId: 'old-chat' }),
+    )
+    expect(texts()[1]).toContain('About 120,000 won.')
   })
 })
 

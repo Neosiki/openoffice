@@ -8,18 +8,6 @@ export const pt = {
   newNameLabel: 'Nome do novo projeto',
   create: 'Criar',
   cancel: 'Cancelar',
-  createExists: 'Já existe uma pasta com esse nome, então nada foi criado: {path}',
-  createInvalidName: 'Esse nome não pode ser usado em uma pasta. Digite outro nome.',
-  createUnwritable: 'Não foi possível criar a pasta. Tente criá-la em outro lugar.',
-  refusedDriveRoot: 'Uma unidade inteira não pode ser um projeto. Escolha uma pasta dentro dela.',
-  refusedUserHome:
-    'A sua pasta de usuário inteira não pode ser um projeto. Escolha uma pasta dentro dela.',
-  refusedProtected:
-    'Esta pasta é usada pelo app ou por um programa de IA, então não pode ser um projeto.',
-  refusedContainsProtected:
-    'Esta pasta contém uma pasta usada pelo app ou por um programa de IA, então não pode ser um projeto.',
-  refusedNotFolder: 'Não foi possível ler esta pasta.',
-  refusedDifferentProject: 'Essa pasta pertence a outro projeto, então nada foi alterado.',
   backToList: 'Todos os projetos',
   projectNameLabel: 'Nome do projeto',
   saveName: 'Salvar nome',
@@ -92,7 +80,6 @@ export const pt = {
   restoreAria: 'Desfazer: {name}',
   chatsDesc:
     'Conversas deste projeto. Clique em uma para continuá-la no painel de IA do último documento que a usou.',
-  deleteConfirm: 'Mover a conversa “{title}” para a lixeira?',
   actionFailed: 'Não deu certo. Tente de novo.',
   loadFailed: 'Não foi possível ler o projeto.',
 } satisfies Record<keyof typeof zh, string>

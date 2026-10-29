@@ -8,17 +8,6 @@ export const ar = {
   newNameLabel: 'اسم المشروع الجديد',
   create: 'إنشاء',
   cancel: 'إلغاء',
-  createExists: 'يوجد مجلد بهذا الاسم بالفعل، لذا لم يُنشأ شيء: {path}',
-  createInvalidName: 'لا يمكن استخدام هذا الاسم لمجلد. أدخل اسمًا آخر.',
-  createUnwritable: 'تعذّر إنشاء المجلد. جرّب إنشاءه في مكان آخر.',
-  refusedDriveRoot: 'لا يمكن أن يكون محرك أقراص كامل مشروعًا. اختر مجلدًا بداخله.',
-  refusedUserHome: 'لا يمكن أن يكون مجلد المستخدم بالكامل مشروعًا. اختر مجلدًا بداخله.',
-  refusedProtected:
-    'يستخدم التطبيق أو برنامج ذكاء اصطناعي هذا المجلد، لذا لا يمكن أن يكون مشروعًا.',
-  refusedContainsProtected:
-    'يحتوي هذا المجلد على مجلد يستخدمه التطبيق أو برنامج ذكاء اصطناعي، لذا لا يمكن أن يكون مشروعًا.',
-  refusedNotFolder: 'تعذّرت قراءة هذا المجلد.',
-  refusedDifferentProject: 'هذا المجلد تابع لمشروع آخر، لذا لم يتغيّر شيء.',
   backToList: 'كل المشاريع',
   projectNameLabel: 'اسم المشروع',
   saveName: 'حفظ الاسم',
@@ -88,7 +77,6 @@ export const ar = {
   restoreAria: 'تراجع: {name}',
   chatsDesc:
     'محادثات هذا المشروع. انقر محادثة لمتابعتها في لوحة الذكاء الاصطناعي للمستند الذي استُخدمت فيه آخر مرة.',
-  deleteConfirm: 'هل تريد نقل المحادثة «{title}» إلى سلة المهملات؟',
   actionFailed: 'لم ينجح ذلك. حاول مرة أخرى.',
   loadFailed: 'تعذّرت قراءة المشروع.',
 } satisfies Record<keyof typeof zh, string>

@@ -8,17 +8,6 @@ export const vi = {
   newNameLabel: 'Tên dự án mới',
   create: 'Tạo',
   cancel: 'Hủy',
-  createExists: 'Đã có thư mục cùng tên nên không tạo gì: {path}',
-  createInvalidName: 'Không thể dùng tên này cho thư mục. Hãy nhập tên khác.',
-  createUnwritable: 'Không tạo được thư mục. Hãy thử tạo ở nơi khác.',
-  refusedDriveRoot: 'Không thể dùng cả ổ đĩa làm dự án. Hãy chọn một thư mục bên trong.',
-  refusedUserHome:
-    'Không thể dùng cả thư mục người dùng làm dự án. Hãy chọn một thư mục bên trong.',
-  refusedProtected: 'Ứng dụng hoặc chương trình AI đang dùng thư mục này nên không thể làm dự án.',
-  refusedContainsProtected:
-    'Thư mục này chứa thư mục mà ứng dụng hoặc chương trình AI đang dùng nên không thể làm dự án.',
-  refusedNotFolder: 'Không đọc được thư mục này.',
-  refusedDifferentProject: 'Thư mục đó thuộc dự án khác nên không thay đổi gì.',
   backToList: 'Tất cả dự án',
   projectNameLabel: 'Tên dự án',
   saveName: 'Lưu tên',
@@ -87,7 +76,6 @@ export const vi = {
   restoreAria: 'Hoàn tác: {name}',
   chatsDesc:
     'Các cuộc trò chuyện trong dự án này. Nhấp để tiếp tục trong bảng AI của tài liệu dùng nó gần nhất.',
-  deleteConfirm: 'Chuyển cuộc trò chuyện “{title}” vào thùng rác?',
   actionFailed: 'Không thực hiện được. Vui lòng thử lại.',
   loadFailed: 'Không đọc được dự án.',
 } satisfies Record<keyof typeof zh, string>

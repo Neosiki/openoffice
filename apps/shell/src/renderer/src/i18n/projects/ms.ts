@@ -8,17 +8,6 @@ export const ms = {
   newNameLabel: 'Nama projek baharu',
   create: 'Cipta',
   cancel: 'Batal',
-  createExists: 'Folder dengan nama itu sudah wujud, jadi tiada apa-apa dicipta: {path}',
-  createInvalidName: 'Nama itu tidak boleh digunakan untuk folder. Masukkan nama lain.',
-  createUnwritable: 'Folder tidak dapat dicipta. Cuba cipta di tempat lain.',
-  refusedDriveRoot: 'Seluruh pemacu tidak boleh menjadi projek. Pilih folder di dalamnya.',
-  refusedUserHome: 'Seluruh folder pengguna tidak boleh menjadi projek. Pilih folder di dalamnya.',
-  refusedProtected:
-    'Folder ini digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
-  refusedContainsProtected:
-    'Folder ini mengandungi folder yang digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
-  refusedNotFolder: 'Folder ini tidak dapat dibaca.',
-  refusedDifferentProject: 'Folder itu milik projek lain, jadi tiada apa-apa diubah.',
   backToList: 'Semua projek',
   projectNameLabel: 'Nama projek',
   saveName: 'Simpan nama',
@@ -93,7 +82,6 @@ export const ms = {
   restoreAria: 'Buat asal: {name}',
   chatsDesc:
     'Sembang dalam projek ini. Klik satu untuk menyambungnya dalam panel AI dokumen yang terakhir menggunakannya.',
-  deleteConfirm: 'Alihkan sembang “{title}” ke tong sampah?',
   actionFailed: 'Tidak berjaya. Sila cuba lagi.',
   loadFailed: 'Projek tidak dapat dibaca.',
 } satisfies Record<keyof typeof zh, string>

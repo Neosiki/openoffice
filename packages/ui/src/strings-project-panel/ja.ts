@@ -70,4 +70,24 @@ export const ja = {
   toolSummaryNoName: '{editor}でツールを {count} 回実行',
   toolSummaryNoNameOne: '{editor}でツールを 1 回実行',
   dismiss: '閉じる',
+  createExists: '同じ名前のフォルダーがすでにあるため、作成しませんでした: {path}',
+  createInvalidName: 'その名前はフォルダー名に使えません。別の名前を入力してください。',
+  createUnwritable: 'フォルダーを作成できませんでした。別の場所に作成してみてください。',
+  refusedDriveRoot: 'ドライブ全体はプロジェクトにできません。その中のフォルダーを選んでください。',
+  refusedUserHome:
+    'ユーザーフォルダー全体はプロジェクトにできません。その中のフォルダーを選んでください。',
+  refusedProtected: 'アプリや AI プログラムが使うフォルダーなので、プロジェクトにできません。',
+  refusedContainsProtected:
+    'アプリや AI プログラムが使うフォルダーを含んでいるため、プロジェクトにできません。',
+  refusedNotFolder: 'このフォルダーを読み取れません。',
+  refusedDifferentProject: '別のプロジェクトのフォルダーなので、変更しませんでした。',
+  deleteConfirm: '会話「{title}」をごみ箱に移しますか?',
+  cancel: 'キャンセル',
+  actionFailed: 'できませんでした。もう一度お試しください。',
+  consolidateFailed: '整理できませんでした。メモリーはそのままです。',
+  contextMissing:
+    'プロジェクトのフォルダーが見つからないため、今回のリクエストにはプロジェクトの内容を含めませんでした。',
+  contextUnknown:
+    'プロジェクトが一覧にないため、今回のリクエストにはプロジェクトの内容を含めませんでした。',
+  contextFailed: 'プロジェクトの内容を読み込めなかったため、今回のリクエストには含めませんでした。',
 } satisfies Record<keyof typeof zh, string>

@@ -70,4 +70,26 @@ export const pt = {
   toolSummaryNoName: 'Ferramentas executadas {count} vezes em {editor}',
   toolSummaryNoNameOne: 'Ferramenta executada uma vez em {editor}',
   dismiss: 'Fechar',
+  createExists: 'Já existe uma pasta com esse nome, então nada foi criado: {path}',
+  createInvalidName: 'Esse nome não pode ser usado em uma pasta. Digite outro nome.',
+  createUnwritable: 'Não foi possível criar a pasta. Tente criá-la em outro lugar.',
+  refusedDriveRoot: 'Uma unidade inteira não pode ser um projeto. Escolha uma pasta dentro dela.',
+  refusedUserHome:
+    'A sua pasta de usuário inteira não pode ser um projeto. Escolha uma pasta dentro dela.',
+  refusedProtected:
+    'Esta pasta é usada pelo app ou por um programa de IA, então não pode ser um projeto.',
+  refusedContainsProtected:
+    'Esta pasta contém uma pasta usada pelo app ou por um programa de IA, então não pode ser um projeto.',
+  refusedNotFolder: 'Não foi possível ler esta pasta.',
+  refusedDifferentProject: 'Essa pasta pertence a outro projeto, então nada foi alterado.',
+  deleteConfirm: 'Mover a conversa “{title}” para a lixeira?',
+  cancel: 'Cancelar',
+  actionFailed: 'Não deu certo. Tente de novo.',
+  consolidateFailed: 'Não foi possível organizar. A memória não mudou.',
+  contextMissing:
+    'A pasta do projeto não foi encontrada, então esta solicitação foi enviada sem o contexto do projeto.',
+  contextUnknown:
+    'O projeto não está mais na lista, então esta solicitação foi enviada sem o contexto do projeto.',
+  contextFailed:
+    'Não foi possível ler o contexto do projeto, então esta solicitação foi enviada sem ele.',
 } satisfies Record<keyof typeof zh, string>

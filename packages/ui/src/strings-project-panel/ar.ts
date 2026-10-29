@@ -69,4 +69,22 @@ export const ar = {
   toolSummaryNoName: 'شُغّلت الأدوات {count} مرة في {editor}',
   toolSummaryNoNameOne: 'شُغّلت أداة مرة واحدة في {editor}',
   dismiss: 'إغلاق',
+  createExists: 'يوجد مجلد بهذا الاسم بالفعل، لذا لم يُنشأ شيء: {path}',
+  createInvalidName: 'لا يمكن استخدام هذا الاسم لمجلد. أدخل اسمًا آخر.',
+  createUnwritable: 'تعذّر إنشاء المجلد. جرّب إنشاءه في مكان آخر.',
+  refusedDriveRoot: 'لا يمكن أن يكون محرك أقراص كامل مشروعًا. اختر مجلدًا بداخله.',
+  refusedUserHome: 'لا يمكن أن يكون مجلد المستخدم بالكامل مشروعًا. اختر مجلدًا بداخله.',
+  refusedProtected:
+    'يستخدم التطبيق أو برنامج ذكاء اصطناعي هذا المجلد، لذا لا يمكن أن يكون مشروعًا.',
+  refusedContainsProtected:
+    'يحتوي هذا المجلد على مجلد يستخدمه التطبيق أو برنامج ذكاء اصطناعي، لذا لا يمكن أن يكون مشروعًا.',
+  refusedNotFolder: 'تعذّرت قراءة هذا المجلد.',
+  refusedDifferentProject: 'هذا المجلد تابع لمشروع آخر، لذا لم يتغيّر شيء.',
+  deleteConfirm: 'هل تريد نقل المحادثة «{title}» إلى سلة المهملات؟',
+  cancel: 'إلغاء',
+  actionFailed: 'لم ينجح ذلك. حاول مرة أخرى.',
+  consolidateFailed: 'تعذّر الترتيب. لم تتغيّر الذاكرة.',
+  contextMissing: 'تعذّر العثور على مجلد المشروع، لذا أُرسل هذا الطلب دون سياق المشروع.',
+  contextUnknown: 'لم يعد المشروع في القائمة، لذا أُرسل هذا الطلب دون سياق المشروع.',
+  contextFailed: 'تعذّرت قراءة سياق المشروع، لذا أُرسل هذا الطلب دونه.',
 } satisfies Record<keyof typeof zh, string>

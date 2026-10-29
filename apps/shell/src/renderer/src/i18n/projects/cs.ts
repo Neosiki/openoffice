@@ -8,16 +8,6 @@ export const cs = {
   newNameLabel: 'Název nového projektu',
   create: 'Vytvořit',
   cancel: 'Zrušit',
-  createExists: 'Složka s tímto názvem už existuje, proto se nic nevytvořilo: {path}',
-  createInvalidName: 'Tento název nelze použít pro složku. Zadejte jiný název.',
-  createUnwritable: 'Složku se nepodařilo vytvořit. Zkuste ji vytvořit jinde.',
-  refusedDriveRoot: 'Celý disk nemůže být projektem. Vyberte složku na něm.',
-  refusedUserHome: 'Celá uživatelská složka nemůže být projektem. Vyberte složku v ní.',
-  refusedProtected: 'Tuto složku používá aplikace nebo program AI, proto nemůže být projektem.',
-  refusedContainsProtected:
-    'Tato složka obsahuje složku, kterou používá aplikace nebo program AI, proto nemůže být projektem.',
-  refusedNotFolder: 'Tuto složku nelze přečíst.',
-  refusedDifferentProject: 'Tato složka patří jinému projektu, proto se nic nezměnilo.',
   backToList: 'Všechny projekty',
   projectNameLabel: 'Název projektu',
   saveName: 'Uložit název',
@@ -87,7 +77,6 @@ export const cs = {
   restoreAria: 'Vrátit: {name}',
   chatsDesc:
     'Konverzace v tomto projektu. Kliknutím ji otevřete v panelu AI dokumentu, kde byla naposledy použita.',
-  deleteConfirm: 'Přesunout konverzaci „{title}“ do koše?',
   actionFailed: 'Nepodařilo se. Zkuste to prosím znovu.',
   loadFailed: 'Projekt se nepodařilo přečíst.',
 } satisfies Record<keyof typeof zh, string>

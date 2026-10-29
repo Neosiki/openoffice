@@ -13,7 +13,7 @@ Um projeto é uma pasta do seu PC. Escolha um projeto em um painel de IA e a IA 
 
 ## Novo projeto e Adicionar pasta
 
-- **Novo projeto**: digite um nome e uma pasta com esse nome é criada na sua pasta padrão de salvamento (no início, `Documentos\GenOffice`; você pode mudá-la nas Configurações). **Em outro lugar…** permite escolher outro local. Se já existir uma pasta com esse nome, o app pergunta se você quer usá-la como projeto.
+- **Novo projeto**: digite um nome e uma pasta com esse nome é criada na sua pasta padrão de salvamento (no início, `Documentos\GenOffice`; você pode mudá-la nas Configurações). **Criar em outro lugar…** permite escolher outro local. Se já existir uma pasta com esse nome, o app pergunta se você quer usá-la como projeto.
 - **Adicionar pasta**: usa uma pasta que você já tem. As subpastas dela entram também. Não é possível escolher uma unidade inteira, a sua pasta de usuário inteira nem pastas que guardam dados de login ou os dados do app.
 - Ao abrir um documento que está dentro da pasta de um projeto que não está na sua lista, aparece abaixo do campo de entrada "Este documento está na pasta do projeto '…'" com um botão **Usar**. Clicar nele é o mesmo que Adicionar pasta.
 - Quando uma pasta recebida de outra pessoa já traz instruções ou memória, `AGENTS.md` ou `CLAUDE.md`, ou conversas escritas em outro PC, o app mostra isso uma vez e pergunta. **Usar** aproveita tudo. **Usar sem instruções** mantém essas instruções e essa memória longe da IA, esconde as conversas de outros PCs e para de acrescentar memória; a leitura de arquivos continua funcionando. Mais tarde você pode passar para **Usar** na página do projeto. Fechar a pergunta sem escolher não adiciona a pasta.

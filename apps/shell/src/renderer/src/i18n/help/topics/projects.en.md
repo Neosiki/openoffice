@@ -13,7 +13,7 @@ A project is one folder on your PC. Pick a project in an AI panel and the AI wor
 
 ## New project and Add folder
 
-- **New project**: type a name and a folder of that name is made in your default save folder (`Documents\GenOffice` at first; you can change it in Settings). **Elsewhere…** lets you choose another place. If a folder of that name already exists, you are asked whether to use it as the project.
+- **New project**: type a name and a folder of that name is made in your default save folder (`Documents\GenOffice` at first; you can change it in Settings). **Create somewhere else…** lets you choose another place. If a folder of that name already exists, you are asked whether to use it as the project.
 - **Add folder**: use a folder you already have. Its subfolders are included. A whole drive, your whole user folder, and folders that hold sign-in data or the app's data cannot be chosen.
 - Open a document inside a project folder that is not on your list and "This document is in the project folder '…'" appears below the input with a **Use** button. Clicking it is the same as Add folder.
 - When a folder you got from someone else already holds instructions or memory, `AGENTS.md` or `CLAUDE.md`, or chats written on another PC, the app shows them once and asks. **Use** uses all of it. **Use without instructions** keeps those instructions and that memory away from the AI, hides chats from other PCs, and stops adding memory; reading files still works. You can switch to **Use** later on the project's page. Closing the question without choosing does not add the folder.

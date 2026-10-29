@@ -8,17 +8,6 @@ export const ja = {
   newNameLabel: '新しいプロジェクトの名前',
   create: '作成',
   cancel: 'キャンセル',
-  createExists: '同じ名前のフォルダーがすでにあるため、作成しませんでした: {path}',
-  createInvalidName: 'その名前はフォルダー名に使えません。別の名前を入力してください。',
-  createUnwritable: 'フォルダーを作成できませんでした。別の場所に作成してみてください。',
-  refusedDriveRoot: 'ドライブ全体はプロジェクトにできません。その中のフォルダーを選んでください。',
-  refusedUserHome:
-    'ユーザーフォルダー全体はプロジェクトにできません。その中のフォルダーを選んでください。',
-  refusedProtected: 'アプリや AI プログラムが使うフォルダーなので、プロジェクトにできません。',
-  refusedContainsProtected:
-    'アプリや AI プログラムが使うフォルダーを含んでいるため、プロジェクトにできません。',
-  refusedNotFolder: 'このフォルダーを読み取れません。',
-  refusedDifferentProject: '別のプロジェクトのフォルダーなので、変更しませんでした。',
   backToList: 'すべてのプロジェクト',
   projectNameLabel: 'プロジェクト名',
   saveName: '名前を保存',
@@ -86,7 +75,6 @@ export const ja = {
   restoreAria: '元に戻す: {name}',
   chatsDesc:
     'このプロジェクトでの会話です。クリックすると、最後に使った文書の AI パネルで続けます。',
-  deleteConfirm: '会話「{title}」をごみ箱に移しますか?',
   actionFailed: 'できませんでした。もう一度お試しください。',
   loadFailed: 'プロジェクトを読み取れませんでした。',
 } satisfies Record<keyof typeof zh, string>

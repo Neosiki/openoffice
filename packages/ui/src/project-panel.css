@@ -333,6 +333,23 @@
   outline: none;
 }
 
+/* "move this chat to the trash?" asked in the row before it goes */
+.ai-project-confirm-text {
+  min-width: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.ai-project-confirm-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ai-project-confirm-delete {
+  color: var(--danger);
+}
+
 .ai-project-visually-hidden {
   position: absolute;
   width: 1px;

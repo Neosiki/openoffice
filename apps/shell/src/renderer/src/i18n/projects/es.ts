@@ -8,18 +8,6 @@ export const es = {
   newNameLabel: 'Nombre del nuevo proyecto',
   create: 'Crear',
   cancel: 'Cancelar',
-  createExists: 'Ya existe una carpeta con ese nombre, así que no se creó nada: {path}',
-  createInvalidName: 'Ese nombre no se puede usar para una carpeta. Escribe otro nombre.',
-  createUnwritable: 'No se pudo crear la carpeta. Prueba a crearla en otro lugar.',
-  refusedDriveRoot: 'Una unidad entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
-  refusedUserHome:
-    'Tu carpeta de usuario entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
-  refusedProtected:
-    'La app o un programa de IA usa esta carpeta, así que no puede ser un proyecto.',
-  refusedContainsProtected:
-    'Esta carpeta contiene una carpeta que usa la app o un programa de IA, así que no puede ser un proyecto.',
-  refusedNotFolder: 'No se puede leer esta carpeta.',
-  refusedDifferentProject: 'Esa carpeta pertenece a otro proyecto, así que no se cambió nada.',
   backToList: 'Todos los proyectos',
   projectNameLabel: 'Nombre del proyecto',
   saveName: 'Guardar nombre',
@@ -93,7 +81,6 @@ export const es = {
   restoreAria: 'Deshacer: {name}',
   chatsDesc:
     'Chats de este proyecto. Haz clic en uno para seguirlo en el panel de IA del último documento que lo usó.',
-  deleteConfirm: '¿Mover el chat «{title}» a la papelera?',
   actionFailed: 'No funcionó. Inténtalo de nuevo.',
   loadFailed: 'No se pudo leer el proyecto.',
 } satisfies Record<keyof typeof zh, string>
