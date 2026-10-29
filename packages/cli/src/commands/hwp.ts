@@ -93,7 +93,7 @@ async function read(
   ctx: CommandContext,
 ): Promise<CommandResult> {
   const { path, ext } = hwpInput(file, ctx)
-  const offset = parseOffset(flagString(args, 'offset'))
+  const offset = parseOffset(args.flags.offset)
   const max = previewChars(args, HWP_PREVIEW_CHARS)
   let text: string
   try {
@@ -125,9 +125,9 @@ async function read(
   return { summary: `${basename(path)}: ${text.length} characters${part}`, detail }
 }
 
-function parseOffset(raw: string | undefined): number {
+function parseOffset(raw: string | true | undefined): number {
   if (raw === undefined) return 0
-  const n = Number(raw)
+  const n = typeof raw === 'string' ? Number(raw) : NaN
   if (!Number.isInteger(n) || n < 0) {
     throw new CliError(
       EXIT.usage,
