@@ -13,16 +13,16 @@ Een project is één map op je pc. Kies je in een AI-paneel een project, dan wer
 
 ## Nieuw project en Map toevoegen
 
-- **Nieuw project**: typ een naam en er wordt een map met die naam gemaakt in je standaard opslagmap (eerst `Documenten\GenOffice`; dit kun je wijzigen in Instellingen). Met **Ergens anders maken…** kies je een andere plek. Bestaat er al een map met die naam, dan wordt gevraagd of je die als project wilt gebruiken.
-- **Map toevoegen**: gebruik een map die je al hebt. De submappen horen erbij. Een hele schijf, je hele gebruikersmap en mappen met aanmeldgegevens of de gegevens van de app kun je niet kiezen.
+- **Nieuw project**: typ een naam en er wordt een map met die naam gemaakt in je standaard opslagmap (eerst `Documenten\GenOffice`; dit kun je wijzigen in Instellingen). Met **Ergens anders maken…** kies je een andere plek. Bestaat er al een map met die naam, dan wordt gevraagd of je die als project wilt gebruiken, en **Deze map gebruiken** begint ermee. Is die map al een project in je lijst, dan gaat hij meteen open, zonder vraag.
+- **Map toevoegen** (**Bestaande map gebruiken** op het scherm Projecten van Start): gebruik een map die je al hebt. De submappen horen erbij. Een hele schijf, je hele gebruikersmap en mappen met aanmeldgegevens of de gegevens van de app kun je niet kiezen.
 - Open je een document in een projectmap die niet in je lijst staat, dan verschijnt onder het invoerveld 'Dit document staat in de projectmap "…"' met een knop **Gebruiken**. Klikken daarop is hetzelfde als Map toevoegen.
-- Bevat een map die je van iemand anders hebt gekregen al instructies of geheugen, `AGENTS.md` of `CLAUDE.md`, of chats die op een andere pc zijn geschreven, dan laat de app die één keer zien en vraagt wat je wilt. **Gebruiken** neemt alles mee. **Gebruiken zonder instructies** houdt die instructies en dat geheugen weg bij de AI, verbergt chats van andere pc's en voegt geen geheugen meer toe; bestanden lezen werkt nog gewoon. Later kun je op de projectpagina overstappen naar **Gebruiken**. Sluit je de vraag zonder te kiezen, dan wordt de map niet toegevoegd.
+- Bevat een map die je van iemand anders hebt gekregen al instructies of geheugen, `AGENTS.md` of `CLAUDE.md`, of chats die op een andere pc zijn geschreven, dan laat de app die één keer zien en vraagt wat je wilt. Met **Alles bekijken** lees je eerst alles. **Gebruiken met instructies** neemt alles mee. **Gebruiken zonder instructies** houdt die instructies en dat geheugen weg bij de AI, verbergt chats van andere pc's en voegt geen geheugen meer toe; bestanden lezen werkt nog gewoon. Later kun je op de projectpagina overstappen met **Instructies ook gebruiken**. Klik je op **Annuleren** of sluit je de vraag zonder te kiezen, dan wordt de map niet toegevoegd.
 - Daarna wordt het niet meer gevraagd. Veranderen de instructies of het geheugen buiten GenOffice, dan toont het AI-paneel één keer 'Instructies gewijzigd', en **Bekijken** opent dat deel van de projectpagina.
 
 ## Instructies en geheugen
 
 - **Instructies** zijn de regels voor dit project, zoals 'Schrijf verslagen in opsommingstekens en kort de naam van de organisatie nooit af'. Schrijf ze op de projectpagina in Start en druk op **Opslaan**. Staat er bovenin de map een `AGENTS.md` of `CLAUDE.md`, dan worden die ook gelezen; je kunt ze uitzetten op de projectpagina.
-- **Geheugen** zijn notities die de AI tijdens chats maakt: feiten, voorkeuren en beslissingen die later van pas komen, elk op één regel met de datum. Telkens als de AI er een schrijft, toont het AI-paneel 'Onthouden: …' met een knop **Verwijderen**. Er wordt niet eerst om toestemming gevraagd.
+- **Geheugen** zijn notities die de AI tijdens chats maakt: feiten, voorkeuren en beslissingen die later van pas komen, elk op één regel met de datum. Telkens als de AI er een schrijft, toont het AI-paneel 'Onthouden: …' met een knop **Verwijderen**. Is die notitie al verwijderd, dan staat er 'Geheugen gewist: …' zonder knop **Verwijderen**. Er wordt niet eerst om toestemming gevraagd.
 - Wordt het geheugen lang, dan toont het AI-paneel 'Het geheugen wordt lang' met **Opruimen**. Daarop drukken voegt notities samen die elkaar overlappen of verouderd zijn. De vorige versie blijft bewaard en **Ongedaan maken** zet die terug. Opruimen gebeurt alleen als je op de knop drukt, en het stuurt één AI-verzoek.
 - Op de projectpagina kun je notities verwijderen, het hele geheugen bewerken en het geheugen uitzetten. Staat het uit, dan wordt er niets nieuws geschreven en wordt het bestaande geheugen nog wel gelezen.
 - Bij heel lange instructies valt het laatste deel weg, en het AI-paneel meldt dat. Het geheugen wordt altijd volledig verstuurd, hoe lang ook.
@@ -48,17 +48,18 @@ Een project is één map op je pc. Kies je in een AI-paneel een project, dan wer
 
 ## De projectpagina in Start
 
-**Projecten** in de zijbalk van Start is waar je projecten maakt, mappen toevoegt en er een opent om te beheren.
+**Projecten** in de zijbalk van Start is waar je een **Nieuw project** maakt, **Bestaande map gebruiken** kiest en er een opent om te beheren.
 
-- **Kop**: de naam (die wijzigen hernoemt de map niet), het pad van de map, **Tonen in Verkenner**.
+- **Kop**: de naam (die wijzigen hernoemt de map niet), het pad van de map, **Tonen in Verkenner** en de status. Wordt het project zonder instructies gebruikt, dan staat er **Instructies ook gebruiken**.
 - **Instructies**: het vak voor instructies, en de `AGENTS.md` en `CLAUDE.md` die erbij worden gelezen.
 - **Geheugen**: de lijst met notities, **Alles bewerken**, **Opruimen**, geheugen aan of uit.
-- **Bestanden**: de bestanden die de AI ziet en die welke ervoor verborgen zijn.
+- **Bestanden**: de bestanden die de AI ziet en die welke ervoor verborgen zijn. Klik op een bestandsnaam om het bestand te openen.
 - **Chats**: de chats van dit project. Klik op een chat om het document te openen waarin hij het laatst is gebruikt en ga verder in dat AI-paneel.
+- Deze pagina leest de map opnieuw telkens als ze verschijnt, dus een notitie die de AI net heeft onthouden zie je zonder de pagina te verlaten. Is het bestand met instructies of geheugen buiten GenOffice gewijzigd terwijl je het bewerkte, dan vraagt **Opslaan** eerst: **Opnieuw laden** leest het gewijzigde bestand, **Toch opslaan** overschrijft het met jouw wijzigingen.
 
 ## Wat er in de map blijft, en goed om te weten
 
-- Instructies, geheugen en chats worden als tekstbestanden bewaard in een map `.ieumoffice` binnen de projectmap. Verplaats je de map of kopieer je hem naar een andere pc, dan gaan ze mee. Kies hem op die andere pc één keer met **Map toevoegen**.
+- Instructies, geheugen en chats worden als tekstbestanden bewaard in een map `.ieumoffice` binnen de projectmap. Verplaats je de map of kopieer je hem naar een andere pc, dan gaan ze mee. Kies hem op die andere pc één keer met **Map toevoegen** in een AI-paneel of met **Bestaande map gebruiken** op het scherm Projecten van Start.
 - De map `.ieumoffice` wordt pas gemaakt als er iets te schrijven is. Je kunt de bestanden erin openen en bewerken in Kladblok.
 - Wat je in een chat typt, kan in het geheugen terechtkomen. Wil je iets erbuiten houden, verwijder het dan met **Verwijderen** op de regel 'Onthouden' of zet het geheugen uit.
 - Kies je een gesynchroniseerde map als project, dan worden de instructies, het geheugen en de chats ook naar die dienst geüpload. De app meldt dat één keer, de eerste keer dat je de map kiest.

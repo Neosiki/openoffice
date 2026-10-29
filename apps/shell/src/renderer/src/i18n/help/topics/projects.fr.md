@@ -13,16 +13,16 @@ Un projet, c’est un dossier de votre PC. Choisissez un projet dans un panneau 
 
 ## Nouveau projet et Ajouter un dossier
 
-- **Nouveau projet** : saisissez un nom, et un dossier de ce nom est créé dans votre dossier d’enregistrement par défaut (`Documents\GenOffice` au départ, modifiable dans les Paramètres). **Créer ailleurs…** permet de choisir un autre emplacement. Si un dossier de ce nom existe déjà, on vous demande s’il faut l’utiliser comme projet.
-- **Ajouter un dossier** : utilise un dossier que vous avez déjà, sous-dossiers compris. Un lecteur entier, tout votre dossier utilisateur et les dossiers qui contiennent des données de connexion ou les données de l’application ne peuvent pas être choisis.
+- **Nouveau projet** : saisissez un nom, et un dossier de ce nom est créé dans votre dossier d’enregistrement par défaut (`Documents\GenOffice` au départ, modifiable dans les Paramètres). **Créer ailleurs…** permet de choisir un autre emplacement. Si un dossier de ce nom existe déjà, on vous demande s’il faut l’utiliser comme projet ; **Utiliser ce dossier** démarre avec lui. Si ce dossier est déjà un projet de votre liste, il s’ouvre directement, sans question.
+- **Ajouter un dossier** (**Utiliser un dossier existant** sur l’écran Projets de l’Accueil) : utilise un dossier que vous avez déjà, sous-dossiers compris. Un lecteur entier, tout votre dossier utilisateur et les dossiers qui contiennent des données de connexion ou les données de l’application ne peuvent pas être choisis.
 - Si vous ouvrez un document situé dans un dossier de projet absent de votre liste, « Ce document se trouve dans le dossier de projet “…” » s’affiche sous la zone de saisie, avec un bouton **Utiliser**. Cliquer dessus revient à ajouter le dossier.
-- Quand un dossier reçu de quelqu’un d’autre contient déjà des consignes ou une mémoire, un `AGENTS.md` ou un `CLAUDE.md`, ou des conversations écrites sur un autre PC, l’application vous les montre une fois et vous demande quoi faire. **Utiliser** prend le tout. **Utiliser sans les consignes** tient ces consignes et cette mémoire à l’écart de l’IA, masque les conversations venues d’autres PC et cesse d’ajouter à la mémoire ; la lecture des fichiers continue de fonctionner. Vous pourrez passer à **Utiliser** plus tard depuis la page du projet. Fermer la question sans choisir n’ajoute pas le dossier.
+- Quand un dossier reçu de quelqu’un d’autre contient déjà des consignes ou une mémoire, un `AGENTS.md` ou un `CLAUDE.md`, ou des conversations écrites sur un autre PC, l’application vous les montre une fois et vous demande quoi faire. **Tout afficher** permet de tout lire d’abord. **Utiliser avec les consignes** prend le tout. **Utiliser sans les consignes** tient ces consignes et cette mémoire à l’écart de l’IA, masque les conversations venues d’autres PC et cesse d’ajouter à la mémoire ; la lecture des fichiers continue de fonctionner. Vous pourrez changer plus tard avec **Utiliser aussi les consignes** sur la page du projet. **Annuler**, ou fermer la question sans choisir, n’ajoute pas le dossier.
 - Ensuite, la question ne revient plus. Si les consignes ou la mémoire sont modifiées en dehors de GenOffice, le panneau IA affiche une fois « Consignes modifiées », et **Voir** ouvre la partie correspondante de la page du projet.
 
 ## Consignes et mémoire
 
 - Les **consignes** sont les règles de ce projet, par exemple « Rédiger les rapports sous forme de puces et ne jamais abréger le nom de l’organisme ». Écrivez-les sur la page du projet dans l’Accueil, puis appuyez sur **Enregistrer**. Si le haut du dossier contient `AGENTS.md` ou `CLAUDE.md`, ces fichiers sont lus aussi, et vous pouvez les désactiver sur la page du projet.
-- La **mémoire** rassemble les notes que l’IA prend pendant les conversations : des faits, des préférences et des décisions utiles pour la suite, une ligne datée pour chacune. Chaque fois qu’elle en écrit une, le panneau IA affiche « Mémorisé : … » avec un bouton **Supprimer**. Elle ne vous demande pas votre accord avant.
+- La **mémoire** rassemble les notes que l’IA prend pendant les conversations : des faits, des préférences et des décisions utiles pour la suite, une ligne datée pour chacune. Chaque fois qu’elle en écrit une, le panneau IA affiche « Mémorisé : … » avec un bouton **Supprimer**. Si cette note a déjà été supprimée, la ligne indique « Mémoire effacée : … » et n’a pas de bouton **Supprimer**. Elle ne vous demande pas votre accord avant.
 - Quand la mémoire s’allonge, le panneau IA affiche « La mémoire devient longue » avec **Mettre en ordre**. Ce bouton fusionne les notes qui se recoupent ou qui sont dépassées. La version précédente est conservée, et **Annuler** la rétablit. Le rangement n’a lieu que si vous appuyez sur le bouton, et il envoie une requête à l’IA.
 - Sur la page du projet, vous pouvez supprimer des notes, modifier toute la mémoire et désactiver la mémoire. Désactivée, elle ne reçoit plus rien de nouveau, mais la mémoire existante est toujours lue.
 - Des consignes très longues perdent leur fin, et le panneau IA vous le signale. La mémoire est toujours envoyée en entier, quelle que soit sa longueur.
@@ -48,17 +48,18 @@ Un projet, c’est un dossier de votre PC. Choisissez un projet dans un panneau 
 
 ## La page du projet dans l’Accueil
 
-**Projets**, dans la barre latérale de l’Accueil, est l’endroit où l’on crée des projets, ajoute des dossiers et ouvre un projet pour le gérer.
+**Projets**, dans la barre latérale de l’Accueil, est l’endroit où l’on crée un **Nouveau projet**, où l’on choisit **Utiliser un dossier existant**, et où l’on ouvre un projet pour le gérer.
 
-- **En-tête** : le nom (le changer ne renomme pas le dossier), le chemin du dossier, **Afficher dans l’Explorateur**.
+- **En-tête** : le nom (le changer ne renomme pas le dossier), le chemin du dossier, **Afficher dans l’Explorateur**, et l’état. Quand le projet est utilisé sans consignes, **Utiliser aussi les consignes** apparaît.
 - **Consignes** : la zone des consignes, et les `AGENTS.md` et `CLAUDE.md` lus avec elle.
 - **Mémoire** : la liste des notes, **Tout modifier**, **Mettre en ordre**, mémoire activée ou désactivée.
-- **Fichiers** : les fichiers que voit l’IA et ceux qui lui sont cachés.
+- **Fichiers** : les fichiers que voit l’IA et ceux qui lui sont cachés. Cliquez sur un nom de fichier pour l’ouvrir.
 - **Conversations** : les conversations de ce projet. Cliquez sur l’une d’elles pour ouvrir le document où elle a servi en dernier et la poursuivre dans ce panneau IA.
+- Cette page relit le dossier chaque fois qu’elle s’affiche : une note que l’IA vient de mémoriser apparaît sans la quitter. Si le fichier des consignes ou de la mémoire a changé hors de GenOffice pendant que vous le modifiiez, **Enregistrer** demande d’abord : **Recharger** lit le fichier modifié, **Enregistrer quand même** le remplace par vos modifications.
 
 ## Ce qui reste dans le dossier, et ce qu’il faut savoir
 
-- Les consignes, la mémoire et les conversations sont conservées sous forme de fichiers texte dans un dossier `.ieumoffice`, à l’intérieur du dossier de projet. Déplacez le dossier ou copiez-le sur un autre PC, et elles suivent. Sur l’autre PC, choisissez-le une fois avec **Ajouter un dossier**.
+- Les consignes, la mémoire et les conversations sont conservées sous forme de fichiers texte dans un dossier `.ieumoffice`, à l’intérieur du dossier de projet. Déplacez le dossier ou copiez-le sur un autre PC, et elles suivent. Sur l’autre PC, choisissez-le une fois avec **Ajouter un dossier** dans un panneau IA, ou **Utiliser un dossier existant** sur l’écran Projets de l’Accueil.
 - Le dossier `.ieumoffice` n’est créé que lorsqu’il y a quelque chose à écrire. Vous pouvez ouvrir et modifier ses fichiers dans le Bloc-notes.
 - Ce que vous tapez dans une conversation peut se retrouver dans la mémoire. Pour écarter quelque chose, supprimez-le avec **Supprimer** sur la ligne « Mémorisé », ou désactivez la mémoire.
 - Si vous choisissez un dossier synchronisé comme projet, ses consignes, sa mémoire et ses conversations sont aussi envoyées vers ce service. L’application vous le dit une fois, la première fois que vous le choisissez.

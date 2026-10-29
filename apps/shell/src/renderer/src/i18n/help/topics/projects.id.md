@@ -13,16 +13,16 @@ Proyek adalah satu folder di PC Anda. Pilih proyek di panel AI, dan AI bekerja d
 
 ## Proyek baru dan Tambah folder
 
-- **Proyek baru**: ketik sebuah nama, lalu folder dengan nama itu dibuat di folder simpan bawaan Anda (awalnya `Dokumen\GenOffice`; bisa diubah di Pengaturan). **Buat di tempat lain…** memungkinkan Anda memilih lokasi lain. Jika folder dengan nama itu sudah ada, Anda akan ditanya apakah folder itu mau dipakai sebagai proyek.
-- **Tambah folder**: memakai folder yang sudah Anda punya. Subfoldernya ikut disertakan. Seluruh drive, seluruh folder pengguna Anda, dan folder yang berisi data login atau data aplikasi tidak dapat dipilih.
+- **Proyek baru**: ketik sebuah nama, lalu folder dengan nama itu dibuat di folder simpan bawaan Anda (awalnya `Dokumen\GenOffice`; bisa diubah di Pengaturan). **Buat di tempat lain…** memungkinkan Anda memilih lokasi lain. Jika folder dengan nama itu sudah ada, Anda akan ditanya apakah folder itu mau dipakai sebagai proyek, dan **Gunakan folder ini** memulai dengan folder itu. Jika folder itu sudah menjadi proyek di daftar Anda, proyek itu langsung dibuka tanpa bertanya.
+- **Tambah folder** (**Gunakan folder yang ada** di layar Proyek pada Beranda): memakai folder yang sudah Anda punya. Subfoldernya ikut disertakan. Seluruh drive, seluruh folder pengguna Anda, dan folder yang berisi data login atau data aplikasi tidak dapat dipilih.
 - Jika Anda membuka dokumen di folder proyek yang belum ada di daftar, di bawah kotak masukan muncul "Dokumen ini ada di folder proyek '…'" beserta tombol **Gunakan**. Mengekliknya sama dengan Tambah folder.
-- Jika folder yang Anda terima dari orang lain sudah berisi instruksi atau memori, `AGENTS.md` atau `CLAUDE.md`, atau obrolan yang ditulis di PC lain, aplikasi menampilkannya sekali dan bertanya. **Gunakan** memakai semuanya. **Gunakan tanpa instruksi** menjauhkan instruksi dan memori itu dari AI, menyembunyikan obrolan dari PC lain, dan berhenti menambah memori; membaca file tetap bisa. Nanti Anda bisa beralih ke **Gunakan** di halaman proyek. Menutup pertanyaan itu tanpa memilih berarti folder tidak ditambahkan.
+- Jika folder yang Anda terima dari orang lain sudah berisi instruksi atau memori, `AGENTS.md` atau `CLAUDE.md`, atau obrolan yang ditulis di PC lain, aplikasi menampilkannya sekali dan bertanya. **Lihat semua** memungkinkan Anda membaca semuanya lebih dulu. **Gunakan dengan instruksi** memakai semuanya. **Gunakan tanpa instruksi** menjauhkan instruksi dan memori itu dari AI, menyembunyikan obrolan dari PC lain, dan berhenti menambah memori; membaca file tetap bisa. Nanti Anda bisa mengubahnya dengan **Gunakan instruksi juga** di halaman proyek. Mengeklik **Batal** atau menutup pertanyaan itu tanpa memilih berarti folder tidak ditambahkan.
 - Setelah itu aplikasi tidak bertanya lagi. Jika instruksi atau memori diubah di luar GenOffice, panel AI menampilkan "Instruksi berubah" satu kali, dan **Lihat** membuka bagian itu di halaman proyek.
 
 ## Instruksi dan memori
 
 - **Instruksi** adalah aturan untuk proyek ini, misalnya "Tulis laporan dalam bentuk butir, dan jangan pernah menyingkat nama instansi". Tulis di halaman proyek pada Beranda lalu tekan **Simpan**. Jika bagian teratas folder berisi `AGENTS.md` atau `CLAUDE.md`, file itu ikut dibaca, dan Anda bisa menonaktifkannya di halaman proyek.
-- **Memori** adalah catatan yang ditulis AI selama obrolan: fakta, preferensi, dan keputusan yang berguna nanti, masing-masing satu baris dengan tanggalnya. Setiap kali AI menulis catatan, panel AI menampilkan "Diingat: …" dengan tombol **Hapus**. AI tidak meminta izin Anda lebih dulu.
+- **Memori** adalah catatan yang ditulis AI selama obrolan: fakta, preferensi, dan keputusan yang berguna nanti, masing-masing satu baris dengan tanggalnya. Setiap kali AI menulis catatan, panel AI menampilkan "Diingat: …" dengan tombol **Hapus**. Jika catatan itu sudah dihapus, baris itu berbunyi "Memori dihapus: …" dan tidak punya tombol **Hapus**. AI tidak meminta izin Anda lebih dulu.
 - Saat memori makin panjang, panel AI menampilkan "Memori mulai panjang" dengan tombol **Rapikan**. Menekannya menggabungkan catatan yang tumpang tindih atau sudah usang. Versi sebelumnya tetap disimpan, dan **Urungkan** mengembalikannya. Perapian hanya terjadi saat Anda menekan tombol itu, dan memakai satu permintaan AI.
 - Di halaman proyek Anda bisa menghapus catatan, menyunting seluruh memori, dan menonaktifkan memori. Jika dinonaktifkan, tidak ada catatan baru yang ditulis, tetapi memori yang sudah ada tetap dibaca.
 - Instruksi yang sangat panjang akan terpotong bagian akhirnya, dan panel AI memberi tahu Anda. Memori selalu dikirim utuh, sepanjang apa pun.
@@ -48,17 +48,18 @@ Proyek adalah satu folder di PC Anda. Pilih proyek di panel AI, dan AI bekerja d
 
 ## Halaman proyek di Beranda
 
-**Proyek** di bilah sisi Beranda adalah tempat Anda membuat proyek, menambahkan folder, dan membuka sebuah proyek untuk mengelolanya.
+**Proyek** di bilah sisi Beranda adalah tempat Anda membuat **Proyek baru**, memilih **Gunakan folder yang ada**, dan membuka sebuah proyek untuk mengelolanya.
 
-- **Kepala halaman**: nama (mengganti nama proyek tidak mengganti nama folder), jalur folder, dan **Tampilkan di Penjelajah File**.
+- **Kepala halaman**: nama (mengganti nama proyek tidak mengganti nama folder), jalur folder, **Tampilkan di Penjelajah File**, dan statusnya. Jika proyek dipakai tanpa instruksi, muncul **Gunakan instruksi juga**.
 - **Instruksi**: kotak instruksi, serta `AGENTS.md` dan `CLAUDE.md` yang ikut dibaca.
 - **Memori**: daftar catatan, **Sunting semua**, **Rapikan**, dan sakelar memori.
-- **File**: file yang dilihat AI dan file yang disembunyikan darinya.
+- **File**: file yang dilihat AI dan file yang disembunyikan darinya. Klik nama file untuk membukanya.
 - **Obrolan**: obrolan proyek ini. Klik salah satunya untuk membuka dokumen tempat obrolan itu terakhir dipakai dan melanjutkannya di panel AI dokumen itu.
+- Halaman ini membaca ulang folder setiap kali ditampilkan, jadi catatan yang baru saja diingat AI langsung terlihat tanpa meninggalkan halaman. Jika file instruksi atau memori berubah di luar GenOffice saat Anda menyuntingnya, **Simpan** bertanya dulu: **Muat ulang** membaca file yang berubah, dan **Tetap simpan** menimpanya dengan suntingan Anda.
 
 ## Apa yang tersimpan di folder, dan hal yang perlu diketahui
 
-- Instruksi, memori, dan obrolan disimpan sebagai file teks di folder `.ieumoffice` di dalam folder proyek. Jika folder dipindahkan atau disalin ke PC lain, semuanya ikut terbawa. Di PC lain, pilih folder itu sekali dengan **Tambah folder**.
+- Instruksi, memori, dan obrolan disimpan sebagai file teks di folder `.ieumoffice` di dalam folder proyek. Jika folder dipindahkan atau disalin ke PC lain, semuanya ikut terbawa. Di PC lain, pilih folder itu sekali dengan **Tambah folder** di panel AI atau **Gunakan folder yang ada** di layar Proyek pada Beranda.
 - Folder `.ieumoffice` hanya dibuat jika ada sesuatu yang perlu ditulis. Anda bisa membuka dan menyunting file di dalamnya dengan Notepad.
 - Apa yang Anda ketik dalam obrolan bisa masuk ke memori. Agar sesuatu tidak tersimpan, hapus dengan **Hapus** pada baris "Diingat", atau nonaktifkan memori.
 - Jika Anda memilih folder yang disinkronkan sebagai proyek, instruksi, memori, dan obrolannya juga ikut diunggah ke layanan tersebut. Aplikasi memberi tahu Anda sekali, saat pertama kali folder itu dipilih.

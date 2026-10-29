@@ -8,7 +8,7 @@ Die Startseite ist GenOffices Startseite: eine Navigationsleiste links, Dateilis
 - **Favoriten**: die von Ihnen mit einem Stern versehenen Dateien. Fahren Sie über eine Dateizeile und klicken Sie auf den Stern, um sie hinzuzufügen oder zu entfernen. **In Gruppe verschieben** im ⋯-Menü sortiert markierte Dateien in benannte Gruppen; die Markierungs-Ansicht filtert danach.
 - **Benutzerhandbuch**: öffnet dieses Handbuch.
 - **Ask AI**: das Wissensbasis-Panel — stellen Sie Fragen und erhalten Sie Antworten mit Quellen aus Ihren markierten Dateien (siehe unten).
-- **Projekte**: die Ordner (Projekte), mit denen die KI arbeiten kann. Legen Sie ein Projekt an oder fügen Sie einen Ordner hinzu, und öffnen Sie eines, um seine Anweisungen, Erinnerungen, Dateien und Unterhaltungen zu verwalten. Siehe [Projekte](help://projects).
+- **Projekte**: die Ordner (Projekte), mit denen die KI arbeiten kann. Legen Sie ein Projekt an oder verwenden Sie einen vorhandenen Ordner, und öffnen Sie eines, um seine Anweisungen, Erinnerungen, Dateien und Unterhaltungen zu verwalten. Siehe [Projekte](help://projects).
 - **Ordner**: Verzeichnisse, die Sie mit **Ordner hinzufügen…** zur Seitenleiste hinzufügen oder aus dem Dateimanager dorthin ziehen. Jedes wird zu einem Stammverzeichnis, das Sie öffnen, mit Unterordnern füllen, umbenennen und daraus entfernen können; geht eines offline, wird es als nicht verfügbar angezeigt und lässt sich aus der Liste nehmen. **Neuer Ordner** legt ein weiteres an.
 - **Die Zeile ganz unten**: zeigt, ob eine KI verbunden ist — **KI verbinden** oder den Namen des verbundenen Abonnements — und öffnet die Einstellungen.
 

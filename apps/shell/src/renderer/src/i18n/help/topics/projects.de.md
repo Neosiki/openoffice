@@ -13,16 +13,16 @@ Ein Projekt ist ein Ordner auf Ihrem PC. Wählen Sie in einem KI-Bereich ein Pro
 
 ## Neues Projekt und Ordner hinzufügen
 
-- **Neues Projekt**: Geben Sie einen Namen ein, und in Ihrem Standard-Speicherordner (anfangs `Dokumente\GenOffice`, in den Einstellungen änderbar) wird ein Ordner mit diesem Namen angelegt. Mit **An anderem Ort erstellen…** wählen Sie einen anderen Speicherort. Gibt es schon einen Ordner dieses Namens, werden Sie gefragt, ob er als Projekt dienen soll.
-- **Ordner hinzufügen**: Nutzt einen Ordner, den Sie schon haben, samt Unterordnern. Ein ganzes Laufwerk, Ihr gesamter Benutzerordner und Ordner mit Anmeldedaten oder den Daten der App lassen sich nicht wählen.
+- **Neues Projekt**: Geben Sie einen Namen ein, und in Ihrem Standard-Speicherordner (anfangs `Dokumente\GenOffice`, in den Einstellungen änderbar) wird ein Ordner mit diesem Namen angelegt. Mit **An anderem Ort erstellen…** wählen Sie einen anderen Speicherort. Gibt es schon einen Ordner dieses Namens, werden Sie gefragt, ob er als Projekt dienen soll; **Diesen Ordner verwenden** startet mit ihm. Ist dieser Ordner schon ein Projekt auf Ihrer Liste, öffnet er sich ohne Nachfrage.
+- **Ordner hinzufügen** (unter **Projekte** auf der Startseite: **Vorhandenen Ordner verwenden**): Nutzt einen Ordner, den Sie schon haben, samt Unterordnern. Ein ganzes Laufwerk, Ihr gesamter Benutzerordner und Ordner mit Anmeldedaten oder den Daten der App lassen sich nicht wählen.
 - Öffnen Sie ein Dokument in einem Projektordner, der nicht auf Ihrer Liste steht, erscheint unter dem Eingabefeld „Dieses Dokument liegt im Projektordner ‚…‘“ mit der Schaltfläche **Verwenden**. Ein Klick darauf wirkt wie Ordner hinzufügen.
-- Enthält ein Ordner, den Sie von jemand anderem bekommen haben, bereits Anweisungen oder Erinnerungen, eine `AGENTS.md` oder `CLAUDE.md` oder Unterhaltungen von einem anderen PC, zeigt die App sie Ihnen einmal und fragt nach. **Verwenden** übernimmt alles. **Ohne Anweisungen verwenden** hält diese Anweisungen und Erinnerungen von der KI fern, blendet Unterhaltungen von anderen PCs aus und legt keine neuen Erinnerungen an; Dateien lesen funktioniert weiterhin. Auf der Seite des Projekts können Sie später zu **Verwenden** wechseln. Schließen Sie die Frage, ohne zu wählen, wird der Ordner nicht hinzugefügt.
+- Enthält ein Ordner, den Sie von jemand anderem bekommen haben, bereits Anweisungen oder Erinnerungen, eine `AGENTS.md` oder `CLAUDE.md` oder Unterhaltungen von einem anderen PC, zeigt die App sie Ihnen einmal und fragt nach. Mit **Alles anzeigen** lesen Sie zuerst alles. **Mit Anweisungen verwenden** übernimmt alles. **Ohne Anweisungen verwenden** hält diese Anweisungen und Erinnerungen von der KI fern, blendet Unterhaltungen von anderen PCs aus und legt keine neuen Erinnerungen an; Dateien lesen funktioniert weiterhin. Auf der Seite des Projekts können Sie später mit **Anweisungen auch verwenden** wechseln. Klicken Sie auf **Abbrechen** oder schließen Sie die Frage, ohne zu wählen, wird der Ordner nicht hinzugefügt.
 - Danach fragt die App nicht mehr. Ändern sich Anweisungen oder Erinnerungen außerhalb von GenOffice, zeigt der KI-Bereich einmal „Anweisungen geändert“, und **Ansehen** öffnet den betreffenden Teil der Projektseite.
 
 ## Anweisungen und Erinnerungen
 
 - **Anweisungen** sind die Regeln für dieses Projekt, etwa „Berichte in Stichpunkten schreiben und den Namen der Organisation nie abkürzen“. Schreiben Sie sie auf der Seite des Projekts auf der Startseite und klicken Sie auf **Speichern**. Liegt oben im Ordner eine `AGENTS.md` oder `CLAUDE.md`, wird sie ebenfalls gelesen; auf der Projektseite können Sie das abschalten.
-- **Erinnerungen** sind Notizen, die die KI während der Unterhaltungen anlegt: Fakten, Vorlieben und Entscheidungen, die später helfen, jeweils eine Zeile mit Datum. Jedes Mal, wenn sie eine schreibt, zeigt der KI-Bereich „Gemerkt: …“ mit der Schaltfläche **Löschen**. Vorher fragt sie Sie nicht.
+- **Erinnerungen** sind Notizen, die die KI während der Unterhaltungen anlegt: Fakten, Vorlieben und Entscheidungen, die später helfen, jeweils eine Zeile mit Datum. Jedes Mal, wenn sie eine schreibt, zeigt der KI-Bereich „Gemerkt: …“ mit der Schaltfläche **Löschen**. Wurde diese Notiz schon gelöscht, lautet die Zeile „Erinnerung gelöscht: …“ und hat keine Schaltfläche **Löschen**. Vorher fragt sie Sie nicht.
 - Werden die Erinnerungen lang, zeigt der KI-Bereich „Die Erinnerungen werden lang“ mit **Aufräumen**. Ein Klick darauf fasst Notizen zusammen, die sich überschneiden oder veraltet sind. Der vorherige Stand bleibt erhalten, und **Rückgängig** stellt ihn wieder her. Aufgeräumt wird nur, wenn Sie die Schaltfläche drücken, und dabei geht eine Anfrage an die KI.
 - Auf der Projektseite können Sie Notizen löschen, die gesamten Erinnerungen bearbeiten und die Erinnerungen abschalten. Abgeschaltet kommt nichts Neues hinzu, die vorhandenen Erinnerungen werden aber weiter gelesen.
 - Bei sehr langen Anweisungen fällt das Ende weg, und der KI-Bereich weist Sie darauf hin. Erinnerungen werden immer vollständig gesendet, ganz gleich, wie lang sie sind.
@@ -48,17 +48,18 @@ Ein Projekt ist ein Ordner auf Ihrem PC. Wählen Sie in einem KI-Bereich ein Pro
 
 ## Die Seite des Projekts auf der Startseite
 
-Unter **Projekte** in der Seitenleiste der Startseite legen Sie Projekte an, fügen Ordner hinzu und öffnen ein Projekt, um es zu verwalten.
+Unter **Projekte** in der Seitenleiste der Startseite legen Sie ein **Neues Projekt** an, wählen mit **Vorhandenen Ordner verwenden** einen Ordner, den Sie schon haben, und öffnen ein Projekt, um es zu verwalten.
 
-- **Kopfzeile**: der Name (eine Umbenennung ändert den Ordnernamen nicht), der Ordnerpfad, **Im Explorer anzeigen**.
+- **Kopfzeile**: der Name (eine Umbenennung ändert den Ordnernamen nicht), der Ordnerpfad, **Im Explorer anzeigen** und der Status. Wird das Projekt ohne Anweisungen verwendet, erscheint **Anweisungen auch verwenden**.
 - **Anweisungen**: das Feld für die Anweisungen sowie die mitgelesenen `AGENTS.md` und `CLAUDE.md`.
 - **Erinnerungen**: die Liste der Notizen, **Alles bearbeiten**, **Aufräumen**, Erinnerungen ein oder aus.
-- **Dateien**: die Dateien, die die KI sieht, und die, die vor ihr verborgen sind.
+- **Dateien**: die Dateien, die die KI sieht, und die, die vor ihr verborgen sind. Ein Klick auf einen Dateinamen öffnet die Datei.
 - **Unterhaltungen**: die Unterhaltungen dieses Projekts. Ein Klick öffnet das Dokument, in dem eine Unterhaltung zuletzt genutzt wurde, und Sie setzen sie in dessen KI-Bereich fort.
+- Diese Seite liest den Ordner jedes Mal neu, wenn sie angezeigt wird. Eine Erinnerung, die die KI gerade angelegt hat, erscheint also, ohne dass Sie die Seite verlassen. Wurde die Datei mit den Anweisungen oder Erinnerungen außerhalb von GenOffice geändert, während Sie sie bearbeitet haben, fragt **Speichern** zuerst nach: **Neu laden** liest die geänderte Datei, **Trotzdem speichern** überschreibt sie mit Ihren Änderungen.
 
 ## Was im Ordner bleibt, und was Sie wissen sollten
 
-- Anweisungen, Erinnerungen und Unterhaltungen liegen als Textdateien in einem Ordner `.ieumoffice` innerhalb des Projektordners. Verschieben Sie den Ordner oder kopieren Sie ihn auf einen anderen PC, wandern sie mit. Auf dem anderen PC wählen Sie ihn einmal mit **Ordner hinzufügen**.
+- Anweisungen, Erinnerungen und Unterhaltungen liegen als Textdateien in einem Ordner `.ieumoffice` innerhalb des Projektordners. Verschieben Sie den Ordner oder kopieren Sie ihn auf einen anderen PC, wandern sie mit. Auf dem anderen PC wählen Sie ihn einmal mit **Ordner hinzufügen** in einem KI-Bereich oder mit **Vorhandenen Ordner verwenden** unter **Projekte** auf der Startseite.
 - Der Ordner `.ieumoffice` entsteht erst, wenn es etwas zu schreiben gibt. Seine Dateien können Sie im Editor von Windows öffnen und bearbeiten.
 - Was Sie in einer Unterhaltung eingeben, kann in den Erinnerungen landen. Um etwas herauszuhalten, löschen Sie es mit **Löschen** in der Zeile „Gemerkt“, oder schalten Sie die Erinnerungen ab.
 - Wählen Sie einen synchronisierten Ordner als Projekt, werden dessen Anweisungen, Erinnerungen und Unterhaltungen ebenfalls zu diesem Dienst hochgeladen. Die App weist Sie einmal darauf hin, wenn Sie ihn zum ersten Mal wählen.

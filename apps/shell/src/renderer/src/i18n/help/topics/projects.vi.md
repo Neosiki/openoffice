@@ -13,16 +13,16 @@ Một dự án là một thư mục trên máy tính của bạn. Chọn dự á
 
 ## Dự án mới và Thêm thư mục
 
-- **Dự án mới**: gõ tên, một thư mục mang tên đó sẽ được tạo trong thư mục lưu mặc định của bạn (ban đầu là `Tài liệu\GenOffice`; có thể đổi trong Cài đặt). **Tạo ở nơi khác…** cho phép chọn một vị trí khác. Nếu đã có thư mục trùng tên, ứng dụng sẽ hỏi bạn có muốn dùng thư mục đó làm dự án không.
-- **Thêm thư mục**: dùng một thư mục bạn đã có. Các thư mục con cũng được tính vào. Không thể chọn cả một ổ đĩa, toàn bộ thư mục người dùng, hay thư mục chứa dữ liệu đăng nhập hoặc dữ liệu của ứng dụng.
+- **Dự án mới**: gõ tên, một thư mục mang tên đó sẽ được tạo trong thư mục lưu mặc định của bạn (ban đầu là `Tài liệu\GenOffice`; có thể đổi trong Cài đặt). **Tạo ở nơi khác…** cho phép chọn một vị trí khác. Nếu đã có thư mục trùng tên, ứng dụng sẽ hỏi bạn có muốn dùng thư mục đó làm dự án không, và **Dùng thư mục này** sẽ bắt đầu với thư mục đó. Nếu thư mục đó đã là một dự án trong danh sách, dự án sẽ mở ngay mà không hỏi.
+- **Thêm thư mục** (**Dùng thư mục có sẵn** trên màn hình Dự án của Trang chủ): dùng một thư mục bạn đã có. Các thư mục con cũng được tính vào. Không thể chọn cả một ổ đĩa, toàn bộ thư mục người dùng, hay thư mục chứa dữ liệu đăng nhập hoặc dữ liệu của ứng dụng.
 - Khi bạn mở một tài liệu nằm trong một thư mục dự án chưa có trong danh sách, dòng "Tài liệu này nằm trong thư mục dự án '…'" sẽ hiện dưới ô nhập kèm nút **Dùng**. Nhấp vào nút này cũng giống như Thêm thư mục.
-- Khi một thư mục nhận từ người khác đã có sẵn chỉ dẫn hoặc ghi nhớ, `AGENTS.md` hoặc `CLAUDE.md`, hay các cuộc trò chuyện viết trên máy khác, ứng dụng cho bạn xem một lần và hỏi. **Dùng** sẽ dùng tất cả. **Dùng mà không theo chỉ dẫn** không gửi các chỉ dẫn và ghi nhớ đó cho AI, ẩn các cuộc trò chuyện từ máy khác và ngừng thêm ghi nhớ; việc đọc tệp vẫn hoạt động. Về sau bạn có thể chuyển sang **Dùng** trên trang của dự án. Đóng câu hỏi mà không chọn thì thư mục sẽ không được thêm.
+- Khi một thư mục nhận từ người khác đã có sẵn chỉ dẫn hoặc ghi nhớ, `AGENTS.md` hoặc `CLAUDE.md`, hay các cuộc trò chuyện viết trên máy khác, ứng dụng cho bạn xem một lần và hỏi. **Xem tất cả** cho bạn đọc hết trước. **Dùng cùng chỉ dẫn** sẽ dùng tất cả. **Dùng mà không theo chỉ dẫn** không gửi các chỉ dẫn và ghi nhớ đó cho AI, ẩn các cuộc trò chuyện từ máy khác và ngừng thêm ghi nhớ; việc đọc tệp vẫn hoạt động. Về sau bạn có thể đổi bằng **Dùng cả chỉ dẫn** trên trang của dự án. Nhấn **Hủy** hoặc đóng câu hỏi mà không chọn thì thư mục sẽ không được thêm.
 - Sau đó ứng dụng không hỏi lại nữa. Nếu chỉ dẫn hoặc ghi nhớ bị thay đổi bên ngoài GenOffice, bảng AI sẽ hiện "Chỉ dẫn đã thay đổi" một lần, và **Xem** mở đúng phần đó trên trang của dự án.
 
 ## Chỉ dẫn và ghi nhớ
 
 - **Chỉ dẫn** là các quy tắc của dự án này, chẳng hạn "Viết báo cáo dạng gạch đầu dòng, và không bao giờ viết tắt tên cơ quan". Hãy viết chúng trên trang của dự án ở Trang chủ rồi nhấn **Lưu**. Nếu ở cấp trên cùng của thư mục có `AGENTS.md` hoặc `CLAUDE.md`, các tệp này cũng được đọc, và bạn có thể tắt chúng trên trang của dự án.
-- **Ghi nhớ** là những ghi chú AI viết trong lúc trò chuyện: sự thật, sở thích và quyết định sẽ có ích về sau, mỗi điều một dòng kèm ngày. Mỗi lần AI viết một ghi chú, bảng AI hiện "Đã ghi nhớ: …" kèm nút **Xóa**. AI không hỏi bạn trước.
+- **Ghi nhớ** là những ghi chú AI viết trong lúc trò chuyện: sự thật, sở thích và quyết định sẽ có ích về sau, mỗi điều một dòng kèm ngày. Mỗi lần AI viết một ghi chú, bảng AI hiện "Đã ghi nhớ: …" kèm nút **Xóa**. Nếu ghi chú đó đã bị xóa, dòng đó hiện "Đã xóa ghi nhớ: …" và không có nút **Xóa**. AI không hỏi bạn trước.
 - Khi ghi nhớ dài ra, bảng AI hiện "Ghi nhớ đang dài dần" kèm nút **Sắp xếp gọn**. Nhấn vào sẽ gộp các ghi chú trùng lặp hoặc đã cũ. Bản trước đó vẫn được giữ lại, và **Hoàn tác** sẽ khôi phục nó. Việc sắp xếp chỉ diễn ra khi bạn nhấn nút, và dùng một yêu cầu AI.
 - Trên trang của dự án, bạn có thể xóa ghi chú, sửa toàn bộ ghi nhớ và tắt ghi nhớ. Khi tắt, không có gì mới được ghi thêm, còn ghi nhớ hiện có vẫn được đọc.
 - Chỉ dẫn quá dài sẽ bị mất phần cuối, và bảng AI sẽ báo cho bạn biết. Ghi nhớ thì luôn được gửi đầy đủ, dù dài đến đâu.
@@ -48,17 +48,18 @@ Một dự án là một thư mục trên máy tính của bạn. Chọn dự á
 
 ## Trang của dự án ở Trang chủ
 
-**Dự án** trên thanh bên của Trang chủ là nơi bạn tạo dự án, thêm thư mục và mở một dự án để quản lý.
+**Dự án** trên thanh bên của Trang chủ là nơi bạn tạo **Dự án mới**, chọn **Dùng thư mục có sẵn** và mở một dự án để quản lý.
 
-- **Phần đầu**: tên (đổi tên dự án không đổi tên thư mục), đường dẫn thư mục, **Hiện trong Trình khám phá tệp**.
+- **Phần đầu**: tên (đổi tên dự án không đổi tên thư mục), đường dẫn thư mục, **Hiện trong Trình khám phá tệp** và trạng thái. Khi dự án đang dùng mà không theo chỉ dẫn, nút **Dùng cả chỉ dẫn** sẽ hiện ra.
 - **Chỉ dẫn**: ô viết chỉ dẫn, cùng `AGENTS.md` và `CLAUDE.md` được đọc kèm.
 - **Ghi nhớ**: danh sách ghi chú, **Sửa tất cả**, **Sắp xếp gọn**, bật hoặc tắt ghi nhớ.
-- **Tệp**: các tệp AI nhìn thấy và những tệp được giữ khỏi AI.
+- **Tệp**: các tệp AI nhìn thấy và những tệp được giữ khỏi AI. Nhấp vào tên tệp để mở tệp đó.
 - **Cuộc trò chuyện**: các cuộc trò chuyện của dự án này. Nhấp vào một cuộc để mở tài liệu dùng nó gần nhất và tiếp tục trong bảng AI của tài liệu đó.
+- Trang này đọc lại thư mục mỗi khi hiện ra, nên ghi nhớ AI vừa viết sẽ hiện ngay mà không cần rời trang. Nếu tệp chỉ dẫn hoặc ghi nhớ bị thay đổi bên ngoài GenOffice trong lúc bạn đang sửa, **Lưu** sẽ hỏi trước: **Tải lại** đọc tệp đã thay đổi, còn **Vẫn lưu** ghi đè tệp bằng nội dung bạn đã sửa.
 
 ## Những gì nằm lại trong thư mục, và điều cần biết
 
-- Chỉ dẫn, ghi nhớ và cuộc trò chuyện được lưu dưới dạng tệp văn bản trong thư mục `.ieumoffice` bên trong thư mục dự án. Khi bạn di chuyển thư mục hoặc chép sang máy khác, chúng đi theo. Trên máy khác, chỉ cần chọn thư mục đó một lần bằng **Thêm thư mục**.
+- Chỉ dẫn, ghi nhớ và cuộc trò chuyện được lưu dưới dạng tệp văn bản trong thư mục `.ieumoffice` bên trong thư mục dự án. Khi bạn di chuyển thư mục hoặc chép sang máy khác, chúng đi theo. Trên máy khác, chỉ cần chọn thư mục đó một lần bằng **Thêm thư mục** trong bảng AI hoặc **Dùng thư mục có sẵn** trên màn hình Dự án của Trang chủ.
 - Thư mục `.ieumoffice` chỉ được tạo khi có gì đó cần ghi. Bạn có thể mở và sửa các tệp trong đó bằng Notepad.
 - Những gì bạn gõ trong cuộc trò chuyện có thể được đưa vào ghi nhớ. Để giữ một điều nào đó lại, hãy xóa nó bằng **Xóa** trên dòng "Đã ghi nhớ", hoặc tắt ghi nhớ.
 - Nếu bạn chọn một thư mục đồng bộ làm dự án, chỉ dẫn, ghi nhớ và cuộc trò chuyện của nó cũng được tải lên dịch vụ đó. Ứng dụng báo cho bạn một lần, vào lần đầu bạn chọn.

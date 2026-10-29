@@ -13,16 +13,16 @@ Un proyecto es una carpeta de tu PC. Si eliges un proyecto en un panel de IA, la
 
 ## Nuevo proyecto y Añadir carpeta
 
-- **Nuevo proyecto**: escribe un nombre y se crea una carpeta con ese nombre en tu carpeta de guardado predeterminada (al principio `Documentos\GenOffice`; puedes cambiarla en Configuración). Con **Crear en otro lugar…** eliges otra ubicación. Si ya existe una carpeta con ese nombre, se te pregunta si quieres usarla como proyecto.
-- **Añadir carpeta**: usa una carpeta que ya tienes. Sus subcarpetas también cuentan. No se puede elegir una unidad entera, tu carpeta de usuario completa ni carpetas que guardan datos de inicio de sesión o los datos de la app.
+- **Nuevo proyecto**: escribe un nombre y se crea una carpeta con ese nombre en tu carpeta de guardado predeterminada (al principio `Documentos\GenOffice`; puedes cambiarla en Configuración). Con **Crear en otro lugar…** eliges otra ubicación. Si ya existe una carpeta con ese nombre, se te pregunta si quieres usarla como proyecto, y **Usar esta carpeta** empieza con ella. Si esa carpeta ya es un proyecto de tu lista, se abre directamente, sin preguntar.
+- **Añadir carpeta** (**Usar una carpeta existente** en la pantalla Proyectos de Inicio): usa una carpeta que ya tienes. Sus subcarpetas también cuentan. No se puede elegir una unidad entera, tu carpeta de usuario completa ni carpetas que guardan datos de inicio de sesión o los datos de la app.
 - Si abres un documento que está dentro de la carpeta de un proyecto que no figura en tu lista, debajo del campo de entrada aparece «Este documento está en la carpeta del proyecto "…"» con un botón **Usar**. Pulsarlo equivale a Añadir carpeta.
-- Cuando una carpeta que te ha pasado otra persona ya trae instrucciones o memoria, `AGENTS.md` o `CLAUDE.md`, o chats escritos en otro PC, la app te los muestra una vez y te pregunta. **Usar** lo aprovecha todo. **Usar sin instrucciones** no deja que esas instrucciones ni esa memoria lleguen a la IA, oculta los chats de otros PC y deja de añadir memoria; la lectura de archivos sigue funcionando. Más adelante puedes pasar a **Usar** en la página del proyecto. Si cierras la pregunta sin elegir, la carpeta no se añade.
+- Cuando una carpeta que te ha pasado otra persona ya trae instrucciones o memoria, `AGENTS.md` o `CLAUDE.md`, o chats escritos en otro PC, la app te los muestra una vez y te pregunta. **Ver todo** te deja leerlo todo antes. **Usar con instrucciones** lo aprovecha todo. **Usar sin instrucciones** no deja que esas instrucciones ni esa memoria lleguen a la IA, oculta los chats de otros PC y deja de añadir memoria; la lectura de archivos sigue funcionando. Más adelante puedes cambiarlo con **Usar también las instrucciones** en la página del proyecto. Si pulsas **Cancelar** o cierras la pregunta sin elegir, la carpeta no se añade.
 - Después ya no vuelve a preguntar. Si las instrucciones o la memoria cambian fuera de GenOffice, el panel de IA muestra una vez «Las instrucciones han cambiado», y **Ver** abre esa parte de la página del proyecto.
 
 ## Instrucciones y memoria
 
 - Las **instrucciones** son las reglas de este proyecto, por ejemplo «Redacta los informes en viñetas y no abrevies nunca el nombre de la organización». Escríbelas en la página del proyecto en Inicio y pulsa **Guardar**. Si en la raíz de la carpeta hay un `AGENTS.md` o un `CLAUDE.md`, también se leen, y puedes desactivarlos en la página del proyecto.
-- La **memoria** son notas que la IA escribe durante los chats: datos, preferencias y decisiones que servirán más adelante, una por línea y con fecha. Cada vez que escribe una, el panel de IA muestra «Recordado: …» con un botón **Eliminar**. No te pide permiso antes.
+- La **memoria** son notas que la IA escribe durante los chats: datos, preferencias y decisiones que servirán más adelante, una por línea y con fecha. Cada vez que escribe una, el panel de IA muestra «Recordado: …» con un botón **Eliminar**. Si esa nota ya se eliminó, la línea dice «Memoria borrada: …» y no tiene botón **Eliminar**. No te pide permiso antes.
 - Cuando la memoria se alarga, el panel de IA muestra «La memoria se está haciendo larga» con **Ordenar**. Al pulsarlo se fusionan las notas que se solapan o han quedado anticuadas. La versión anterior se conserva y **Deshacer** la recupera. Solo se ordena cuando pulsas el botón, y eso envía una petición a la IA.
 - En la página del proyecto puedes borrar notas, editar la memoria entera y desactivarla. Desactivada, no se escribe nada nuevo y la memoria que ya existe se sigue leyendo.
 - Si las instrucciones son muy largas, se pierde la parte final, y el panel de IA te lo indica. La memoria se envía siempre completa, por larga que sea.
@@ -48,17 +48,18 @@ Un proyecto es una carpeta de tu PC. Si eliges un proyecto en un panel de IA, la
 
 ## La página del proyecto en Inicio
 
-**Proyectos**, en la barra lateral de Inicio, es donde creas proyectos, añades carpetas y abres uno para gestionarlo.
+**Proyectos**, en la barra lateral de Inicio, es donde creas un **Nuevo proyecto**, eliges **Usar una carpeta existente** y abres uno para gestionarlo.
 
-- **Cabecera**: el nombre (cambiarlo no renombra la carpeta), la ruta de la carpeta y **Mostrar en el Explorador**.
+- **Cabecera**: el nombre (cambiarlo no renombra la carpeta), la ruta de la carpeta, **Mostrar en el Explorador** y el estado. Cuando el proyecto se usa sin instrucciones, aparece **Usar también las instrucciones**.
 - **Instrucciones**: el cuadro de instrucciones, y los `AGENTS.md` y `CLAUDE.md` que se leen junto a él.
 - **Memoria**: la lista de notas, **Editar todo**, **Ordenar** y la memoria activada o desactivada.
-- **Archivos**: los archivos que ve la IA y los que se le ocultan.
+- **Archivos**: los archivos que ve la IA y los que se le ocultan. Haz clic en el nombre de un archivo para abrirlo.
 - **Chats**: los chats de este proyecto. Haz clic en uno para abrir el documento donde se usó por última vez y seguir en ese panel de IA.
+- Esta página vuelve a leer la carpeta cada vez que se muestra, así que una nota que la IA acaba de recordar aparece sin salir de ella. Si el archivo de instrucciones o de memoria cambió fuera de GenOffice mientras lo editabas, **Guardar** pregunta primero: **Volver a cargar** lee el archivo cambiado y **Guardar de todos modos** lo sobrescribe con tus cambios.
 
 ## Lo que queda en la carpeta y cosas que conviene saber
 
-- Las instrucciones, la memoria y los chats se guardan como archivos de texto en una carpeta `.ieumoffice` dentro de la carpeta del proyecto. Si mueves la carpeta o la copias a otro PC, viajan con ella. En el otro PC, elígela una vez con **Añadir carpeta**.
+- Las instrucciones, la memoria y los chats se guardan como archivos de texto en una carpeta `.ieumoffice` dentro de la carpeta del proyecto. Si mueves la carpeta o la copias a otro PC, viajan con ella. En el otro PC, elígela una vez con **Añadir carpeta** en un panel de IA o con **Usar una carpeta existente** en la pantalla Proyectos de Inicio.
 - La carpeta `.ieumoffice` solo se crea cuando hay algo que escribir. Puedes abrir y editar sus archivos con el Bloc de notas.
 - Lo que escribes en un chat puede acabar en la memoria. Para dejar algo fuera, bórralo con **Eliminar** en la línea «Recordado» o desactiva la memoria.
 - Si eliges una carpeta sincronizada como proyecto, sus instrucciones, su memoria y sus chats también se suben a ese servicio. La app te avisa una vez, la primera vez que la eliges.

@@ -8,7 +8,7 @@ Laman Utama ialah halaman permulaan GenOffice: bar navigasi di kiri, senarai fai
 - **Berbintang**: fail yang anda tandakan dengan bintang. Halakan kursor ke baris fail dan klik bintang untuk menambah atau membuangnya. **Alih ke kumpulan** dalam menu ⋯ menyusun fail berbintang ke kumpulan bernama; paparan Berbintang menapis mengikutnya.
 - **Panduan Pengguna**: membuka manual ini.
 - **Ask AI**: panel pangkalan pengetahuan — ajukan soalan dan terima jawapan yang memetik fail anda yang berbintang (lihat bawah).
-- **Projek**: folder (projek) yang boleh digunakan oleh AI. Cipta projek atau tambah folder, dan buka satu untuk mengurus arahan, ingatan, fail dan perbualannya. Lihat [Projek](help://projects).
+- **Projek**: folder (projek) yang boleh digunakan oleh AI. Cipta projek atau guna folder sedia ada, dan buka satu untuk mengurus arahan, ingatan, fail dan perbualannya. Lihat [Projek](help://projects).
 - **Folder**: direktori yang anda tambah ke bar sisi dengan **Tambah folder…**, atau yang anda seret masuk daripada pengurus fail. Setiap satu menjadi lokasi yang boleh dibuka, boleh dicipta subdirektori di dalamnya, boleh dinamakan semula dan boleh dibuang; lokasi yang menjadi luar talian ditandakan sebagai tidak tersedia dan boleh dibuang daripada senarai. **Folder baharu** mencipta satu lagi.
 - **Baris di bahagian bawah**: menunjukkan sama ada AI sudah disambungkan — **Sambungkan AI**, atau nama langganan yang disambungkan — dan membuka Tetapan.
 
