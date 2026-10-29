@@ -231,7 +231,8 @@ export async function runHwpBatch(
   }
   // a batch of reads (list_tables, read_table ...) leaves an existing file as it was: no
   // rewrite, no .bak. A new document is written all the same.
-  if (!results.some((r) => r.changed) && target.output === target.input) {
+  const changed = results.some((r) => r.changed)
+  if (!changed && target.output === target.input) {
     return batchResult(
       {
         summary: `${results.length} of ${ops.length} ops read the document; nothing changed, nothing written`,
@@ -241,7 +242,15 @@ export async function runHwpBatch(
       failures,
     )
   }
-  const saved = await saveHwpSession(session, target.format)
+  // A same-format copy of a read-only batch needs no reserialization.
+  const original = !changed && target.input ? readInput(target.input) : undefined
+  const copy =
+    original && session.mods.savePlan.bytesMatchFormat(original, target.format)
+      ? original
+      : undefined
+  const saved = copy
+    ? { bytes: copy, tailsLost: false, memosLost: 0 }
+    : await saveHwpSession(session, target.format)
   let backupPath: string | undefined
   if (existsSync(target.output)) {
     backupPath = hwpBackupPath(target.output)
@@ -249,7 +258,7 @@ export async function runHwpBatch(
   }
   writeOutput(target.output, saved.bytes)
   const warnings: string[] = []
-  if (session.trackingDropped) {
+  if (session.trackingDropped && !copy) {
     warnings.push(
       'the document held tracked changes: it was edited and written as it reads now, without them',
     )
