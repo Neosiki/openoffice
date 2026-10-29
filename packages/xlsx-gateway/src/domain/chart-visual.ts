@@ -142,13 +142,21 @@ export interface ChartTextStyleState {
 }
 
 /// Numeric category labels (date serials, percents) render through their
-/// source number format instead of the raw number.
-export function formatCategoryLabel(raw: string, format: string | undefined): string {
+/// source number format instead of the raw number. `locale` picks the
+/// weekday/month names numfmt uses (Korean `aaa` must not print "Thu").
+export function formatCategoryLabel(
+  raw: string,
+  format: string | undefined,
+  locale?: string,
+): string {
   if (format === undefined || format === 'General' || raw.trim() === '') return raw
   const value = Number(raw)
   if (!Number.isFinite(value)) return raw
   try {
-    return numfmt.format(format, value, { throws: false })
+    return numfmt.format(format, value, {
+      throws: false,
+      ...(locale === undefined ? {} : { locale }),
+    })
   } catch {
     return raw
   }

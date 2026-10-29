@@ -43,7 +43,8 @@ import {
 import { planFileTableRegistrations } from './file-tables'
 import { optionsOfTableAdd } from './table-design'
 import { DEFAULT_TABLE_STYLE, builtinTablePalette, tableThemeJson } from './table-styles'
-import { t } from './i18n/locale'
+import { getLang, t } from './i18n/locale'
+import { numfmtLocaleFor } from './i18n/numfmt-locale'
 import type { OoXmlPivotConfig, PivotField } from './PivotDialog'
 import type { PivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
 import { applyFormatPatchToRange, nextSessionPivotName, nextSessionTableName } from './univer-sync'
@@ -289,7 +290,11 @@ export function readPivotSourceGrid(
           ? DATE_1904_OFFSET
           : 0
       try {
-        return numfmt.format(pattern, value + shift, { nbsp: true, throws: false })
+        return numfmt.format(pattern, value + shift, {
+          nbsp: true,
+          throws: false,
+          locale: numfmtLocaleFor(getLang()),
+        })
       } catch {
         return value
       }

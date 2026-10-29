@@ -328,6 +328,13 @@ describe('formatCategoryLabel', () => {
     expect(formatCategoryLabel('0.152', '0.0%')).toBe('15.2%')
   })
 
+  it('uses the UI locale for weekday names', () => {
+    expect(formatCategoryLabel('46324', 'yyyy"년 "m"월 "d"일("aaa)', 'ko-KR')).toBe(
+      '2026년 10월 29일(목)',
+    )
+    expect(formatCategoryLabel('46324', 'aaa', 'en-US')).toBe('Thu')
+  })
+
   it('leaves non-numeric, unformatted, and General labels alone', () => {
     expect(formatCategoryLabel('North', 'mmm\\-yy')).toBe('North')
     expect(formatCategoryLabel('44562', undefined)).toBe('44562')
