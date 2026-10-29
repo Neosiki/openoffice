@@ -291,7 +291,7 @@ const PATCHES = {
           "import { FindDialog, navigateToSearchHit } from '@/ui/find-dialog';\n" +
           "import { CellBorderBgDialog } from '@/ui/cell-border-bg-dialog';\n" +
           "import { showToast } from '@/ui/toast';\n" +
-          `import { hancomCommands, installHancomMainKeys, installHancomMenuItems } from '${HANCOM_KEYS_MODULE}';`,
+          `import { hancomCommands, installHancomMainKeys, installHancomMenuItems, installHanjaKey } from '${HANCOM_KEYS_MODULE}';`,
       },
       // the new commands, with the studio parts they build on, and their menu items
       {
@@ -304,7 +304,9 @@ const PATCHES = {
           '}));\n' +
           'installHancomMenuItems(document, getLocale());\n' +
           '// the keys the main process takes first and hands back for the table (decision 0060)\n' +
-          'installHancomMainKeys(window, () => inputHandler, dispatcher);',
+          'installHancomMainKeys(window, () => inputHandler, dispatcher);\n' +
+          '// the Hanja key on a word already typed (the input method only converts while composing)\n' +
+          'installHanjaKey(window, () => inputHandler, dispatcher);',
       },
     ],
   },
@@ -1014,6 +1016,8 @@ export const hancomHooks = [
     file: 'src/engine/command.ts',
     needles: [
       'export class InsertTextCommand',
+      // the Hanja conversion replaces a word with the studio's overwrite typing (5th argument)
+      "    private replacedText = '',",
       'export class ApplyCharFormatCommand',
       'export class ApplyParaFormatCommand',
     ],
@@ -1042,7 +1046,7 @@ export const hancomHooks = [
   },
   { file: 'src/ui/toast.ts', needles: ['export function showToast(options: ToastOptions): void'] },
   { file: 'src/i18n/core.ts', needles: ['export function getLocale(): Locale'] },
-  // what installHancomMainKeys is handed where the commands are registered
+  // what installHancomMainKeys and installHanjaKey are handed where the commands are registered
   {
     file: 'src/main.ts',
     needles: [

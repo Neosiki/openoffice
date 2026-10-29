@@ -36,6 +36,7 @@ import {
   missingPluginHooks,
   rhwpPatches,
 } from './rhwp-patches.mjs'
+import { HANJA_COMMIT, writeHanjaDictionary } from './hanja-dict.mjs'
 
 const SCRIPTS = dirname(fileURLToPath(import.meta.url))
 const APP = resolve(SCRIPTS, '..')
@@ -76,6 +77,8 @@ const AGENT_PLUGIN = join(APP, 'studio-plugin', 'agent-plugin.mjs')
 const DIALOG_THEME = join(APP, 'studio-plugin', 'dialog-theme.mjs')
 const HANCOM_KEYS = join(APP, 'studio-plugin', 'hancom-keys.mjs')
 const FORMAT_COPY = join(APP, 'studio-plugin', 'format-copy.mjs')
+const HANJA = join(APP, 'studio-plugin', 'hanja.mjs')
+const HANJA_CACHE = join(APP, 'node_modules', '.cache', 'libhangul-hanja')
 const STAMP = join(OUT, '.stamp')
 
 function git(args, cwd) {
@@ -87,7 +90,7 @@ function git(args, cwd) {
 function stampValue() {
   const hash = createHash('sha256')
   hash.update(TAG)
-  for (const file of ['build-studio.mjs', 'rhwp-patches.mjs']) {
+  for (const file of ['build-studio.mjs', 'rhwp-patches.mjs', 'hanja-dict.mjs']) {
     hash.update(readFileSync(join(SCRIPTS, file)))
   }
   // the app's own plugin and the Hangul keys are compiled into the studio
@@ -95,6 +98,8 @@ function stampValue() {
   hash.update(readFileSync(DIALOG_THEME))
   hash.update(readFileSync(HANCOM_KEYS))
   hash.update(readFileSync(FORMAT_COPY))
+  hash.update(readFileSync(HANJA))
+  hash.update(HANJA_COMMIT)
   // and so is the engine: a rebuilt WASM must reach the studio
   hash.update(readFileSync(join(CORE_DIR, 'rhwp_bg.wasm')))
   return hash.digest('hex')
@@ -197,6 +202,8 @@ async function buildStudio() {
   // the licenses travel with the build: rhwp's own, and the list of what its WASM links in
   copyFileSync(join(CACHE, 'LICENSE'), join(OUT, 'LICENSE-rhwp.txt'))
   copyFileSync(join(CACHE, 'THIRD_PARTY_LICENSES.md'), join(OUT, 'THIRD-PARTY-LICENSES-rhwp.md'))
+  // the Hanja dictionary the editor reads on the first conversion, with its notice
+  await writeHanjaDictionary(HANJA_CACHE, join(OUT, 'hanja'))
 }
 
 const force = process.argv.includes('--force')
