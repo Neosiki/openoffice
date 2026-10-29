@@ -576,6 +576,25 @@ export interface DesktopApi {
     passwordIntentPending?: boolean
     dataUrl?: string
   }>
+  /**
+   * Project folders (spec 6): first save of a new document a create flow made,
+   * into its panel's project with no dialog. The main process picks the folder
+   * and a free name (never over a file); `skipped` when the panel has no
+   * project (nothing written), `error` when the project folder refused the
+   * write. Absent in older preloads.
+   */
+  saveDocxIntoProject?(
+    defaultName: string,
+    format: DocFormat,
+    data: ArrayBuffer,
+  ): Promise<{
+    ok: boolean
+    path?: string
+    error?: string
+    skipped?: boolean
+    passwordIntentPending?: boolean
+    dataUrl?: string
+  }>
   /** MCP-driven output: write the current document to an explicit absolute path
    *  with no dialog; refuses to replace an existing file unless overwrite is true */
   saveDocxTo(path: string, data: ArrayBuffer, overwrite: boolean): Promise<McpSaveResult>

@@ -83,4 +83,5 @@ export const zh = {
   contextMissing: '找不到项目文件夹，本次请求未包含项目内容。',
   contextUnknown: '该项目已不在列表中，本次请求未包含项目内容。',
   contextFailed: '无法读取项目内容，本次请求未包含这些内容。',
+  newDocumentSaveFailed: '未能保存到项目文件夹，文档仍未命名：{error}',
 }

@@ -413,6 +413,7 @@ import {
   newFile as newFileImpl,
   printDoc as printDocImpl,
   save as saveImpl,
+  saveIntoProject as saveIntoProjectImpl,
   templateDocBytes,
   writeRecoveryCopy as writeRecoveryCopyImpl,
   forgetRecoveryCopy,
@@ -7588,6 +7589,13 @@ export function App() {
               docExtras={aiDocExtras}
               notesAccess={aiNotesAccess}
               templateDocument={templateDocument}
+              // a template copy whose run ended well goes into the panel's project (spec 6)
+              onHandedRunDone={() => {
+                const ctx = fileCtxRef.current
+                if (ctx.doc && !ctx.doc.filePath) {
+                  void saveIntoProjectImpl(ctx, ctx.doc.fileName)
+                }
+              }}
             />
           </div>
         )}

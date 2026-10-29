@@ -89,4 +89,6 @@ export const pl = {
     'Nie znaleziono folderu projektu, więc to żądanie wysłano bez kontekstu projektu.',
   contextUnknown: 'Projektu nie ma już na liście, więc to żądanie wysłano bez kontekstu projektu.',
   contextFailed: 'Nie udało się odczytać kontekstu projektu, więc to żądanie wysłano bez niego.',
+  newDocumentSaveFailed:
+    'Nie udało się zapisać w folderze projektu, więc pozostaje bez tytułu: {error}',
 } satisfies Record<keyof typeof zh, string>

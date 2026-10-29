@@ -90,4 +90,5 @@ export const vi = {
   contextUnknown:
     'Dự án không còn trong danh sách, nên yêu cầu này được gửi mà không có ngữ cảnh của dự án.',
   contextFailed: 'Không đọc được ngữ cảnh của dự án, nên yêu cầu này được gửi mà không có nó.',
+  newDocumentSaveFailed: 'Không lưu được vào thư mục dự án nên tài liệu vẫn chưa có tên: {error}',
 } satisfies Record<keyof typeof zh, string>

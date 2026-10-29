@@ -91,4 +91,6 @@ export const nl = {
   contextUnknown:
     'Het project staat niet meer in de lijst, dus dit verzoek ging zonder de projectcontext.',
   contextFailed: 'De projectcontext kon niet worden gelezen, dus dit verzoek ging zonder.',
+  newDocumentSaveFailed:
+    'Kon niet in de projectmap worden opgeslagen en blijft daarom zonder titel: {error}',
 } satisfies Record<keyof typeof zh, string>

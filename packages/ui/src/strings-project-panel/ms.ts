@@ -89,4 +89,6 @@ export const ms = {
   contextUnknown:
     'Projek ini tiada lagi dalam senarai, jadi permintaan ini dihantar tanpa konteks projek.',
   contextFailed: 'Konteks projek tidak dapat dibaca, jadi permintaan ini dihantar tanpanya.',
+  newDocumentSaveFailed:
+    'Tidak dapat disimpan dalam folder projek, jadi ia kekal tanpa tajuk: {error}',
 } satisfies Record<keyof typeof zh, string>

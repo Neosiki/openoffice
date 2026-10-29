@@ -5258,6 +5258,65 @@ export function registerDocsIpc(): void {
     }
   })
 
+  // Project folders (spec 6): the first save of a new document a create flow
+  // made (the AI's new Word document, a skill template's copy once its run
+  // ended well), into the panel's project with no dialog. The shell picks the
+  // folder from the panel's project and a free name (never over a file); the
+  // renderer offers only a name, whose folder part is dropped. Without a
+  // project (or a shell) nothing is written: `skipped`. Mirrors docs:save-new's
+  // bookkeeping once written.
+  ipcMain.handle(
+    'docs:save-into-project',
+    async (event, defaultName: unknown, format: unknown, data: unknown) => {
+      const wcId = event.sender.id
+      const write = shellHooks?.writeNewDocument
+      // an orphaned renderer, or a document that has its file already
+      if (!write || tornDownWcIds.has(wcId) || openDocByWc.has(wcId)) {
+        return { ok: false, skipped: true }
+      }
+      if (typeof defaultName !== 'string' || !(data instanceof ArrayBuffer)) {
+        return { ok: false, error: 'bad save request' }
+      }
+      const extension = format === 'odt' ? '.odt' : '.docx'
+      const named = basename(defaultName.replace(/\\/g, '/')).replace(/\.(docx|odt)$/i, '')
+      const fileName = `${sanitizeAiDocFileBase(named)}${extension}`
+      try {
+        const { bytes, plain, hashes, encrypted, passwordState } = await prepareDocSave(
+          wcId,
+          fileName,
+          data,
+          null,
+        )
+        if (tornDownWcIds.has(wcId)) return { ok: false }
+        const filePath = await write(wcId, fileName, bytes)
+        if (!filePath) return { ok: false, skipped: true }
+        // the tab closed while the write was in flight: the file is freshly
+        // created, so rolling it back is safe (mirrors docs:save-new)
+        if (tornDownWcIds.has(wcId)) {
+          await unlink(filePath).catch(() => {})
+          return { ok: false }
+        }
+        allowDocWrite(wcId, filePath)
+        rememberOpenDoc(wcId, filePath)
+        await rememberDiskState(wcId, filePath, sha256Hex(bytes))
+        pointLazyMediaAt(hashes, filePath, wcId, encrypted ? plain : undefined)
+        const passwordIntentPending = commitSavePassword(wcId, passwordState, filePath)
+        // the first save of a never-saved document: its untitled copy is stale
+        docsRecovery.noteSaved(wcId, [filePath])
+        pushRecent(filePath)
+        const savedPath = notifyFileSaved(event.sender, filePath)
+        return {
+          ok: true,
+          path: savedPath,
+          passwordIntentPending,
+          ...reissuedDoc(encrypted, hashes, plain),
+        }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
   ipcMain.handle(
     'docs:create-document',
     (event, request: CreateDocumentRequest): Promise<CreateDocumentResult> =>

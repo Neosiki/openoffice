@@ -95,4 +95,6 @@ export const it = {
     'Il progetto non è più nell’elenco, quindi questa richiesta è partita senza il contesto del progetto.',
   contextFailed:
     'Non è stato possibile leggere il contesto del progetto, quindi questa richiesta è partita senza.',
+  newDocumentSaveFailed:
+    'Impossibile salvarlo nella cartella del progetto, quindi resta senza titolo: {error}',
 } satisfies Record<keyof typeof zh, string>

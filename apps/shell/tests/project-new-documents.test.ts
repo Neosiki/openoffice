@@ -198,6 +198,39 @@ describe('writing', () => {
     })
   })
 
+  it('takes a file name only: a name holding a folder or a step up is refused', async () => {
+    const placer = makePlacer()
+    for (const name of ['drafts/a.md', '../a.md', '..', '.', '', 'a/', 'C:a.md']) {
+      await expect(placer.writeFor(HOME, name, Buffer.from('x')), name).rejects.toMatchObject({
+        reason: 'bad-path',
+      })
+    }
+    // backslash-separated names too (built here: no backslash in the source)
+    const sep = String.fromCharCode(92)
+    await expect(
+      placer.writeFor(HOME, ['drafts', 'a.md'].join(sep), Buffer.from('x')),
+    ).rejects.toMatchObject({ reason: 'bad-path' })
+    expect(readdirSync(join(root, 'drafts'))).toEqual([])
+    expect(readdirSync(root).filter((name) => name !== '.ieumoffice')).toEqual(['drafts'])
+  })
+
+  it('a tab a create flow opened writes its document into its opener folder, numbered', async () => {
+    const placer = makePlacer()
+    placer.preset(
+      NEW_TAB,
+      placer.placementOfOpener({ kind: 'window', webContentsId: IN_DOC }, HOME),
+    )
+    chosen.set(NEW_TAB, projectId)
+    writeFileSync(join(root, 'drafts', 'Deck.pptx'), 'old')
+    const written = await placer.writeFor(NEW_TAB, 'Deck.pptx', Buffer.from('new'))
+    expect(written).toBe(join(root, 'drafts', 'Deck (2).pptx'))
+    expect(readFileSync(join(root, 'drafts', 'Deck.pptx'), 'utf8')).toBe('old')
+    // the person switched the tab to "no project": nothing is written
+    chosen.set(NEW_TAB, null)
+    expect(await placer.writeFor(NEW_TAB, 'Deck.pptx', Buffer.from('x'))).toBeNull()
+    expect(readdirSync(join(root, 'drafts')).sort()).toEqual(['Deck (2).pptx', 'Deck.pptx'])
+  })
+
   it('refuses a folder that is a link', async () => {
     const target = folder('linked-target')
     try {

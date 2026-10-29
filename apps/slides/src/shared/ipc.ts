@@ -1720,6 +1720,19 @@ export interface SlidesApi {
   saveAs: (
     defaultName: string,
   ) => Promise<{ ok: boolean; path?: string; error?: string; slides?: RenderSlide[] }>
+  /**
+   * Project folders (spec 6): an untitled deck whose handed-over run ended well
+   * is saved into its panel's project. The main process picks the folder and a
+   * free name; `skipped` when there is no project (nothing written), `error`
+   * when the project folder refused the write (the deck stays untitled).
+   */
+  saveIntoProject?: () => Promise<{
+    ok: boolean
+    path?: string
+    error?: string
+    skipped?: boolean
+    slides?: RenderSlide[]
+  }>
   /** The close guard chose "Save": the main process asks the renderer to run the full save flow */
   onCloseSaveRequest: (handler: () => void) => () => void
   /** Undo/redo stack occupancy pushed by the main process (drives the QAT button gray states) */

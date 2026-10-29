@@ -59,6 +59,16 @@ export function newDocumentFolder(
   return join(root, ...segments)
 }
 
+/**
+ * Whether `fileName` names a file only: no folder part (either slash), no
+ * drive, not `.` or `..`. The folder always comes from the placement, never
+ * from whoever named the document (an editor passes a renderer's name on).
+ */
+export function isBareFileName(fileName: string): boolean {
+  if (!fileName || fileName === '.' || fileName === '..') return false
+  return !/[\\/:]/.test(fileName)
+}
+
 /** `name.ext` for 1, `name (2).ext` for 2, and so on (the extension stays last) */
 export function numberedFileName(fileName: string, n: number): string {
   if (n <= 1) return fileName
@@ -173,6 +183,7 @@ export class NewDocumentPlacer {
     fileName: string,
     bytes: Uint8Array,
   ): Promise<string> {
+    if (!isBareFileName(fileName)) throw new ProjectWriteRefused('bad-path', fileName)
     for (let n = 1; n <= NEW_DOCUMENT_NAME_ATTEMPTS; n++) {
       const target = join(placement.dir, numberedFileName(fileName, n))
       if (await entryExists(target)) continue
