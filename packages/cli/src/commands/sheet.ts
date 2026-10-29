@@ -196,6 +196,22 @@ async function apply(
   const path = resolveInput(file, ctx)
   const cellsSpec = flagString(args, 'cells')
   const opsSpec = flagString(args, 'ops')
+  if (cellsSpec && opsSpec) {
+    throw new CliError(EXIT.usage, 'choose either --cells or --ops, not both', undefined, {
+      reason: 'invalid_argument',
+    })
+  }
+  if (cellsSpec) {
+    const unsupported = ['dry-run', ...BATCH_OPTIONS.map((option) => option.name)].find((name) =>
+      flagBool(args, name),
+    )
+    if (unsupported) {
+      throw new CliError(EXIT.usage, `--${unsupported} requires --ops, not --cells`, undefined, {
+        reason: 'invalid_argument',
+        suggestion: 'use --ops for a dry run or a non-atomic batch; nothing was written',
+      })
+    }
+  }
   if (!cellsSpec && !opsSpec)
     throw new CliError(EXIT.usage, 'missing --cells <file|-> or --ops <file|->', undefined, {
       reason: 'missing_argument',
