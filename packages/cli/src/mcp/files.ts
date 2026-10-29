@@ -77,8 +77,16 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
   // marks, which is what an NFD name (what macOS volumes and many mac clients
   // emit) is built from: dropping them would still fold `résumé.pdf` onto
   // `re_sume_.pdf`.
-  let clean = base.replace(/[^\p{L}\p{N}\p{M}._\- ()]/gu, '_').replace(/^\.+/, '')
+  let clean = base
+    .replace(/[^\p{L}\p{N}\p{M}._\- ()]/gu, '_')
+    .replace(/^\.+/, '')
+    .replace(/[ .]+$/, '')
   if (clean === '') return fallback
+  // Windows device names remain reserved when followed by an extension.
+  if (
+    /^(?:CON|PRN|AUX|NUL|(?:COM|LPT)[1-9\u00b9\u00b2\u00b3])$/i.test(clean.split('.')[0]!.trimEnd())
+  )
+    clean = '_' + clean
   if (clean.length > MAX_SAFE_NAME_CHARS || Buffer.byteLength(clean) > MAX_SAFE_NAME_BYTES) {
     const ext = headWithin(extname(clean), 16, 16 * 4)
     const stem = headWithin(
@@ -88,7 +96,7 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
     )
     clean = stem + ext
   }
-  return clean
+  return clean.replace(/[ .]+$/, '')
 }
 
 export class FileStore {
