@@ -5,6 +5,7 @@ import { aiModelPopoverStyle } from './AiModelPicker'
 import { useDismissablePopover } from './popover-dismiss'
 import {
   projectChipText,
+  projectCreateLocation,
   projectPickerAction,
   projectPickerInitialIndex,
   projectPickerItems,
@@ -42,10 +43,19 @@ export interface ProjectPickerProps {
   readonly disabled?: boolean | undefined
   /** The list opened; a good moment for the caller to refresh `projects` */
   readonly onOpen?: (() => void) | undefined
+  /**
+   * The default save folder (`ProjectFolderApi.getDefaultParentFolder`), shown
+   * as where "'<name>' new project" creates the folder; absent while unknown
+   */
+  readonly defaultParentFolder?: string | undefined
   /** A project row, or "No project" (null) */
   readonly onSelect: (projectId: ProjectId | null) => void
-  /** "+ New project" (no name) or "'<name>' new project" (the search text) */
-  readonly onCreate: (name?: string) => void
+  /**
+   * A new project named as typed in the search field: under the default save
+   * folder, or with `otherPlace` ("Create somewhere else…") under a folder main
+   * asks for. Pass both to `ProjectFolderApi.createProject`; never a path.
+   */
+  readonly onCreate: (name: string, options: { readonly otherPlace: boolean }) => void
   readonly onAddFolder: () => void
   /** A "folder missing" row: the caller opens a folder picker to relocate it */
   readonly onRelocate: (projectId: ProjectId) => void
@@ -64,16 +74,21 @@ export function projectPickerOptionId(listId: string, index: number): string {
  * The project chip on the row under the AI input (`[folder name ▾]`, or "No
  * project") and its list: a search field that also names a new project,
  * "Pinned" and "Recent" rows (icon, name, folder), "+ New project", "Add
- * folder" and "No project". Hovering a row shows pin/unpin, open folder and
- * remove from list. A missing folder is dimmed with "Folder missing" and asks
- * the caller to relocate it. The search field drives ↑/↓/Home/End/Enter/Esc.
- * Every action is a callback; nothing here reads or writes projects.
+ * folder" and "No project". A name that matches no project offers "'<name>'
+ * new project" (with where it goes) and "Create somewhere else…"; "+ New
+ * project" with nothing typed asks for the name in the search field. Hovering a
+ * row shows pin/unpin, open folder and remove from list. A missing folder is
+ * dimmed with "Folder missing" and asks the caller to relocate it. The search
+ * field drives ↑/↓/Home/End/Enter/Esc. Every action is a callback; nothing
+ * here reads or writes projects.
  */
 export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
   const { lang, projects, selectedId, disabled = false } = props
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
+  /** "+ New project" was chosen with nothing typed: the field asks for the name */
+  const [askName, setAskName] = useState(false)
   const [popStyle, setPopStyle] = useState<React.CSSProperties>({})
   const chipRef = useRef<HTMLButtonElement | null>(null)
   const popRef = useRef<HTMLDivElement | null>(null)
@@ -110,6 +125,7 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
       )
     }
     setQuery('')
+    setAskName(false)
     setActive(projectPickerInitialIndex(projectPickerItems(projects, '', lang), selectedId))
     setOpen(true)
     props.onOpen?.()
@@ -121,6 +137,12 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
   }
 
   const run = (action: ProjectPickerAction) => {
+    if (action.type === 'ask-name') {
+      // nothing is created without a name: keep the list open and ask for one
+      setAskName(true)
+      inputRef.current?.focus()
+      return
+    }
     finish()
     switch (action.type) {
       case 'select':
@@ -130,8 +152,7 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
         props.onRelocate(action.projectId)
         break
       case 'create':
-        if (action.name === undefined) props.onCreate()
-        else props.onCreate(action.name)
+        props.onCreate(action.name, { otherPlace: action.otherPlace })
         break
       case 'add-folder':
         props.onAddFolder()
@@ -140,7 +161,7 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
   }
 
   const activate = (item: ProjectPickerItem | undefined) => {
-    if (item) run(projectPickerAction(item))
+    if (item) run(projectPickerAction(item, query))
   }
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -286,7 +307,7 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
     )
   }
 
-  const fixedRow = (kind: 'create' | 'new' | 'add-folder' | 'none') => {
+  const fixedRow = (kind: 'create' | 'create-elsewhere' | 'new' | 'add-folder' | 'none') => {
     const index = items.findIndex((item) => item.kind === kind)
     if (index < 0) return null
     const item = items[index]!
@@ -296,10 +317,27 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
         ? projectPanelText(lang, 'createNamed', { name: item.name })
         : projectPanelText(
             lang,
-            kind === 'new' ? 'newProject' : kind === 'add-folder' ? 'addFolder' : 'noProject',
+            kind === 'create-elsewhere'
+              ? 'createElsewhere'
+              : kind === 'new'
+                ? 'newProject'
+                : kind === 'add-folder'
+                  ? 'addFolder'
+                  : 'noProject',
           )
+    // where "'<name>' new project" puts the folder, written out
+    const location =
+      item.kind === 'create' ? projectCreateLocation(props.defaultParentFolder, item.name) : ''
     const icon =
-      kind === 'add-folder' ? <IconFolderAdd /> : kind === 'none' ? <IconNoProject /> : <IconPlus />
+      kind === 'add-folder' ? (
+        <IconFolderAdd />
+      ) : kind === 'create-elsewhere' ? (
+        <IconFolderOpen />
+      ) : kind === 'none' ? (
+        <IconNoProject />
+      ) : (
+        <IconPlus />
+      )
     return (
       <div
         {...optionProps(index)}
@@ -313,6 +351,11 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
           <span className="ai-project-row-name" dir="auto">
             {text}
           </span>
+          {location && (
+            <span className="ai-project-row-path" dir="auto" title={location}>
+              {projectPanelText(lang, 'createLocation', { path: location })}
+            </span>
+          )}
         </span>
         {chosenNone && (
           <span className="ai-project-row-check">
@@ -324,6 +367,9 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
   }
 
   const hasProjects = items.some((item) => item.kind === 'project')
+  // the name hint stays until something is typed
+  const showNameHint = askName && !query.trim()
+  const hintId = `${listId}-hint`
   const ariaLabel = projectPanelText(lang, 'chipAria', { name: chipText })
 
   return (
@@ -367,7 +413,11 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
             aria-controls={listId}
             aria-activedescendant={projectPickerOptionId(listId, current)}
             aria-label={projectPanelText(lang, 'searchPlaceholder')}
-            placeholder={projectPanelText(lang, 'searchPlaceholder')}
+            aria-describedby={showNameHint ? hintId : undefined}
+            placeholder={projectPanelText(
+              lang,
+              showNameHint ? 'newProjectNameHint' : 'searchPlaceholder',
+            )}
             value={query}
             dir="auto"
             spellCheck={false}
@@ -377,6 +427,11 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
             }}
             onKeyDown={onSearchKeyDown}
           />
+          {showNameHint && (
+            <div id={hintId} className="ai-project-hint" role="status">
+              {projectPanelText(lang, 'newProjectNameHint')}
+            </div>
+          )}
           <div
             className="ai-project-list"
             role="listbox"
@@ -384,6 +439,7 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
             aria-label={projectPanelText(lang, 'pickerLabel')}
           >
             {fixedRow('create')}
+            {fixedRow('create-elsewhere')}
             {group('pinned')}
             {group('recent')}
             {!hasProjects && !query.trim() && (

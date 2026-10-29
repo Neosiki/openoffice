@@ -122,10 +122,63 @@ describe('ProjectPicker', () => {
     expect(rowTexts()).toEqual(['Old', 'New project', 'Add folder', 'No project'])
     type('Field trip')
     expect(rowTexts()[0]).toBe('Create project “Field trip”')
+    expect(rowTexts()[1]).toBe('Create somewhere else…')
     expect(activeText()).toBe('Create project “Field trip”')
     key(search()!, 'Enter')
-    expect(props.onCreate).toHaveBeenCalledWith('Field trip')
+    expect(props.onCreate).toHaveBeenCalledWith('Field trip', { otherPlace: false })
     expect(search()).toBeNull()
+  })
+
+  it('shows where a new project goes and offers another place', () => {
+    const props = render({ lang: 'ko', defaultParentFolder: 'D:/Docs/IeumOffice' })
+    openList()
+    type('현장학습')
+    const createRow = rows()[0]!
+    expect(createRow.querySelector('.ai-project-row-path')?.textContent).toBe(
+      '만들 곳: D:/Docs/IeumOffice/현장학습',
+    )
+    expect(rowTexts()[1]).toBe('다른 곳에 만들기…')
+    key(search()!, 'ArrowDown')
+    key(search()!, 'Enter')
+    // the renderer names no place: main asks for the parent folder itself
+    expect(props.onCreate).toHaveBeenCalledWith('현장학습', { otherPlace: true })
+  })
+
+  it('leaves the location out while the default folder is not known', () => {
+    render()
+    openList()
+    type('Field trip')
+    expect(rows()[0]!.querySelector('.ai-project-row-path')).toBeNull()
+  })
+
+  it('asks for a name when "+ New project" is chosen with nothing typed', () => {
+    const props = render({ lang: 'ko' })
+    openList()
+    const newRow = () => rows().find((r) => r.textContent === '새 프로젝트')!
+    act(() => newRow().click())
+    expect(props.onCreate).not.toHaveBeenCalled()
+    // the list stays open with the focus in the search field and the hint
+    expect(document.activeElement).toBe(search())
+    expect(search()!.placeholder).toBe('새 프로젝트 이름을 입력하세요')
+    const hint = host.querySelector('.ai-project-hint')
+    expect(hint?.textContent).toBe('새 프로젝트 이름을 입력하세요')
+    expect(search()!.getAttribute('aria-describedby')).toBe(hint?.id)
+    type('예산')
+    expect(host.querySelector('.ai-project-hint')).toBeNull()
+    key(search()!, 'Enter')
+    expect(props.onCreate).toHaveBeenCalledWith('예산', { otherPlace: false })
+  })
+
+  it('takes the typed text as the name for "+ New project"', () => {
+    const props = render()
+    openList()
+    type('old')
+    act(() =>
+      rows()
+        .find((r) => r.textContent === 'New project')!
+        .click(),
+    )
+    expect(props.onCreate).toHaveBeenCalledWith('old', { otherPlace: false })
   })
 
   it('moves with ↑/↓ and chooses with Enter', () => {
@@ -185,13 +238,6 @@ describe('ProjectPicker', () => {
 
   it('maps the fixed rows to their callbacks', () => {
     const props = render({ selectedId: 'pinned' })
-    openList()
-    act(() =>
-      rows()
-        .find((r) => r.textContent === 'New project')!
-        .click(),
-    )
-    expect(props.onCreate).toHaveBeenCalledWith()
     openList()
     act(() =>
       rows()

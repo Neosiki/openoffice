@@ -27,7 +27,12 @@ import {
   shell,
   webContents,
 } from 'electron'
-import type { MenuItemConstructorOptions, NativeImage, WebContents } from 'electron'
+import type {
+  MenuItemConstructorOptions,
+  MessageBoxOptions,
+  NativeImage,
+  WebContents,
+} from 'electron'
 import { atomicWriteFile } from './atomic-write'
 import { tabStripOverlay } from './title-bar-overlay'
 import { shellWindowBackground } from './window-background'
@@ -176,6 +181,7 @@ import {
   uniquePathIn,
   authorizeMcpDocWrite,
   activeAiStreamCount,
+  legacyDocumentChatFor,
 } from '../../../docs/src/main/docs-main'
 import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { blankPdfBuffer } from '../../../pdf/src/main/blank-pdf'
@@ -426,9 +432,40 @@ import {
   KbRunScopes,
   listKnowledgeFiles,
   parseKbCreateRequest,
-  readKnowledgeFilePage,
-  searchSavedKnowledgeBase,
+  parseKbOpenScope,
+  readKnowledgeOrProjectPage,
+  searchSavedKnowledgeWithProject,
 } from './knowledge-base'
+import {
+  PROJECT_EDITORS,
+  PROJECT_FOLDER_LISTEN_CHANNEL,
+  type ProjectEditor,
+} from '@genoffice/project-store'
+import { ProjectChatStore } from './projects/chat-store'
+import { resolveCloudOnly } from './projects/cloud-files'
+import { createCachedCloudResolver } from './projects/cloud-cache'
+import {
+  downloadPromptOptions,
+  folderPickerOptions,
+  trustChoiceOf,
+  trustPromptOptions,
+  useExistingPromptOptions,
+} from './projects/project-dialog-text'
+import { createContextFiles } from './projects/project-files'
+import { ProjectGuide } from './projects/project-guide'
+import {
+  createProjectNameOnly,
+  createRerankIgnoreFilter,
+  mergeIndexRoots,
+  projectFolderRoots,
+} from './projects/project-index'
+import {
+  registerProjectFolderIpc,
+  waitForPageReturn,
+  type ProjectIpcController,
+  type ProjectWindow,
+} from './projects/project-ipc'
+import { PROJECT_UNAVAILABLE, ProjectFolderTools, type DownloadAsk } from './projects/project-tools'
 import { runHeadlessExport, type HeadlessExporters } from './headless-export'
 import { TabManager, canonicalPath, type DetachedTab } from './tab-manager'
 import { tabMenuTemplate, type TabMenuActions, isProgramFile } from './tab-menu'
@@ -4405,8 +4442,17 @@ function ensureFileIndexer(): FileIndexer | null {
     return null
   }
   fileIndexer = new FileIndexer(fileIndexStore, extractWorkerPath, {
-    roots: () => folderRootPaths().filter((root) => existsSync(root)),
+    // the listed project folders join the walk (not the home folder list, spec 5.9)
+    roots: () =>
+      mergeIndexRoots(
+        folderRootPaths().filter((root) => existsSync(root)),
+        projectFolderRoots(APP_SETTINGS_PATH()),
+      ),
     extraPaths: () => [...readRecentFiles(), ...readStarredFiles()],
+    // inside a project folder a file that is not on this PC is indexed by name only (spec 5.8)
+    nameOnly: createProjectNameOnly({
+      projectRoots: () => projectFolderRoots(APP_SETTINGS_PATH()),
+    }),
   })
   return fileIndexer
 }
@@ -5509,6 +5555,176 @@ function startQueuedWorkbookNudge(): void {
   }, 700)
 }
 
+// ---- project folders (decision 0088) ----
+//
+// One project guide, one chat store and one set of project tools for the whole
+// app, made on first use (the guide needs the final app data folder). The tools
+// hold their own run scopes, so editor runs never evict the home ask's group
+// scopes. Every request is judged by the window that sent it (project-ipc.ts).
+
+interface ProjectFolderRuntime {
+  guide: ProjectGuide
+  chats: ProjectChatStore
+  tools: ProjectFolderTools
+  scopes: KbRunScopes
+}
+
+let projectFolderRuntime: ProjectFolderRuntime | null = null
+let projectFolderIpc: ProjectIpcController | null = null
+/** webContents whose close and reload the project layer already follows */
+const projectTrackedContents = new Set<number>()
+
+/**
+ * The "not on this PC" check for lists that are read often (the context file
+ * names of every send, the project screen): a verdict is reused for a short
+ * while instead of starting the detector each time. Reads never use it.
+ */
+const projectListCloudOnly = createCachedCloudResolver((paths) => resolveCloudOnly(paths))
+
+function projectFolderServices(): ProjectFolderRuntime {
+  if (projectFolderRuntime) return projectFolderRuntime
+  const guide = new ProjectGuide({
+    settingsPath: APP_SETTINGS_PATH(),
+    homeDir: homedir(),
+    userData: app.getPath('userData'),
+    defaultParentDir: () => defaultSaveDir(),
+    language: () => currentLang(),
+    contextFiles: createContextFiles({ resolveCloudOnly: projectListCloudOnly }),
+  })
+  const chats = new ProjectChatStore({ guide, trash: (path) => shell.trashItem(path) })
+  const scopes = new KbRunScopes()
+  const tools = new ProjectFolderTools({
+    guide,
+    scopes,
+    store: () => {
+      ensureFileIndexer()?.refreshIfStale(60_000)
+      return fileIndexStore
+    },
+    askDownload: (ask) => askProjectDownload(ask),
+  })
+  projectFolderRuntime = { guide, chats, tools, scopes }
+  return projectFolderRuntime
+}
+
+/** The window a project dialog belongs to: the detached window of `owner`, else the shell */
+function projectDialogParent(owner: number): BrowserWindow | null {
+  const parent = detachedWindowForWebContents(owner) ?? shellWindow
+  return parent && !parent.isDestroyed() ? parent : null
+}
+
+async function projectMessageBox(owner: number, options: MessageBoxOptions): Promise<number> {
+  const parent = projectDialogParent(owner)
+  const result = parent
+    ? await dialog.showMessageBox(parent, options)
+    : await dialog.showMessageBox(options)
+  return result.response
+}
+
+/** "'<file>' is not on this PC; download it?" over the asking window (spec 5.8) */
+async function askProjectDownload(ask: DownloadAsk): Promise<boolean> {
+  const response = await projectMessageBox(
+    ask.owner,
+    downloadPromptOptions(currentLang(), ask.fileName),
+  )
+  return response === 0
+}
+
+const PROJECT_EDITOR_KINDS = new Set<string>(PROJECT_EDITORS.filter((kind) => kind !== 'home'))
+
+/** The AI window behind a webContents: the home renderer, an editor tab, or a detached editor */
+function projectWindowOf(id: number): ProjectWindow | null {
+  if (shellWindow && !shellWindow.isDestroyed() && shellWindow.webContents.id === id) {
+    return { kind: 'home' }
+  }
+  const doc = tabManager?.describeWebContents(id) ?? detachedDocumentFor(id)
+  if (!doc || !PROJECT_EDITOR_KINDS.has(doc.kind)) return null
+  return {
+    kind: 'editor',
+    editor: doc.kind as Exclude<ProjectEditor, 'home'>,
+    docPath: doc.filePath ?? null,
+  }
+}
+
+/** Follows a window's close (forget it) and page loads (its listeners are gone) */
+function trackProjectContents(contents: WebContents): void {
+  const id = contents.id
+  if (projectTrackedContents.has(id) || contents.isDestroyed()) return
+  projectTrackedContents.add(id)
+  contents.once('destroyed', () => {
+    projectTrackedContents.delete(id)
+    projectFolderIpc?.forget(id)
+  })
+  contents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) projectFolderIpc?.reset(id)
+  })
+}
+
+function registerProjectFolderChannels(): void {
+  projectFolderIpc = registerProjectFolderIpc({
+    services: projectFolderServices,
+    handle: (channel, handler) =>
+      ipcMain.handle(channel, (event, args: unknown) => {
+        trackProjectContents(event.sender)
+        return handler(event.sender.id, args)
+      }),
+    windowOf: projectWindowOf,
+    send: (target, channel, payload) => {
+      const contents = webContents.fromId(target)
+      if (!contents || contents.isDestroyed()) return false
+      contents.send(channel, payload)
+      return true
+    },
+    dialogs: {
+      pickFolder: async (owner, purpose) => {
+        const options = folderPickerOptions(currentLang(), purpose)
+        const parent = projectDialogParent(owner)
+        const result = parent
+          ? await dialog.showOpenDialog(parent, options)
+          : await dialog.showOpenDialog(options)
+        return result.canceled ? null : (result.filePaths[0] ?? null)
+      },
+      confirmUseExisting: async (owner, folderPath) =>
+        (await projectMessageBox(owner, useExistingPromptOptions(currentLang(), folderPath))) === 0,
+      askTrust: async (owner, prompt) =>
+        trustChoiceOf(await projectMessageBox(owner, trustPromptOptions(currentLang(), prompt))),
+      waitForReturn: async (owner) => {
+        const contents = webContents.fromId(owner)
+        return contents ? waitForPageReturn(contents) : false
+      },
+    },
+    legacyChatFor: (docPath) => legacyDocumentChatFor(docPath),
+    openFolder: async (path) => {
+      await shell.openPath(path)
+    },
+    openDocument: (path) => {
+      if (!openDocumentPath(path)) return null
+      const found = tabManager?.findTabByPath(path) ?? findDetachedTabByPath(path)
+      if (!found) return null
+      trackProjectContents(found.webContents)
+      return found.webContents.id
+    },
+    showHome: () => {
+      revealShellWindow()
+      tabManager?.openHomeTab()
+      const contents = shellWindow?.webContents
+      if (!contents || contents.isDestroyed()) return null
+      trackProjectContents(contents)
+      return contents.id
+    },
+    // the index walks the listed project folders: follow additions, removals and moves
+    projectsChanged: () => fileIndexer?.refresh(),
+    resolveCloudOnly: projectListCloudOnly,
+  })
+  ipcMain.on(PROJECT_FOLDER_LISTEN_CHANNEL, (event, message: unknown) => {
+    trackProjectContents(event.sender)
+    const { method, listening } = (message && typeof message === 'object' ? message : {}) as {
+      method?: unknown
+      listening?: unknown
+    }
+    projectFolderIpc?.listen(event.sender.id, method, listening)
+  })
+}
+
 // ---- home IPC ----
 
 function statEntries(paths: string[]): RecentEntry[] {
@@ -5551,10 +5767,18 @@ function registerHomeIpc(): void {
   // A home ask narrowed to one starred group (spec 8.8) carries a scope main
   // minted for that run; main resolves the group's members itself on every
   // call (see KbRunScopes). A call without a scope is an unscoped ask.
+  // A home ask with a project chosen (spec 5.5) also reads that project folder:
+  // the scope then covers the project plus the starred part (all, or one group).
   const kbRunScopes = new KbRunScopes()
-  ipcMain.handle('kb:open-scope', (event, group: unknown): string =>
-    kbRunScopes.open(event.sender.id, group, readStarredGroupMap()),
-  )
+  ipcMain.handle('kb:open-scope', async (event, raw: unknown): Promise<string> => {
+    const { group, projectId } = parseKbOpenScope(raw)
+    if (projectId === null) return kbRunScopes.open(event.sender.id, group, readStarredGroupMap())
+    if (!(await projectFolderServices().tools.isAvailable(projectId))) {
+      throw new Error(PROJECT_UNAVAILABLE)
+    }
+    const starred = group === null ? 'all' : { group: group as string }
+    return kbRunScopes.openProject(event.sender.id, projectId, starred, readStarredGroupMap())
+  })
   ipcMain.handle('kb:close-scope', (event, scope: unknown): void =>
     kbRunScopes.close(event.sender.id, scope),
   )
@@ -5582,11 +5806,14 @@ function registerHomeIpc(): void {
     const starred = store.pathsIndexedAsOnDisk(readStarredFiles())
     // a group-scoped ask searches its group only: a further filter on the set above, never a wider one
     const inScope = kbRunScopes.narrow(event.sender.id, raw, starred, readStarredGroupMap)
+    // a scope that also holds a project searches that folder's AI-visible files too
+    const projectId = kbRunScopes.projectOf(event.sender.id, raw)
+    const within = projectId ? await projectFolderServices().tools.visibleTest(projectId) : null
     // a starred file open with unsaved changes is left out: its excerpt would
     // be the text as last saved, before any withholding mark still in the editor
-    const hits = await searchSavedKnowledgeBase(
-      (qq, pool) =>
-        store.search(qq, { limit: pool }).hits.map((h) => ({
+    const hits = await searchSavedKnowledgeWithProject(
+      (qq, pool, inside) =>
+        store.search(qq, { limit: pool, ...(inside ? { within: inside } : {}) }).hits.map((h) => ({
           path: h.path,
           name: h.name,
           ext: h.ext,
@@ -5595,6 +5822,8 @@ function registerHomeIpc(): void {
       q,
       inScope,
       Math.min(limit, 20),
+      within,
+      (paths) => store.pathsIndexedAsOnDisk(paths),
     )
     return hits
   })
@@ -5607,14 +5836,24 @@ function registerHomeIpc(): void {
     const path = typeof req.path === 'string' ? req.path : ''
     const offsetRaw = Number(req.offset)
     const offset = Number.isFinite(offsetRaw) ? Math.floor(offsetRaw) : 0
-    if (!path || !readStarredFiles().includes(path)) {
-      throw new Error('path is not in the knowledge base')
-    }
-    // a group-scoped ask reads its group only: the same refusal, on top of the check above
-    if (!kbRunScopes.narrow(event.sender.id, raw, [path], readStarredGroupMap).includes(path)) {
-      throw new Error(KB_NOT_IN_BASE)
-    }
-    return readKnowledgeFilePage(path, offset)
+    if (!path) throw new Error(KB_NOT_IN_BASE)
+    const owner = event.sender.id
+    // the project this run's scope also reads (a scope main does not hold is refused here)
+    const projectId = kbRunScopes.projectOf(owner, raw)
+    // a starred file reads as before when the scope allows it (a group-scoped ask reads its group only)
+    const starredAllowed =
+      readStarredFiles().includes(path) &&
+      kbRunScopes.narrow(owner, raw, [path], readStarredGroupMap).includes(path)
+    // anything else is read only as a file of the run's project: visibility,
+    // unsaved changes, size and the "not on this PC" question all apply there
+    return readKnowledgeOrProjectPage(
+      path,
+      offset,
+      starredAllowed,
+      projectId
+        ? (target, at) => projectFolderServices().tools.readPath(owner, projectId, target, at)
+        : null,
+    )
   })
 
   ipcMain.handle('kb:create-document', async (_event, raw: unknown): Promise<unknown> => {
@@ -5649,7 +5888,12 @@ function registerHomeIpc(): void {
         ? query.paths.filter((p): p is string => typeof p === 'string').slice(0, 20)
         : []
       if (!q || paths.length < 2 || !ensureFileIndexer() || !fileIndexStore) return null
-      searchReranker ??= new SearchReranker(fileIndexStore)
+      // what a project's `ignore` lists stays out of the excerpts sent out (spec 5.9)
+      searchReranker ??= new SearchReranker(
+        fileIndexStore,
+        undefined,
+        createRerankIgnoreFilter({ guide: projectFolderServices().guide }),
+      )
       // excerpts leave the machine here: only from files indexed as they are on disk
       return searchReranker.rerank(q, fileIndexStore.pathsIndexedAsOnDisk(paths), settings)
     },
@@ -8410,6 +8654,7 @@ ipcMain.handle('ai:open-model-settings', () => {
 registerProjectIpc()
 registerDocsIpc()
 registerHomeIpc()
+registerProjectFolderChannels()
 registerIntegrationsIpc({
   settingsPath: APP_SETTINGS_PATH,
   window: () => shellWindow,

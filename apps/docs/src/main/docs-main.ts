@@ -81,7 +81,7 @@ import {
   familyVerticalMetrics,
 } from '@genoffice/font-metrics'
 import { createI18n, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
-import { ProjectStore } from '@genoffice/project-store'
+import { ProjectStore, type LegacyDocumentChat } from '@genoffice/project-store'
 import {
   aiChatGptSignInPages,
   aiSubscriptionLoginWindowText,
@@ -4402,6 +4402,23 @@ export function projectFilePaths(): string[] {
   } catch {
     return []
   }
+}
+
+/**
+ * The per-document chat a saved document already has in the app-data
+ * project-store, or null. Read only: unlike `project:resolveChat` it registers
+ * no mapping and creates no chat. The project folder chat list offers it as
+ * "earlier chats of this document" (decision 0088).
+ */
+export function legacyDocumentChatFor(filePath: string): LegacyDocumentChat | null {
+  const store = getProjectStore()
+  const ids = new Set(['default', ...store.listProjects().map((project) => project.id)])
+  for (const projectId of ids) {
+    const chatId = store.chatIdForPath(filePath, projectId)
+    const meta = store.listChats(projectId).find((chat) => chat.chatId === chatId)
+    if (meta) return { ...meta, projectId }
+  }
+  return null
 }
 
 export function projectFileRenamed(oldPath: string, newPath: string): void {

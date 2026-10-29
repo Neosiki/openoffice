@@ -303,12 +303,12 @@ export type AddFolderResult =
 /** Result of "new project" */
 export type CreateProjectResult =
   | { status: 'created'; project: ProjectListItem }
-  /** A folder of that name already exists; ask "use this folder as the project?" and retry with `useExisting` */
+  /** A folder of that name already exists (main asks "use this folder as the project?" itself) */
   | { status: 'exists'; folderPath: string }
   | { status: 'invalid-name' }
   /** The folder or `project.json` could not be written */
   | { status: 'unwritable' }
-  /** `useExisting` runs the add-folder path (identity and trust) */
+  /** The person chose to use an existing folder: the add-folder path (identity and trust) */
   | AddFolderResult
 
 // ────────────────────────────────────────────────────────────
@@ -669,12 +669,16 @@ export interface ProjectIdArgs {
   projectId: ProjectId
 }
 
+/**
+ * "New project" (spec 5.1). The renderer sends the typed name only: main
+ * creates `<default save folder>/<name>`, or with `otherPlace` asks for the
+ * parent folder itself (an OS folder picker over the asking window) in the same
+ * request. No path from the renderer decides where the folder is written.
+ */
 export interface CreateProjectArgs {
   name: string
-  /** Parent folder from `pickParentFolder`; absent uses the default save folder */
-  parentDir?: string
-  /** After a `status: 'exists'` answer: use that folder as the project */
-  useExisting?: boolean
+  /** "Create somewhere else…": main shows a folder picker for the parent first */
+  otherPlace?: boolean
 }
 
 export interface SetPinnedArgs extends ProjectIdArgs {
@@ -727,8 +731,11 @@ export interface ProjectFolderApi {
   addFolder(): Promise<AddFolderResult>
   /** Default parent of a new project ("default save folder"), for display */
   getDefaultParentFolder(): Promise<string>
-  /** OS folder picker for "[elsewhere…]"; null when closed */
-  pickParentFolder(): Promise<string | null>
+  /**
+   * Creates `<name>` under the default save folder, or under a folder main asks
+   * for (`otherPlace`). A folder of that name that already exists is offered as
+   * "use this folder as the project?" (identity and trust, as for "add folder").
+   */
   createProject(args: CreateProjectArgs): Promise<CreateProjectResult>
   /** Drops the list entry and its per-document choices; folder, trust and hashes stay */
   removeFromList(args: ProjectIdArgs): Promise<void>
@@ -782,6 +789,12 @@ export interface ProjectFolderApi {
   renameChat(args: RenameProjectChatArgs): Promise<ProjectWriteResult>
   /** Moves both chat files to the OS trash */
   deleteChat(args: ProjectChatRef): Promise<ProjectWriteResult>
+  /**
+   * This window's document was just saved (first save, save as): when it now sits
+   * inside the chat's project folder its path joins the chat's `documents` (spec
+   * 5.3.6). Main takes the path from the calling window, never from the request.
+   */
+  attachDocument(args: ProjectChatRef): Promise<ProjectWriteResult>
   /** Opens the chat's latest document (or the home ask panel) and tells that AI panel to open the chat */
   openDocumentChat(args: ProjectChatRef): Promise<void>
   onChatMessageAppended(listener: (event: ProjectChatAppendedEvent) => void): () => void
@@ -823,7 +836,6 @@ export const PROJECT_FOLDER_CHANNELS = {
   listProjects: 'projectFolder:listProjects',
   addFolder: 'projectFolder:addFolder',
   getDefaultParentFolder: 'projectFolder:getDefaultParentFolder',
-  pickParentFolder: 'projectFolder:pickParentFolder',
   createProject: 'projectFolder:createProject',
   removeFromList: 'projectFolder:removeFromList',
   setPinned: 'projectFolder:setPinned',
@@ -851,6 +863,7 @@ export const PROJECT_FOLDER_CHANNELS = {
   appendChat: 'projectFolder:appendChat',
   renameChat: 'projectFolder:renameChat',
   deleteChat: 'projectFolder:deleteChat',
+  attachDocument: 'projectFolder:attachDocument',
   openDocumentChat: 'projectFolder:openDocumentChat',
   getProjectDetail: 'projectFolder:getProjectDetail',
   getSettings: 'projectFolder:getSettings',
@@ -871,3 +884,18 @@ export type ProjectFolderChannel =
 
 export type ProjectFolderEventChannel =
   (typeof PROJECT_FOLDER_EVENTS)[keyof typeof PROJECT_FOLDER_EVENTS]
+
+/**
+ * Renderer → main (`ipcRenderer.send`): a window started or stopped listening to
+ * one event. Main holds an event addressed to a window that is not listening yet
+ * (a tab still loading) and delivers it once the window listens.
+ */
+export const PROJECT_FOLDER_LISTEN_CHANNEL = 'projectFolder:listen'
+
+export interface ProjectFolderListenMessage {
+  method: ProjectFolderEventMethod
+  listening: boolean
+}
+
+/** The global name the preloads expose the bridge under (`window.projectFolderApi`) */
+export const PROJECT_FOLDER_BRIDGE_KEY = 'projectFolderApi'

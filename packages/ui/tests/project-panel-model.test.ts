@@ -12,6 +12,7 @@ import {
   projectChatTitle,
   projectChipText,
   projectConsolidatedText,
+  projectCreateLocation,
   projectEditorLabel,
   projectMatchesQuery,
   projectMemoryEventText,
@@ -81,10 +82,17 @@ describe('projectPickerItems', () => {
     expect(projectMatchesQuery(nfd, '보고')).toBe(true)
   })
 
-  it('puts a create row on top only when nothing matches', () => {
+  it('puts a create row and "create somewhere else" on top only when nothing matches', () => {
     const items = projectPickerItems(PROJECTS, '  Field trip  ')
-    expect(items.map(describeItem)).toEqual(['create', 'new', 'add-folder', 'none'])
+    expect(items.map(describeItem)).toEqual([
+      'create',
+      'create-elsewhere',
+      'new',
+      'add-folder',
+      'none',
+    ])
     expect(items[0]).toEqual({ kind: 'create', name: 'Field trip' })
+    expect(items[1]).toEqual({ kind: 'create-elsewhere', name: 'Field trip' })
     expect(projectPickerItems(PROJECTS, 'Budget')[0]?.kind).not.toBe('create')
     expect(projectPickerItems([], '   ').some((i) => i.kind === 'create')).toBe(false)
   })
@@ -92,6 +100,25 @@ describe('projectPickerItems', () => {
   it('shows a project listed twice once', () => {
     const items = projectPickerItems([PROJECTS[0]!, PROJECTS[0]!], '')
     expect(items.filter((i) => i.kind === 'project')).toHaveLength(1)
+  })
+})
+
+describe('projectCreateLocation', () => {
+  it('writes the default save folder and the name with that folder’s separator', () => {
+    expect(projectCreateLocation('C:\\Users\\me\\Documents\\IeumOffice', ' 현장학습 ')).toBe(
+      'C:\\Users\\me\\Documents\\IeumOffice\\현장학습',
+    )
+    expect(projectCreateLocation('C:\\Work\\', 'Trip')).toBe('C:\\Work\\Trip')
+    expect(projectCreateLocation('D:\\', 'Trip')).toBe('D:\\Trip')
+    expect(projectCreateLocation('/Users/me/Documents/IeumOffice', 'Trip')).toBe(
+      '/Users/me/Documents/IeumOffice/Trip',
+    )
+    expect(projectCreateLocation('/home/me/', 'Trip')).toBe('/home/me/Trip')
+  })
+
+  it('says nothing while the default folder is not known', () => {
+    expect(projectCreateLocation(undefined, 'Trip')).toBe('')
+    expect(projectCreateLocation('  ', 'Trip')).toBe('')
   })
 })
 
@@ -111,8 +138,21 @@ describe('projectPickerAction', () => {
     expect(projectPickerAction({ kind: 'create', name: 'X' })).toEqual({
       type: 'create',
       name: 'X',
+      otherPlace: false,
     })
-    expect(projectPickerAction({ kind: 'new' })).toEqual({ type: 'create' })
+    expect(projectPickerAction({ kind: 'create-elsewhere', name: 'X' })).toEqual({
+      type: 'create',
+      name: 'X',
+      otherPlace: true,
+    })
+    // "+ New project" never creates without a name: it asks for one first
+    expect(projectPickerAction({ kind: 'new' })).toEqual({ type: 'ask-name' })
+    expect(projectPickerAction({ kind: 'new' }, '   ')).toEqual({ type: 'ask-name' })
+    expect(projectPickerAction({ kind: 'new' }, ' Trip ')).toEqual({
+      type: 'create',
+      name: 'Trip',
+      otherPlace: false,
+    })
     expect(projectPickerAction({ kind: 'add-folder' })).toEqual({ type: 'add-folder' })
     expect(projectPickerAction({ kind: 'none' })).toEqual({ type: 'select', projectId: null })
   })

@@ -22,8 +22,10 @@ export type {
 export {
   MEMORY_BACKUP_PATTERN,
   PROJECT_EDITORS,
+  PROJECT_FOLDER_BRIDGE_KEY,
   PROJECT_FOLDER_CHANNELS,
   PROJECT_FOLDER_EVENTS,
+  PROJECT_FOLDER_LISTEN_CHANNEL,
   PROJECT_FOLDER_NAMES,
   PROJECT_FORMAT_VERSION,
   PROJECT_ID_PATTERN,
@@ -69,6 +71,7 @@ export type {
   ProjectFolderEventChannel,
   ProjectFolderEventMethod,
   ProjectFolderFile,
+  ProjectFolderListenMessage,
   ProjectForeignChat,
   ProjectHashedFile,
   ProjectId,

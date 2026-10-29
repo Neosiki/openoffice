@@ -98,7 +98,6 @@ export function fakeProjectBridge(
     listProjects: vi.fn(async () => []),
     addFolder: vi.fn(),
     getDefaultParentFolder: vi.fn(async () => ''),
-    pickParentFolder: vi.fn(async () => null),
     createProject: vi.fn(),
     removeFromList: vi.fn(async () => undefined),
     setPinned: vi.fn(async () => undefined),
