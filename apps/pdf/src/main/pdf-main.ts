@@ -626,14 +626,26 @@ interface RuntimePaths {
   rendererFile?: string
   /** Shell router used to open generated PDFs in a new GenOffice tab. */
   openGeneratedPath?: (path: string) => boolean
-  /** Host-owned cross-app document creator (the shell routes DOCX into Docs). */
-  createDocument?: (request: CreateDocumentRequest) => Promise<CreateDocumentResult>
+  /**
+   * Host-owned cross-app document creator (the shell routes DOCX into Docs).
+   * `ownerWebContentsId` is the asking view: its panel's project decides where
+   * the document goes (spec 6).
+   */
+  createDocument?: (
+    request: CreateDocumentRequest,
+    ownerWebContentsId?: number,
+  ) => Promise<CreateDocumentResult>
   /** The shell's PDF tools window, opened on a task with a file picked (decision 0030) */
   openPdfTools?: (path: string, tool: PdfToolsHandoffTool) => boolean
   /** The shell opens (or brings forward) a PDF's note in a Markdown tab (reading-assist 4.9) */
   openNote?: (path: string) => boolean | Promise<boolean>
   /** The shell puts text at the end of the note's open tab; the file is not written */
   insertIntoNote?: (path: string, text: string) => boolean | Promise<boolean>
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -1474,7 +1486,7 @@ function registerPdfIpc(): void {
       const create = runtime.createDocument
       if (!create) return { ok: false, error: 'pdf: document creation is unavailable in this host' }
       try {
-        return await create(parsed)
+        return await create(parsed, e.sender.id)
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
@@ -1695,7 +1707,11 @@ function registerPdfIpc(): void {
         // a restored copy whose file went missing suggests where that file was
         defaultPath:
           recovery.saveAsDefaultPath(e.sender.id, path) ??
-          join(configuredDefaultSaveDir(app), name),
+          // an untitled copy whose panel has a project starts in that folder (spec 6)
+          join(
+            (await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app),
+            name,
+          ),
         filters: [{ name: 'PDF', extensions: ['pdf'] }],
       }
       const picked = parent

@@ -2,6 +2,7 @@ import { execSync, spawn } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -451,7 +452,8 @@ import {
   trustPromptOptions,
   useExistingPromptOptions,
 } from './projects/project-dialog-text'
-import { createContextFiles } from './projects/project-files'
+import { createContextFiles, projectMentionFiles } from './projects/project-files'
+import { NewDocumentPlacer, type NewDocumentOpener } from './projects/new-documents'
 import { ProjectGuide } from './projects/project-guide'
 import {
   createProjectNameOnly,
@@ -682,6 +684,26 @@ function bundledCliRunner(): ReturnType<typeof createCliRunner> {
   return cliRunner
 }
 
+/**
+ * Markdown made into .docx bytes by the bundled CLI in an app temp folder, for
+ * a home create_document with a project (spec 6): the file reaches the
+ * project folder only through its write guard, after the conversion succeeded.
+ */
+async function markdownDocxBytes(markdown: string): Promise<Uint8Array> {
+  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-kb-docx-'))
+  try {
+    const out = join(dir, 'document.docx')
+    await createFileViaCli(bundledCliRunner(), {
+      type: 'docx',
+      input: { name: 'content.md', content: markdown },
+      out,
+    })
+    return new Uint8Array(readFileSync(out))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
 configureDocsRuntime({
   preloadPath: join(DOCS_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.DOCS_RENDERER_URL,
@@ -696,12 +718,15 @@ configureSheetsRuntime({
   // The sheets AI's create_document (docx/pdf/md) funnels into the docs-owned
   // creation flow, like the pdf app below.
   createDocument: createAiDocument,
+  newDocumentDir: (id) => newDocumentFolderFor(id),
+  writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
 })
 configureSlidesRuntime({
   preloadPath: join(SLIDES_OUT, 'preload', 'index.js'),
   rendererDevUrl: process.env.SLIDES_RENDERER_URL,
   rendererFilePath: join(SLIDES_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
 })
 /** a PDF's note (reading-assist 4.9): its Markdown tab or detached window, else a new tab */
 const noteTabHost: NoteTabHost = {
@@ -730,23 +755,29 @@ configurePdfRuntime({
   openPdfTools: (path, tool) => openPdfToolsWithFile(path, tool),
   openNote: (path) => openNoteTab(noteTabHost, path) !== null,
   insertIntoNote: (path, text) => insertIntoNoteTab(noteTabHost, path, text),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
 })
 configureMarkdownRuntime({
   preloadPath: join(MARKDOWN_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.MARKDOWN_RENDERER_URL,
   rendererFile: join(MARKDOWN_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
+  writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
 })
 configureHtmlRuntime({
   preloadPath: join(HTML_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.HTML_RENDERER_URL,
   rendererFile: join(HTML_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
+  writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
 })
 configureMindmapRuntime({
   preloadPath: join(MINDMAP_OUT, 'preload', 'index.js'),
   rendererUrl: process.env.MINDMAP_RENDERER_URL,
   rendererFile: join(MINDMAP_OUT, 'renderer', 'index.html'),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
 })
 configureHwpRuntime({
   preloadPath: join(HWP_OUT, 'preload', 'index.js'),
@@ -756,6 +787,7 @@ configureHwpRuntime({
   openFileDialog: () => void openFileViaDialog(),
   goHome: () => tabManager?.openHomeTab(),
   newDocument: () => newHwpTab(),
+  newDocumentDir: (id) => newDocumentFolderFor(id),
 })
 configureEpubRuntime({
   preloadPath: join(EPUB_OUT, 'preload', 'index.js'),
@@ -4907,6 +4939,15 @@ function createShellWindow(): void {
     openTab: (openPath, options) => ensureTabManager().openDocsTab(openPath, options),
     openAiDocTab: (content) =>
       ensureTabManager().openDocsTab(undefined, { newBlank: true, aiContent: content }),
+    // the AI's new Word document follows the project of the panel that asked (spec 6)
+    openAiDocTabFor: (content, owner) => {
+      const manager = ensureTabManager()
+      const tabId = manager.openDocsTab(undefined, { newBlank: true, aiContent: content })
+      const contents = manager.webContentsForTab(tabId)
+      if (contents) followOpenerProject(contents, { kind: 'window', webContentsId: owner })
+    },
+    newDocumentDir: (id) => newDocumentFolderFor(id),
+    writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
     listTabs: () =>
       (tabManager?.list() ?? [])
         .filter((t) => t.kind === 'docs')
@@ -5606,6 +5647,60 @@ function projectFolderServices(): ProjectFolderRuntime {
   return projectFolderRuntime
 }
 
+// New documents the AI makes go into the panel's project folder (spec 6). The
+// placer reads a window's chosen project from the request layer and writes
+// through the project guide's write guard only.
+const newDocuments = new NewDocumentPlacer({
+  guide: {
+    projectRoot: (id) => projectFolderServices().guide.projectRoot(id),
+    writeNewDocument: (id, target, data) =>
+      projectFolderServices().guide.writeNewDocument(id, target, data),
+  },
+  windowProject: async (id) => (projectFolderIpc ? projectFolderIpc.windowProject(id) : null),
+  documentOf: (id) => {
+    const win = projectWindowOf(id)
+    return win?.kind === 'editor' ? win.docPath : null
+  },
+})
+
+/** The folder an untitled document's save dialog opens in (spec 6); null: the default folder */
+function newDocumentFolderFor(webContentsId: number): Promise<string | null> {
+  return newDocuments.saveDialogFolder(webContentsId).catch(() => null)
+}
+
+/** A new document the AI made in this window, into its panel's project; null without one */
+function writeProjectNewDocument(
+  webContentsId: number,
+  fileName: string,
+  bytes: Uint8Array,
+): Promise<string | null> {
+  return newDocuments.writeFor(webContentsId, fileName, bytes)
+}
+
+/** The home renderer's webContents id, when the shell window is up */
+function homeContentsId(): number | null {
+  return shellWindow && !shellWindow.isDestroyed() ? shellWindow.webContents.id : null
+}
+
+/**
+ * A create flow opened `contents` for `opener` (spec 5.2, 6): the new tab's AI
+ * panel starts in the opener's project and its new document goes into the
+ * opener's folder. Nothing changes when the opener has no project.
+ */
+function followOpenerProject(
+  contents: {
+    readonly id: number
+    isDestroyed(): boolean
+    once(e: 'destroyed', f: () => void): unknown
+  },
+  opener: NewDocumentOpener | null,
+): void {
+  if (!opener || contents.isDestroyed()) return
+  const id = contents.id
+  newDocuments.preset(id, newDocuments.placementOfOpener(opener, homeContentsId()))
+  contents.once('destroyed', () => newDocuments.forget(id))
+}
+
 /** The window a project dialog belongs to: the detached window of `owner`, else the shell */
 function projectDialogParent(owner: number): BrowserWindow | null {
   const parent = detachedWindowForWebContents(owner) ?? shellWindow
@@ -5714,6 +5809,7 @@ function registerProjectFolderChannels(): void {
     // the index walks the listed project folders: follow additions, removals and moves
     projectsChanged: () => fileIndexer?.refresh(),
     resolveCloudOnly: projectListCloudOnly,
+    presetProjectOf: (sender) => newDocuments.presetProjectOf(sender),
   })
   ipcMain.on(PROJECT_FOLDER_LISTEN_CHANNEL, (event, message: unknown) => {
     trackProjectContents(event.sender)
@@ -5856,8 +5952,10 @@ function registerHomeIpc(): void {
     )
   })
 
-  ipcMain.handle('kb:create-document', async (_event, raw: unknown): Promise<unknown> => {
+  ipcMain.handle('kb:create-document', async (event, raw: unknown): Promise<unknown> => {
     const req = parseKbCreateRequest(raw)
+    // a project chosen at home: the new document goes to its folder's top (spec 6)
+    const placement = await newDocuments.placementFor(event.sender.id)
     return createKnowledgeDocument(
       {
         dir: defaultSaveDir,
@@ -5872,6 +5970,15 @@ function registerHomeIpc(): void {
           })
         },
         recordRecent: recordRecentFile,
+        ...(placement
+          ? {
+              project: {
+                write: (fileName: string, bytes: Uint8Array) =>
+                  newDocuments.write(placement, fileName, bytes),
+                docxBytes: (markdown: string) => markdownDocxBytes(markdown),
+              },
+            }
+          : {}),
       },
       req,
     )
@@ -8739,6 +8846,9 @@ const templateTabs = createTemplateTabs({
   removeDir: async (dir) => rmSync(dir, { recursive: true, force: true }),
   templateFileOf: (id) => userSkills.templateFile(id),
   openCopy: (copy) => openTemplateCopyTab(copy),
+  // a skill template's copy follows the project of the panel that asked (spec 6)
+  copyOpenedFor: (contents, openerId) =>
+    followOpenerProject(contents, { kind: 'window', webContentsId: openerId }),
   focusTab: (tabId) => {
     const manager = tabManager
     if (!manager || !manager.list().some((tab) => tab.id === tabId)) return false
@@ -8987,6 +9097,14 @@ app.whenReady().then(async () => {
       },
       recent: async () =>
         readRecentFiles().map((path) => ({ path, title: basename(path), missing: false })),
+      // spec 5.13: the newest AI-visible files of the asking panel's project
+      projectFiles: async (asker) => {
+        if (asker.webContentsId === undefined || !projectFolderIpc) return []
+        const projectId = await projectFolderIpc.windowProject(asker.webContentsId)
+        if (!projectId) return []
+        const visibility = await projectFolderServices().guide.aiVisibility(projectId)
+        return visibility ? projectMentionFiles(visibility) : []
+      },
       stat: async (path) => {
         const entry = statPathEntries([path], new Set<string>())[0]
         return entry && !entry.missing ? { sizeBytes: entry.sizeBytes } : null
@@ -9093,13 +9211,18 @@ app.whenReady().then(async () => {
     parentWindow: () => shellWindow,
     lang: () => currentLang(),
     theme: () => currentTheme(),
-    openTargetTab: (handoff) => {
+    // the new tab follows the project of the window the create window was opened from (spec 6)
+    openTargetTab: (handoff, opener) => {
       revealShellWindow()
-      ensureTabManager().openGenerateTargetTab(handoff)
+      const manager = ensureTabManager()
+      const contents = manager.webContentsForTab(manager.openGenerateTargetTab(handoff))
+      if (contents) followOpenerProject(contents, opener)
     },
-    openConvertedTab: (doc) => {
+    openConvertedTab: (doc, opener) => {
       revealShellWindow()
-      ensureTabManager().openConversionResult(doc)
+      const manager = ensureTabManager()
+      const contents = manager.webContentsForTab(manager.openConversionResult(doc))
+      if (contents) followOpenerProject(contents, opener)
     },
     starredGroupPaths: (group) => {
       const groupOf = readStarredGroupMap()

@@ -17,6 +17,7 @@ import {
   waitForPageReturn,
   type ProjectFolderServices,
   type ProjectIpcController,
+  type ProjectIpcDeps,
   type ProjectWindow,
 } from '../src/main/projects/project-ipc'
 import { PROJECT_SCOPE_UNKNOWN } from '../src/main/projects/project-tools'
@@ -56,7 +57,7 @@ function chatInfo(over: Partial<ProjectChatInfo> = {}): ProjectChatInfo {
   }
 }
 
-function setup() {
+function setup(extra: Partial<ProjectIpcDeps> = {}) {
   const handlers = new Map<string, Handler>()
   const windows = new Map<number, ProjectWindow>([
     [HOME, { kind: 'home' }],
@@ -210,6 +211,7 @@ function setup() {
     openDocument,
     showHome,
     projectsChanged,
+    ...extra,
   })
 
   const call = (name: keyof typeof PROJECT_FOLDER_CHANNELS, sender: number, args?: unknown) => {
@@ -308,6 +310,38 @@ describe('the asking window decides the document', () => {
     expect(t.controller.untitledProject(UNTITLED)).toBe('p1')
     t.controller.forget(UNTITLED)
     expect(t.controller.untitledProject(UNTITLED)).toBeNull()
+  })
+
+  it('starts a tab a create flow opened in its project until its panel chooses', async () => {
+    const preset = setup({ presetProjectOf: async (sender) => (sender === UNTITLED ? 'p1' : null) })
+    expect(await preset.controller.windowProject(UNTITLED)).toBe('p1')
+    expect(await preset.call('getSelection', UNTITLED)).toEqual({
+      projectId: 'p1',
+      initialChatId: null,
+    })
+    expect(preset.guide.getSelection).toHaveBeenLastCalledWith({
+      kind: 'untitled',
+      projectId: 'p1',
+    })
+    await preset.call('setSelection', UNTITLED, { projectId: null })
+    expect(await preset.call('getSelection', UNTITLED)).toEqual({
+      projectId: null,
+      initialChatId: null,
+    })
+    expect(await preset.controller.windowProject(UNTITLED)).toBeNull()
+  })
+
+  it('knows the project each window’s panel chose, and nothing for a stranger', async () => {
+    expect(await t.controller.windowProject(DOCS)).toBe('p1')
+    expect(await t.controller.windowProject(HOME)).toBeNull()
+    await t.call('setSelection', HOME, { projectId: 'p1' })
+    expect(await t.controller.windowProject(HOME)).toBe('p1')
+    await t.call('setSelection', DOCS, { projectId: null })
+    expect(await t.controller.windowProject(DOCS)).toBeNull()
+    t.controller.reset(DOCS)
+    // after a reload the starting selection counts again
+    expect(await t.controller.windowProject(DOCS)).toBe('p1')
+    expect(await t.controller.windowProject(STRANGER)).toBeNull()
   })
 
   it('ignores a path the renderer sends with a message', async () => {

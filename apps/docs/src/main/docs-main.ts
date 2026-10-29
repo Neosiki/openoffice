@@ -5110,12 +5110,18 @@ export function registerDocsIpc(): void {
       const current: DocFormat = format === 'odt' ? 'odt' : 'docx'
       const word = { name: tm('filterWord'), extensions: ['docx'] }
       const odt = { name: tm('filterOdt'), extensions: ['odt'] }
+      const source = typeof sourcePath === 'string' ? sourcePath : null
+      // a never-saved document whose panel has a project is offered in that folder (spec 6)
+      const projectDir =
+        source || openDocByWc.has(event.sender.id)
+          ? null
+          : await shellHooks?.newDocumentDir?.(event.sender.id)
       const result = await saveDialog(event, {
         title: tm('dlgSaveAs'),
-        defaultPath: saveAsSuggestion(
-          typeof sourcePath === 'string' ? sourcePath : null,
-          defaultName,
-        ),
+        defaultPath:
+          projectDir && basename(defaultName) === defaultName
+            ? join(projectDir, defaultName)
+            : saveAsSuggestion(source, defaultName),
         // the document's own format comes first: it is the dialog's default
         filters: current === 'odt' ? [odt, word] : [word, odt],
       })
@@ -5254,8 +5260,8 @@ export function registerDocsIpc(): void {
 
   ipcMain.handle(
     'docs:create-document',
-    (_event, request: CreateDocumentRequest): Promise<CreateDocumentResult> =>
-      createAiDocument(request),
+    (event, request: CreateDocumentRequest): Promise<CreateDocumentResult> =>
+      createAiDocument(request, event.sender.id),
   )
 
   // MCP-driven output: write the live document to an explicit absolute path with
@@ -5876,6 +5882,27 @@ interface DocsShellHooks {
   closeActiveTab(): void
   /** Shell router used to open exported PDFs in a new GenOffice tab. */
   openGeneratedPath?(path: string): boolean
+  /**
+   * Project folders (spec 6): the AI's new Word document opens in a blank tab
+   * that follows the project of `ownerWebContentsId`'s panel (its first save is
+   * offered in that project's folder). Without it, `openAiDocTab`.
+   */
+  openAiDocTabFor?(content: AiDocContent, ownerWebContentsId: number): void
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?(webContentsId: number): Promise<string | null>
+  /**
+   * Project folders (spec 6): write a new document the AI made for this view
+   * into the project its panel chose (a free name, never over a file);
+   * resolves to the path written, or null when the panel has no project.
+   */
+  writeNewDocument?(
+    webContentsId: number,
+    fileName: string,
+    bytes: Uint8Array,
+  ): Promise<string | null>
 }
 let shellHooks: DocsShellHooks | null = null
 export function setDocsShellHooks(hooks: DocsShellHooks | null): void {
@@ -5939,9 +5966,15 @@ export function sanitizeAiDocFileBase(title: string): string {
  * inserts the queued content on boot and saves itself (the full-fidelity
  * HTML → docx conversion lives in the docs renderer); pdf and md are written
  * directly here. Also called by other apps' mains via shell-wired hooks.
+ *
+ * `ownerWebContentsId` is the view whose AI asked. When its panel has a
+ * project (spec 6), pdf / md / html are made first and then written into that
+ * project's folder by the shell (a free name, never over a file), and the
+ * docx tab follows that project; otherwise everything is as described above.
  */
 export async function createAiDocument(
   request: CreateDocumentRequest,
+  ownerWebContentsId?: number,
 ): Promise<CreateDocumentResult> {
   const type = request?.type
   const title = sanitizeAiDocFileBase(request?.title)
@@ -5950,7 +5983,9 @@ export async function createAiDocument(
   try {
     if (type === 'docx') {
       const payload: AiDocContent = { title, html: content }
-      if (shellHooks?.openAiDocTab) shellHooks.openAiDocTab(payload)
+      if (ownerWebContentsId !== undefined && shellHooks?.openAiDocTabFor) {
+        shellHooks.openAiDocTabFor(payload, ownerWebContentsId)
+      } else if (shellHooks?.openAiDocTab) shellHooks.openAiDocTab(payload)
       else {
         const win = createDocsWindow(undefined)
         markDocsNewBlank(win.webContents.id)
@@ -5964,14 +5999,17 @@ export async function createAiDocument(
         () =>
           new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } }),
       )
-      const filePath = uniquePathIn(defaultSaveDir(), `${title}.pdf`)
-      await writeFile(filePath, bytes)
+      const placed = await placeAiDocument(ownerWebContentsId, `${title}.pdf`, bytes)
+      const filePath = placed ?? uniquePathIn(defaultSaveDir(), `${title}.pdf`)
+      if (!placed) await writeFile(filePath, bytes)
       openGeneratedFile(filePath)
       return { ok: true, path: filePath }
     }
     if (type === 'md' || type === 'html') {
-      const filePath = uniquePathIn(defaultSaveDir(), `${title}.${type}`)
-      await writeFile(filePath, content, 'utf8')
+      const fileName = `${title}.${type}`
+      const placed = await placeAiDocument(ownerWebContentsId, fileName, Buffer.from(content))
+      const filePath = placed ?? uniquePathIn(defaultSaveDir(), fileName)
+      if (!placed) await writeFile(filePath, content, 'utf8')
       openGeneratedFile(filePath)
       return { ok: true, path: filePath }
     }
@@ -5979,6 +6017,17 @@ export async function createAiDocument(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
+}
+
+/** A made document into the asking view's project folder (spec 6); null without a project */
+async function placeAiDocument(
+  ownerWebContentsId: number | undefined,
+  fileName: string,
+  bytes: Uint8Array,
+): Promise<string | null> {
+  const write = shellHooks?.writeNewDocument
+  if (ownerWebContentsId === undefined || !write) return null
+  return write(ownerWebContentsId, fileName, bytes)
 }
 
 // ---- application menu ----

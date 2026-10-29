@@ -1,6 +1,6 @@
 import type { Dirent } from 'node:fs'
 import { readdir, stat } from 'node:fs/promises'
-import { extname, join } from 'node:path'
+import { basename, extname, join } from 'node:path'
 import type { ProjectFileEntry } from '@genoffice/project-store'
 import { isSupportedTreeFile } from '../folder-tree'
 import { SCAN_MAX_DEPTH } from '../file-index/scan'
@@ -143,6 +143,22 @@ export function toEntry(file: VisibleFile): ProjectFileEntry {
     mtimeMs: file.mtimeMs,
     cloudOnly: file.cloudOnly,
   }
+}
+
+/** project files in the AI input's `@` list (spec 5.13); tunable */
+export const PROJECT_MENTION_FILES_LIMIT = 50
+
+/**
+ * The `@` list's "files of this project" (spec 5.13): the newest `limit`
+ * AI-visible supported files (hidden entries, `.ieumoffice/` and `ignore` left
+ * out), as path and file name. Nothing is opened.
+ */
+export async function projectMentionFiles(
+  visibility: ProjectAiVisibility,
+  limit: number = PROJECT_MENTION_FILES_LIMIT,
+): Promise<Array<{ path: string; title: string }>> {
+  const files = await listVisibleFiles(visibility)
+  return files.slice(0, limit).map((file) => ({ path: file.path, title: basename(file.path) }))
 }
 
 /**
