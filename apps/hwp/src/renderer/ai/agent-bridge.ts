@@ -54,6 +54,8 @@ const METHODS = [
   'createStyle',
   'editStyle',
   'printPages',
+  'previewPage',
+  'pageTarget',
   'formatCells',
   'mergeCells',
   'splitCell',

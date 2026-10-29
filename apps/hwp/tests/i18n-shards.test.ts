@@ -13,6 +13,13 @@ describe('hwp renderer strings', () => {
     }
   })
 
+  it('keeps the page and total placeholders of the preview in every language', () => {
+    for (const lang of LANGS) {
+      expect(strings[lang].previewPageOf, lang).toContain('{page}')
+      expect(strings[lang].previewPageOf, lang).toContain('{total}')
+    }
+  })
+
   it('translates rather than copies English outside English', () => {
     for (const lang of LANGS) {
       if (lang === 'en') continue
