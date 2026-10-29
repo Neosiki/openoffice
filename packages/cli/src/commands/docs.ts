@@ -128,6 +128,13 @@ export const docsCommand: CommandDef = {
     },
   ],
   async run(args, ctx) {
+    for (const option of docsCommand.options ?? []) {
+      if (option.value && args.flags[option.name] === true) {
+        throw new CliError(EXIT.usage, `missing --${option.name} <${option.value}>`, undefined, {
+          reason: 'missing_argument',
+        })
+      }
+    }
     const [verb, file, second] = args.positionals
     switch (verb) {
       case 'read':
