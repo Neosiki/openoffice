@@ -6,7 +6,7 @@ Un projet, c’est un dossier de votre PC. Choisissez un projet dans un panneau 
 
 - Dans le panneau IA de chaque éditeur et dans **Demander à l’IA** sur l’Accueil, le nom du projet en cours s’affiche à gauche, sous la zone de saisie. Si aucun n’est choisi, on lit **Sans projet**.
 - Cliquez dessus pour ouvrir la liste : les projets **Épinglés** et **Récents**, **Nouveau projet**, **Ajouter un dossier** et **Sans projet**. Tapez dans la case du haut pour chercher ; si aucun projet ne correspond, vous pouvez en créer un portant ce nom.
-- Au survol d’une ligne apparaissent l’épingle, **Afficher dans l’Explorateur** (le Finder sur Mac) et **Retirer de la liste**. Retirer un projet de la liste ne touche ni au dossier ni à ses fichiers.
+- Au survol d’une ligne apparaissent l’épingle, **Ouvrir le dossier** et **Retirer de la liste**. Retirer un projet de la liste ne touche ni au dossier ni à ses fichiers.
 - Un projet dont le dossier a été déplacé ou supprimé apparaît en grisé avec la mention **Dossier introuvable**. Cliquez dessus et choisissez le dossier à son nouvel emplacement pour continuer avec le même projet.
 - Quand vous ouvrez un document situé dans un dossier de projet, ce projet est déjà choisi. Si vous passez ce document sur **Sans projet**, il le reste à sa prochaine ouverture. Un projet choisi pour un document hors du dossier est lui aussi mémorisé pour ce document.
 - Le projet choisi s’applique à partir de la requête suivante dans ce panneau. En changer en pleine conversation en démarre une nouvelle ; celle que vous aviez reste à sa place.
@@ -50,7 +50,7 @@ Un projet, c’est un dossier de votre PC. Choisissez un projet dans un panneau 
 
 **Projets**, dans la barre latérale de l’Accueil, est l’endroit où l’on crée un **Nouveau projet**, où l’on choisit **Utiliser un dossier existant**, et où l’on ouvre un projet pour le gérer.
 
-- **En-tête** : le nom (le changer ne renomme pas le dossier), le chemin du dossier, **Afficher dans l’Explorateur**, et l’état. Quand le projet est utilisé sans consignes, **Utiliser aussi les consignes** apparaît.
+- **En-tête** : le nom (le changer ne renomme pas le dossier), le chemin du dossier, **Ouvrir dans l’Explorateur de fichiers** (sur Mac, **Afficher dans le Finder**), et l’état. Quand le projet est utilisé sans consignes, **Utiliser aussi les consignes** apparaît.
 - **Consignes** : la zone des consignes, et les `AGENTS.md` et `CLAUDE.md` lus avec elle.
 - **Mémoire** : la liste des notes, **Tout modifier**, **Mettre en ordre**, mémoire activée ou désactivée.
 - **Fichiers** : les fichiers que voit l’IA et ceux qui lui sont cachés. Cliquez sur un nom de fichier pour l’ouvrir.

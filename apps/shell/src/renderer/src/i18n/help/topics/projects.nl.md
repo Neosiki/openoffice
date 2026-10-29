@@ -6,7 +6,7 @@ Een project is één map op je pc. Kies je in een AI-paneel een project, dan wer
 
 - In het AI-paneel van elke editor en in **Ask AI** op Start staat de naam van het huidige project links, onder het invoerveld. Is er niets gekozen, dan staat er **Geen project**.
 - Klik erop om de lijst te openen: **Vastgemaakte** en **Recente** projecten, **Nieuw project**, **Map toevoegen** en **Geen project**. Typ in het vak bovenaan om te zoeken; past er geen project bij, dan kun je een nieuw project met die naam maken.
-- Beweeg over een rij voor vastmaken, **Tonen in Verkenner** (Finder op een Mac) en **Uit lijst verwijderen**. Een project uit de lijst halen laat de map en de bestanden erin met rust.
+- Beweeg over een rij voor vastmaken, **Map openen** en **Uit lijst verwijderen**. Een project uit de lijst halen laat de map en de bestanden erin met rust.
 - Een project waarvan de map is verplaatst of verwijderd, staat gedimd als **Map ontbreekt**. Klik erop en kies de verplaatste map om met hetzelfde project verder te gaan.
 - Open je een document dat in een projectmap staat, dan is dat project al gekozen. Zet je dat document op **Geen project**, dan blijft dat zo de volgende keer dat je het opent. Een project dat je kiest voor een document buiten de map, wordt ook voor dat document onthouden.
 - Het gekozen project geldt vanaf het volgende verzoek in dat paneel. Wissel je midden in een chat, dan begint er een nieuwe chat; de chat waar je in zat blijft staan waar hij stond.
@@ -50,7 +50,7 @@ Een project is één map op je pc. Kies je in een AI-paneel een project, dan wer
 
 **Projecten** in de zijbalk van Start is waar je een **Nieuw project** maakt, **Bestaande map gebruiken** kiest en er een opent om te beheren.
 
-- **Kop**: de naam (die wijzigen hernoemt de map niet), het pad van de map, **Tonen in Verkenner** en de status. Wordt het project zonder instructies gebruikt, dan staat er **Instructies ook gebruiken**.
+- **Kop**: de naam (die wijzigen hernoemt de map niet), het pad van de map, **Openen in Verkenner** (op een Mac **Tonen in Finder**) en de status. Wordt het project zonder instructies gebruikt, dan staat er **Instructies ook gebruiken**.
 - **Instructies**: het vak voor instructies, en de `AGENTS.md` en `CLAUDE.md` die erbij worden gelezen.
 - **Geheugen**: de lijst met notities, **Alles bewerken**, **Opruimen**, geheugen aan of uit.
 - **Bestanden**: de bestanden die de AI ziet en die welke ervoor verborgen zijn. Klik op een bestandsnaam om het bestand te openen.

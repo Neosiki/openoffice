@@ -6,7 +6,7 @@ Un proyecto es una carpeta de tu PC. Si eliges un proyecto en un panel de IA, la
 
 - En el panel de IA de cada editor y en **Ask AI** de Inicio, el nombre del proyecto actual aparece a la izquierda, debajo del campo de entrada. Si no has elegido ninguno, pone **Sin proyecto**.
 - Haz clic en él para abrir la lista: proyectos **Fijados** y **Recientes**, **Nuevo proyecto**, **Añadir carpeta** y **Sin proyecto**. Escribe en el cuadro de arriba para buscar; si ningún proyecto coincide, puedes crear uno nuevo con ese nombre.
-- Al pasar el cursor por una fila aparecen fijar, **Mostrar en el Explorador** (Finder en Mac) y **Quitar de la lista**. Quitar un proyecto de la lista no toca la carpeta ni sus archivos.
+- Al pasar el cursor por una fila aparecen fijar, **Abrir carpeta** y **Quitar de la lista**. Quitar un proyecto de la lista no toca la carpeta ni sus archivos.
 - Un proyecto cuya carpeta se movió o se borró aparece atenuado como **Carpeta no encontrada**. Haz clic en él y elige la carpeta movida para seguir con el mismo proyecto.
 - Al abrir un documento que está dentro de la carpeta de un proyecto, ese proyecto ya viene elegido. Si cambias ese documento a **Sin proyecto**, seguirá así la próxima vez que lo abras. El proyecto que elijas para un documento de fuera de la carpeta también se recuerda para ese documento.
 - El proyecto elegido se usa a partir de la siguiente petición de ese panel. Cambiarlo en mitad de un chat abre un chat nuevo; el chat en el que estabas se queda donde estaba.
@@ -50,7 +50,7 @@ Un proyecto es una carpeta de tu PC. Si eliges un proyecto en un panel de IA, la
 
 **Proyectos**, en la barra lateral de Inicio, es donde creas un **Nuevo proyecto**, eliges **Usar una carpeta existente** y abres uno para gestionarlo.
 
-- **Cabecera**: el nombre (cambiarlo no renombra la carpeta), la ruta de la carpeta, **Mostrar en el Explorador** y el estado. Cuando el proyecto se usa sin instrucciones, aparece **Usar también las instrucciones**.
+- **Cabecera**: el nombre (cambiarlo no renombra la carpeta), la ruta de la carpeta, **Abrir en el Explorador de archivos** (en Mac, **Mostrar en el Finder**) y el estado. Cuando el proyecto se usa sin instrucciones, aparece **Usar también las instrucciones**.
 - **Instrucciones**: el cuadro de instrucciones, y los `AGENTS.md` y `CLAUDE.md` que se leen junto a él.
 - **Memoria**: la lista de notas, **Editar todo**, **Ordenar** y la memoria activada o desactivada.
 - **Archivos**: los archivos que ve la IA y los que se le ocultan. Haz clic en el nombre de un archivo para abrirlo.

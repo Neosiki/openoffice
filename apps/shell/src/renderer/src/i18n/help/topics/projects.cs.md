@@ -6,7 +6,7 @@ Projekt je jedna složka ve vašem počítači. Když v panelu AI vyberete proje
 
 - V panelu AI každého editoru a v **Ask AI** na stránce Domů je název aktuálního projektu vlevo pod vstupním polem. Když žádný vybraný není, stojí tam **Bez projektu**.
 - Kliknutím otevřete seznam: projekty **Připnuté** a **Nedávné**, **Nový projekt**, **Přidat složku** a **Bez projektu**. Hledat můžete psaním do pole nahoře; když žádný projekt neodpovídá, můžete rovnou vytvořit nový s tímto názvem.
-- Po najetí myší na řádek se objeví připnutí, **Zobrazit v Průzkumníkovi** (na Macu ve Finderu) a **Odebrat ze seznamu**. Odebrání projektu ze seznamu složku ani její soubory nijak nemění.
+- Po najetí myší na řádek se objeví připnutí, **Otevřít složku** a **Odebrat ze seznamu**. Odebrání projektu ze seznamu složku ani její soubory nijak nemění.
 - Projekt, jehož složka byla přesunuta nebo smazána, je zašedlý a označený **Složka nenalezena**. Klikněte na něj a vyberte přesunutou složku; projekt pak pokračuje beze změny.
 - Když otevřete dokument ze složky projektu, je tento projekt už vybraný. Pokud dokument přepnete na **Bez projektu**, zůstane tak i při dalším otevření. Projekt vybraný pro dokument mimo složku si tento dokument také pamatuje.
 - Vybraný projekt platí od dalšího požadavku v daném panelu. Pokud ho změníte uprostřed konverzace, začne nová konverzace a ta předchozí zůstane, kde byla.
@@ -50,7 +50,7 @@ Projekt je jedna složka ve vašem počítači. Když v panelu AI vyberete proje
 
 V položce **Projekty** v postranním panelu Domů vytváříte **Nový projekt**, volíte **Použít existující složku** a otevíráte projekty ke správě.
 
-- **Záhlaví**: název (přejmenováním se složka nepřejmenuje), cesta ke složce, **Zobrazit v Průzkumníkovi** a stav. Když se projekt používá bez pokynů, zobrazí se **Použít i pokyny**.
+- **Záhlaví**: název (přejmenováním se složka nepřejmenuje), cesta ke složce, **Otevřít v Průzkumníku souborů** (na Macu **Zobrazit ve Finderu**) a stav. Když se projekt používá bez pokynů, zobrazí se **Použít i pokyny**.
 - **Pokyny**: pole pro pokyny a k němu načítané `AGENTS.md` a `CLAUDE.md`.
 - **Paměť**: seznam poznámek, **Upravit vše**, **Uklidit**, zapnutí a vypnutí paměti.
 - **Soubory**: soubory, které AI vidí, a ty, které jsou před ní skryté. Kliknutím na název souboru ho otevřete.

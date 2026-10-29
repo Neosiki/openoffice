@@ -41,7 +41,7 @@ En el panel de IA de los editores Docs, Sheets, Slides, Hangul, HTML y mapas men
 - Haz clic en el nombre del proyecto, a la izquierda y debajo del campo de entrada, para elegir un proyecto (una carpeta de tu PC). Así la IA responde conociendo los archivos, las instrucciones y la memoria de esa carpeta, y el chat se guarda en ella para que puedas seguir en otro editor. Consulta [Proyectos](help://projects).
 - Con un proyecto elegido, el título del chat actual aparece arriba del panel. Haz clic en él para ver la lista de chats del proyecto y **Nuevo chat**.
 - En la lista de `@` del campo de entrada aparece «Archivos de este proyecto» después de los documentos abiertos.
-- Una petición con un proyecto elegido también envía a la IA que estés usando las instrucciones, la memoria y la lista de nombres de archivo de ese proyecto, además del texto de cualquier archivo que la IA lea.
+- Una petición con un proyecto elegido también envía a la IA que estés usando las instrucciones (junto con `AGENTS.md` y `CLAUDE.md` de la raíz de la carpeta, que puedes desactivar en la página del proyecto), la memoria y la lista de nombres de archivo de ese proyecto, un breve fragmento de cada archivo que la IA encuentre al buscar en la carpeta, además del texto de cualquier archivo que la IA lea.
 
 ## Retroceso y seguridad
 

@@ -6,7 +6,7 @@ Um projeto é uma pasta do seu PC. Escolha um projeto em um painel de IA e a IA 
 
 - No painel de IA de todos os editores e no **Ask AI** do Início, o nome do projeto atual fica à esquerda, abaixo do campo de entrada. Quando nenhum está escolhido, aparece **Sem projeto**.
 - Clique nele para abrir a lista: projetos **Fixados** e **Recentes**, **Novo projeto**, **Adicionar pasta** e **Sem projeto**. Digite na caixa do topo para pesquisar; se nenhum projeto corresponder, você pode criar um novo com esse nome.
-- Ao passar o cursor sobre uma linha aparecem fixar, **Mostrar no Explorador** (Finder no Mac) e **Remover da lista**. Remover um projeto da lista não mexe na pasta nem nos arquivos dela.
+- Ao passar o cursor sobre uma linha aparecem fixar, **Abrir pasta** e **Remover da lista**. Remover um projeto da lista não mexe na pasta nem nos arquivos dela.
 - Um projeto cuja pasta foi movida ou apagada aparece esmaecido como **Pasta não encontrada**. Clique nele e escolha a pasta no novo lugar para continuar com o mesmo projeto.
 - Ao abrir um documento que está dentro da pasta de um projeto, esse projeto já vem escolhido. Se você mudar esse documento para **Sem projeto**, ele continua assim da próxima vez que for aberto. O projeto que você escolher para um documento fora da pasta também fica guardado para esse documento.
 - O projeto escolhido vale a partir do próximo pedido daquele painel. Trocá-lo no meio de uma conversa começa uma conversa nova; a conversa em que você estava continua onde estava.
@@ -50,7 +50,7 @@ Um projeto é uma pasta do seu PC. Escolha um projeto em um painel de IA e a IA 
 
 **Projetos**, na barra lateral do Início, é onde você cria um **Novo projeto**, escolhe **Usar uma pasta existente** e abre um deles para gerenciá-lo.
 
-- **Cabeçalho**: o nome (renomeá-lo não renomeia a pasta), o caminho da pasta, **Mostrar no Explorador** e o estado. Quando o projeto é usado sem instruções, aparece **Usar também as instruções**.
+- **Cabeçalho**: o nome (renomeá-lo não renomeia a pasta), o caminho da pasta, **Abrir no Explorador de Arquivos** (no Mac, **Mostrar no Finder**) e o estado. Quando o projeto é usado sem instruções, aparece **Usar também as instruções**.
 - **Instruções**: a caixa de instruções e os `AGENTS.md` e `CLAUDE.md` lidos junto com ela.
 - **Memória**: a lista de anotações, **Editar tudo**, **Organizar** e a memória ligada ou desligada.
 - **Arquivos**: os arquivos que a IA vê e os que ficam escondidos dela. Clique no nome de um arquivo para abri-lo.

@@ -41,7 +41,7 @@ Trong bảng AI của trình soạn thảo Docs, Sheets, Slides, Hangul, HTML v�
 - Nhấp vào tên dự án ở bên trái, ngay dưới ô nhập, để chọn một dự án (một thư mục trên máy tính của bạn). Khi đó AI trả lời khi đã biết các tệp, chỉ dẫn và ghi nhớ của thư mục ấy, và cuộc trò chuyện được lưu trong thư mục để bạn tiếp tục ở trình soạn thảo khác. Xem [Dự án](help://projects).
 - Khi đã chọn dự án, tiêu đề cuộc trò chuyện hiện tại hiện ở phía trên bảng. Nhấp vào đó để xem danh sách cuộc trò chuyện của dự án này và **Cuộc trò chuyện mới**.
 - Danh sách `@` trong ô nhập hiện mục "Tệp trong dự án này" sau các tài liệu đang mở.
-- Một yêu cầu có chọn dự án cũng gửi chỉ dẫn, ghi nhớ và danh sách tên tệp của dự án đó, cùng nội dung của bất kỳ tệp nào AI đọc, tới AI bạn đang dùng.
+- Một yêu cầu có chọn dự án cũng gửi chỉ dẫn (kèm `AGENTS.md` và `CLAUDE.md` ở đầu thư mục, có thể tắt trong trang dự án), ghi nhớ và danh sách tên tệp của dự án đó, một đoạn trích ngắn của mỗi tệp AI tìm thấy khi tìm trong thư mục, cùng nội dung của bất kỳ tệp nào AI đọc, tới AI bạn đang dùng.
 
 ## Quay lui và an toàn
 

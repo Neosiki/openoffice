@@ -6,7 +6,7 @@ Projekt to jeden folder na twoim komputerze. Gdy wybierzesz projekt w panelu AI,
 
 - W panelu AI każdego edytora i w **Ask AI** na stronie głównej nazwa bieżącego projektu jest po lewej, pod polem wpisywania. Gdy żaden nie jest wybrany, widać **Bez projektu**.
 - Kliknij ją, aby otworzyć listę: projekty **Przypięte** i **Ostatnie**, **Nowy projekt**, **Dodaj folder** i **Bez projektu**. Pisz w polu u góry, aby wyszukiwać; gdy żaden projekt nie pasuje, możesz utworzyć nowy o tej nazwie.
-- Po najechaniu na wiersz pojawiają się przypięcie, **Pokaż w Eksploratorze** (na Macu w Finderze) i **Usuń z listy**. Usunięcie projektu z listy nie rusza folderu ani plików w nim.
+- Po najechaniu na wiersz pojawiają się przypięcie, **Otwórz folder** i **Usuń z listy**. Usunięcie projektu z listy nie rusza folderu ani plików w nim.
 - Projekt, którego folder przeniesiono lub usunięto, jest wyszarzony z napisem **Brak folderu**. Kliknij go i wskaż przeniesiony folder, aby dalej pracować z tym samym projektem.
 - Gdy otworzysz dokument leżący w folderze projektu, ten projekt jest już wybrany. Jeśli przełączysz ten dokument na **Bez projektu**, tak zostanie przy następnym otwarciu. Projekt wybrany dla dokumentu spoza folderu też jest zapamiętywany dla tego dokumentu.
 - Wybrany projekt obowiązuje od następnego zapytania w tym panelu. Zmiana w trakcie rozmowy zaczyna nową rozmowę; poprzednia zostaje tam, gdzie była.
@@ -50,7 +50,7 @@ Projekt to jeden folder na twoim komputerze. Gdy wybierzesz projekt w panelu AI,
 
 **Projekty** na pasku bocznym strony głównej to miejsce, w którym tworzysz **Nowy projekt**, wybierasz **Użyj istniejącego folderu** i otwierasz projekt, aby nim zarządzać.
 
-- **Nagłówek**: nazwa (jej zmiana nie zmienia nazwy folderu), ścieżka folderu, **Pokaż w Eksploratorze** i stan. Gdy projekt jest używany bez instrukcji, widać przycisk **Użyj też instrukcji**.
+- **Nagłówek**: nazwa (jej zmiana nie zmienia nazwy folderu), ścieżka folderu, **Otwórz w Eksploratorze plików** (na Macu **Pokaż w Finderze**) i stan. Gdy projekt jest używany bez instrukcji, widać przycisk **Użyj też instrukcji**.
 - **Instrukcje**: pole instrukcji oraz `AGENTS.md` i `CLAUDE.md` czytane razem z nim.
 - **Pamięć**: lista notatek, **Edytuj całość**, **Uporządkuj**, włączanie i wyłączanie pamięci.
 - **Pliki**: pliki widoczne dla AI i te przed nim ukryte. Kliknij nazwę pliku, aby go otworzyć.

@@ -6,7 +6,7 @@ Ein Projekt ist ein Ordner auf Ihrem PC. Wählen Sie in einem KI-Bereich ein Pro
 
 - Im KI-Bereich jedes Editors und unter **KI fragen** auf der Startseite steht links unter dem Eingabefeld der Name des aktuellen Projekts. Ist keins gewählt, steht dort **Kein Projekt**.
 - Ein Klick darauf öffnet die Liste: **Angeheftete** und **Zuletzt verwendete** Projekte, **Neues Projekt**, **Ordner hinzufügen** und **Kein Projekt**. Tippen Sie oben in das Feld, um zu suchen; passt kein Projekt, können Sie mit diesem Namen ein neues anlegen.
-- Fahren Sie mit der Maus über eine Zeile, erscheinen Anheften, **Im Explorer anzeigen** (auf dem Mac im Finder) und **Aus der Liste entfernen**. Wird ein Projekt aus der Liste entfernt, bleiben der Ordner und seine Dateien unverändert.
+- Fahren Sie mit der Maus über eine Zeile, erscheinen Anheften, **Ordner öffnen** und **Aus der Liste entfernen**. Wird ein Projekt aus der Liste entfernt, bleiben der Ordner und seine Dateien unverändert.
 - Ein Projekt, dessen Ordner verschoben oder gelöscht wurde, erscheint abgeblendet als **Ordner fehlt**. Klicken Sie darauf und wählen Sie den verschobenen Ordner, um mit demselben Projekt weiterzuarbeiten.
 - Öffnen Sie ein Dokument aus einem Projektordner, ist dieses Projekt bereits gewählt. Stellen Sie das Dokument auf **Kein Projekt** um, bleibt es auch beim nächsten Öffnen dabei. Ein Projekt, das Sie für ein Dokument außerhalb des Ordners wählen, merkt sich das Dokument ebenfalls.
 - Das gewählte Projekt gilt ab der nächsten Anfrage in diesem Bereich. Wechseln Sie es mitten in einer Unterhaltung, beginnt eine neue; die bisherige bleibt, wo sie war.
@@ -50,7 +50,7 @@ Ein Projekt ist ein Ordner auf Ihrem PC. Wählen Sie in einem KI-Bereich ein Pro
 
 Unter **Projekte** in der Seitenleiste der Startseite legen Sie ein **Neues Projekt** an, wählen mit **Vorhandenen Ordner verwenden** einen Ordner, den Sie schon haben, und öffnen ein Projekt, um es zu verwalten.
 
-- **Kopfzeile**: der Name (eine Umbenennung ändert den Ordnernamen nicht), der Ordnerpfad, **Im Explorer anzeigen** und der Status. Wird das Projekt ohne Anweisungen verwendet, erscheint **Anweisungen auch verwenden**.
+- **Kopfzeile**: der Name (eine Umbenennung ändert den Ordnernamen nicht), der Ordnerpfad, **Im Datei-Explorer öffnen** (auf dem Mac **Im Finder zeigen**) und der Status. Wird das Projekt ohne Anweisungen verwendet, erscheint **Anweisungen auch verwenden**.
 - **Anweisungen**: das Feld für die Anweisungen sowie die mitgelesenen `AGENTS.md` und `CLAUDE.md`.
 - **Erinnerungen**: die Liste der Notizen, **Alles bearbeiten**, **Aufräumen**, Erinnerungen ein oder aus.
 - **Dateien**: die Dateien, die die KI sieht, und die, die vor ihr verborgen sind. Ein Klick auf einen Dateinamen öffnet die Datei.

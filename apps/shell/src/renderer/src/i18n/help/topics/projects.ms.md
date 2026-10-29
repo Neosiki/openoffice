@@ -6,7 +6,7 @@ Projek ialah satu folder pada PC anda. Pilih projek dalam panel AI dan AI akan b
 
 - Dalam panel AI setiap editor dan dalam **Ask AI** di Laman Utama, nama projek semasa terletak di sebelah kiri, di bawah kotak input. Jika belum ada yang dipilih, ia tertulis **Tanpa projek**.
 - Klik nama itu untuk membuka senarai: projek **Disemat** dan **Terkini**, **Projek baharu**, **Tambah folder** dan **Tanpa projek**. Taip dalam kotak di bahagian atas untuk mencari; jika tiada projek yang sepadan, anda boleh terus mencipta projek baharu dengan nama itu.
-- Halakan kursor ke sesuatu baris untuk memaparkan semat, **Tunjukkan dalam Penjelajah Fail** (Finder pada Mac) dan **Alih keluar daripada senarai**. Mengalih keluar projek daripada senarai tidak menyentuh folder dan fail di dalamnya.
+- Halakan kursor ke sesuatu baris untuk memaparkan semat, **Buka folder** dan **Alih keluar daripada senarai**. Mengalih keluar projek daripada senarai tidak menyentuh folder dan fail di dalamnya.
 - Projek yang foldernya telah dialihkan atau dipadam kelihatan malap dengan tanda **Folder tiada**. Klik projek itu dan pilih folder yang telah dialihkan untuk meneruskan projek yang sama.
 - Apabila anda membuka dokumen di dalam folder projek, projek itu sudah dipilih. Jika anda menukar dokumen itu kepada **Tanpa projek**, pilihan itu kekal apabila dokumen dibuka semula. Projek yang anda pilih untuk dokumen di luar folder juga diingati untuk dokumen itu.
 - Projek yang dipilih mula digunakan pada permintaan seterusnya daripada panel itu. Menukar projek di tengah-tengah perbualan akan memulakan perbualan baharu; perbualan yang sedang berjalan kekal di tempatnya.
@@ -50,7 +50,7 @@ Projek ialah satu folder pada PC anda. Pilih projek dalam panel AI dan AI akan b
 
 **Projek** dalam bar sisi Laman Utama ialah tempat anda mencipta **Projek baharu**, memilih **Guna folder sedia ada** dan membuka sesuatu projek untuk mengurusnya.
 
-- **Pengepala**: nama (menamakan semula projek tidak menamakan semula folder), laluan folder, **Tunjukkan dalam Penjelajah Fail** dan statusnya. Jika projek digunakan tanpa arahan, **Guna arahan juga** dipaparkan.
+- **Pengepala**: nama (menamakan semula projek tidak menamakan semula folder), laluan folder, **Buka dalam File Explorer** (pada Mac **Tunjukkan dalam Finder**) dan statusnya. Jika projek digunakan tanpa arahan, **Guna arahan juga** dipaparkan.
 - **Arahan**: kotak arahan, serta `AGENTS.md` dan `CLAUDE.md` yang dibaca bersamanya.
 - **Ingatan**: senarai nota, **Sunting semua**, **Kemaskan**, dan suis untuk menghidupkan atau mematikan ingatan.
 - **Fail**: fail yang dilihat oleh AI dan fail yang dijauhkan daripadanya. Klik nama fail untuk membukanya.

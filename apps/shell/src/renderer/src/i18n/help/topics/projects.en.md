@@ -6,7 +6,7 @@ A project is one folder on your PC. Pick a project in an AI panel and the AI wor
 
 - In every editor's AI panel and in Home's **Ask AI**, the name of the current project sits at the left, below the input. With none picked it reads **No project**.
 - Click it to open the list: **Pinned** and **Recent** projects, **New project**, **Add folder** and **No project**. Type in the box at the top to search; when no project matches, you can create a new one with that name.
-- Hover a row for pin, **Show in Explorer** (Finder on a Mac) and **Remove from list**. Removing a project from the list leaves the folder and its files as they are.
+- Hover a row for pin, **Open folder** and **Remove from list**. Removing a project from the list leaves the folder and its files as they are.
 - A project whose folder was moved or deleted shows dimmed as **Folder missing**. Click it and pick the moved folder to carry on with the same project.
 - Open a document inside a project folder and that project is already picked. Switch that document to **No project** and it stays that way the next time you open it. A project you pick for a document outside the folder is remembered for that document too.
 - The project you pick applies from that panel's next request. Changing it in the middle of a chat starts a new chat; the chat you were in stays where it was.
@@ -50,7 +50,7 @@ A project is one folder on your PC. Pick a project in an AI panel and the AI wor
 
 **Projects** in Home's sidebar is where you make a **New project** or **Use an existing folder**, and open one to manage it.
 
-- **Header**: the name (renaming it does not rename the folder), the folder path, **Show in Explorer**, and the status. When the project is used without instructions, **Use instructions too** appears.
+- **Header**: the name (renaming it does not rename the folder), the folder path, **Open in File Explorer** (**Show in Finder** on a Mac), and the status. When the project is used without instructions, **Use instructions too** appears.
 - **Instructions**: the instructions box, and the `AGENTS.md` and `CLAUDE.md` read with it.
 - **Memory**: the list of notes, **Edit all**, **Tidy up**, memory on or off.
 - **Files**: the files the AI sees and the ones kept from it. Click a file name to open the file.

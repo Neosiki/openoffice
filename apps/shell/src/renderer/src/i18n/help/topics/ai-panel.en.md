@@ -41,7 +41,7 @@ In the AI panel of the Docs, Sheets, Slides, Hangul, HTML and mind map editors y
 - Click the project name at the left, below the input, to pick a project (one folder on your PC). The AI then answers knowing that folder's files, instructions and memory, and the chat is kept in the folder so you can carry on in another editor. See [Projects](help://projects).
 - With a project picked, the current chat's title appears at the top of the panel. Click it for this project's chat list and **New chat**.
 - The `@` list in the input shows "Files in this project" after the open documents.
-- A request with a project picked also sends that project's instructions, memory and list of file names, and the text of any file the AI reads, to the AI you are using.
+- A request with a project picked also sends that project's instructions (with `AGENTS.md` and `CLAUDE.md` at the top of the folder, which you can turn off on the project's page), memory and list of file names, a short excerpt of each file the AI finds when it searches the folder, and the text of any file the AI reads, to the AI you are using.
 
 ## Rollback and safety
 

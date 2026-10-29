@@ -41,7 +41,7 @@ No painel de IA dos editores Docs, Sheets, Slides, Hangul, HTML e mapa mental, v
 - Clique no nome do projeto, à esquerda e abaixo do campo de entrada, para escolher um projeto (uma pasta do seu PC). A IA passa a responder conhecendo os arquivos, as instruções e a memória dessa pasta, e a conversa fica guardada nela para você continuar em outro editor. Veja [Projetos](help://projects).
 - Com um projeto escolhido, o título da conversa atual aparece no topo do painel. Clique nele para ver a lista de conversas do projeto e **Nova conversa**.
 - A lista de `@` do campo de entrada mostra "Arquivos deste projeto" depois dos documentos abertos.
-- Um pedido com um projeto escolhido também envia à IA que você está usando as instruções, a memória e a lista de nomes de arquivo desse projeto, além do texto de qualquer arquivo que a IA ler.
+- Um pedido com um projeto escolhido também envia à IA que você está usando as instruções (junto com `AGENTS.md` e `CLAUDE.md` no topo da pasta, que você pode desativar na página do projeto), a memória e a lista de nomes de arquivo desse projeto, um trecho curto de cada arquivo que a IA encontrar ao pesquisar a pasta, além do texto de qualquer arquivo que a IA ler.
 
 ## Reversão e segurança
 
