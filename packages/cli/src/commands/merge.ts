@@ -196,9 +196,34 @@ function flatten(obj: Record<string, unknown>, prefix: string, out: Values, igno
   for (const [k, v] of Object.entries(obj)) {
     const key = prefix ? `${prefix}.${k}` : k
     if (isRecord(v)) flatten(v, key, out, ignored)
-    else if (v === null || ['string', 'number', 'boolean'].includes(typeof v))
+    else if (v === null || ['string', 'number', 'boolean'].includes(typeof v)) {
+      if (out.has(key)) {
+        throw new CliError(
+          EXIT.usage,
+          `--data: multiple entries flatten to ${JSON.stringify(key)}`,
+          { key },
+          {
+            reason: 'invalid_argument',
+            suggestion: 'use one unambiguous value for each flattened key',
+          },
+        )
+      }
+      if (
+        typeof v === 'number' &&
+        (!Number.isFinite(v) || (Number.isInteger(v) && !Number.isSafeInteger(v)))
+      ) {
+        throw new CliError(
+          EXIT.usage,
+          `--data: ${JSON.stringify(key)} is non-finite or an unsafe integer`,
+          { key },
+          {
+            reason: 'invalid_argument',
+            suggestion: 'pass exact large values as JSON strings',
+          },
+        )
+      }
       out.set(key, v as Scalar)
-    else ignored.push(key)
+    } else ignored.push(key)
   }
 }
 
