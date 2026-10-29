@@ -360,12 +360,26 @@ function nestedDocxHits(table: TableModel): Array<Pick<Hit, 'placeholder' | 'key
   )
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+/** Replace visible text only; placeholders in link targets and other attributes are literal. */
+function substituteHtml(html: string, values: Values): string {
+  const container = document.createElement('div')
+  container.innerHTML = html
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const nodes: Text[] = []
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text)
+  for (const node of nodes) {
+    const text = node.data
+    if (!hits(text).some((h) => values.has(h.key))) continue
+    const fragment = document.createDocumentFragment()
+    substitute(text, values)
+      .split('\n')
+      .forEach((line, index) => {
+        if (index) fragment.append(document.createElement('br'))
+        fragment.append(document.createTextNode(line))
+      })
+    node.replaceWith(fragment)
+  }
+  return container.innerHTML
 }
 
 /**
@@ -404,9 +418,7 @@ async function mergeDocx(path: string, values: Values, output: string): Promise<
         op: 'replace_blocks',
         startBlockIndex: block,
         endBlockIndex: block,
-        html: blockRangeHtml(doc, block, block).replace(PLACEHOLDER, (m, key: string) =>
-          values.has(key) ? escapeHtml(textOf(values.get(key)!)).replace(/\n/g, '<br>') : m,
-        ),
+        html: substituteHtml(blockRangeHtml(doc, block, block), values),
       })
     }
     if (ops.length) await applyDocOps(doc, ops, { mode: 'best_effort' })
