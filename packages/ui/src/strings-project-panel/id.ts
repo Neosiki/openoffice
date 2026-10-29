@@ -90,4 +90,5 @@ export const id = {
   contextUnknown:
     'Proyek tidak lagi ada di daftar, jadi permintaan ini dikirim tanpa konteks proyek.',
   contextFailed: 'Konteks proyek tidak dapat dibaca, jadi permintaan ini dikirim tanpanya.',
+  newDocumentSaveFailed: 'Tidak dapat disimpan di folder proyek, jadi masih tanpa judul: {error}',
 } satisfies Record<keyof typeof zh, string>

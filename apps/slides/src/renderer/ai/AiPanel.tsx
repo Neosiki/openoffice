@@ -31,6 +31,7 @@ import {
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
+  createHandedRun,
   type TemplateDocument,
   type ProjectChatEntry,
   type ProjectChatOpened,
@@ -398,6 +399,12 @@ interface AiPanelProps {
   onPathChange?: (path: string) => void
   /** Flush pending editor state (e.g. the speaker-notes draft) right before an AI run edits the deck, so a stale draft cannot overwrite what the run writes */
   onBeforeRun?: () => Promise<void> | void
+  /**
+   * The run a create flow handed to this tab (the create window's request, a
+   * template copy's request) ended well, its layout check included: the app
+   * saves an untitled deck into the panel's project (spec 6)
+   */
+  onHandedRunDone?: () => void
   /** Generation progress callback (for the canvas top progress bar) */
   onDeckProgress?: (event: DeckProgressEvent | null) => void
   /** Absolute path of the currently open file (for chat history persistence) */
@@ -497,6 +504,7 @@ export function AiPanel({
   onCollapse,
   onPathChange,
   onBeforeRun,
+  onHandedRunDone,
   onDeckProgress,
   currentFilePath,
   editQueue,
@@ -566,6 +574,10 @@ export function AiPanel({
     send: (text, use) => runWith(text, undefined, undefined, use),
     onTaken: () => {
       if (!open) onExpand?.()
+    },
+    // a template copy's request: the deck goes into the project once it ends well
+    onHandedRun: ({ preview }) => {
+      if (!preview) handedRunRef.current.arm()
     },
     setComposer: setInput,
   })
@@ -712,6 +724,10 @@ export function AiPanel({
   onBeforeRunRef.current = onBeforeRun
   const onPathChangeRef = useRef(onPathChange)
   onPathChangeRef.current = onPathChange
+  const onHandedRunDoneRef = useRef(onHandedRunDone)
+  onHandedRunDoneRef.current = onHandedRunDone
+  /** the run a create flow handed to this tab, until it ends (spec 6) */
+  const handedRunRef = useRef(createHandedRun())
   const onDeckProgressRef = useRef(onDeckProgress)
   onDeckProgressRef.current = onDeckProgress
   /** Subscription connections (Claude, Codex) and what they allow right now */
@@ -1743,11 +1759,17 @@ export function AiPanel({
             }
             return next
           })
+          const handedDone = handedRunRef.current.settle(!cancelled)
           void finishHistoryBatch().finally(() => {
             setBusy(false)
             // Post-generation layout QC: only after a completed run that landed generated pages
             if (cancelled) qcPagesRef.current = []
-            else if (qcPagesRef.current.length > 0) void runQcPassRef.current()
+            const qc =
+              !cancelled && qcPagesRef.current.length > 0
+                ? runQcPassRef.current()
+                : Promise.resolve()
+            // a handed-over run that ended well: the deck goes into the project after its check
+            if (handedDone) void qc.finally(() => onHandedRunDoneRef.current?.())
             // After the batch closes, so the next queued page opens a fresh one
             const resolveQueueRun = queueRunResolverRef.current
             queueRunResolverRef.current = null
@@ -1765,6 +1787,8 @@ export function AiPanel({
         },
         onError: (error) => {
           logRunFailure('error', error)
+          // a failed make writes nothing: the deck stays untitled
+          handedRunRef.current.settle(false)
           projectPanelRef.current.finishSend()
           qcPagesRef.current = []
           // A run that stopped because its connection cannot go on (limit used up, signed
@@ -1848,7 +1872,11 @@ export function AiPanel({
       }
     },
     fill: (text) => setInput(text),
-    send: (text) => runWith(text),
+    send: (text) => {
+      // the create window's request: the deck goes into the project once it ends well
+      handedRunRef.current.arm()
+      runWith(text)
+    },
   })
 
   // `open` dep: re-expanding lands on messages streamed while collapsed

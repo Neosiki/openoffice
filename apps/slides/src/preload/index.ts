@@ -414,6 +414,7 @@ const api: SlidesApi = {
   printSlides: (op: PrintSlidesOp) => ipcRenderer.invoke('slides:print', op),
   save: (auto?: boolean) => ipcRenderer.invoke('slides:save', auto === true),
   saveAs: (defaultName: string) => ipcRenderer.invoke('slides:save-as', defaultName),
+  saveIntoProject: () => ipcRenderer.invoke('slides:save-into-project'),
   onCloseSaveRequest: (handler: () => void) => {
     const listener = () => handler()
     ipcRenderer.on('slides:close-save-request', listener)

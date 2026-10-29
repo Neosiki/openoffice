@@ -3681,6 +3681,8 @@ export function App() {
                   setDirty(false)
                 }}
                 onBeforeRun={flushNotes}
+                // a deck a create flow handed over goes into the panel's project once made (spec 6)
+                onHandedRunDone={() => void fileActions.saveIntoProject(() => ctxRef.current)}
                 currentFilePath={path}
                 editQueue={editQueue}
                 onQueueEditInstruction={(key, instruction) =>

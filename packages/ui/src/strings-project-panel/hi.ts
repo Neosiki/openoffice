@@ -90,4 +90,6 @@ export const hi = {
   contextUnknown:
     'प्रोजेक्ट अब सूची में नहीं है, इसलिए यह अनुरोध प्रोजेक्ट के संदर्भ के बिना भेजा गया।',
   contextFailed: 'प्रोजेक्ट का संदर्भ पढ़ा नहीं जा सका, इसलिए यह अनुरोध उसके बिना भेजा गया।',
+  newDocumentSaveFailed:
+    'प्रोजेक्ट फ़ोल्डर में सहेजा नहीं जा सका, इसलिए यह बिना शीर्षक के है: {error}',
 } satisfies Record<keyof typeof zh, string>

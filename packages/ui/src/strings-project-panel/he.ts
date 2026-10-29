@@ -86,4 +86,5 @@ export const he = {
   contextMissing: 'תיקיית הפרויקט לא נמצאה, ולכן הבקשה הזו נשלחה בלי ההקשר של הפרויקט.',
   contextUnknown: 'הפרויקט כבר לא ברשימה, ולכן הבקשה הזו נשלחה בלי ההקשר של הפרויקט.',
   contextFailed: 'לא ניתן היה לקרוא את ההקשר של הפרויקט, ולכן הבקשה הזו נשלחה בלעדיו.',
+  newDocumentSaveFailed: 'לא ניתן היה לשמור בתיקיית הפרויקט, ולכן המסמך נשאר ללא שם: {error}',
 } satisfies Record<keyof typeof zh, string>

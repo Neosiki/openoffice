@@ -727,6 +727,8 @@ configureSlidesRuntime({
   rendererFilePath: join(SLIDES_OUT, 'renderer', 'index.html'),
   openGeneratedPath: (path) => openGeneratedDocument(path),
   newDocumentDir: (id) => newDocumentFolderFor(id),
+  // a deck a create flow handed to the AI goes into the panel's project once made (spec 6)
+  writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
 })
 /** a PDF's note (reading-assist 4.9): its Markdown tab or detached window, else a new tab */
 const noteTabHost: NoteTabHost = {
@@ -778,6 +780,8 @@ configureMindmapRuntime({
   rendererUrl: process.env.MINDMAP_RENDERER_URL,
   rendererFile: join(MINDMAP_OUT, 'renderer', 'index.html'),
   newDocumentDir: (id) => newDocumentFolderFor(id),
+  // a map a create flow handed to the AI goes into the panel's project once made (spec 6)
+  writeNewDocument: (id, fileName, bytes) => writeProjectNewDocument(id, fileName, bytes),
 })
 configureHwpRuntime({
   preloadPath: join(HWP_OUT, 'preload', 'index.js'),

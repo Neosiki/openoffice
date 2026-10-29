@@ -58,6 +58,7 @@ const core: MindmapCoreApi = {
   consumePending: () => ipcRenderer.invoke(MINDMAP_CHANNELS.consumePending),
   openFile: (path) => ipcRenderer.invoke(MINDMAP_CHANNELS.openFile, path),
   save: (request) => ipcRenderer.invoke(MINDMAP_CHANNELS.save, request),
+  saveIntoProject: (request) => ipcRenderer.invoke(MINDMAP_CHANNELS.saveIntoProject, request),
   setDirty: (dirty) => ipcRenderer.send(MINDMAP_CHANNELS.dirtyChanged, dirty),
   onSaveRequest: (handler) => listen<[SaveMode]>(MINDMAP_CHANNELS.saveRequest, handler),
   sendSaveRequestAck: (ok) => ipcRenderer.send(MINDMAP_CHANNELS.saveRequestAck, ok),

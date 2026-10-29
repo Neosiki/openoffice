@@ -94,4 +94,6 @@ export const fr = {
   contextUnknown:
     'Le projet n’est plus dans la liste : cette demande est partie sans le contexte du projet.',
   contextFailed: 'Le contexte du projet n’a pas pu être lu : cette demande est partie sans lui.',
+  newDocumentSaveFailed:
+    'Impossible de l’enregistrer dans le dossier du projet ; il reste sans titre : {error}',
 } satisfies Record<keyof typeof zh, string>

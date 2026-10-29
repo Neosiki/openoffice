@@ -1287,6 +1287,17 @@ function nameGeneratedDeck(session: Session, deckName?: string): void {
   session.askPathOnFirstSave = true
 }
 
+/**
+ * The file name an untitled deck is written under in a project folder (spec
+ * 6): its suggested first-save name, else the untitled name; a bare name with
+ * the .pptx extension (the folder is the shell's to choose).
+ */
+function projectDeckFileName(firstSaveName: string | undefined): string {
+  const named = firstSaveName ? basename(firstSaveName).replace(/\.pptx$/i, '') : ''
+  const base = sanitizeDraftBaseName(named) ?? sanitizeDraftBaseName(tm('untitledDeck'))
+  return `${base ?? 'presentation'}.pptx`
+}
+
 /** Theme body (minor) Latin font: fallback shown in the ribbon font box when the selection has no text element. */
 function deckDefaultFont(opened: OpenedPptx): string | undefined {
   try {
@@ -4825,6 +4836,46 @@ export function registerSlidesIpc(): void {
       }
     } catch (err) {
       return { ok: false, error: String(err) }
+    }
+  })
+
+  // Project folders (spec 6): the run a create flow handed to this untitled deck
+  // ended well. The deck's bytes go to the shell's project writer, which picks
+  // the folder from the panel's project and a free name (never over a file);
+  // the renderer names neither. The deck then becomes that file like a first
+  // save. Without a project (or a shell) nothing is written: `skipped`.
+  ipcMain.handle('slides:save-into-project', async (e) => {
+    const session = sessions.get(e.sender.id)
+    const write = runtime.writeNewDocument
+    if (!session || session.path || session.masterEdit || !write) {
+      return { ok: false, skipped: true }
+    }
+    const fileName = projectDeckFileName(session.firstSaveName)
+    try {
+      const metaRevAtSave = session.metaRev ?? 0
+      const written = await write(
+        e.sender.id,
+        fileName,
+        deckFileBytes(session, await savePptx(session.opened)),
+      )
+      // no project chosen, or a save that asked where landed meanwhile
+      if (!written || session.path) return { ok: false, skipped: true }
+      session.path = written
+      session.askPathOnFirstSave = false
+      followTemplateSelection(session, '', written)
+      await pushRecent(written)
+      slidesOpenedHook?.(e.sender, written)
+      session.diskState = (await recordDiskState(written)) ?? undefined
+      recoveryCopiesSaved(session, '')
+      commitSaved(session.opened)
+      if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+      return {
+        ok: true,
+        path: written,
+        slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
+      }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
 

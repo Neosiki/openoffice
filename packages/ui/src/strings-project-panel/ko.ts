@@ -85,4 +85,5 @@ export const ko = {
   contextMissing: '프로젝트 폴더를 찾을 수 없어 이번 요청에는 프로젝트 내용을 넣지 못했습니다.',
   contextUnknown: '프로젝트가 목록에 없어 이번 요청에는 프로젝트 내용을 넣지 못했습니다.',
   contextFailed: '프로젝트 내용을 읽지 못해 이번 요청에는 넣지 못했습니다.',
+  newDocumentSaveFailed: '프로젝트 폴더에 저장하지 못해 제목 없는 문서로 남았습니다: {error}',
 } satisfies Record<keyof typeof zh, string>

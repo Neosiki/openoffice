@@ -88,4 +88,6 @@ export const cs = {
     'Složka projektu nebyla nalezena, proto tento požadavek odešel bez kontextu projektu.',
   contextUnknown: 'Projekt už není v seznamu, proto tento požadavek odešel bez kontextu projektu.',
   contextFailed: 'Kontext projektu se nepodařilo načíst, proto tento požadavek odešel bez něj.',
+  newDocumentSaveFailed:
+    'Nepodařilo se uložit do složky projektu, proto zůstává bez názvu: {error}',
 } satisfies Record<keyof typeof zh, string>

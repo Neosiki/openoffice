@@ -98,4 +98,6 @@ export const de = {
     'Das Projekt steht nicht mehr in der Liste, daher ging diese Anfrage ohne den Projektkontext hinaus.',
   contextFailed:
     'Der Projektkontext konnte nicht gelesen werden, daher ging diese Anfrage ohne ihn hinaus.',
+  newDocumentSaveFailed:
+    'Konnte nicht im Projektordner gespeichert werden und bleibt daher ohne Titel: {error}',
 } satisfies Record<keyof typeof zh, string>
