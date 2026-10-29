@@ -89,7 +89,9 @@ export function checkDocument(doc: OpenDocument): IssueDraft[] {
       message: `${revisions.length} tracked change(s) pending (${[...kinds].map(([k, n]) => `${k} ${n}`).join(', ')}); \`ieumoffice docs read --revisions\` lists them`,
     })
   }
-  const open = listComments(doc).filter((c) => !c.done)
+  const comments = listComments(doc)
+  const ids = new Set(comments.map((c) => c.id))
+  const open = comments.filter((c) => !c.done && (!c.parentId || !ids.has(c.parentId)))
   if (open.length) {
     const first = open.find((c) => c.blockIndex !== undefined)
     issues.push({
