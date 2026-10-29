@@ -4,6 +4,7 @@ import {
   blankXlsxBuffer,
   isNumericCell,
   parseCsv,
+  resolveImportDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { columnLabel, parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
 import {
@@ -1025,7 +1026,8 @@ export async function blankWorkbook(sheetName = 'Sheet1'): Promise<Buffer> {
 /** CSV → table; numeric-looking cells become numbers like the app's importer. */
 export function csvTable(bytes: Uint8Array, name: string, opts: CsvTableOptions = {}): TableInput {
   const formats: Record<string, string> = {}
-  const rows = parseCsv(decodeCsv(bytes)).map((r, rowIndex) =>
+  const text = decodeCsv(bytes)
+  const rows = parseCsv(text, resolveImportDelimiter(text)).map((r, rowIndex) =>
     r.map((v, columnIndex) => {
       if (opts.decimal === ',') {
         const n = commaDecimalNumber(v)
