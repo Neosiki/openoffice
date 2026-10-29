@@ -963,7 +963,8 @@ export function isoDateSerial(value: string): { serial: number; format: string }
     return undefined
   }
   if ((hh ?? 0) > 23 || (mm ?? 0) > 59 || (ss ?? 0) > 59) return undefined
-  const serial = (utc - EXCEL_EPOCH_UTC) / 86_400_000
+  // Excel reserves serial 60 for its fictional 1900-02-29. January/February start one day later.
+  const serial = (utc - EXCEL_EPOCH_UTC) / 86_400_000 - (y === 1900 && mo! < 3 ? 1 : 0)
   const format =
     hh === undefined ? 'yyyy-mm-dd' : ss === undefined ? 'yyyy-mm-dd hh:mm' : 'yyyy-mm-dd hh:mm:ss'
   return { serial, format }
