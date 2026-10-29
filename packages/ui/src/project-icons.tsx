@@ -6,7 +6,7 @@ import type { ProjectEditor } from '@genoffice/project-store'
  * shapes only (folders, pages, a grid, a house); none imitates another
  * company's mark (decision 0052).
  */
-function Svg({ size = 14, children }: { size?: number; children: ReactNode }) {
+function Svg({ size = 14, children }: { size?: number | undefined; children: ReactNode }) {
   return (
     <svg
       width={size}
@@ -24,7 +24,7 @@ function Svg({ size = 14, children }: { size?: number; children: ReactNode }) {
   )
 }
 
-export function IconProjectFolder({ size }: { size?: number }) {
+export function IconProjectFolder({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M1.8 4.2c0-.6.4-1 1-1h3.3l1.4 1.5h5.7c.6 0 1 .4 1 1v6.6c0 .6-.4 1-1 1H2.8c-.6 0-1-.4-1-1z" />
@@ -33,7 +33,7 @@ export function IconProjectFolder({ size }: { size?: number }) {
 }
 
 /** "No project": an outline folder crossed out */
-export function IconNoProject({ size }: { size?: number }) {
+export function IconNoProject({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M1.8 4.2c0-.6.4-1 1-1h3.3l1.4 1.5h5.7c.6 0 1 .4 1 1v6.6c0 .6-.4 1-1 1H2.8c-.6 0-1-.4-1-1z" />
@@ -42,7 +42,7 @@ export function IconNoProject({ size }: { size?: number }) {
   )
 }
 
-export function IconFolderAdd({ size }: { size?: number }) {
+export function IconFolderAdd({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M1.8 4.2c0-.6.4-1 1-1h3.3l1.4 1.5h5.7c.6 0 1 .4 1 1v6.6c0 .6-.4 1-1 1H2.8c-.6 0-1-.4-1-1z" />
@@ -51,7 +51,7 @@ export function IconFolderAdd({ size }: { size?: number }) {
   )
 }
 
-export function IconPlus({ size }: { size?: number }) {
+export function IconPlus({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M8 3v10M3 8h10" />
@@ -59,7 +59,7 @@ export function IconPlus({ size }: { size?: number }) {
   )
 }
 
-export function IconCheck({ size }: { size?: number }) {
+export function IconCheck({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M3.2 8.4 6.5 11.6 12.8 4.6" />
@@ -67,7 +67,7 @@ export function IconCheck({ size }: { size?: number }) {
   )
 }
 
-export function IconPin({ size }: { size?: number }) {
+export function IconPin({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M6 2.2h4M6.6 2.2l-.4 4.3-2 2.2h7.6l-2-2.2-.4-4.3M8 8.7v5" />
@@ -76,7 +76,7 @@ export function IconPin({ size }: { size?: number }) {
 }
 
 /** Unpin: the pin with a stroke through it */
-export function IconUnpin({ size }: { size?: number }) {
+export function IconUnpin({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M6 2.2h4M6.6 2.2l-.4 4.3-2 2.2h7.6l-2-2.2-.4-4.3M8 8.7v5" />
@@ -86,7 +86,7 @@ export function IconUnpin({ size }: { size?: number }) {
 }
 
 /** "Open folder": a folder with an arrow out of it */
-export function IconFolderOpen({ size }: { size?: number }) {
+export function IconFolderOpen({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M7 12.8H2.8c-.6 0-1-.4-1-1V4.2c0-.6.4-1 1-1h3.3l1.4 1.5h5.7c.6 0 1 .4 1 1v1.6" />
@@ -96,7 +96,7 @@ export function IconFolderOpen({ size }: { size?: number }) {
 }
 
 /** "Remove from list": a minus in a circle (the folder itself stays) */
-export function IconRemoveFromList({ size }: { size?: number }) {
+export function IconRemoveFromList({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <circle cx="8" cy="8" r="5.6" />
@@ -105,7 +105,7 @@ export function IconRemoveFromList({ size }: { size?: number }) {
   )
 }
 
-export function IconClose({ size }: { size?: number }) {
+export function IconClose({ size }: { size?: number | undefined }) {
   return (
     <Svg size={size}>
       <path d="M4 4l8 8M12 4l-8 8" />
@@ -113,7 +113,7 @@ export function IconClose({ size }: { size?: number }) {
   )
 }
 
-export function IconCaretDown({ size = 10 }: { size?: number }) {
+export function IconCaretDown({ size = 10 }: { size?: number | undefined }) {
   return (
     <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden>
       <path
@@ -132,7 +132,13 @@ export function IconCaretDown({ size = 10 }: { size?: number }) {
 const PAGE = 'M4 1.8h5.4L12.5 5v8.2c0 .6-.4 1-1 1H4c-.6 0-1-.4-1-1V2.8c0-.6.4-1 1-1z'
 
 /** The last editor of a chat, as a small generic glyph */
-export function IconProjectEditor({ editor, size }: { editor: ProjectEditor; size?: number }) {
+export function IconProjectEditor({
+  editor,
+  size,
+}: {
+  editor: ProjectEditor
+  size?: number | undefined
+}) {
   switch (editor) {
     case 'sheets':
       return (
