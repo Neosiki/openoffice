@@ -1,4 +1,7 @@
 import { statSync } from 'node:fs'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { parseDocx } from '@genoffice/docx-engine'
 import { protectedCellsOf } from '@genoffice/odt-engine'
 import { openPptx } from '@genoffice/pptx-engine'
@@ -7,7 +10,7 @@ import { csvInfo } from '../formats/csv'
 import { hwpInfo } from '../formats/hwp'
 import { openOdtBytes } from '../formats/odt'
 import { pdfInfo } from '../formats/pdf'
-import { workbookSummary } from '../formats/xlsx'
+import { convertLegacyWorkbook, workbookSummary } from '../formats/xlsx'
 import { extension, readInput, resolveInput } from '../fs'
 import type { CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
@@ -134,6 +137,23 @@ async function describePptx(path: string): Promise<Description> {
 }
 
 async function describeWorkbook(path: string): Promise<Description> {
+  if (['xls', 'xlsb', 'ods'].includes(extension(path))) {
+    const directory = await mkdtemp(join(tmpdir(), 'ieumoffice-workbook-info-'))
+    try {
+      const converted = join(directory, 'workbook.xlsx')
+      await convertLegacyWorkbook(path, converted)
+      const wb = await workbookSummary(converted)
+      return {
+        headline: `${wb.sheets.length} sheets (converted values and formulas)`,
+        fields: {
+          sheets: wb.sheets,
+          note: 'Inspected through a temporary XLSX conversion: row and column extents reflect converted values and formulas. Original active sheet and defined names are not inferred.',
+        },
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  }
   const wb = await workbookSummary(path)
   return {
     headline: `${wb.sheets.length} sheets`,
