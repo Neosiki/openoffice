@@ -1,0 +1,99 @@
+import type { zh } from './zh'
+
+export const ms = {
+  navProjects: 'Projek',
+  intro:
+    'Jadikan folder sebagai projek, dan dokumen, arahan, memori serta sembangnya menjadi konteks panel AI. Semuanya disimpan di dalam folder itu.',
+  emptyHint: 'Belum ada projek. Cipta yang baharu atau tambah folder yang sudah anda gunakan.',
+  newNameLabel: 'Nama projek baharu',
+  create: 'Cipta',
+  cancel: 'Batal',
+  createExists: 'Folder dengan nama itu sudah wujud, jadi tiada apa-apa dicipta: {path}',
+  createInvalidName: 'Nama itu tidak boleh digunakan untuk folder. Masukkan nama lain.',
+  createUnwritable: 'Folder tidak dapat dicipta. Cuba cipta di tempat lain.',
+  refusedDriveRoot: 'Seluruh pemacu tidak boleh menjadi projek. Pilih folder di dalamnya.',
+  refusedUserHome: 'Seluruh folder pengguna tidak boleh menjadi projek. Pilih folder di dalamnya.',
+  refusedProtected:
+    'Folder ini digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
+  refusedContainsProtected:
+    'Folder ini mengandungi folder yang digunakan oleh aplikasi atau program AI, jadi ia tidak boleh menjadi projek.',
+  refusedNotFolder: 'Folder ini tidak dapat dibaca.',
+  refusedDifferentProject: 'Folder itu milik projek lain, jadi tiada apa-apa diubah.',
+  backToList: 'Semua projek',
+  projectNameLabel: 'Nama projek',
+  saveName: 'Simpan nama',
+  renameHint: 'Nama folder kekal sama.',
+  openInExplorer: 'Buka dalam File Explorer',
+  openInFinder: 'Tunjukkan dalam Finder',
+  trustUse: 'Arahan dan memori dihantar kepada AI',
+  trustWithout: 'Digunakan tanpa arahan',
+  trustWithoutDesc:
+    'Arahan, memori dan sembang dari PC lain tidak dihantar kepada AI, dan memori tidak ditambah.',
+  trustUnconfirmed: 'Folder ini belum disahkan',
+  retry: 'Cuba lagi',
+  relocate: 'Pilih folder sekali lagi',
+  missingNote: 'Folder tidak ditemui. Jika anda telah memindahkannya, pilih lokasi baharunya.',
+  tabsLabel: 'Kandungan projek',
+  tabInstructions: 'Arahan',
+  tabMemory: 'Memori',
+  tabFiles: 'Fail',
+  tabChats: 'Sembang',
+  instructionsDesc:
+    'Peraturan kerja yang diikuti AI dalam projek ini. Ia disertakan dalam setiap permintaan daripada panel AI yang memilih projek ini.',
+  instructionsPlaceholder:
+    'Contoh: tulis laporan dengan nada rasmi, dan tarikh seperti 30 Okt 2026.',
+  save: 'Simpan',
+  saved: 'Disimpan.',
+  saveUnwritable: 'Folder ini tidak boleh ditulis, jadi tiada apa-apa disimpan.',
+  alsoRead: 'Turut dibaca',
+  readAgentsFiles: 'Baca juga AGENTS.md dan CLAUDE.md di bahagian atas folder sebagai arahan',
+  withoutNotSent:
+    'Projek ini digunakan tanpa arahan, jadi buat masa ini ia tidak dihantar kepada AI.',
+  memoryDesc:
+    'Nota yang dicatat AI semasa bersembang. Padam yang salah atau tidak diperlukan lagi.',
+  memoryEnabled: 'Simpan memori',
+  memoryEnabledDesc:
+    'Jika dimatikan, AI tidak menulis apa-apa yang baharu. Memori sedia ada masih dibaca.',
+  memoryLength: '{count} entri · {chars} aksara',
+  memoryEmpty: 'Belum ada memori.',
+  memoryEditAll: 'Edit semua',
+  memoryEditLabel: 'Semua memori',
+  memoryConflict: 'Terdapat salinan konflik penyegerakan: {names}',
+  consolidating: 'Sedang mengemas…',
+  stop: 'Henti',
+  consolidateConnect:
+    'Tiada AI yang boleh digunakan disambungkan. Sambungkan satu, kemudian tekan lagi.',
+  openAiSettings: 'Buka tetapan AI',
+  consolidateChecking: 'Sedang menyemak sambungan AI. Tekan lagi sebentar nanti.',
+  consolidateNotice: 'Baca notis sambungan AI dahulu, kemudian tekan lagi.',
+  consolidateNothing: 'Tiada memori untuk dikemas.',
+  consolidateWithout:
+    'Projek ini digunakan tanpa arahan, jadi memorinya tidak boleh dihantar kepada AI. Tukar kepada menggunakan arahan di atas untuk mengemasnya.',
+  consolidateFailed: 'Tidak dapat mengemas. Memori tidak berubah.',
+  consolidateStopped: 'Dihentikan. Memori tidak berubah.',
+  consolidateUndone: 'Dikembalikan seperti sebelum dikemas.',
+  undoFailed: 'Tidak dapat membuat asal.',
+  removeMemoryAria: 'Padam memori ini: {text}',
+  filesDesc:
+    'Fail yang boleh dilihat AI dalam projek ini. Fail tersembunyi dan folder .ieumoffice tidak disertakan.',
+  filesEmpty: 'Tiada fail yang boleh dilihat AI.',
+  filesLoadFailed: 'Senarai fail tidak dapat dibaca.',
+  filesCount: '{count} fail',
+  loadMore: 'Tunjukkan lagi',
+  noExt: 'Tiada jenis',
+  notOnPc: 'Tiada dalam PC ini',
+  notOnPcTitle:
+    'Fail ini hanya ada di awan. Jika AI mahu membacanya, anda akan ditanya dahulu sebelum dimuat turun.',
+  hideFromAi: 'Sembunyikan daripada AI',
+  hideFromAiAria: 'Sembunyikan daripada AI: {name}',
+  ignoredTitle: 'Fail yang disembunyikan daripada AI',
+  ignoredDesc:
+    'Senarai ini hanya dipaparkan pada skrin ini. Buat asal supaya AI dapat melihat fail semula.',
+  ignoredEmpty: 'Tiada.',
+  restoreAria: 'Buat asal: {name}',
+  chatsDesc:
+    'Sembang dalam projek ini. Klik satu untuk menyambungnya dalam panel AI dokumen yang terakhir menggunakannya.',
+  deleteConfirm: 'Alihkan sembang “{title}” ke tong sampah?',
+  actionFailed: 'Tidak berjaya. Sila cuba lagi.',
+  loadFailed: 'Projek tidak dapat dibaca.',
+} satisfies Record<keyof typeof zh, string>

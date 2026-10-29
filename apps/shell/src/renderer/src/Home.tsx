@@ -64,6 +64,8 @@ import type { QuickLookPayload } from '../../shared/quick-look-api'
 import { agentText } from './i18n/strings-agent'
 import { DriveNavIcon, DrivePanel, useDriveState } from './DrivePanel'
 import { driveUiText } from './i18n/strings-drive'
+import { ProjectsPanel, subscribeProjectScreen, type ProjectScreenRequest } from './ProjectsPanel'
+import { projectsText } from './i18n/strings-projects'
 
 declare global {
   interface Window {
@@ -1085,6 +1087,24 @@ export function Home({
   const [driveMode, setDriveMode] = useState(false)
   const driveState = useDriveState()
   const driveOffered = driveState !== null && driveState.state !== 'unavailable'
+  // the project screen (decision 0088) takes over the content area the same way
+  const [projectsMode, setProjectsMode] = useState(false)
+  const [projectRequest, setProjectRequest] = useState<ProjectScreenRequest | null>(null)
+  // the project screen asked for the first-connection notice ("[tidy up]" waits behind it)
+  const [projectsNoticeAsked, setProjectsNoticeAsked] = useState(false)
+  const projectsOffered = typeof window.projectFolderApi?.listProjects === 'function'
+  // an AI panel's "[view]" (instructions or memory changed) opens the screen at that section
+  useEffect(
+    () =>
+      subscribeProjectScreen(window.projectFolderApi, (request) => {
+        setProjectsMode(true)
+        setAskMode(false)
+        setDriveMode(false)
+        setSelectedFolder(null)
+        setProjectRequest(request)
+      }),
+    [],
+  )
   const [filter, setFilter] = useState('all')
   // ── Starred groups (named buckets the Starred view can filter on) ──
   // groups that currently have at least one starred file (drives the pills)
@@ -1570,6 +1590,7 @@ export function Home({
     setSelectedFolder(null)
     setAskMode(false)
     setDriveMode(false)
+    setProjectsMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setGroupFilter(null)
@@ -1591,6 +1612,7 @@ export function Home({
     setSelectedFolder(dir)
     setAskMode(false)
     setDriveMode(false)
+    setProjectsMode(false)
     setSelected(new Set())
     setRowMenu(null)
     setFolderMenu(null)
@@ -2924,7 +2946,7 @@ export function Home({
           }
           return
         }
-      } else if (event.key === ' ' && !askMode && !driveMode) {
+      } else if (event.key === ' ' && !askMode && !driveMode && !projectsMode) {
         const checkedPath = selectedFolder ? folderSelectedPaths[0] : selectedPaths[0]
         const candidate = hoveredFilePathRef.current ?? checkedPath ?? null
         if (candidate) {
@@ -3254,7 +3276,8 @@ export function Home({
       return parent?.folders.some((f) => f.path === p) ?? false
     })
 
-  const activeNav = !selectedFolder && !driveMode ? (askMode ? 'ask' : view) : null
+  const activeNav =
+    !selectedFolder && !driveMode ? (projectsMode ? 'projects' : askMode ? 'ask' : view) : null
 
   const onSidebarResizeStart = (e: ReactPointerEvent<HTMLDivElement>) => {
     const startX = e.clientX
@@ -3334,6 +3357,7 @@ export function Home({
             onClick={() => {
               setAskMode(true)
               setDriveMode(false)
+              setProjectsMode(false)
               setSelectedFolder(null)
               setSelected(new Set())
               setRowMenu(null)
@@ -3355,6 +3379,37 @@ export function Home({
             </svg>
             <span className="nav-label">{t('navAsk')}</span>
           </button>
+          {projectsOffered && (
+            <button
+              className={`nav-item${activeNav === 'projects' ? ' active' : ''}`}
+              aria-current={activeNav === 'projects' ? 'page' : undefined}
+              data-testid="home-projects-nav"
+              onClick={() => {
+                setProjectsMode(true)
+                setAskMode(false)
+                setDriveMode(false)
+                setSelectedFolder(null)
+                setSelected(new Set())
+                setRowMenu(null)
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M1.9 4.3c0-.7.6-1.3 1.3-1.3h2.9l1.4 1.5h5.3c.7 0 1.3.6 1.3 1.3v6.3c0 .7-.6 1.3-1.3 1.3H3.2c-.7 0-1.3-.6-1.3-1.3z"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M5 8.4h6M5 10.6h3.6"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="nav-label">{projectsText(lang, 'navProjects')}</span>
+            </button>
+          )}
           {/* decision 0032: the agent opens a window of its own, hence the mark on the right */}
           {window.aiOfficeAgent ? (
             <button
@@ -3395,6 +3450,7 @@ export function Home({
               onClick={() => {
                 setDriveMode(true)
                 setAskMode(false)
+                setProjectsMode(false)
                 setSelectedFolder(null)
                 setSelected(new Set())
                 setRowMenu(null)
@@ -3422,6 +3478,19 @@ export function Home({
           lang={lang}
           dateLocale={i18n.dateLocale}
           onOpenSettings={() => setSettingsRequest({ section: 'integrations' })}
+        />
+      ) : projectsMode && projectsOffered ? (
+        <ProjectsPanel
+          request={projectRequest}
+          aiSettings={aiSettings}
+          statuses={connection.statuses}
+          noticeDue={noticeDue}
+          onNoticeNeeded={() => setProjectsNoticeAsked(true)}
+          onOpenAiSettings={() => setSettingsRequest({ section: 'aiModel' })}
+          onOpenHomeAsk={() => {
+            setProjectsMode(false)
+            setAskMode(true)
+          }}
         />
       ) : askMode ? (
         <KbAskPanel
@@ -3617,7 +3686,7 @@ export function Home({
       {/* the first-connection notice comes up where a connection is made or first
           used from this screen: in Settings and on the ask panel (an editor's AI
           panel shows it for itself) */}
-      {noticeDue && (settingsVisited || askMode) && (
+      {noticeDue && (settingsVisited || askMode || (projectsMode && projectsNoticeAsked)) && (
         <FirstConnectionDialog onAcknowledge={onNoticeAcknowledge} />
       )}
       {/* documents with unsaved content left in recovery copies, asked about
