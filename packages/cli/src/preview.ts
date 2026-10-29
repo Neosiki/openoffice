@@ -1,4 +1,4 @@
-import { flagBool, flagString, type ParsedArgs } from './args'
+import { flagBool, type ParsedArgs } from './args'
 import { CliError, EXIT } from './result'
 
 /**
@@ -24,9 +24,9 @@ export function clipText(text: string, max: number): { text: string; truncated: 
 /** `--full` lifts the cap, `--max-chars n` moves it. */
 export function previewChars(args: ParsedArgs, fallback: number): number {
   if (flagBool(args, 'full')) return Infinity
-  const raw = flagString(args, 'max-chars')
+  const raw = args.flags['max-chars']
   if (raw === undefined) return fallback
-  const n = Number(raw)
+  const n = typeof raw === 'string' ? Number(raw) : NaN
   if (!Number.isInteger(n) || n < 1 || n > MAX_PREVIEW_CHARS)
     throw new CliError(
       EXIT.usage,

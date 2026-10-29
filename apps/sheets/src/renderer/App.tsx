@@ -382,6 +382,7 @@ import { installMenuInputEnter } from './menu-input-enter'
 import { installCellContextMenu } from './cell-context-menu'
 import { installClipboardAnchorTile } from './clipboard-anchor-tile'
 import { installSelectionWrapGuard } from './selection-wrap-fix'
+import { installSelectionAppearance } from './selection-appearance'
 import { sharedFormulaResolverFor } from './shared-formula-journal'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { installBorderOverflowExclusionFix } from './border-overflow-exclusion'
@@ -2063,6 +2064,7 @@ export function App({
     // must precede the first render: the filter render module registers at
     // lifecycle Rendered, and Excel draws no outline around a filtered range
     installFilterRangeOutlineSuppression(runtime)
+    const selectionAppearance = installSelectionAppearance(runtime)
     installVeryHiddenSheetGuard(runtime, lazyWorkbookRef)
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
     univerRef.current = runtime
@@ -2094,6 +2096,7 @@ export function App({
     const themeService = runtime.univer.__getInjector().get(ThemeService)
     const applyUniverDark = () => {
       themeService.setDarkMode(isDarkTheme())
+      selectionAppearance.refresh()
       crossHighlightRef.current?.refresh()
     }
     const offThemeChanged = window.desktopApi?.onThemeChanged?.(applyUniverDark)
@@ -3593,6 +3596,7 @@ export function App({
       unsubscribeCloseSave()
       offThemeChanged?.()
       offDocThemeChanged?.()
+      selectionAppearance.dispose()
       offAuthorChanged?.()
       undoRedoSub.unsubscribe()
       findRevealDispose()

@@ -136,7 +136,7 @@ export const convertCommand: CommandDef = {
       throw new CliError(EXIT.usage, 'missing --to <format>', undefined, {
         reason: 'missing_argument',
       })
-    const targets = ROUTES[from]
+    const targets = Object.hasOwn(ROUTES, from) ? ROUTES[from] : undefined
     if (!targets?.includes(to)) {
       throw new CliError(
         EXIT.usage,
