@@ -439,3 +439,89 @@ export {
 export { ProviderLogo } from './provider-logos'
 export { useRedactLabelField } from './use-redact-label'
 export type { RedactLabelField } from './use-redact-label'
+export { ProjectPicker, projectPickerOptionId, type ProjectPickerProps } from './ProjectPicker'
+export { ProjectChatMenu, projectChatOptionId, type ProjectChatMenuProps } from './ProjectChatMenu'
+export {
+  ProjectNoticeLine,
+  ProjectNoticeList,
+  ProjectFolderHintLine,
+  ProjectMemoryEventLine,
+  ProjectMemoryConsolidatedLine,
+  ProjectToolSummaryLine,
+} from './ProjectNotices'
+export {
+  projectPickerItems,
+  projectPickerAction,
+  projectPickerInitialIndex,
+  projectMatchesQuery,
+  projectChipText,
+  projectChatRows,
+  projectChatMenuItems,
+  projectChatTitle,
+  projectEditorLabel,
+  projectRelativeTime,
+  projectFullTime,
+  projectNoticeView,
+  projectNoticeActionLabel,
+  projectMemoryEventText,
+  projectConsolidatedText,
+  projectToolSummaryText,
+  type ProjectPickerItem,
+  type ProjectPickerAction,
+  type ProjectChatMenuItem,
+  type ProjectNoticeAction,
+  type ProjectNoticeView,
+} from './project-panel-model'
+export {
+  PROJECT_PANEL_STRINGS,
+  projectPanelText,
+  type ProjectPanelStringKey,
+} from './strings-project-panel'
+export {
+  PROJECT_TOOLS,
+  createProjectRun,
+  forgetMemoryLine,
+  memoryLinesOf,
+  panelProjectSkill,
+  projectSystemPrompt,
+  windowProjectFolderBridge,
+} from './project-skill'
+export type {
+  CreateProjectRunOptions,
+  PanelProjectSkillOptions,
+  ProjectMemoryLine,
+  ProjectRun,
+  ProjectRunPrepared,
+  ProjectRunSnapshot,
+  ProjectSkillBridge,
+} from './project-skill'
+export {
+  createProjectChatController,
+  useProjectChat,
+  windowLegacyChatApi,
+} from './use-project-chat'
+export type {
+  LegacyChatApi,
+  ProjectActiveChat,
+  ProjectChat,
+  ProjectChatBridge,
+  ProjectChatController,
+  ProjectChatEntry,
+  ProjectChatLoop,
+  ProjectChatOpened,
+  ProjectChatOptions,
+  ProjectChatRecord,
+  ProjectChatState,
+} from './use-project-chat'
+export {
+  consolidateProjectMemory,
+  parseConsolidatedMemory,
+  undoProjectMemoryConsolidation,
+} from './project-memory-consolidate'
+export type {
+  ConsolidateProjectMemoryOptions,
+  ConsolidateProjectMemoryResult,
+  ProjectMemoryBridge,
+} from './project-memory-consolidate'
+export { PROJECT_CHAT_STRINGS, projectChatText } from './strings-project-chat'
+export type { ProjectChatStringKey } from './strings-project-chat'
