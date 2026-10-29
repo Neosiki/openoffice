@@ -1,0 +1,99 @@
+import type { zh } from './zh'
+
+export const es = {
+  navProjects: 'Proyectos',
+  intro:
+    'Convierte una carpeta en proyecto y sus documentos, instrucciones, memoria y chats pasan a ser el contexto del panel de IA. Todo se guarda dentro de esa carpeta.',
+  emptyHint: 'Aún no hay proyectos. Crea uno o añade una carpeta que ya uses.',
+  newNameLabel: 'Nombre del nuevo proyecto',
+  create: 'Crear',
+  cancel: 'Cancelar',
+  createExists: 'Ya existe una carpeta con ese nombre, así que no se creó nada: {path}',
+  createInvalidName: 'Ese nombre no se puede usar para una carpeta. Escribe otro nombre.',
+  createUnwritable: 'No se pudo crear la carpeta. Prueba a crearla en otro lugar.',
+  refusedDriveRoot: 'Una unidad entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
+  refusedUserHome:
+    'Tu carpeta de usuario entera no puede ser un proyecto. Elige una carpeta dentro de ella.',
+  refusedProtected:
+    'La app o un programa de IA usa esta carpeta, así que no puede ser un proyecto.',
+  refusedContainsProtected:
+    'Esta carpeta contiene una carpeta que usa la app o un programa de IA, así que no puede ser un proyecto.',
+  refusedNotFolder: 'No se puede leer esta carpeta.',
+  refusedDifferentProject: 'Esa carpeta pertenece a otro proyecto, así que no se cambió nada.',
+  backToList: 'Todos los proyectos',
+  projectNameLabel: 'Nombre del proyecto',
+  saveName: 'Guardar nombre',
+  renameHint: 'La carpeta conserva su nombre.',
+  openInExplorer: 'Abrir en el Explorador de archivos',
+  openInFinder: 'Mostrar en el Finder',
+  trustUse: 'Las instrucciones y la memoria se envían a la IA',
+  trustWithout: 'En uso sin instrucciones',
+  trustWithoutDesc:
+    'No se envían a la IA las instrucciones, la memoria ni los chats de otros PC, y no se guarda memoria.',
+  trustUnconfirmed: 'Esta carpeta aún no se ha confirmado',
+  retry: 'Reintentar',
+  relocate: 'Elegir la carpeta de nuevo',
+  missingNote: 'No se encuentra la carpeta. Si la moviste, elige su nueva ubicación.',
+  tabsLabel: 'Contenido del proyecto',
+  tabInstructions: 'Instrucciones',
+  tabMemory: 'Memoria',
+  tabFiles: 'Archivos',
+  tabChats: 'Chats',
+  instructionsDesc:
+    'Reglas de trabajo que sigue la IA en este proyecto. Acompañan cada solicitud de un panel de IA que tenga este proyecto elegido.',
+  instructionsPlaceholder:
+    'Por ejemplo: redactar los informes en tono formal y las fechas como 30 oct. 2026.',
+  save: 'Guardar',
+  saved: 'Guardado.',
+  saveUnwritable: 'No se puede escribir en esta carpeta, así que no se guardó nada.',
+  alsoRead: 'También se leen',
+  readAgentsFiles: 'Leer también AGENTS.md y CLAUDE.md de la raíz de la carpeta como instrucciones',
+  withoutNotSent:
+    'Este proyecto se usa sin instrucciones, así que por ahora esto no se envía a la IA.',
+  memoryDesc: 'Notas que la IA tomó mientras chateaba. Borra lo que esté mal o ya no haga falta.',
+  memoryEnabled: 'Guardar memoria',
+  memoryEnabledDesc:
+    'Si se desactiva, la IA no escribe nada nuevo. La memoria existente se sigue leyendo.',
+  memoryLength: '{count} entradas · {chars} caracteres',
+  memoryEmpty: 'Aún no hay memoria.',
+  memoryEditAll: 'Editar todo',
+  memoryEditLabel: 'Toda la memoria',
+  memoryConflict: 'Hay copias por conflicto de sincronización: {names}',
+  consolidating: 'Ordenando…',
+  stop: 'Detener',
+  consolidateConnect:
+    'No hay ninguna IA conectada que pueda usarse. Conecta una y vuelve a pulsar.',
+  openAiSettings: 'Abrir ajustes de IA',
+  consolidateChecking: 'Comprobando la conexión de IA. Vuelve a pulsar en un momento.',
+  consolidateNotice: 'Lee primero el aviso de conexión de IA y vuelve a pulsar.',
+  consolidateNothing: 'No hay memoria que ordenar.',
+  consolidateWithout:
+    'Este proyecto se usa sin instrucciones, así que su memoria no se puede enviar a la IA. Cambia arriba a usar las instrucciones para ordenarla.',
+  consolidateFailed: 'No se pudo ordenar. La memoria no ha cambiado.',
+  consolidateStopped: 'Detenido. La memoria no ha cambiado.',
+  consolidateUndone: 'Se volvió a como estaba antes de ordenar.',
+  undoFailed: 'No se pudo deshacer.',
+  removeMemoryAria: 'Borrar esta memoria: {text}',
+  filesDesc:
+    'Archivos que la IA puede ver en este proyecto. Se excluyen los archivos ocultos y la carpeta .ieumoffice.',
+  filesEmpty: 'No hay archivos que la IA pueda ver.',
+  filesLoadFailed: 'No se pudo leer la lista de archivos.',
+  filesCount: '{count} archivos',
+  loadMore: 'Mostrar más',
+  noExt: 'Sin tipo',
+  notOnPc: 'No está en este PC',
+  notOnPcTitle:
+    'Este archivo solo está en la nube. Si la IA quiere leerlo, se te pregunta antes de descargarlo.',
+  hideFromAi: 'Ocultar a la IA',
+  hideFromAiAria: 'Ocultar a la IA: {name}',
+  ignoredTitle: 'Archivos ocultos a la IA',
+  ignoredDesc:
+    'Esta lista solo se muestra en esta pantalla. Deshaz para que la IA vuelva a ver un archivo.',
+  ignoredEmpty: 'Ninguno.',
+  restoreAria: 'Deshacer: {name}',
+  chatsDesc:
+    'Chats de este proyecto. Haz clic en uno para seguirlo en el panel de IA del último documento que lo usó.',
+  deleteConfirm: '¿Mover el chat «{title}» a la papelera?',
+  actionFailed: 'No funcionó. Inténtalo de nuevo.',
+  loadFailed: 'No se pudo leer el proyecto.',
+} satisfies Record<keyof typeof zh, string>

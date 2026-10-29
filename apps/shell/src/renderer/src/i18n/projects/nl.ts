@@ -1,0 +1,98 @@
+import type { zh } from './zh'
+
+export const nl = {
+  navProjects: 'Projecten',
+  intro:
+    'Maak van een map een project: de documenten, instructies, het geheugen en de chats worden de context van het AI-paneel. Alles blijft in die map.',
+  emptyHint: 'Nog geen projecten. Maak er een of voeg een map toe die je al gebruikt.',
+  newNameLabel: 'Naam van het nieuwe project',
+  create: 'Maken',
+  cancel: 'Annuleren',
+  createExists: 'Er bestaat al een map met die naam, dus er is niets gemaakt: {path}',
+  createInvalidName: 'Die naam kan niet voor een map worden gebruikt. Voer een andere naam in.',
+  createUnwritable: 'De map kon niet worden gemaakt. Probeer hem ergens anders te maken.',
+  refusedDriveRoot: 'Een heel station kan geen project zijn. Kies een map daarbinnen.',
+  refusedUserHome: 'Je hele gebruikersmap kan geen project zijn. Kies een map daarbinnen.',
+  refusedProtected:
+    'Deze map wordt gebruikt door de app of een AI-programma en kan dus geen project zijn.',
+  refusedContainsProtected:
+    'Deze map bevat een map die de app of een AI-programma gebruikt en kan dus geen project zijn.',
+  refusedNotFolder: 'Deze map kan niet worden gelezen.',
+  refusedDifferentProject: 'Die map hoort bij een ander project, dus er is niets gewijzigd.',
+  backToList: 'Alle projecten',
+  projectNameLabel: 'Projectnaam',
+  saveName: 'Naam opslaan',
+  renameHint: 'De map houdt zijn naam.',
+  openInExplorer: 'Openen in Verkenner',
+  openInFinder: 'Tonen in Finder',
+  trustUse: 'Instructies en geheugen worden naar de AI gestuurd',
+  trustWithout: 'In gebruik zonder instructies',
+  trustWithoutDesc:
+    'Instructies, geheugen en chats van andere pc’s worden niet naar de AI gestuurd, en er wordt geen geheugen bijgehouden.',
+  trustUnconfirmed: 'Deze map is nog niet bevestigd',
+  retry: 'Opnieuw proberen',
+  relocate: 'Map opnieuw kiezen',
+  missingNote: 'De map is niet gevonden. Heb je hem verplaatst, kies dan de nieuwe locatie.',
+  tabsLabel: 'Projectinhoud',
+  tabInstructions: 'Instructies',
+  tabMemory: 'Geheugen',
+  tabFiles: 'Bestanden',
+  tabChats: 'Chats',
+  instructionsDesc:
+    'Werkregels die de AI in dit project volgt. Ze gaan mee met elk verzoek uit een AI-paneel waarin dit project is gekozen.',
+  instructionsPlaceholder:
+    'Bijvoorbeeld: rapporten in een formele toon schrijven en datums als 30 okt. 2026.',
+  save: 'Opslaan',
+  saved: 'Opgeslagen.',
+  saveUnwritable: 'Er kan niet in deze map worden geschreven, dus er is niets opgeslagen.',
+  alsoRead: 'Ook gelezen',
+  readAgentsFiles: 'AGENTS.md en CLAUDE.md bovenin de map ook als instructies lezen',
+  withoutNotSent:
+    'Dit project wordt zonder instructies gebruikt, dus dit gaat voorlopig niet naar de AI.',
+  memoryDesc:
+    'Notities die de AI tijdens het chatten bijhield. Verwijder wat fout is of niet meer nodig.',
+  memoryEnabled: 'Geheugen bijhouden',
+  memoryEnabledDesc:
+    'Uitgeschakeld schrijft de AI niets nieuws. Bestaand geheugen wordt nog steeds gelezen.',
+  memoryLength: '{count} items · {chars} tekens',
+  memoryEmpty: 'Nog geen geheugen.',
+  memoryEditAll: 'Alles bewerken',
+  memoryEditLabel: 'Hele geheugen',
+  memoryConflict: 'Er zijn kopieën door een synchronisatieconflict: {names}',
+  consolidating: 'Bezig met opruimen…',
+  stop: 'Stoppen',
+  consolidateConnect: 'Er is geen bruikbare AI verbonden. Verbind er een en druk dan opnieuw.',
+  openAiSettings: 'AI-instellingen openen',
+  consolidateChecking: 'De AI-verbinding wordt gecontroleerd. Druk zo dadelijk opnieuw.',
+  consolidateNotice: 'Lees eerst de melding over de AI-verbinding en druk dan opnieuw.',
+  consolidateNothing: 'Er is geen geheugen om op te ruimen.',
+  consolidateWithout:
+    'Dit project wordt zonder instructies gebruikt, dus het geheugen kan niet naar de AI. Schakel hierboven over naar het gebruik van instructies om op te ruimen.',
+  consolidateFailed: 'Opruimen lukte niet. Het geheugen is ongewijzigd.',
+  consolidateStopped: 'Gestopt. Het geheugen is ongewijzigd.',
+  consolidateUndone: 'Terug naar hoe het was vóór het opruimen.',
+  undoFailed: 'Ongedaan maken lukte niet.',
+  removeMemoryAria: 'Dit geheugen verwijderen: {text}',
+  filesDesc:
+    'Bestanden die de AI in dit project kan zien. Verborgen bestanden en de map .ieumoffice vallen erbuiten.',
+  filesEmpty: 'Er zijn geen bestanden die de AI kan zien.',
+  filesLoadFailed: 'De bestandslijst kon niet worden gelezen.',
+  filesCount: '{count} bestanden',
+  loadMore: 'Meer tonen',
+  noExt: 'Geen type',
+  notOnPc: 'Niet op deze pc',
+  notOnPcTitle:
+    'Dit bestand staat alleen in de cloud. Wil de AI het lezen, dan wordt je eerst gevraagd het te downloaden.',
+  hideFromAi: 'Verbergen voor AI',
+  hideFromAiAria: 'Verbergen voor AI: {name}',
+  ignoredTitle: 'Voor de AI verborgen bestanden',
+  ignoredDesc:
+    'Deze lijst is alleen op dit scherm te zien. Maak ongedaan om de AI een bestand weer te laten zien.',
+  ignoredEmpty: 'Geen.',
+  restoreAria: 'Ongedaan maken: {name}',
+  chatsDesc:
+    'Chats in dit project. Klik op een chat om verder te gaan in het AI-paneel van het document waarin hij het laatst werd gebruikt.',
+  deleteConfirm: 'De chat ‘{title}’ naar de prullenbak verplaatsen?',
+  actionFailed: 'Dat lukte niet. Probeer het opnieuw.',
+  loadFailed: 'Het project kon niet worden gelezen.',
+} satisfies Record<keyof typeof zh, string>
