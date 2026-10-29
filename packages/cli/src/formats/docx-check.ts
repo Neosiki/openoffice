@@ -196,8 +196,10 @@ function emptyFieldResults(xml: string | null | undefined): string[] {
   )) {
     const instr = /\bw:instr="([^"]*)"/.exec(m[1] ?? m[3] ?? '')?.[1] ?? ''
     const keyword = keywordOf(unescapeAttr(instr))
-    if (!RESULTLESS_FIELDS.has(keyword) && !/<w:t\b[^>]*>[^<]*\S/.test(m[2] ?? ''))
-      out.push(keyword)
+    const result = [...(m[2] ?? '').matchAll(/<w:t\b[^>]*>([^<]*)<\/w:t>/g)]
+      .map((t) => unescapeAttr(t[1]!))
+      .join('')
+    if (!RESULTLESS_FIELDS.has(keyword) && !result.trim()) out.push(keyword)
   }
   const stack: { instr: string[]; result: string | null }[] = []
   for (const t of xml.matchAll(
@@ -214,10 +216,12 @@ function emptyFieldResults(xml: string | null | undefined): string[] {
         const keyword = keywordOf(ended.instr.join(''))
         if (!RESULTLESS_FIELDS.has(keyword) && !(ended.result ?? '').trim()) out.push(keyword)
       }
-    } else if (t[2] !== undefined && current?.result === null) current.instr.push(t[2])
+    } else if (t[2] !== undefined && current?.result === null)
+      current.instr.push(unescapeAttr(t[2]))
     else if (t[3] !== undefined) {
       // A nested result also supplies text to every enclosing result, but not its instruction.
-      for (const field of stack) if (field.result !== null) field.result += t[3]
+      const text = unescapeAttr(t[3])
+      for (const field of stack) if (field.result !== null) field.result += text
     }
   }
   return out
@@ -229,7 +233,7 @@ function fieldKeyword(xml: string | null | undefined): string {
     /<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/.exec(xml)?.[1] ??
     /<w:fldSimple[^>]*w:instr="([^"]*)"/.exec(xml)?.[1] ??
     ''
-  return /^\s*\\?\s*([A-Za-z]+)/.exec(instr)?.[1]?.toUpperCase() ?? ''
+  return /^\s*\\?\s*([A-Za-z]+)/.exec(unescapeAttr(instr))?.[1]?.toUpperCase() ?? ''
 }
 
 function checkRefs(parsed: Block[], at: (docxIndex: number) => number, issues: IssueDraft[]): void {
@@ -250,7 +254,7 @@ function checkRefs(parsed: Block[], at: (docxIndex: number) => number, issues: I
       if (link) targets.push({ kind: 'HYPERLINK', name: link[1]! })
     }
     for (const m of xml.matchAll(/<w:hyperlink\b[^>]*\bw:anchor="([^"]+)"/g)) {
-      targets.push({ kind: 'hyperlink', name: m[1]! })
+      targets.push({ kind: 'hyperlink', name: unescapeAttr(m[1]!) })
     }
     for (const t of targets) {
       if (bookmarks.has(t.name) || seen.has(t.name)) continue
@@ -282,18 +286,30 @@ function fieldInstructions(xml: string): string[] {
     else if (t[1] === 'separate' || t[1] === 'end') {
       if (current) out.push(current.join('').trim())
       current = null
-    } else if (t[2] !== undefined && current) current.push(t[2])
+    } else if (t[2] !== undefined && current) current.push(unescapeAttr(t[2]))
   }
   return out
 }
 
 function unescapeAttr(text: string): string {
-  return text
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
+  return text.replace(
+    /&(?:(quot|apos|lt|gt|amp)|#(?:x([0-9a-fA-F]+)|(\d+)));/g,
+    (reference, named: string | undefined, hex: string | undefined, decimal: string) => {
+      if (named)
+        return ({ quot: '"', apos: "'", lt: '<', gt: '>', amp: '&' } as Record<string, string>)[
+          named
+        ]!
+      const code = hex === undefined ? Number(decimal) : parseInt(hex, 16)
+      return code === 9 ||
+        code === 10 ||
+        code === 13 ||
+        (code >= 0x20 && code <= 0xd7ff) ||
+        (code >= 0xe000 && code <= 0xfffd) ||
+        (code >= 0x10000 && code <= 0x10ffff)
+        ? String.fromCodePoint(code)
+        : reference
+    },
+  )
 }
 
 function checkToc(blocks: PmBlock[], issues: IssueDraft[]): void {
