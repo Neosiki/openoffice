@@ -46,6 +46,63 @@ export function listVisibleFiles(visibility: ProjectAiVisibility): Promise<Visib
   )
 }
 
+/** `listVisibleFiles` or a cached stand-in for it */
+export type VisibleFileLister = (visibility: ProjectAiVisibility) => Promise<VisibleFile[]>
+
+/**
+ * How long one project's walk is reused (context file names of each send, the
+ * `@` list, the list tool). A send, its tool calls and the `@` list of the next
+ * message often ask within seconds; on a large folder each walk is thousands of
+ * file system calls. Tunable; a file added or removed meanwhile shows after this.
+ */
+export const PROJECT_FILE_LIST_CACHE_MS = 5_000
+
+export interface CachedFileLister extends VisibleFileLister {
+  /** forget the walks of one project root, or of every project */
+  invalidate(root?: string): void
+}
+
+/**
+ * `listVisibleFiles` with each project's walk remembered for `ttlMs`, keyed by
+ * the root and the visibility rule (`ruleKey`), so an `ignore` edit is a new key
+ * and never served a stale list. Callers asking at the same time share one walk.
+ * A visibility without a `ruleKey` is never cached. A failed walk is not kept.
+ */
+export function createCachedFileLister(
+  options: { ttlMs?: number; now?: () => number; list?: VisibleFileLister } = {},
+): CachedFileLister {
+  const ttl = options.ttlMs ?? PROJECT_FILE_LIST_CACHE_MS
+  const now = options.now ?? Date.now
+  const list = options.list ?? listVisibleFiles
+  const walks = new Map<string, { root: string; at: number; files: Promise<VisibleFile[]> }>()
+  const lister = (async (visibility: ProjectAiVisibility) => {
+    if (visibility.ruleKey === undefined) return list(visibility)
+    const at = now()
+    for (const [key, walk] of walks) {
+      if (at - walk.at >= ttl) walks.delete(key)
+    }
+    const key = `${visibility.root}\u0000${visibility.ruleKey}`
+    let walk = walks.get(key)
+    if (!walk) {
+      const files = list(visibility)
+      walk = { root: visibility.root, at, files }
+      walks.set(key, walk)
+      const kept = walk
+      files.catch(() => {
+        if (walks.get(key) === kept) walks.delete(key)
+      })
+    }
+    // a copy: callers filter and slice, and one caller's array is never another's
+    return [...(await walk.files)]
+  }) as CachedFileLister
+  lister.invalidate = (root) => {
+    for (const [key, walk] of walks) {
+      if (root === undefined || walk.root === root) walks.delete(key)
+    }
+  }
+  return lister
+}
+
 const NO_IGNORE = compileIgnore('', { caseInsensitive: false })
 
 /**
@@ -156,8 +213,9 @@ export const PROJECT_MENTION_FILES_LIMIT = 50
 export async function projectMentionFiles(
   visibility: ProjectAiVisibility,
   limit: number = PROJECT_MENTION_FILES_LIMIT,
+  list: VisibleFileLister = listVisibleFiles,
 ): Promise<Array<{ path: string; title: string }>> {
-  const files = await listVisibleFiles(visibility)
+  const files = await list(visibility)
   return files.slice(0, limit).map((file) => ({ path: file.path, title: basename(file.path) }))
 }
 
@@ -166,12 +224,13 @@ export async function projectMentionFiles(
  * "not on this PC" mark, and how many were left out.
  */
 export function createContextFiles(
-  options: { resolveCloudOnly?: CloudOnlyResolver; limit?: number } = {},
+  options: { resolveCloudOnly?: CloudOnlyResolver; limit?: number; list?: VisibleFileLister } = {},
 ): (request: ContextFilesRequest) => Promise<ContextFiles> {
   const resolve = options.resolveCloudOnly ?? ((paths) => detectCloudOnly(paths))
   const limit = options.limit ?? PROJECT_CONTEXT_FILES_LIMIT
+  const list = options.list ?? listVisibleFiles
   return async ({ visibility }) => {
-    const all = await listVisibleFiles(visibility)
+    const all = await list(visibility)
     const shown = await withCloudFlags(all.slice(0, limit), resolve)
     return { files: shown.map(toEntry), omitted: Math.max(0, all.length - shown.length) }
   }

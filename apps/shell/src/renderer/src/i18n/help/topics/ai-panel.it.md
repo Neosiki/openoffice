@@ -41,7 +41,7 @@ Nel pannello IA degli editor Docs, Sheets, Slides, Hangul, HTML e mappe mentali 
 - Fai clic sul nome del progetto, a sinistra sotto il campo di input, per scegliere un progetto (una cartella del tuo PC). L'IA risponde allora conoscendo i file, le istruzioni e la memoria di quella cartella, e la chat viene conservata lì così puoi continuare in un altro editor. Vedi [Progetti](help://projects).
 - Con un progetto scelto, il titolo della chat attuale compare in cima al pannello. Fai clic per vedere l'elenco delle chat del progetto e **Nuova chat**.
 - L'elenco di `@` nel campo di input mostra «File di questo progetto» dopo i documenti aperti.
-- Una richiesta con un progetto scelto invia all'IA che stai usando anche le istruzioni, la memoria e l'elenco dei nomi dei file di quel progetto, oltre al testo di ogni file che l'IA legge.
+- Una richiesta con un progetto scelto invia all'IA che stai usando anche le istruzioni (insieme ad `AGENTS.md` e `CLAUDE.md` in cima alla cartella, che puoi disattivare nella pagina del progetto), la memoria e l'elenco dei nomi dei file di quel progetto, un breve estratto di ogni file che l'IA trova cercando nella cartella, oltre al testo di ogni file che l'IA legge.
 
 ## Ripristino e sicurezza
 

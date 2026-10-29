@@ -452,7 +452,11 @@ import {
   trustPromptOptions,
   useExistingPromptOptions,
 } from './projects/project-dialog-text'
-import { createContextFiles, projectMentionFiles } from './projects/project-files'
+import {
+  createCachedFileLister,
+  createContextFiles,
+  projectMentionFiles,
+} from './projects/project-files'
 import { NewDocumentPlacer, type NewDocumentOpener } from './projects/new-documents'
 import { ProjectGuide } from './projects/project-guide'
 import {
@@ -5626,6 +5630,13 @@ const projectTrackedContents = new Set<number>()
  */
 const projectListCloudOnly = createCachedCloudResolver((paths) => resolveCloudOnly(paths))
 
+/**
+ * One project's AI-visible file walk, reused for a few seconds by the context
+ * file names, the `@` list and the list tool. An `ignore` edit is a new key;
+ * a change to the list or a new document in a folder drops the walks.
+ */
+const projectFileLister = createCachedFileLister()
+
 function projectFolderServices(): ProjectFolderRuntime {
   if (projectFolderRuntime) return projectFolderRuntime
   const guide = new ProjectGuide({
@@ -5634,7 +5645,10 @@ function projectFolderServices(): ProjectFolderRuntime {
     userData: app.getPath('userData'),
     defaultParentDir: () => defaultSaveDir(),
     language: () => currentLang(),
-    contextFiles: createContextFiles({ resolveCloudOnly: projectListCloudOnly }),
+    contextFiles: createContextFiles({
+      resolveCloudOnly: projectListCloudOnly,
+      list: projectFileLister,
+    }),
   })
   const chats = new ProjectChatStore({ guide, trash: (path) => shell.trashItem(path) })
   const scopes = new KbRunScopes()
@@ -5645,6 +5659,9 @@ function projectFolderServices(): ProjectFolderRuntime {
       ensureFileIndexer()?.refreshIfStale(60_000)
       return fileIndexStore
     },
+    // list and search marks may reuse recent verdicts; a read always asks afresh
+    listCloudOnly: projectListCloudOnly,
+    listFiles: projectFileLister,
     askDownload: (ask) => askProjectDownload(ask),
   })
   projectFolderRuntime = { guide, chats, tools, scopes }
@@ -5673,12 +5690,15 @@ function newDocumentFolderFor(webContentsId: number): Promise<string | null> {
 }
 
 /** A new document the AI made in this window, into its panel's project; null without one */
-function writeProjectNewDocument(
+async function writeProjectNewDocument(
   webContentsId: number,
   fileName: string,
   bytes: Uint8Array,
 ): Promise<string | null> {
-  return newDocuments.writeFor(webContentsId, fileName, bytes)
+  const written = await newDocuments.writeFor(webContentsId, fileName, bytes)
+  // the new file belongs in the next file list right away
+  if (written) projectFileLister.invalidate()
+  return written
 }
 
 /** The home renderer's webContents id, when the shell window is up */
@@ -5811,7 +5831,10 @@ function registerProjectFolderChannels(): void {
       return contents.id
     },
     // the index walks the listed project folders: follow additions, removals and moves
-    projectsChanged: () => fileIndexer?.refresh(),
+    projectsChanged: () => {
+      projectFileLister.invalidate()
+      fileIndexer?.refresh()
+    },
     resolveCloudOnly: projectListCloudOnly,
     presetProjectOf: (sender) => newDocuments.presetProjectOf(sender),
   })
@@ -9107,7 +9130,7 @@ app.whenReady().then(async () => {
         const projectId = await projectFolderIpc.windowProject(asker.webContentsId)
         if (!projectId) return []
         const visibility = await projectFolderServices().guide.aiVisibility(projectId)
-        return visibility ? projectMentionFiles(visibility) : []
+        return visibility ? projectMentionFiles(visibility, undefined, projectFileLister) : []
       },
       stat: async (path) => {
         const entry = statPathEntries([path], new Set<string>())[0]
@@ -9561,6 +9584,12 @@ app.on('will-quit', () => {
 
 /** what every way out of a normal run releases (will-quit, and an OS session end) */
 function releaseAppResources(): void {
+  // project use times held back to spare the settings file (written once a minute)
+  try {
+    projectFolderRuntime?.guide.flushTouches()
+  } catch {
+    // the settings file is not writable now; the list order is only a convenience
+  }
   fileIndexer?.stop()
   fileIndexStore?.close()
   for (const watcher of folderWatchers.values()) watcher.close()

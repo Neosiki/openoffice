@@ -6,7 +6,7 @@ Un progetto è una cartella del tuo PC. Scegli un progetto in un pannello IA e l
 
 - Nel pannello IA di ogni editor e in **Ask AI** della Home, il nome del progetto attuale si trova a sinistra, sotto il campo di input. Se non ne hai scelto nessuno, c'è scritto **Nessun progetto**.
 - Fai clic sul nome per aprire l'elenco: progetti **Fissati** e **Recenti**, **Nuovo progetto**, **Aggiungi cartella** e **Nessun progetto**. Scrivi nella casella in alto per cercare; se nessun progetto corrisponde, puoi crearne uno nuovo con quel nome.
-- Passando il puntatore su una riga compaiono fissa, **Mostra in Esplora file** (Finder su Mac) e **Togli dall'elenco**. Togliere un progetto dall'elenco lascia la cartella e i suoi file come sono.
+- Passando il puntatore su una riga compaiono fissa, **Apri cartella** e **Togli dall'elenco**. Togliere un progetto dall'elenco lascia la cartella e i suoi file come sono.
 - Un progetto la cui cartella è stata spostata o eliminata appare attenuato come **Cartella mancante**. Fai clic e scegli la cartella spostata per continuare con lo stesso progetto.
 - Se apri un documento che si trova nella cartella di un progetto, quel progetto è già scelto. Se per quel documento passi a **Nessun progetto**, resta così anche la volta successiva che lo apri. Anche il progetto che scegli per un documento fuori dalla cartella viene ricordato per quel documento.
 - Il progetto scelto vale dalla richiesta successiva di quel pannello. Cambiarlo a metà di una chat avvia una nuova chat; quella in cui eri rimane dov'era.
@@ -50,7 +50,7 @@ Un progetto è una cartella del tuo PC. Scegli un progetto in un pannello IA e l
 
 **Progetti**, nella barra laterale della Home, è il posto dove crei un **Nuovo progetto**, scegli **Usa una cartella esistente** e ne apri uno per gestirlo.
 
-- **Intestazione**: il nome (cambiarlo non rinomina la cartella), il percorso della cartella, **Mostra in Esplora file** e lo stato. Quando il progetto è usato senza istruzioni, compare **Usa anche le istruzioni**.
+- **Intestazione**: il nome (cambiarlo non rinomina la cartella), il percorso della cartella, **Apri in Esplora file** (su Mac **Mostra nel Finder**) e lo stato. Quando il progetto è usato senza istruzioni, compare **Usa anche le istruzioni**.
 - **Istruzioni**: la casella delle istruzioni, e gli `AGENTS.md` e `CLAUDE.md` letti insieme.
 - **Memoria**: l'elenco degli appunti, **Modifica tutto**, **Riordina**, memoria attiva o disattivata.
 - **File**: i file che l'IA vede e quelli tenuti fuori. Fai clic sul nome di un file per aprirlo.

@@ -1,11 +1,11 @@
-import { existsSync } from 'node:fs'
-import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { closeAndSaveVideo, launchShell, waitForPageWithUrl } from './helpers'
 import {
   queueTurns,
   recorded,
+  removeRun,
   scratch,
   shot,
   stubEverything,
@@ -35,7 +35,9 @@ async function send(page: Page, text: string): Promise<void> {
 
 /** wait until the stub has seen `count` requests in total */
 async function waitStreams(app: Parameters<typeof recorded>[0], count: number): Promise<string[]> {
-  await expect.poll(async () => (await recorded(app)).streams.length, { timeout: 20_000 }).toBeGreaterThanOrEqual(count)
+  await expect
+    .poll(async () => (await recorded(app)).streams.length, { timeout: 20_000 })
+    .toBeGreaterThanOrEqual(count)
   return (await recorded(app)).streams
 }
 
@@ -74,7 +76,10 @@ test.describe('project folder, as a first-time user', () => {
         await shot(page, 'u01-instructions-saved')
       })
 
-      await writeFile(join(proj, '운영 보고서 초안.md'), '# 2학기 운영 보고서\n\n- 방과후 프로그램 12개 운영\n')
+      await writeFile(
+        join(proj, '운영 보고서 초안.md'),
+        '# 2학기 운영 보고서\n\n- 방과후 프로그램 12개 운영\n',
+      )
       await writeFile(
         join(proj, '학부모 안내문.html'),
         '<html><body><h1>학부모 안내문</h1><p>2학기 상담 주간은 10월 셋째 주입니다.</p></body></html>',
@@ -109,7 +114,9 @@ test.describe('project folder, as a first-time user', () => {
         await expect(md.locator('.ai-msg-assistant, .ai-msg').last()).toContainText('셋째 주', {
           timeout: 15_000,
         })
-        await expect(md.locator(".ai-project-event-text", { hasText: `기억함: ${MEMORY_A}` })).toBeVisible()
+        await expect(
+          md.locator('.ai-project-event-text', { hasText: `기억함: ${MEMORY_A}` }),
+        ).toBeVisible()
         await shot(md, 'u02-md-first-reply-memory')
       })
 
@@ -122,10 +129,10 @@ test.describe('project folder, as a first-time user', () => {
         await shot(md, 'u03-md-memory-removed')
         // the home tab
         await page.locator('.tab-bar .tab-home').click()
-        await page.locator('.projects-tabs button, .projects-tabs [role=tab]', { hasText: '기억' }).click()
+        await page
+          .locator('.projects-tabs button, .projects-tabs [role=tab]', { hasText: '기억' })
+          .click()
         await page.waitForTimeout(2000)
-        const staleView = await page.locator('.projects-pane').innerText()
-        console.log('HOME MEMORY TAB right after the AI wrote memory:', staleView.replace(/\s+/g, ' '))
         await shot(page, 'u04a-home-memory-before-reopen')
         // leave the project and come back: the screen reads the folder again
         await page.getByRole('button', { name: '모든 프로젝트' }).click()
@@ -145,9 +152,12 @@ test.describe('project folder, as a first-time user', () => {
         await html.locator('.ai-project-chat-menu button').first().click()
         await shot(html, 'u06-html-chat-menu')
         await html
-          .locator('.ai-project-chat-menu .ai-project-list [role=option], .ai-project-chat-menu .ai-project-list button', {
-            hasText: '상담 주간',
-          })
+          .locator(
+            '.ai-project-chat-menu .ai-project-list [role=option], .ai-project-chat-menu .ai-project-list button',
+            {
+              hasText: '상담 주간',
+            },
+          )
           .first()
           .click()
         await expect(html.getByText('상담 주간은 10월 셋째 주입니다.').first()).toBeVisible()
@@ -168,11 +178,15 @@ test.describe('project folder, as a first-time user', () => {
 
       await test.step('7. 파일 하나를 AI가 보지 않게', async () => {
         await page.locator('.tab-bar .tab-home').click()
-        await page.locator('.projects-tabs button, .projects-tabs [role=tab]', { hasText: '파일' }).click()
+        await page
+          .locator('.projects-tabs button, .projects-tabs [role=tab]', { hasText: '파일' })
+          .click()
         await page.getByRole('button', { name: 'AI가 보지 않게: 예산 메모.txt' }).click()
         await expect(page.locator('.projects-ignored-list')).toContainText('예산 메모.txt')
         await shot(page, 'u09-home-file-hidden')
-        await page.locator('.tab-bar .tab-item:not(.tab-home)', { hasText: '학부모 안내문' }).click()
+        await page
+          .locator('.tab-bar .tab-item:not(.tab-home)', { hasText: '학부모 안내문' })
+          .click()
         const before = (await recorded(app)).streams.length
         await queueTurns(app, [
           { toolCalls: [{ id: 'r2', name: 'project_read', input: { path: '예산 메모.txt' } }] },
@@ -200,26 +214,25 @@ test.describe('project folder, as a first-time user', () => {
 
       await test.step('10b. 대화 지우기', async () => {
         await md.bringToFront()
-        await page.locator('.tab-bar .tab-item:not(.tab-home)', { hasText: '운영 보고서 초안' }).click()
+        await page
+          .locator('.tab-bar .tab-item:not(.tab-home)', { hasText: '운영 보고서 초안' })
+          .click()
         await md.locator('.ai-project-chat-menu button').first().click()
-        const row = md.locator('.ai-project-chat-menu .ai-project-list > *', { hasText: '상담 주간' }).first()
+        const row = md
+          .locator('.ai-project-chat-menu .ai-project-list > *', { hasText: '상담 주간' })
+          .first()
         await row.hover()
         await row.getByRole('button', { name: '지우기' }).click()
         await shot(md, 'u13-md-delete-confirm')
         await md.locator('.ai-project-confirm-delete').click()
         await shot(md, 'u14-md-after-delete')
-        const chatsDir = join(proj, '.ieumoffice', 'chats')
-        for (const t of [300, 1500, 4000]) {
-          await md.waitForTimeout(t)
-          console.log(`chats left after delete +${t}ms:`, existsSync(chatsDir) ? await readdir(chatsDir) : [])
-        }
-        console.log('list after delete:', await md.locator('.ai-project-chat-menu .ai-project-list').innerText().catch(() => 'closed'))
+        await expect(
+          md.locator('.ai-project-chat-menu .ai-project-list > *', { hasText: '상담 주간' }),
+        ).toHaveCount(0)
       })
-
-      console.log('message boxes:', JSON.stringify((await recorded(app)).boxes, null, 1))
     } finally {
       await closeAndSaveVideo(launched, 'pf-user')
+      await removeRun(run)
     }
-    await rm(join(ud), { recursive: true, force: true }).catch(() => {})
   })
 })

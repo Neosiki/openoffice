@@ -6,7 +6,7 @@ Một dự án là một thư mục trên máy tính của bạn. Chọn dự á
 
 - Trong bảng AI của mọi trình soạn thảo và trong **Ask AI** ở Trang chủ, tên dự án hiện tại nằm bên trái, ngay dưới ô nhập. Khi chưa chọn gì, nó hiện **Không dùng dự án**.
 - Nhấp vào tên đó để mở danh sách: các dự án **Đã ghim** và **Gần đây**, **Dự án mới**, **Thêm thư mục** và **Không dùng dự án**. Gõ vào ô trên cùng để tìm; khi không có dự án nào khớp, bạn có thể tạo ngay một dự án mới mang tên đó.
-- Rê chuột lên một hàng để thấy nút ghim, **Hiện trong Trình khám phá tệp** (Finder trên máy Mac) và **Xóa khỏi danh sách**. Xóa một dự án khỏi danh sách không động gì đến thư mục và các tệp bên trong.
+- Rê chuột lên một hàng để thấy nút ghim, **Mở thư mục** và **Xóa khỏi danh sách**. Xóa một dự án khỏi danh sách không động gì đến thư mục và các tệp bên trong.
 - Dự án có thư mục đã bị di chuyển hoặc xóa sẽ hiện mờ với dòng **Không tìm thấy thư mục**. Nhấp vào đó rồi chọn thư mục đã chuyển đi để tiếp tục với chính dự án ấy.
 - Khi mở một tài liệu nằm trong thư mục dự án, dự án đó đã được chọn sẵn. Nếu bạn chuyển tài liệu đó sang **Không dùng dự án**, lần mở sau nó vẫn giữ như vậy. Dự án bạn chọn cho một tài liệu nằm ngoài thư mục cũng được ghi nhớ cho tài liệu đó.
 - Dự án đã chọn có hiệu lực từ yêu cầu tiếp theo của bảng đó. Đổi dự án giữa chừng sẽ mở một cuộc trò chuyện mới; cuộc trò chuyện đang dở vẫn nằm nguyên chỗ cũ.
@@ -50,7 +50,7 @@ Một dự án là một thư mục trên máy tính của bạn. Chọn dự á
 
 **Dự án** trên thanh bên của Trang chủ là nơi bạn tạo **Dự án mới**, chọn **Dùng thư mục có sẵn** và mở một dự án để quản lý.
 
-- **Phần đầu**: tên (đổi tên dự án không đổi tên thư mục), đường dẫn thư mục, **Hiện trong Trình khám phá tệp** và trạng thái. Khi dự án đang dùng mà không theo chỉ dẫn, nút **Dùng cả chỉ dẫn** sẽ hiện ra.
+- **Phần đầu**: tên (đổi tên dự án không đổi tên thư mục), đường dẫn thư mục, **Mở trong File Explorer** (trên máy Mac là **Hiện trong Finder**) và trạng thái. Khi dự án đang dùng mà không theo chỉ dẫn, nút **Dùng cả chỉ dẫn** sẽ hiện ra.
 - **Chỉ dẫn**: ô viết chỉ dẫn, cùng `AGENTS.md` và `CLAUDE.md` được đọc kèm.
 - **Ghi nhớ**: danh sách ghi chú, **Sửa tất cả**, **Sắp xếp gọn**, bật hoặc tắt ghi nhớ.
 - **Tệp**: các tệp AI nhìn thấy và những tệp được giữ khỏi AI. Nhấp vào tên tệp để mở tệp đó.

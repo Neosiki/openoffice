@@ -41,7 +41,7 @@ In het AI-paneel van de editors Docs, Sheets, Slides, Hangul, HTML en mindmaps k
 - Klik op de projectnaam links onder het invoerveld om een project te kiezen (één map op uw pc). De AI antwoordt dan met kennis van de bestanden, instructies en het geheugen van die map, en de chat wordt in de map bewaard, zodat u in een andere editor verder kunt. Zie [Projecten](help://projects).
 - Met een gekozen project staat de titel van de huidige chat bovenaan het paneel. Klik erop voor de chatlijst van dit project en **Nieuwe chat**.
 - De `@`-lijst in het invoerveld toont na de geopende documenten 'Bestanden in dit project'.
-- Een verzoek met een gekozen project stuurt ook de instructies, het geheugen en de lijst met bestandsnamen van dat project, en de tekst van elk bestand dat de AI leest, naar de AI die u gebruikt.
+- Een verzoek met een gekozen project stuurt ook de instructies (met `AGENTS.md` en `CLAUDE.md` bovenin de map, die u op de projectpagina kunt uitzetten), het geheugen en de lijst met bestandsnamen van dat project, een kort fragment van elk bestand dat de AI vindt bij zoeken in de map, en de tekst van elk bestand dat de AI leest, naar de AI die u gebruikt.
 
 ## Terugdraaien en veiligheid
 

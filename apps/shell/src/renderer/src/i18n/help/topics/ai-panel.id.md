@@ -41,7 +41,7 @@ Di panel AI editor Docs, Sheets, Slides, Hangul, HTML, dan peta pikiran, Anda da
 - Klik nama proyek di sebelah kiri, di bawah kotak masukan, untuk memilih proyek (satu folder di PC Anda). AI lalu menjawab dengan mengetahui file, instruksi, dan memori folder itu, dan obrolannya disimpan di folder tersebut sehingga bisa dilanjutkan di editor lain. Lihat [Proyek](help://projects).
 - Setelah proyek dipilih, judul obrolan yang sedang berjalan tampil di bagian atas panel. Klik untuk melihat daftar obrolan proyek ini dan **Obrolan baru**.
 - Daftar `@` di kotak masukan menampilkan "File di proyek ini" setelah dokumen yang terbuka.
-- Permintaan dengan proyek terpilih juga mengirim instruksi, memori, dan daftar nama file proyek itu, serta teks file apa pun yang dibaca AI, ke AI yang Anda pakai.
+- Permintaan dengan proyek terpilih juga mengirim instruksi (bersama `AGENTS.md` dan `CLAUDE.md` di puncak folder, yang bisa dimatikan di halaman proyek), memori, dan daftar nama file proyek itu, cuplikan singkat dari setiap file yang ditemukan AI saat mencari di folder, serta teks file apa pun yang dibaca AI, ke AI yang Anda pakai.
 
 ## Pengembalian dan keamanan
 

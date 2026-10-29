@@ -6,7 +6,7 @@ Proyek adalah satu folder di PC Anda. Pilih proyek di panel AI, dan AI bekerja d
 
 - Di panel AI setiap editor dan di **Ask AI** pada Beranda, nama proyek yang sedang dipakai ada di sebelah kiri, di bawah kotak masukan. Jika belum ada yang dipilih, tertulis **Tanpa proyek**.
 - Klik nama itu untuk membuka daftarnya: proyek **Disematkan** dan **Terbaru**, **Proyek baru**, **Tambah folder**, dan **Tanpa proyek**. Ketik di kotak paling atas untuk mencari; jika tidak ada proyek yang cocok, Anda bisa langsung membuat proyek baru dengan nama itu.
-- Arahkan kursor ke sebuah baris untuk menampilkan sematkan, **Tampilkan di Penjelajah File** (Finder di Mac), dan **Hapus dari daftar**. Menghapus proyek dari daftar tidak mengubah folder maupun file di dalamnya.
+- Arahkan kursor ke sebuah baris untuk menampilkan sematkan, **Buka folder**, dan **Hapus dari daftar**. Menghapus proyek dari daftar tidak mengubah folder maupun file di dalamnya.
 - Proyek yang foldernya dipindahkan atau dihapus tampak redup dengan tulisan **Folder tidak ditemukan**. Klik, lalu pilih folder yang sudah dipindahkan untuk melanjutkan proyek yang sama.
 - Saat Anda membuka dokumen di dalam folder proyek, proyek itu sudah langsung terpilih. Jika dokumen itu Anda ubah ke **Tanpa proyek**, pilihan itu tetap berlaku saat dokumen dibuka lagi. Proyek yang Anda pilih untuk dokumen di luar folder juga diingat untuk dokumen tersebut.
 - Proyek yang dipilih berlaku mulai permintaan berikutnya dari panel itu. Mengganti proyek di tengah obrolan akan memulai obrolan baru; obrolan sebelumnya tetap tersimpan di tempatnya.
@@ -50,7 +50,7 @@ Proyek adalah satu folder di PC Anda. Pilih proyek di panel AI, dan AI bekerja d
 
 **Proyek** di bilah sisi Beranda adalah tempat Anda membuat **Proyek baru**, memilih **Gunakan folder yang ada**, dan membuka sebuah proyek untuk mengelolanya.
 
-- **Kepala halaman**: nama (mengganti nama proyek tidak mengganti nama folder), jalur folder, **Tampilkan di Penjelajah File**, dan statusnya. Jika proyek dipakai tanpa instruksi, muncul **Gunakan instruksi juga**.
+- **Kepala halaman**: nama (mengganti nama proyek tidak mengganti nama folder), jalur folder, **Buka di File Explorer** (di Mac **Tampilkan di Finder**), dan statusnya. Jika proyek dipakai tanpa instruksi, muncul **Gunakan instruksi juga**.
 - **Instruksi**: kotak instruksi, serta `AGENTS.md` dan `CLAUDE.md` yang ikut dibaca.
 - **Memori**: daftar catatan, **Sunting semua**, **Rapikan**, dan sakelar memori.
 - **File**: file yang dilihat AI dan file yang disembunyikan darinya. Klik nama file untuk membukanya.

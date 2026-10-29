@@ -17,15 +17,16 @@ import type { FileIndexStore } from '../file-index/store'
 import { isSupportedTreeFile } from '../folder-tree'
 import { KB_READ_MAX_BYTES, readKnowledgeFilePage, type KbRunScopes } from '../knowledge-base'
 import { resolveCloudOnly as detectCloudOnly } from './cloud-files'
-import { plainFileIn } from './folder-files'
+import { realPlainFileIn } from './folder-files'
 import { compileIgnore } from './ignore'
-import { relativeInside } from './paths'
+import { isPlainSegment, relativeInside } from './paths'
 import {
   listVisibleFiles,
   toEntry,
   withCloudFlags,
   type CloudOnlyResolver,
   type VisibleFile,
+  type VisibleFileLister,
 } from './project-files'
 import type { ProjectAiVisibility, ProjectGuide } from './project-guide'
 import { isAiVisiblePath } from './visibility'
@@ -74,8 +75,18 @@ export interface ProjectToolsDeps {
   scopes: KbRunScopes
   /** the home search index, or null while it is unavailable */
   store: () => Pick<FileIndexStore, 'search' | 'pathsIndexedAsOnDisk'> | null
-  /** default: `resolveCloudOnly` (one detector run per call) */
+  /**
+   * The check right before a read opens a file; never cached. Default:
+   * `resolveCloudOnly` (one detector run per call)
+   */
   resolveCloudOnly?: CloudOnlyResolver
+  /**
+   * The "not on this PC" marks of list and search results, which a run asks for
+   * often; may reuse recent verdicts. Default: `resolveCloudOnly`
+   */
+  listCloudOnly?: CloudOnlyResolver
+  /** the project's AI-visible files; may reuse a recent walk. Default: `listVisibleFiles` */
+  listFiles?: VisibleFileLister
   /** asks "'<file>' is not on this PC; download it?"; true only when the person agreed */
   askDownload: (ask: DownloadAsk) => Promise<boolean>
   platform?: NodeJS.Platform
@@ -108,10 +119,14 @@ const NO_IGNORE = compileIgnore('', { caseInsensitive: false })
 export class ProjectFolderTools {
   private readonly platform: NodeJS.Platform
   private readonly resolveCloud: CloudOnlyResolver
+  private readonly listCloud: CloudOnlyResolver
+  private readonly list: VisibleFileLister
 
   constructor(private readonly deps: ProjectToolsDeps) {
     this.platform = deps.platform ?? process.platform
     this.resolveCloud = deps.resolveCloudOnly ?? ((paths) => detectCloudOnly(paths))
+    this.listCloud = deps.listCloudOnly ?? this.resolveCloud
+    this.list = deps.listFiles ?? listVisibleFiles
   }
 
   // ────────────────────────── scope ──────────────────────────
@@ -173,7 +188,7 @@ export class ProjectFolderTools {
     const { visibility } = await this.scoped(owner, raw)
     const args = argsOf(raw)
     const prefix = typeof args.prefix === 'string' ? cleanRelPath(args.prefix) : ''
-    let files: VisibleFile[] = await listVisibleFiles(visibility)
+    let files: VisibleFile[] = await this.list(visibility)
     if (prefix) {
       const fold = foldsCase(this.platform)
       const wanted = fold ? prefix.toLowerCase() : prefix
@@ -183,7 +198,7 @@ export class ProjectFolderTools {
     }
     const offset = count(args.offset, 0)
     const limit = count(args.limit, PROJECT_LIST_DEFAULT_LIMIT)
-    const page = await withCloudFlags(files.slice(offset, offset + limit), this.resolveCloud)
+    const page = await withCloudFlags(files.slice(offset, offset + limit), this.listCloud)
     return { files: page.map(toEntry), total: files.length }
   }
 
@@ -225,7 +240,7 @@ export class ProjectFolderTools {
     const quotable = new Set(
       await withoutUnsavedFiles(store.pathsIndexedAsOnDisk(paths), (path) => path),
     )
-    const cloud = await this.cloudVerdicts(paths)
+    const cloud = await this.cloudVerdicts(paths, this.listCloud)
     const hits: ProjectSearchHit[] = []
     for (const hit of result.hits) {
       const relPath = this.relOf(visibility, hit.path)
@@ -245,9 +260,12 @@ export class ProjectFolderTools {
   }
 
   /** one detector run for the paths; null when it failed (callers treat that as not on this PC) */
-  private async cloudVerdicts(paths: readonly string[]): Promise<Map<string, boolean> | null> {
+  private async cloudVerdicts(
+    paths: readonly string[],
+    resolve: CloudOnlyResolver,
+  ): Promise<Map<string, boolean> | null> {
     if (paths.length === 0) return new Map()
-    return this.resolveCloud(paths).catch(() => null)
+    return resolve(paths).catch(() => null)
   }
 
   // ────────────────────────── project_read ──────────────────────────
@@ -274,6 +292,17 @@ export class ProjectFolderTools {
     return this.readIn(owner, projectId, visibility, path, count(offset, 0))
   }
 
+  /** why the AI may not see these folder-relative segments, or null when it may */
+  private judge(
+    visibility: ProjectAiVisibility,
+    segments: readonly string[],
+  ): 'hidden' | 'ignored' | null {
+    const rel = segments.join('/')
+    if (!isAiVisiblePath(visibility.root, rel, NO_IGNORE)) return 'hidden'
+    if (!visibility.isVisible(rel)) return 'ignored'
+    return null
+  }
+
   private async readIn(
     owner: number,
     projectId: ProjectId,
@@ -294,24 +323,31 @@ export class ProjectFolderTools {
     } else {
       rel = cleanRelPath(given)
     }
-    const segments = rel.split('/').filter((segment) => segment !== '')
-    if (segments.length === 0 || segments.some((segment) => segment === '..' || segment === '.')) {
+    const asked = rel.split('/').filter((segment) => segment !== '')
+    if (asked.length === 0 || asked.some((segment) => segment === '..' || segment === '.')) {
       return refused('outside')
     }
-    if (!isAiVisiblePath(visibility.root, rel, NO_IGNORE)) return refused('hidden')
-    if (!visibility.isVisible(rel)) return refused('ignored')
+    // a stream name (`:`) or a trailing dot or space is another spelling of some entry on Windows
+    if (this.platform === 'win32' && !asked.every(isPlainSegment)) return refused('not-found')
+    const judged = this.judge(visibility, asked)
+    if (judged) return refused(judged)
 
     // no link or junction on the way, a plain file at the end
-    const path = await plainFileIn(visibility.root, segments)
-    if (!path) {
+    const found = await realPlainFileIn(visibility.root, asked, this.platform)
+    if (!found) {
       try {
-        const info = await lstat(join(visibility.root, ...segments))
+        const info = await lstat(join(visibility.root, ...asked))
         // a folder is no file to read; anything else present was reached through a link
         return refused(info.isDirectory() ? 'not-found' : 'outside')
       } catch {
         return refused('not-found')
       }
     }
+    // judged again by the name on disk: a short name or other spelling may stand for
+    // a hidden, `.ieumoffice/` or ignored entry; every later check uses the real path
+    const { path, segments } = found
+    const judgedReal = this.judge(visibility, segments)
+    if (judgedReal) return refused(judgedReal)
     if (!isSupportedTreeFile(path)) return refused('unreadable')
     if (await fileHasUnsavedChanges(path)) return refused('unsaved')
     try {
@@ -321,7 +357,8 @@ export class ProjectFolderTools {
     }
 
     // the content of a file that is not on this PC is opened only on the person's yes
-    const cloud = await this.cloudVerdicts([path])
+    // fresh, never the list cache: this decides whether opening the file downloads it
+    const cloud = await this.cloudVerdicts([path], this.resolveCloud)
     if (!cloud || cloud.get(path) !== false) {
       const ask: DownloadAsk = {
         owner,

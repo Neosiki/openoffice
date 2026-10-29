@@ -90,7 +90,8 @@ function parseChatInfo(text: string | null, id: string): ChatInfoLike | null {
 /**
  * Whether any message line of a chat was written by another install. Lines are
  * read one at a time and the scan stops at the first foreign one; unreadable
- * lines are skipped, as chat reading does.
+ * lines are skipped, as chat reading does. A file that cannot be read to the
+ * end counts as foreign: under "without" such a chat stays hidden.
  */
 export async function hasForeignMessage(
   root: string,
@@ -115,7 +116,7 @@ export async function hasForeignMessage(
     }
     return false
   } catch {
-    return false
+    return true
   } finally {
     lines.close()
     stream.destroy()

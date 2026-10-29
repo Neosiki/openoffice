@@ -41,7 +41,7 @@ V panelu AI editorů Docs, Sheets, Slides, hangul, HTML a myšlenkových map mů
 - Projekt (jednu složku ve vašem počítači) vyberete kliknutím na název projektu vlevo pod vstupním polem. AI pak odpovídá se znalostí souborů, pokynů a paměti z této složky a konverzace se uloží do složky, takže v ní můžete pokračovat v jiném editoru. Viz [Projekty](help://projects).
 - S vybraným projektem se nahoře v panelu zobrazí název aktuální konverzace. Kliknutím na něj otevřete seznam konverzací projektu a **Nová konverzace**.
 - Seznam `@` ve vstupním poli ukazuje za otevřenými dokumenty „Soubory v tomto projektu“.
-- Požadavek s vybraným projektem posílá AI, kterou používáte, také pokyny projektu, jeho paměť a seznam názvů souborů a k tomu text každého souboru, který si AI přečte.
+- Požadavek s vybraným projektem posílá AI, kterou používáte, také pokyny projektu (spolu s `AGENTS.md` a `CLAUDE.md` v kořeni složky, které lze vypnout na stránce projektu), jeho paměť a seznam názvů souborů, krátký úryvek z každého souboru, který AI najde při hledání ve složce, a k tomu text každého souboru, který si AI přečte.
 
 ## Vrácení zpět a bezpečnost
 

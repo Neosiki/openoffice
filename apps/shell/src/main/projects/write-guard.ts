@@ -14,7 +14,7 @@ import { tempPathBeside } from '@genoffice/electron-utils/atomic-write'
 import { PROJECT_FOLDER_NAMES } from '@genoffice/project-store'
 import { atomicWriteFile } from '../atomic-write'
 import { isValidRenameName } from '../rename-validation'
-import { comparablePath, pathApi, relativeInside, samePath } from './paths'
+import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } from './paths'
 
 /**
  * The single write guard for project folders (spec 3, invariants 3 and 9).
@@ -78,15 +78,6 @@ async function lstatOrNull(path: string): Promise<Stats | null> {
     if (errorCode(error) === 'ENOENT') return null
     throw error
   }
-}
-
-/** One path segment as a person or the app could name it inside the folder */
-function isPlainSegment(segment: string): boolean {
-  if (segment === '' || segment === '.' || segment === '..') return false
-  // eslint-disable-next-line no-control-regex -- control characters are the check
-  if (/[\u0000-\u001f:]/.test(segment)) return false
-  // Windows drops trailing dots and spaces, so such a name could alias another entry.
-  return !segment.endsWith('.') && !segment.endsWith(' ')
 }
 
 function looksAbsolute(path: string): boolean {

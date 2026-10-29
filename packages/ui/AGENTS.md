@@ -47,7 +47,7 @@
 - `template-fonts/`의 글꼴 파일을 Vite 자산으로 가져오지 않는다(import, `new URL(…, import.meta.url)`, CSS `url()`). 그러면 편집기 빌드마다 사본이 들어간다. 설치 파일에는 `apps/shell/electron-builder.cjs`의 extraResources 항목 하나로 한 번만 들어가고(`resources/template-fonts`), 편집기는 `templateFontsDir`(`@genoffice/electron-utils/template-fonts-dir`)로 그 폴더를 읽는다. shell의 `tests/template-fonts-resource.test.ts`가 둘 다 지킨다.
 - 템플릿 글꼴 파일은 배포처의 것 그대로 둔다. 잘라 내거나 이름을 바꾸지 않는다. 라이선스 글도 배포처의 바이트 그대로다(`.gitattributes`의 `-text`). 글꼴 파일 합계는 `TEMPLATE_FONTS_MAX_BYTES`(45 MiB) 이하여야 하고 `tests/template-fonts.test.ts`가 지킨다. 상한은 사용자가 받아들인 설치 파일 증가(수십 MB) 안에 머물기 위한 값이고, 글꼴은 편집기마다가 아니라 한 벌만 실리기 때문에 이 안에 들어간다. 올리려면 그 범위를 넘지 않는지 먼저 따진다. 글꼴을 더하거나 바꾸면 `src/template-fonts.ts`, 폴더의 `README.md`, 저장소 루트의 `NOTICE`를 함께 고친다.
 - **프로젝트 맥락은 지시문에만 넣는다.** `panelProjectSkill`은 프로젝트 이름·지침·기억·파일 이름 목록을 스킬의 `systemPrompt`(실행 반복이 `MATERIAL_NOT_INSTRUCTIONS` 뒤에 잇는다)에 넣고, 사용자 메시지에 붙는 `buildContext`에는 넣지 않는다. 넣으면 대화 기록에 쌓이고 주소 판정에서 사람의 말로 치인다. 두 자리 모두 동기 함수이므로 보내기 직전에 다리로 미리 읽어 그 요청 동안 고정한다. 아홉 편집기와 홈 AI 질문이 모두 스킬 목록에 펼쳐 넣으므로 이 한 곳에서 넣는다(`composeWithDrive`에 넣으면 홈 AI 질문이 빠진다). 프로젝트를 고르지 않으면 아무것도 돌려주지 않는다.
-- **프로젝트 도구는 앱 도구다.** 도구 넷은 이 패키지가 정의하고 실행은 다리를 부른다. 범위는 뒷단이 지키므로 화면은 프로젝트 id만 넘긴다. `project_remember`는 기억 쌓기가 켜져 있고, 믿음이 "쓰기"이고, 폴더에 쓸 수 있을 때만 목록에 넣는다. 구독 프로그램에 도구를 켜는 길을 만들지 않는다. 기억 정리는 사람이 누를 때만 한 번 실행하고, 보내기 전 판단(`aiSendGate`)을 똑같이 지난다.
+- **프로젝트 도구는 앱 도구다.** 도구 넷은 이 패키지가 정의하고 실행은 다리를 부른다. 범위는 뒷단이 지키므로 화면은 프로젝트 id만 넘긴다. `project_remember`는 기억 쌓기가 켜져 있고, 믿음이 "지침까지 사용"이고, 폴더에 쓸 수 있을 때만 목록에 넣는다. 구독 프로그램에 도구를 켜는 길을 만들지 않는다. 기억 정리는 사람이 누를 때만 한 번 실행하고, 보내기 전 판단(`aiSendGate`)을 똑같이 지난다.
 - 상태 확인의 오류 문장(`status.error`)을 그대로 화면에 찍지 않는다. `subscriptionStatusErrorKind`로 종류를 읽어 번역된 문장을 쓴다. 로그인·설치 실패의 원문도 마찬가지다(실행 파일 경로가 들어 있을 수 있다).
 
 ## 이 모듈의 방식
