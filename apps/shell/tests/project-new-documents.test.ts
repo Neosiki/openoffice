@@ -216,7 +216,10 @@ describe('writing', () => {
 
   it('a tab a create flow opened writes its document into its opener folder, numbered', async () => {
     const placer = makePlacer()
-    placer.preset(NEW_TAB, placer.placementOfOpener({ kind: 'window', webContentsId: IN_DOC }, HOME))
+    placer.preset(
+      NEW_TAB,
+      placer.placementOfOpener({ kind: 'window', webContentsId: IN_DOC }, HOME),
+    )
     chosen.set(NEW_TAB, projectId)
     writeFileSync(join(root, 'drafts', 'Deck.pptx'), 'old')
     const written = await placer.writeFor(NEW_TAB, 'Deck.pptx', Buffer.from('new'))

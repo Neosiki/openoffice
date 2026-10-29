@@ -184,6 +184,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke('docs:capture-rect', rect),
   saveDocxNew: (defaultName: string, data: ArrayBuffer) =>
     ipcRenderer.invoke('docs:save-new', defaultName, data),
+  saveDocxIntoProject: (defaultName: string, format: DocFormat, data: ArrayBuffer) =>
+    ipcRenderer.invoke('docs:save-into-project', defaultName, format, data),
   saveDocxTo: (path: string, data: ArrayBuffer, overwrite: boolean) =>
     ipcRenderer.invoke('docs:save-to', path, data, overwrite === true),
   onMcpCommand: (handler) => {

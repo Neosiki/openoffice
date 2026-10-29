@@ -45,6 +45,7 @@ import {
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
+  createHandedRun,
   type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
@@ -378,6 +379,12 @@ export interface AiPanelProps {
   templateDocument?: TemplateDocument | null
   /** this tab took a request handed over by the template flow: show the panel */
   onSkillHandoff?: () => void
+  /**
+   * The run a create flow handed to this tab (the create window's request, a
+   * template copy's request) ended well: the app saves an untitled map into
+   * the panel's project (spec 6)
+   */
+  onHandedRunDone?: () => void
 }
 
 export function AiPanel({
@@ -388,8 +395,13 @@ export function AiPanel({
   onCollapse,
   templateDocument,
   onSkillHandoff,
+  onHandedRunDone,
 }: AiPanelProps): ReactElement {
   const { lang, t } = useI18n()
+  /** the run a create flow handed to this tab, until it ends (spec 6) */
+  const handedRunRef = useRef(createHandedRun())
+  const onHandedRunDoneRef = useRef(onHandedRunDone)
+  onHandedRunDoneRef.current = onHandedRunDone
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
@@ -486,6 +498,10 @@ export function AiPanel({
     busy,
     send: (text, use) => send(text, undefined, use),
     onTaken: onSkillHandoff,
+    // a template copy's request: the map goes into the project once it ends well
+    onHandedRun: ({ preview }) => {
+      if (!preview) handedRunRef.current.arm()
+    },
     setComposer: setPrompt,
   })
   const skillTemplatesRef = useRef(skillTemplates)
@@ -919,6 +935,8 @@ export function AiPanel({
           void projectChatRef.current.finishSend()
           turnRef.current = null
           setBusy(false)
+          // a handed-over run that ended well: the map goes into the project
+          if (handedRunRef.current.settle(!cancelled)) onHandedRunDoneRef.current?.()
         },
         onError: (error) => {
           // a connection that cannot go on gets the blocked notice (with "continue with …") instead of an error line
@@ -952,6 +970,8 @@ export function AiPanel({
           void projectChatRef.current.finishSend()
           turnRef.current = null
           setBusy(false)
+          // a failed make writes nothing: the map stays untitled
+          handedRunRef.current.settle(false)
         },
       },
     })
@@ -1597,6 +1617,8 @@ export function AiPanel({
       await addPaths([...(request.attachmentPaths ?? [])])
       if (!mountedRef.current) return
       setPrompt(request.text)
+      // the create window's request: the map goes into the project once its run ends well
+      handedRunRef.current.arm()
       // while a run is active the request waits in the composer; refused or held, it stays there too
       if (!loopRef.current?.busy) sendRef.current(request.text)
     })()

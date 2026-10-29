@@ -33,9 +33,7 @@ export async function saveMapIntoProject(
   const call = api?.saveIntoProject
   if (!call) return { kind: 'skipped' }
   try {
-    return outcomeOf(
-      await call.call(api, { bytes, ...(defaultName ? { defaultName } : {}) }),
-    )
+    return outcomeOf(await call.call(api, { bytes, ...(defaultName ? { defaultName } : {}) }))
   } catch (err) {
     return { kind: 'failed', error: err instanceof Error ? err.message : String(err) }
   }

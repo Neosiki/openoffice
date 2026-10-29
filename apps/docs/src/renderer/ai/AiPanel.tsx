@@ -30,6 +30,7 @@ import {
   SkillUsedNotes,
   useSkillProposals,
   useSkillTemplates,
+  createHandedRun,
   type TemplateDocument,
   type SkillChipRef,
   type SkillUse,
@@ -453,6 +454,11 @@ interface AiPanelProps {
   docExtras?: AiDocExtras
   /** footnote / endnote lists for insert_footnote, insert_endnote, delete_note, read_notes */
   notesAccess?: AiNotesAccess
+  /**
+   * The run a skill template's copy handed to this tab ended well: the app
+   * saves the untitled copy into the panel's project (spec 6)
+   */
+  onHandedRunDone?: () => void
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -486,8 +492,13 @@ export function AiPanel({
   docExtras,
   notesAccess,
   templateDocument,
+  onHandedRunDone,
 }: AiPanelProps) {
   const { t, lang } = useI18n()
+  /** the run a template copy handed to this tab, until it ends (spec 6) */
+  const handedRunRef = useRef(createHandedRun())
+  const onHandedRunDoneRef = useRef(onHandedRunDone)
+  onHandedRunDoneRef.current = onHandedRunDone
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
   const isRtl = lang === 'ar' || lang === 'he'
   const [input, setInput] = useState('')
@@ -543,6 +554,10 @@ export function AiPanel({
     send: (text, use) => runWith(text, text, undefined, undefined, use),
     onTaken: () => {
       if (!open) onExpand?.()
+    },
+    // a template copy's request: the copy goes into the project once it ends well
+    onHandedRun: ({ preview }) => {
+      if (!preview) handedRunRef.current.arm()
     },
     setComposer: setInput,
   })
@@ -1211,6 +1226,8 @@ export function AiPanel({
             persistMessage('assistant', finalText, runToolsRef.current)
           }
           projectRef.current?.finishSend()
+          // a handed-over run that ended well: the copy goes into the project
+          if (handedRunRef.current.settle(!cancelled)) onHandedRunDoneRef.current?.()
         },
         onError: (error) => {
           const errorCause = runErrorCauseOf(streamErrorRef.current, error)
@@ -1241,6 +1258,8 @@ export function AiPanel({
           if (isBlockedRunCause(errorCause)) msgQueueRef.current.hold()
           setBusy(false)
           projectRef.current?.finishSend()
+          // a failed make writes nothing: the copy stays untitled
+          handedRunRef.current.settle(false)
         },
       },
     })

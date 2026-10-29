@@ -692,7 +692,10 @@ function registerMindmapIpc(): void {
       // the bytes come from a renderer: only a map that opens is written
       const check = await openXmind(bytes)
       if (check.status !== 'ok') {
-        return { ok: false, error: `mindmap: refusing to write a map that would not open (${check.status})` }
+        return {
+          ok: false,
+          error: `mindmap: refusing to write a map that would not open (${check.status})`,
+        }
       }
       const base = fileNameBase(typeof defaultName === 'string' ? defaultName : undefined)
       try {

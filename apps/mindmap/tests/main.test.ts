@@ -407,7 +407,8 @@ describe('saving a new map into the project (spec 6)', () => {
       contents,
       request,
     )
-  const writer = vi.fn<(id: number, fileName: string, bytes: Uint8Array) => Promise<string | null>>()
+  const writer =
+    vi.fn<(id: number, fileName: string, bytes: Uint8Array) => Promise<string | null>>()
 
   beforeEach(() => {
     writer.mockReset()
