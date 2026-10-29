@@ -159,7 +159,7 @@ function describeCsv(path: string): Description {
 
 function describeText(path: string, ext: string): Description {
   const text = Buffer.from(readInput(path)).toString('utf-8')
-  const lines = text.split(/\r?\n/)
+  const lines = text.split(/\r\n|\r|\n/)
   const fields: Record<string, unknown> = { lines: lines.length, characters: text.length }
   if (ext === 'md' || ext === 'markdown') {
     fields.headings = lines.filter((l) => /^#{1,6}\s/.test(l)).length
