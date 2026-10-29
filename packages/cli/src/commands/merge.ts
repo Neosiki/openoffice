@@ -42,11 +42,12 @@ interface Hit {
   key: string
   location: Record<string, string | number | boolean>
   /** set while scanning when no fill path reaches the spot */
-  reason?: 'unreachable_nested' | 'formula_cell'
+  reason?: 'unreachable_nested' | 'formula_cell' | 'unsupported_location'
 }
 
 interface Unresolved extends Omit<Hit, 'reason'> {
-  reason: 'no_key' | 'split_placeholder' | 'unreachable_nested' | 'formula_cell'
+  reason:
+    'no_key' | 'split_placeholder' | 'unreachable_nested' | 'formula_cell' | 'unsupported_location'
 }
 
 interface Merged {
@@ -102,6 +103,11 @@ export const mergeCommand: CommandDef = {
     const nested = report.unresolved.some((u) => u.reason === 'unreachable_nested')
     const nestedRemedy =
       format === 'docx' ? 'fill the nested Word tables in Word' : 'ungroup the nested groups'
+    const sideParts = report.unresolved.some((u) => u.reason === 'unsupported_location')
+    const remedy = [
+      ...(nested ? [nestedRemedy] : []),
+      ...(sideParts ? ['fill Word headers, footers or notes in Word'] : []),
+    ].join(' and ')
     if (flagBool(args, 'strict') && report.unresolved.length) {
       throw new CliError(
         EXIT.usage,
@@ -109,8 +115,8 @@ export const mergeCommand: CommandDef = {
         { unresolved_placeholders: report.unresolved, unused_keys: report.unused },
         {
           reason: 'unresolved_placeholder',
-          suggestion: nested
-            ? `${nestedRemedy}, or drop --strict to write anyway`
+          suggestion: remedy
+            ? `${remedy}, or drop --strict to write anyway`
             : 'add the keys listed in detail.unresolved_placeholders to --data, or drop --strict to write anyway',
         },
       )
@@ -135,7 +141,7 @@ export const mergeCommand: CommandDef = {
         {
           code: 'unresolved_placeholder',
           message: `${report.unresolved.length} placeholders were left in place: ${shown.join(', ')}${report.unresolved.length > shown.length ? ', …' : ''}`,
-          suggestion: `${nested ? nestedRemedy : 'add the missing keys to --data'}${inFormula ? ', move a placeholder out of a formula into a plain text cell' : ''}, or pass --strict to fail instead`,
+          suggestion: `${remedy || 'add the missing keys to --data'}${inFormula ? ', move a placeholder out of a formula into a plain text cell' : ''}, or pass --strict to fail instead`,
         },
       ]
     }
@@ -348,6 +354,17 @@ function scanDocx(doc: OpenDocument): {
       return false
     })
   }
+  // These parts are preserved verbatim; body find/replace cannot fill them.
+  const unsupported = (location: Hit['location'], text: string) => {
+    for (const h of hits(text)) found.push({ ...h, location, reason: 'unsupported_location' })
+  }
+  for (const [relationship, part] of Object.entries(doc.parsed.hfParts ?? {}))
+    unsupported({ part: 'header/footer', relationship }, part.text)
+  for (const [kind, notes] of [
+    ['footnote', doc.side.footnotes],
+    ['endnote', doc.side.endnotes],
+  ] as const)
+    for (const note of notes) unsupported({ part: kind, note: note.id }, note.text)
   return { found, tables, texts }
 }
 
