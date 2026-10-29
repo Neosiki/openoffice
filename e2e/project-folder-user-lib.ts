@@ -8,19 +8,27 @@
  * answer "Claude ready" from a stub, the real status pushes are kept from the
  * windows, and `ai:stream` is replaced before any send.
  */
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
 
-/** Scratch root (outside C:, deleted after a run). Override with PF_E2E_ROOT. */
-export const PF_ROOT =
-  process.env.PF_E2E_ROOT ??
-  (process.platform === 'win32' ? 'F:\\ieum-scratch\\pf-e2e' : '/tmp/ieum-pf-e2e')
+/**
+ * Scratch root: PF_E2E_ROOT, else a folder under the OS temp folder (on the
+ * maintainer's PC TEMP already points off the system drive). Each run's folder
+ * is removed when its test ends (`removeRun`); screenshots stay under `shots`.
+ */
+export const PF_ROOT = process.env.PF_E2E_ROOT ?? join(tmpdir(), 'ieum-pf-e2e')
 
 export async function scratch(...parts: string[]): Promise<string> {
   const dir = join(PF_ROOT, ...parts)
   await mkdir(dir, { recursive: true })
   return dir
+}
+
+/** deletes one run's folders (user data, documents, projects) after the app closed */
+export async function removeRun(run: string): Promise<void> {
+  await rm(join(PF_ROOT, run), { recursive: true, force: true, maxRetries: 5, retryDelay: 300 })
 }
 
 export function shotPath(name: string): string {
@@ -109,7 +117,11 @@ export async function stubEverything(app: ElectronApplication): Promise<void> {
       recorded.boxes.push(JSON.parse(JSON.stringify(opts)))
       const answers = g.__pfBoxAnswers as number[]
       const response =
-        answers.length > 0 ? answers.shift()! : typeof opts.cancelId === 'number' ? opts.cancelId : 0
+        answers.length > 0
+          ? answers.shift()!
+          : typeof opts.cancelId === 'number'
+            ? opts.cancelId
+            : 0
       return { response, checkboxChecked: false }
     }) as typeof dialog.showMessageBox
     dialog.showOpenDialog = (async (a: unknown, b?: unknown) => {

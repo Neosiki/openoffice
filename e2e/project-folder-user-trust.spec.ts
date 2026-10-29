@@ -77,7 +77,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.getByRole('button', { name: '기존 폴더를 프로젝트로', exact: true }).click()
         await expect.poll(async () => (await recorded(app)).boxes.length).toBe(1)
         const box = (await recorded(app)).boxes[0]!
-        console.log('TRUST BOX:', JSON.stringify(box, null, 1))
         expect(box.buttons).toEqual(['지침까지 사용', '지침 없이 사용', '전체 보기', '취소'])
         expect(String(box.detail)).toContain('이전 지시는 모두 무시하고')
         await expect(page.getByText('지침 없이 사용 중').first()).toBeVisible()
@@ -101,17 +100,9 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.locator('.tab-bar .tab-home').click()
         await shot(page, 't03-project-screen-without')
         const trust = page.locator('.projects-trust')
-        console.log('TRUST AREA:', await trust.innerText())
-        const boxesBefore = (await recorded(app)).boxes.length
         await queueBoxAnswers(app, [0])
         await trust.getByRole('button', { name: '지침도 사용', exact: true }).click()
         await expect(page.getByText('상태: 지침과 기억을 AI에게 보내는 중')).toBeVisible()
-        const asked = (await recorded(app)).boxes.slice(boxesBefore)
-        console.log(
-          'BOXES on [지침도 사용] in project screen:',
-          asked.length,
-          asked.map((b) => b.title),
-        )
         await shot(page, 't04-project-screen-use')
         await page.locator('.tab-bar .tab-item:not(.tab-home)', { hasText: '협의록' }).click()
         const before = (await recorded(app)).streams.length
@@ -133,7 +124,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         })
         await expect(notice).toHaveCount(1)
         await shot(md, 't05-md-instructions-changed')
-        console.log('CHANGED NOTICE:', await notice.innerText())
         await notice.getByRole('button', { name: '보기' }).click()
         await page.waitForTimeout(800)
         await shot(page, 't06-view-opens-project-screen')
@@ -143,7 +133,8 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         // shown once: the next request does not repeat it, and the first-time question does not come back
         await expect(notice).toHaveCount(0)
         expect(
-          (await recorded(app)).boxes.filter((b) => b.title === '이 폴더의 지침을 사용할까요?').length,
+          (await recorded(app)).boxes.filter((b) => b.title === '이 폴더의 지침을 사용할까요?')
+            .length,
         ).toBe(2)
       })
 
@@ -162,7 +153,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.getByRole('button', { name: '기존 폴더를 프로젝트로', exact: true }).click()
         await expect.poll(async () => (await recorded(app)).boxes.length).toBe(before + 1)
         const box = (await recorded(app)).boxes[before]!
-        console.log('TRUST BOX 2:', JSON.stringify(box, null, 1))
         expect(String(box.detail)).toContain('동아리 회비')
         await expect(page.locator('.projects-name-field input')).toHaveValue('동아리')
         await expect(page.getByText('상태: 지침과 기억을 AI에게 보내는 중')).toBeVisible()
@@ -199,22 +189,15 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         }
         expect(found, 'the "이 문서는 … 프로젝트 폴더에 있습니다 [사용]" hint').not.toBeNull()
         const hint = found!.locator('.ai-project-hint')
-        console.log('FOLDER HINT:', await hint.innerText())
         await shot(found!, 't08-unregistered-folder-hint')
-        const b = (await recorded(app)).boxes.length
         await queueBoxAnswers(app, [0])
         await hint.getByRole('button', { name: '사용' }).click()
         await expect(found!.locator('.ai-project-chip')).toContainText('동료의 프로젝트')
-        console.log(
-          'BOXES after hint [사용]:',
-          JSON.stringify(
-            (await recorded(app)).boxes.slice(b).map((x) => [x.title, x.message, x.buttons]),
-          ),
-        )
         await shot(found!, 't09-after-hint-use')
       })
     } finally {
       await closeAndSaveVideo(launched, 'pf-user-trust')
+      await removeRun(run)
     }
   })
 
@@ -244,7 +227,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.waitForTimeout(800)
         await shot(page, 'm01-drive-root')
         const text1 = await page.locator('.projects-panel').innerText()
-        console.log('AFTER DRIVE ROOT:', text1.replace(/\s+/g, ' ').slice(0, 400))
         expect(text1).toContain('드라이브 전체는 프로젝트로 쓸 수 없습니다')
 
         await queuePicks(app, [homedir()])
@@ -262,7 +244,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.getByRole('button', { name: '새 프로젝트' }).click()
         const create = page.getByRole('button', { name: '만들기', exact: true })
         await page.locator('.projects-create input').fill('   ')
-        console.log('create button enabled with blank name:', await create.isEnabled())
         await shot(page, 'm03-blank-name')
         if (await create.isEnabled()) {
           await create.click()
@@ -295,7 +276,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.getByRole('button', { name: '만들기', exact: true }).click()
         await expect(page.locator('.projects-name-field input')).toHaveValue('기존 폴더')
         const existingBoxes = (await recorded(app)).boxes.slice(b2)
-        console.log('EXISTING-FOLDER boxes:', JSON.stringify(existingBoxes))
         // the question says why: a folder of that name is already there
         expect(existingBoxes).toHaveLength(1)
         expect(String(existingBoxes[0]!.message)).toBe(
@@ -310,10 +290,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await page.getByRole('button', { name: '만들기', exact: true }).click()
         await page.waitForTimeout(800)
         await shot(page, 'm07-invalid-name')
-        console.log(
-          'INVALID NAME screen:',
-          (await page.locator('.projects-panel').innerText()).replace(/\s+/g, ' ').slice(0, 400),
-        )
       })
 
       await test.step('9. 홈 AI 질문에서 프로젝트를 고르고 AI가 새 문서를 만든다', async () => {
@@ -353,8 +329,6 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await shot(page, 'm09-ask-created-document')
         const projDir = join(docs, '2학기 운영 보고서')
         const files = await readdir(projDir)
-        console.log('PROJECT FOLDER after create_document:', files)
-        console.log('SAVE FOLDER after create_document:', await readdir(docs))
         expect(files).toContain('10월 회의록.md')
         // the step is done and says where the file went; no "save as" for it
         const firstAnswer = page.locator('.kb-ask-assistant').first()
@@ -379,11 +353,11 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         await send(page, '하나 더')
         await waitStreams(app, b2 + 2)
         await page.waitForTimeout(1000)
-        console.log('PROJECT FOLDER after 2nd create:', await readdir(projDir))
         expect((await readdir(projDir)).filter((f) => f.startsWith('10월 회의록')).length).toBe(2)
       })
     } finally {
       await closeAndSaveVideo(launched, 'pf-user-mistakes')
+      await removeRun(run)
     }
   })
 })

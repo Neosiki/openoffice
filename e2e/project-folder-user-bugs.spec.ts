@@ -2,7 +2,14 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { closeAndSaveVideo, launchShell, waitForPageWithUrl, type LaunchedApp } from './helpers'
-import { queueTurns, recorded, scratch, shot, stubEverything } from './project-folder-user-lib'
+import {
+  queueTurns,
+  recorded,
+  removeRun,
+  scratch,
+  shot,
+  stubEverything,
+} from './project-folder-user-lib'
 
 /**
  * Problems a first-time user ran into with the project folder (decision 0088),
@@ -17,6 +24,8 @@ interface Setup {
   app: ElectronApplication
   page: Page
   proj: string
+  /** this test's scratch folder name under PF_ROOT */
+  run: string
 }
 
 /** a running app with one project "P" holding a.md and b.html, on the project screen */
@@ -43,7 +52,7 @@ async function setup(name: string): Promise<Setup> {
   const proj = join(docs, 'P')
   await writeFile(join(proj, 'a.md'), '# A\n')
   await writeFile(join(proj, 'b.html'), '<h1>B</h1>')
-  return { launched, app, page, proj }
+  return { launched, app, page, proj, run }
 }
 
 async function send(page: Page, text: string): Promise<void> {
@@ -88,6 +97,7 @@ test.describe('project folder problems a first-time user hit', () => {
       })
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-stale-memory')
+      await removeRun(s.run)
     }
   })
 
@@ -115,17 +125,16 @@ test.describe('project folder problems a first-time user hit', () => {
       await expect(s.page.locator('.projects-textarea')).toHaveValue(/날짜는 2026\. 10\. 30\./)
       await shot(s.page, 'b02-view-shows-new-instructions')
       const shown = await s.page.locator('.projects-textarea').inputValue()
-      console.log('instructions shown after [보기]:', JSON.stringify(shown))
       // the person adds one more rule on the screen [보기] opened and saves
       await s.page.locator('.projects-textarea').fill(`${shown}\n표는 쓰지 않는다.`)
       await s.page.getByRole('button', { name: '저장', exact: true }).click()
       await expect(s.page.getByText('저장했습니다.')).toBeVisible()
       const after = await readFile(file, 'utf8')
-      console.log('instructions.md after saving:', JSON.stringify(after))
       expect(shown).toContain('날짜는 2026. 10. 30.')
       expect(after).toContain('날짜는 2026. 10. 30.')
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-stale-instructions')
+      await removeRun(s.run)
     }
   })
 
@@ -170,6 +179,7 @@ test.describe('project folder problems a first-time user hit', () => {
       await expect(other.getByRole('button', { name: '지우기' })).toHaveCount(0, { timeout: 3_000 })
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-stale-memory-line')
+      await removeRun(s.run)
     }
   })
 
@@ -201,7 +211,6 @@ test.describe('project folder problems a first-time user hit', () => {
           .map((e) => (e as HTMLElement).className)
         return { panelLeft: Math.round(p.left), panelRight: Math.round(p.right), buttons, scrolled }
       })
-      console.log('header geometry:', JSON.stringify(geo))
       for (const b of geo.buttons) {
         expect(b.right, `${b.label} inside the panel`).toBeLessThanOrEqual(geo.panelRight)
         expect(b.left, `${b.label} inside the panel`).toBeGreaterThanOrEqual(geo.panelLeft)
@@ -209,6 +218,7 @@ test.describe('project folder problems a first-time user hit', () => {
       expect(geo.scrolled, 'nothing in the panel scrolled sideways').toEqual([])
     } finally {
       await closeAndSaveVideo(s.launched, 'pf-bugs-long-title')
+      await removeRun(s.run)
     }
   })
 })
