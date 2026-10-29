@@ -43,4 +43,18 @@ describe('buildPrintHtml', () => {
     expect(html).not.toContain('ProseMirror-separator')
     expect(html).toContain('<p>text</p>')
   })
+
+  it('keeps the checked state of task list boxes', () => {
+    const root = editorRoot(
+      '<ul data-type="taskList">' +
+        '<li data-checked="true"><label><input type="checkbox"><span></span></label><div><p>done</p></div></li>' +
+        '<li data-checked="false"><label><input type="checkbox"><span></span></label><div><p>todo</p></div></li>' +
+        '</ul>',
+    )
+    // The task item view sets the `checked` property only, never the attribute.
+    root.querySelector<HTMLInputElement>('li[data-checked="true"] input')!.checked = true
+    const printed = new DOMParser().parseFromString(buildPrintHtml(root, 'Notes'), 'text/html')
+    const boxes = [...printed.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes.map((box) => box.checked)).toEqual([true, false])
+  })
 })
