@@ -150,6 +150,15 @@ export function deriveAutoFileName(editor: Editor): string {
   return ''
 }
 
+/** Name an export suggests: the document's name without .md, else a derived one */
+export function exportBaseName(path: string | null, editor: Editor): string {
+  return (
+    (path
+      ? path.replace(/^.*[/\\]/, '').replace(/\.(md|markdown)$/i, '')
+      : deriveAutoFileName(editor)) || 'Untitled'
+  )
+}
+
 export default function App() {
   const { lang, t } = useI18n()
   // Fallback focus ping: the shell is told whenever this window gains focus
@@ -734,14 +743,27 @@ export default function App() {
           sourceAtSave,
         )
         const imageSources = imageSourcesFromEditor(current)
+        // Save As can write the rendered document as a PDF instead; the HTML
+        // comes from what is on screen (pending edits included)
+        const pdfHtml =
+          mode === 'saveAs'
+            ? buildPrintHtml(current.view.dom, exportBaseName(filePathRef.current, current))
+            : undefined
         const result = await window.markdownApi.save({
           text,
           imageSources,
           mode,
           suggestedName,
           auto,
+          ...(pdfHtml !== undefined ? { pdfHtml } : {}),
         })
         if (result.ok && 'path' in result) {
+          // A PDF target is an export of this document: its path, unsaved edits
+          // and assets stay as they are (the main process opened the PDF)
+          if (result.exported === 'pdf') {
+            setSaveState('idle')
+            return true
+          }
           const unchanged =
             editorRef.current?.state.doc === docAtSave &&
             envelopeRef.current.frontmatter === fmAtSave
@@ -819,10 +841,7 @@ export default function App() {
       if (sourceMode) return false
       const current = editorRef.current
       if (!current || statusRef.current !== 'ready') return false
-      const suggestedName =
-        (filePathRef.current
-          ? filePathRef.current.replace(/^.*[/\\]/, '').replace(/\.(md|markdown)$/i, '')
-          : deriveAutoFileName(current)) || 'Untitled'
+      const suggestedName = exportBaseName(filePathRef.current, current)
       if (format === 'png') {
         if (exportingImagesRef.current) return false
         exportingImagesRef.current = true

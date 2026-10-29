@@ -775,6 +775,7 @@ async function resolveSaveTarget(
   e: Electron.IpcMainInvokeEvent,
   mode: SaveMode,
   suggestedName?: string,
+  allowPdf = false,
 ): Promise<string | null | 'canceled'> {
   const current = savePathByWc.get(e.sender.id)
   if (mode === 'save' && current) return current
@@ -797,13 +798,22 @@ async function resolveSaveTarget(
     ? join(dirname(current), basename(current))
     : (recovery.saveAsDefaultPath(e.sender.id) ??
       join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.md`))
+  // With PDF offered, the suggestion carries no extension: the file type chosen
+  // in the dialog supplies .md or .pdf (a typed name keeps its own extension)
+  const suggestedPath = allowPdf ? defaultPath.replace(/\.(md|markdown)$/i, '') : defaultPath
+  const filters: Array<{ name: string; extensions: string[] }> = [
+    { name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] },
+  ]
+  if (allowPdf) filters.push({ name: 'PDF', extensions: ['pdf'] })
   const picked = await showSaveDialogWithMemory(dialog, win, {
     title: tm('dlgSaveTitle'),
-    defaultPath,
-    filters: [{ name: tm('filterMarkdown'), extensions: ['md', 'markdown', 'txt', 'json'] }],
+    defaultPath: suggestedPath,
+    filters,
   })
   if (picked.canceled || !picked.filePath) return 'canceled'
-  return picked.filePath
+  // A dialog that does not add the chosen type's extension (some Linux desktops)
+  // leaves a bare name: the default type is Markdown
+  return extname(picked.filePath) ? picked.filePath : `${picked.filePath}.md`
 }
 
 const DISPLAY_IMAGE_EXTS = new Set(Object.keys(EXPORT_IMAGE_MIME_BY_EXT))
@@ -975,6 +985,11 @@ function registerMarkdownIpc(): void {
       const mode: SaveMode = request.mode === 'saveAs' ? 'saveAs' : 'save'
       // Request input is untrusted: only an explicit automatic-save flag counts
       const auto = (request as { auto?: unknown } | null)?.auto === true
+      // Save As › PDF (rendered documents only): the print HTML of the screen
+      const pdfHtml =
+        mode === 'saveAs' && typeof request.pdfHtml === 'string' && request.pdfHtml
+          ? request.pdfHtml
+          : undefined
       const pathAtRequest = savePathByWc.get(e.sender.id)
       const recoveryAtRequest = recovery.identityOf(e.sender.id)
       // A copy pair saving onto the document's own path settles the conflict
@@ -992,9 +1007,22 @@ function registerMarkdownIpc(): void {
       try {
         const suggestedName =
           typeof request.suggestedName === 'string' ? request.suggestedName : undefined
-        const target = await resolveSaveTarget(e, mode, suggestedName)
+        const target = await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined)
         if (target === 'canceled') return done({ ok: true, canceled: true })
         if (!target) return done({ ok: false, error: 'markdown: no save target' })
+        if (pdfHtml !== undefined && /\.pdf$/i.test(target)) {
+          // Save As › PDF: a rendered copy of what is on screen (the same PDF
+          // the export menu writes). The document keeps its path, unsaved edits
+          // and assets; nothing below is a save.
+          try {
+            const pdf = await printMarkdownPdf(pdfHtml)
+            await writeFile(target, pdf)
+            openExportedPdf(target)
+            return done({ ok: true, path: target, exported: 'pdf' })
+          } catch (err) {
+            return done({ ok: false, error: err instanceof Error ? err.message : String(err) })
+          }
+        }
         const currentPath = pathAtRequest
         const isNewPath = currentPath !== target
         const imageSources = [...(request.imageSources ?? [])]
