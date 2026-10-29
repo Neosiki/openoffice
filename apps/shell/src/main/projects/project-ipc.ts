@@ -1,6 +1,7 @@
-import { basename, dirname, isAbsolute, join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import {
   isValidProjectId,
+  PROJECT_FOLDER_NAMES,
   PROJECT_FOLDER_CHANNELS,
   PROJECT_FOLDER_EVENTS,
   type AddFolderResult,
@@ -18,14 +19,13 @@ import {
   type ProjectScreenSection,
   type ProjectSelection,
   type ProjectSettings,
-  type ProjectTrustAnswer,
   type ProjectTrustPrompt,
 } from '@genoffice/project-store'
 import type { KbRunScopes } from '../knowledge-base'
 import type { ProjectChatStore } from './chat-store'
-import type { ProjectFolderPickPurpose } from './project-dialog-text'
+import type { ProjectFolderPickPurpose, ProjectTrustChoice } from './project-dialog-text'
 import { listIgnoredFiles, toEntry, withCloudFlags, type CloudOnlyResolver } from './project-files'
-import type { ProjectGuide, SelectionTarget, TrustAsk } from './project-guide'
+import type { NewProjectRequest, ProjectGuide, SelectionTarget, TrustAsk } from './project-guide'
 import { PROJECT_SCOPE_UNKNOWN, type ProjectFolderTools } from './project-tools'
 import { relativeInside } from './paths'
 
@@ -100,14 +100,16 @@ export interface ProjectFolderServices {
 export interface ProjectDialogs {
   /** OS folder picker parented to `owner`'s window; null when closed */
   pickFolder(owner: number, purpose: ProjectFolderPickPurpose): Promise<string | null>
-  /** "New project" save dialog at `defaultPath`; the chosen `<parent>/<name>`, or null */
-  newProjectPath(owner: number, defaultPath: string): Promise<string | null>
   /** "Use this folder as the project?"; true only on the person's yes */
   confirmUseExisting(owner: number, folderPath: string): Promise<boolean>
-  /** The first-time trust prompt (spec 5.10); null when closed */
-  askTrust(owner: number, prompt: ProjectTrustPrompt): Promise<ProjectTrustAnswer>
-  /** The localized default name of a new project ("New project") */
-  defaultProjectName(): string
+  /** The first-time trust prompt (spec 5.10) over `owner`'s window; null when closed */
+  askTrust(owner: number, prompt: ProjectTrustPrompt): Promise<ProjectTrustChoice>
+  /**
+   * After [view all] opened the files in the app: resolves true when the person
+   * comes back to `owner`'s page (the prompt then shows again), false when that
+   * page is gone (the addition is cancelled). See `waitForPageReturn`.
+   */
+  waitForReturn(owner: number): Promise<boolean>
 }
 
 export interface ProjectIpcDeps {
@@ -299,10 +301,48 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     return { kind: 'untitled', projectId: untitled.get(sender) ?? null }
   }
 
+  /**
+   * [view all] in the trust prompt: the quoted files open in the app (Markdown
+   * opens in the app's editor) and the chats folder in the file manager. The
+   * paths are built here from the prompt main made, never from a request.
+   * True when something opened in the app, so the prompt waits for the person.
+   */
+  const showTrustFiles = async (prompt: ProjectTrustPrompt): Promise<boolean> => {
+    const N = PROJECT_FOLDER_NAMES
+    const root = prompt.folderPath
+    const files: Array<[string | null, string]> = [
+      [prompt.instructions, join(root, N.dataDir, N.instructionsFile)],
+      [prompt.memory, join(root, N.dataDir, N.memoryFile)],
+      [prompt.agents, join(root, N.rootAgentsFile)],
+      [prompt.claude, join(root, N.rootClaudeFile)],
+    ]
+    let opened = false
+    for (const [text, path] of files) {
+      if (text === null) continue
+      if (deps.openDocument(path) !== null) opened = true
+    }
+    if (prompt.foreignChats.length > 0) {
+      try {
+        await deps.openFolder(join(root, N.dataDir, N.chatsDir))
+      } catch {
+        // The prompt still lists the chats by title.
+      }
+    }
+    return opened
+  }
+
+  /** The trust prompt over the asking window, again after each [view all], until an answer */
   const askTrustFor =
     (sender: number): TrustAsk =>
-    (prompt) =>
-      deps.dialogs.askTrust(sender, prompt)
+    async (prompt) => {
+      for (;;) {
+        const choice = await deps.dialogs.askTrust(sender, prompt)
+        if (choice !== 'view') return choice
+        if ((await showTrustFiles(prompt)) && !(await deps.dialogs.waitForReturn(sender))) {
+          return null
+        }
+      }
+    }
 
   /** the chat a document opens with (spec 5.3.1), checked against the list in both cases */
   const withInitialChat = async (
@@ -335,20 +375,19 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
 
     getDefaultParentFolder: () => svc().guide.getDefaultParentFolder(),
 
-    pickParentFolder: (sender) => deps.dialogs.pickFolder(sender, 'parent'),
-
     createProject: async (sender, raw): Promise<CreateProjectResult> => {
       const args = record(raw)
-      const typed = typeof args.name === 'string' ? args.name.trim() : ''
-      const given = typeof args.parentDir === 'string' ? args.parentDir : ''
-      const parent = given && isAbsolute(given) ? given : svc().guide.getDefaultParentFolder()
-      // the person confirms the name and the place in the OS dialog (spec 5.1)
-      const chosen = await deps.dialogs.newProjectPath(
-        sender,
-        join(parent, typed || deps.dialogs.defaultProjectName()),
-      )
-      if (!chosen) return { status: 'cancelled', stage: 'dialog' }
-      const request = { name: basename(chosen), parentDir: dirname(chosen) }
+      const name = typeof args.name === 'string' ? args.name.trim() : ''
+      if (!name) return { status: 'invalid-name' }
+      // The place is main's to decide (spec 5.1): the default save folder, or a
+      // parent the person picks in main's own folder picker. A path in the
+      // request is never read.
+      const request: NewProjectRequest = { name }
+      if (args.otherPlace === true) {
+        const parent = await deps.dialogs.pickFolder(sender, 'parent')
+        if (!parent) return { status: 'cancelled', stage: 'dialog' }
+        request.parentDir = parent
+      }
       const ask = askTrustFor(sender)
       const created = await svc().guide.createProject(request, ask)
       if (created.status !== 'exists') return afterAdd(created)
@@ -597,4 +636,48 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     reset,
     untitledProject: (sender) => untitled.get(sender) ?? null,
   }
+}
+
+/** What `waitForPageReturn` needs of a page (an Electron `WebContents`) */
+export interface ReturnablePage {
+  isDestroyed(): boolean
+  on(event: 'focus' | 'blur' | 'destroyed', listener: () => void): unknown
+  off(event: 'focus' | 'blur' | 'destroyed', listener: () => void): unknown
+}
+
+/** How long after [view all] a focus on the asking page still counts as the dialog handing it back */
+export const TRUST_RETURN_ARM_MS = 1_000
+
+/**
+ * Resolves true when the person comes back to `page` (it takes the focus
+ * again) after [view all] opened the files elsewhere, false when the page is
+ * gone first. The focus a closing dialog hands straight back to its window is
+ * not a return: a focus counts once the page lost it, or after `armAfterMs`.
+ */
+export function waitForPageReturn(
+  page: ReturnablePage,
+  armAfterMs: number = TRUST_RETURN_ARM_MS,
+): Promise<boolean> {
+  if (page.isDestroyed()) return Promise.resolve(false)
+  return new Promise<boolean>((resolve) => {
+    let armed = false
+    const arm = () => {
+      armed = true
+    }
+    const timer = setTimeout(arm, armAfterMs)
+    const finish = (back: boolean) => {
+      clearTimeout(timer)
+      page.off('focus', onFocus)
+      page.off('blur', arm)
+      page.off('destroyed', onGone)
+      resolve(back)
+    }
+    const onFocus = () => {
+      if (armed) finish(true)
+    }
+    const onGone = () => finish(false)
+    page.on('focus', onFocus)
+    page.on('blur', arm)
+    page.on('destroyed', onGone)
+  })
 }

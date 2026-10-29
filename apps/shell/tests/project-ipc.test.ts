@@ -1,5 +1,6 @@
+import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   PROJECT_FOLDER_CHANNELS,
   PROJECT_FOLDER_EVENTS,
@@ -13,6 +14,7 @@ import {
   PROJECT_IPC_BAD_REQUEST,
   PROJECT_IPC_UNKNOWN_WINDOW,
   registerProjectFolderIpc,
+  waitForPageReturn,
   type ProjectFolderServices,
   type ProjectIpcController,
   type ProjectWindow,
@@ -178,11 +180,11 @@ function setup() {
   }
   const dialogs = {
     pickFolder: vi.fn(async () => join(process.cwd(), 'picked') as string | null),
-    newProjectPath: vi.fn(async (_owner: number, path: string) => path as string | null),
     confirmUseExisting: vi.fn(async () => true),
-    askTrust: vi.fn(async () => 'use' as const as 'use' | 'without' | null),
-    defaultProjectName: vi.fn(() => 'New project'),
+    askTrust: vi.fn(async () => 'use' as const as 'use' | 'without' | 'view' | null),
+    waitForReturn: vi.fn(async () => true),
   }
+  const openFolder = vi.fn(async (_path: string) => undefined)
   const projectsChanged = vi.fn()
   const openDocument = vi.fn((_path: string) => NEW_TAB as number | null)
   const showHome = vi.fn(() => HOME as number | null)
@@ -204,7 +206,7 @@ function setup() {
     },
     dialogs,
     legacyChatFor,
-    openFolder: vi.fn(async () => undefined),
+    openFolder,
     openDocument,
     showHome,
     projectsChanged,
@@ -232,6 +234,7 @@ function setup() {
     dialogs,
     projectsChanged,
     openDocument,
+    openFolder,
     showHome,
     legacyChatFor,
     controller,
@@ -492,6 +495,86 @@ describe('dialogs', () => {
     expect(t.projectsChanged).not.toHaveBeenCalled()
   })
 
+  describe('[view all] in the trust prompt', () => {
+    const quoted: ProjectTrustPrompt = {
+      ...trustPrompt,
+      agents: 'Root rules',
+      claude: 'More rules',
+      foreignChats: [{ id: 'c9', title: 'From the laptop', updatedAt: '2026-10-29T00:00:00.000Z' }],
+    }
+    const addWith = (prompt: ProjectTrustPrompt) =>
+      t.guide.addFolder.mockImplementationOnce(async (_path, ask) => {
+        const answer = await ask(prompt)
+        return answer === null
+          ? { status: 'cancelled' as const, stage: 'trust' as const }
+          : {
+              status: 'added' as const,
+              project: projectItem,
+              identity: 'new' as const,
+              notices: [],
+            }
+      })
+
+    it('opens the quoted files in the app and the chats folder, then asks again', async () => {
+      addWith(quoted)
+      t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce('without')
+      const result = await t.call('addFolder', DOCS)
+      expect(t.openDocument.mock.calls.map(([path]) => path)).toEqual([
+        join(ROOT, '.ieumoffice', 'instructions.md'),
+        join(ROOT, 'AGENTS.md'),
+        join(ROOT, 'CLAUDE.md'),
+      ])
+      expect(t.openFolder).toHaveBeenCalledWith(join(ROOT, '.ieumoffice', 'chats'))
+      expect(t.dialogs.waitForReturn).toHaveBeenCalledWith(DOCS)
+      expect(t.dialogs.askTrust).toHaveBeenCalledTimes(2)
+      expect(t.dialogs.askTrust).toHaveBeenLastCalledWith(DOCS, quoted)
+      expect(result).toMatchObject({ status: 'added' })
+    })
+
+    it('keeps asking after each [view all] until the person answers', async () => {
+      addWith(trustPrompt)
+      t.dialogs.askTrust
+        .mockResolvedValueOnce('view')
+        .mockResolvedValueOnce('view')
+        .mockResolvedValueOnce('use')
+      expect(await t.call('addFolder', HOME)).toMatchObject({ status: 'added' })
+      expect(t.dialogs.askTrust).toHaveBeenCalledTimes(3)
+      expect(t.openFolder).not.toHaveBeenCalled()
+    })
+
+    it('still cancels when the prompt is closed after viewing', async () => {
+      addWith(quoted)
+      t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce(null)
+      expect(await t.call('addFolder', DOCS)).toEqual({ status: 'cancelled', stage: 'trust' })
+      expect(t.projectsChanged).not.toHaveBeenCalled()
+    })
+
+    it('cancels when the asking page is gone while the files are read', async () => {
+      addWith(quoted)
+      t.dialogs.askTrust.mockResolvedValueOnce('view')
+      t.dialogs.waitForReturn.mockResolvedValueOnce(false)
+      expect(await t.call('addFolder', DOCS)).toEqual({ status: 'cancelled', stage: 'trust' })
+      expect(t.dialogs.askTrust).toHaveBeenCalledTimes(1)
+    })
+
+    it('asks again at once when nothing could open in the app', async () => {
+      addWith(quoted)
+      t.openDocument.mockReturnValue(null)
+      t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce('use')
+      expect(await t.call('addFolder', DOCS)).toMatchObject({ status: 'added' })
+      expect(t.dialogs.waitForReturn).not.toHaveBeenCalled()
+    })
+
+    it('loops the same way when switching a project to "use"', async () => {
+      await t.call('decideTrust', SHEETS, { projectId: 'p1', decision: 'use' })
+      const ask = t.guide.decideTrust.mock.calls[0]?.[2] as (p: ProjectTrustPrompt) => unknown
+      t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce('use')
+      expect(await ask(trustPrompt)).toBe('use')
+      expect(t.openDocument).toHaveBeenCalledWith(join(ROOT, '.ieumoffice', 'instructions.md'))
+      expect(t.dialogs.waitForReturn).toHaveBeenCalledWith(SHEETS)
+    })
+  })
+
   it('relocates a missing project to the folder the person picks', async () => {
     await t.call('relocateProject', HOME, { projectId: 'p1' })
     expect(t.dialogs.pickFolder).toHaveBeenCalledWith(HOME, 'relocate')
@@ -502,36 +585,59 @@ describe('dialogs', () => {
     )
   })
 
-  it('creates a new project where the save dialog says, named as typed', async () => {
-    const parent = t.guide.getDefaultParentFolder()
-    await t.call('createProject', DOCS, { name: '  Budget  ' })
-    expect(t.dialogs.newProjectPath).toHaveBeenCalledWith(DOCS, join(parent, 'Budget'))
-    expect(t.guide.createProject).toHaveBeenCalledWith(
-      { name: 'Budget', parentDir: parent },
-      expect.any(Function),
-    )
+  it('creates a new project under the default save folder, without a dialog', async () => {
+    const result = await t.call('createProject', DOCS, { name: '  Budget  ' })
+    expect(t.dialogs.pickFolder).not.toHaveBeenCalled()
+    expect(t.guide.createProject).toHaveBeenCalledWith({ name: 'Budget' }, expect.any(Function))
+    expect(result).toMatchObject({ status: 'created' })
     expect(t.projectsChanged).toHaveBeenCalledTimes(1)
   })
 
-  it('offers the localized default name when none was typed, and the place the person picks', async () => {
-    const parent = t.guide.getDefaultParentFolder()
-    const elsewhere = join(process.cwd(), 'Desktop', 'Trip')
-    t.dialogs.newProjectPath.mockResolvedValueOnce(elsewhere)
-    await t.call('createProject', DOCS, { name: '' })
-    expect(t.dialogs.newProjectPath).toHaveBeenCalledWith(DOCS, join(parent, 'New project'))
+  it('never lets a path in the request decide where the folder goes', async () => {
+    const elsewhere = join(process.cwd(), 'Desktop')
+    await t.call('createProject', DOCS, { name: 'Trip', parentDir: elsewhere, useExisting: true })
+    expect(t.guide.createProject).toHaveBeenCalledTimes(1)
+    expect(t.guide.createProject).toHaveBeenCalledWith({ name: 'Trip' }, expect.any(Function))
+  })
+
+  it('refuses an empty name without asking anything', async () => {
+    for (const name of ['', '   ', undefined]) {
+      expect(await t.call('createProject', DOCS, { name })).toEqual({ status: 'invalid-name' })
+    }
+    expect(t.dialogs.pickFolder).not.toHaveBeenCalled()
+    expect(t.guide.createProject).not.toHaveBeenCalled()
+  })
+
+  it('"create somewhere else" asks main’s folder picker for the parent, then creates there', async () => {
+    const parent = join(process.cwd(), 'Desktop')
+    t.dialogs.pickFolder.mockResolvedValueOnce(parent)
+    await t.call('createProject', SHEETS, { name: 'Trip', otherPlace: true })
+    expect(t.dialogs.pickFolder).toHaveBeenCalledWith(SHEETS, 'parent')
     expect(t.guide.createProject).toHaveBeenCalledWith(
-      { name: 'Trip', parentDir: join(process.cwd(), 'Desktop') },
+      { name: 'Trip', parentDir: parent },
       expect.any(Function),
     )
   })
 
-  it('cancels a new project when the save dialog is closed', async () => {
-    t.dialogs.newProjectPath.mockResolvedValueOnce(null)
-    expect(await t.call('createProject', DOCS, { name: 'x' })).toEqual({
+  it('cancels a new project when the parent folder picker is closed', async () => {
+    t.dialogs.pickFolder.mockResolvedValueOnce(null)
+    expect(await t.call('createProject', DOCS, { name: 'x', otherPlace: true })).toEqual({
       status: 'cancelled',
       stage: 'dialog',
     })
     expect(t.guide.createProject).not.toHaveBeenCalled()
+    expect(t.projectsChanged).not.toHaveBeenCalled()
+  })
+
+  it('passes on the guide’s refusal of a protected place and changes nothing', async () => {
+    t.dialogs.pickFolder.mockResolvedValueOnce(join(process.cwd(), '.codex'))
+    t.guide.createProject.mockResolvedValueOnce({ status: 'refused', reason: 'protected' } as never)
+    expect(await t.call('createProject', DOCS, { name: 'x', otherPlace: true })).toEqual({
+      status: 'refused',
+      reason: 'protected',
+    })
+    expect(t.dialogs.confirmUseExisting).not.toHaveBeenCalled()
+    expect(t.projectsChanged).not.toHaveBeenCalled()
   })
 
   it('asks before using an existing folder of that name, and uses it on yes', async () => {
@@ -543,10 +649,25 @@ describe('dialogs', () => {
     const result = await t.call('createProject', DOCS, { name: 'Budget' })
     expect(t.dialogs.confirmUseExisting).toHaveBeenCalledWith(DOCS, existing)
     expect(t.guide.createProject).toHaveBeenLastCalledWith(
-      { name: 'Budget', parentDir: t.guide.getDefaultParentFolder(), useExisting: true },
+      { name: 'Budget', useExisting: true },
       expect.any(Function),
     )
     expect(result).toMatchObject({ status: 'added' })
+  })
+
+  it('keeps the picked parent when using an existing folder there', async () => {
+    const parent = join(process.cwd(), 'Desktop')
+    t.dialogs.pickFolder.mockResolvedValueOnce(parent)
+    t.guide.createProject.mockResolvedValueOnce({
+      status: 'exists',
+      folderPath: join(parent, 'Trip'),
+    } as never)
+    await t.call('createProject', DOCS, { name: 'Trip', otherPlace: true })
+    expect(t.dialogs.pickFolder).toHaveBeenCalledTimes(1)
+    expect(t.guide.createProject).toHaveBeenLastCalledWith(
+      { name: 'Trip', parentDir: parent, useExisting: true },
+      expect.any(Function),
+    )
   })
 
   it('leaves an existing folder alone when the person says no', async () => {
@@ -692,5 +813,66 @@ describe('"open the project screen"', () => {
     t.controller.listen(HOME, 'onOpenProjectScreen', false)
     await t.call('openProjectScreen', DOCS, { projectId: 'p1' })
     expect(screenTo(HOME)).toEqual([])
+  })
+})
+
+describe('waitForPageReturn', () => {
+  const page = () => {
+    const emitter = new EventEmitter()
+    let destroyed = false
+    return {
+      emitter,
+      destroy: () => {
+        destroyed = true
+        emitter.emit('destroyed')
+      },
+      page: {
+        isDestroyed: () => destroyed,
+        on: (event: string, listener: () => void) => emitter.on(event, listener),
+        off: (event: string, listener: () => void) => emitter.off(event, listener),
+      },
+    }
+  }
+  const settled = async (promise: Promise<boolean>) => {
+    let value: boolean | 'pending' = 'pending'
+    void promise.then((v) => (value = v))
+    await Promise.resolve()
+    await Promise.resolve()
+    return value
+  }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('ignores the focus the closing dialog hands straight back, then waits for the person', async () => {
+    vi.useFakeTimers()
+    const p = page()
+    const waiting = waitForPageReturn(p.page, 1000)
+    p.emitter.emit('focus')
+    expect(await settled(waiting)).toBe('pending')
+    p.emitter.emit('blur')
+    p.emitter.emit('focus')
+    expect(await settled(waiting)).toBe(true)
+    expect(p.emitter.listenerCount('focus')).toBe(0)
+    expect(p.emitter.listenerCount('blur')).toBe(0)
+    expect(p.emitter.listenerCount('destroyed')).toBe(0)
+  })
+
+  it('counts a focus after the short grace time even without a blur first', async () => {
+    vi.useFakeTimers()
+    const p = page()
+    const waiting = waitForPageReturn(p.page, 1000)
+    vi.advanceTimersByTime(1000)
+    p.emitter.emit('focus')
+    expect(await settled(waiting)).toBe(true)
+  })
+
+  it('answers false when the page goes away, or is already gone', async () => {
+    const p = page()
+    const waiting = waitForPageReturn(p.page, 1000)
+    p.destroy()
+    expect(await waiting).toBe(false)
+    expect(await waitForPageReturn(p.page)).toBe(false)
   })
 })

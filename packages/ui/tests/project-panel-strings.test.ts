@@ -71,6 +71,11 @@ describe('PROJECT_PANEL_STRINGS', () => {
     expect(projectPanelText('ko', 'createNamed', { name: '현장학습' })).toBe(
       '‘현장학습’ 새 프로젝트 만들기',
     )
+    expect(
+      projectPanelText('ko', 'createLocation', { path: 'D:\\문서\\IeumOffice\\현장학습' }),
+    ).toBe('만들 곳: D:\\문서\\IeumOffice\\현장학습')
+    expect(projectPanelText('ko', 'createElsewhere')).toBe('다른 곳에 만들기…')
+    expect(projectPanelText('ko', 'newProjectNameHint')).toBe('새 프로젝트 이름을 입력하세요')
     expect(projectPanelText('ko', 'removeFromList')).toBe('목록에서 빼기')
     expect(projectPanelText('ko', 'newChat')).toBe('새 대화')
     expect(projectPanelText('ko', 'otherPc')).toBe('다른 PC')

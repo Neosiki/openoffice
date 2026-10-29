@@ -10,7 +10,6 @@ import {
   type AddFolderResult,
   type ApplyMemoryConsolidationArgs,
   type ApplyMemoryConsolidationResult,
-  type CreateProjectArgs,
   type CreateProjectResult,
   type DecideTrustResult,
   type ProjectContextResult,
@@ -103,6 +102,19 @@ export { INSTRUCTIONS_LIMIT_CHARS } from './context'
 
 /** Shows the first-time trust prompt; resolves to the answer, or null when it was closed */
 export type TrustAsk = (prompt: ProjectTrustPrompt) => Promise<ProjectTrustAnswer>
+
+/**
+ * "New project" as main decides it (spec 5.1). `parentDir` is a folder main
+ * itself chose (the default save folder, or the person's pick in main's own
+ * folder picker); it never comes from a renderer.
+ */
+export interface NewProjectRequest {
+  name: string
+  /** Absent: the default save folder */
+  parentDir?: string
+  /** After a `status: 'exists'` answer the person confirmed: use that folder as the project */
+  useExisting?: boolean
+}
 
 /** Whose AI panel asks for a selection */
 export type SelectionTarget =
@@ -470,7 +482,7 @@ export class ProjectGuide {
    * An existing folder of that name is never written to unless `useExisting` asks
    * to add it as a project (identity and trust as for "add folder").
    */
-  async createProject(args: CreateProjectArgs, askTrust: TrustAsk): Promise<CreateProjectResult> {
+  async createProject(args: NewProjectRequest, askTrust: TrustAsk): Promise<CreateProjectResult> {
     const name = typeof args.name === 'string' ? args.name.trim() : ''
     if (!isValidRenameName(name) || Array.from(name).length > PROJECT_NAME_MAX_CHARS) {
       return { status: 'invalid-name' }

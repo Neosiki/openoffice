@@ -8,9 +8,10 @@ import {
   TRUST_TEXT_SHOWN_CHARS,
   downloadPromptOptions,
   folderPickerOptions,
-  newProjectDialogOptions,
+  projectDialogText,
+  shownExcerpt,
   shownText,
-  trustAnswerOf,
+  trustChoiceOf,
   trustPromptOptions,
   useExistingPromptOptions,
 } from '../src/main/projects/project-dialog-text'
@@ -52,12 +53,24 @@ describe('the trust prompt (spec 5.10)', () => {
       prompt({ instructions: long, memory: '- likes tables', agents: 'AGENTS', claude: null }),
     )
     const detail = options.detail ?? ''
-    expect(detail).toContain(`${'x'.repeat(TRUST_TEXT_SHOWN_CHARS)}…`)
+    expect(detail).toContain(`${'x'.repeat(TRUST_TEXT_SHOWN_CHARS)}…\n(50 more characters)`)
     expect(detail).not.toContain('x'.repeat(TRUST_TEXT_SHOWN_CHARS + 1))
     expect(detail).toContain('- likes tables')
     expect(detail).toContain('— AGENTS.md —\nAGENTS')
+    // a text that fits says nothing about more characters
+    expect(detail.match(/more characters/g)).toHaveLength(1)
     expect(detail).not.toContain('CLAUDE.md')
     expect(options.message).toContain('Report')
+  })
+
+  it('says how many characters each long file leaves out, in the reader’s language', () => {
+    const long = '가'.repeat(TRUST_TEXT_SHOWN_CHARS + 1_234)
+    const detail = trustPromptOptions('ko', prompt({ instructions: long, claude: long })).detail
+    expect(detail).toContain(`${'가'.repeat(TRUST_TEXT_SHOWN_CHARS)}…\n(1,234자 더 있음)`)
+    expect(detail?.match(/1,234자 더 있음/g)).toHaveLength(2)
+    expect(detail).toContain(projectDialogText('ko', 'trustViewHint'))
+    expect(shownExcerpt('abcdef', 4)).toEqual({ text: 'abcd…', more: 2 })
+    expect(shownExcerpt('abc', 4)).toEqual({ text: 'abc', more: 0 })
   })
 
   it('lists the chats from other PCs by title and counts the rest', () => {
@@ -74,12 +87,19 @@ describe('the trust prompt (spec 5.10)', () => {
     expect(detail).toContain('…and 3 more')
   })
 
-  it('offers use / use without / cancel, with cancel as the default and the close answer', () => {
+  it('offers use / use without / view all / cancel, cancel being the default and the close answer', () => {
     const options = trustPromptOptions('ko', prompt())
-    expect(options.buttons).toEqual(['쓰기', '지침 없이 쓰기', '취소'])
-    expect(options.defaultId).toBe(2)
-    expect(options.cancelId).toBe(2)
-    expect([0, 1, 2, -1, 9].map(trustAnswerOf)).toEqual(['use', 'without', null, null, null])
+    expect(options.buttons).toEqual(['쓰기', '지침 없이 쓰기', '전체 보기', '취소'])
+    expect(options.defaultId).toBe(3)
+    expect(options.cancelId).toBe(3)
+    expect([0, 1, 2, 3, -1, 9].map(trustChoiceOf)).toEqual([
+      'use',
+      'without',
+      'view',
+      null,
+      null,
+      null,
+    ])
   })
 
   it('cuts by whole characters', () => {
@@ -103,13 +123,8 @@ describe('the other dialogs', () => {
     expect(options.cancelId).toBe(1)
   })
 
-  it('title the new project dialog and start it at the given place', () => {
-    const options = newProjectDialogOptions('ko', 'D:\\문서\\새 프로젝트')
-    expect(options.title).toBe('새 프로젝트')
-    expect(options.defaultPath).toBe('D:\\문서\\새 프로젝트')
-  })
-
   it('pick folders only', () => {
+    expect(folderPickerOptions('ko', 'parent').title).toBe('새 프로젝트를 만들 곳 고르기')
     for (const purpose of ['add', 'relocate', 'parent'] as const) {
       expect(folderPickerOptions('en', purpose).properties).toContain('openDirectory')
     }

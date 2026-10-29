@@ -303,12 +303,12 @@ export type AddFolderResult =
 /** Result of "new project" */
 export type CreateProjectResult =
   | { status: 'created'; project: ProjectListItem }
-  /** A folder of that name already exists; ask "use this folder as the project?" and retry with `useExisting` */
+  /** A folder of that name already exists (main asks "use this folder as the project?" itself) */
   | { status: 'exists'; folderPath: string }
   | { status: 'invalid-name' }
   /** The folder or `project.json` could not be written */
   | { status: 'unwritable' }
-  /** `useExisting` runs the add-folder path (identity and trust) */
+  /** The person chose to use an existing folder: the add-folder path (identity and trust) */
   | AddFolderResult
 
 // ────────────────────────────────────────────────────────────
@@ -669,12 +669,16 @@ export interface ProjectIdArgs {
   projectId: ProjectId
 }
 
+/**
+ * "New project" (spec 5.1). The renderer sends the typed name only: main
+ * creates `<default save folder>/<name>`, or with `otherPlace` asks for the
+ * parent folder itself (an OS folder picker over the asking window) in the same
+ * request. No path from the renderer decides where the folder is written.
+ */
 export interface CreateProjectArgs {
   name: string
-  /** Parent folder from `pickParentFolder`; absent uses the default save folder */
-  parentDir?: string
-  /** After a `status: 'exists'` answer: use that folder as the project */
-  useExisting?: boolean
+  /** "Create somewhere else…": main shows a folder picker for the parent first */
+  otherPlace?: boolean
 }
 
 export interface SetPinnedArgs extends ProjectIdArgs {
@@ -727,8 +731,11 @@ export interface ProjectFolderApi {
   addFolder(): Promise<AddFolderResult>
   /** Default parent of a new project ("default save folder"), for display */
   getDefaultParentFolder(): Promise<string>
-  /** OS folder picker for "[elsewhere…]"; null when closed */
-  pickParentFolder(): Promise<string | null>
+  /**
+   * Creates `<name>` under the default save folder, or under a folder main asks
+   * for (`otherPlace`). A folder of that name that already exists is offered as
+   * "use this folder as the project?" (identity and trust, as for "add folder").
+   */
   createProject(args: CreateProjectArgs): Promise<CreateProjectResult>
   /** Drops the list entry and its per-document choices; folder, trust and hashes stay */
   removeFromList(args: ProjectIdArgs): Promise<void>
@@ -829,7 +836,6 @@ export const PROJECT_FOLDER_CHANNELS = {
   listProjects: 'projectFolder:listProjects',
   addFolder: 'projectFolder:addFolder',
   getDefaultParentFolder: 'projectFolder:getDefaultParentFolder',
-  pickParentFolder: 'projectFolder:pickParentFolder',
   createProject: 'projectFolder:createProject',
   removeFromList: 'projectFolder:removeFromList',
   setPinned: 'projectFolder:setPinned',

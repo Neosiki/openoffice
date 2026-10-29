@@ -162,6 +162,15 @@
   color: var(--text-tertiary);
 }
 
+/* "+ New project" with nothing typed: asks for the name under the search field */
+.ai-project-hint {
+  flex-shrink: 0;
+  margin: -2px 0 4px;
+  padding: 0 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 /* ---- rows ---- */
 
 .ai-project-row {
@@ -236,6 +245,10 @@
 
 .ai-project-row-create .ai-project-row-name {
   font-weight: 600;
+}
+
+.ai-project-row-create-elsewhere .ai-project-row-name {
+  color: var(--text-secondary);
 }
 
 .ai-project-row-none .ai-project-row-name,

@@ -1,12 +1,12 @@
-import type { MessageBoxOptions, OpenDialogOptions, SaveDialogOptions } from 'electron'
+import type { MessageBoxOptions, OpenDialogOptions } from 'electron'
 import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
 import type { ProjectTrustAnswer, ProjectTrustPrompt } from '@genoffice/project-store'
 
 /**
  * The shell main process's project folder dialogs (decision 0088): the
  * first-time trust prompt (spec 5.10), the download question for a file that
- * is not on this PC (spec 5.8), "new project" and the folder pickers (spec
- * 5.1). Only the texts and the dialog options live here, so they are testable
+ * is not on this PC (spec 5.8), "use this folder as the project?" for a new
+ * project and the folder pickers (spec 5.1). Only the texts and the dialog options live here, so they are testable
  * without Electron; `index.ts` shows them parented to the asking window.
  */
 
@@ -22,12 +22,13 @@ const zh = {
   trustUse: '使用',
   trustWithout: '不使用说明',
   cancel: '取消',
+  trustViewAll: '查看全部',
+  trustViewHint: '点击“查看全部”会在应用中打开这些文件。读完后回到这个窗口，会再次询问。',
+  trustMoreChars: '（还有 {count} 个字）',
   downloadTitle: '文件不在这台电脑上',
   downloadMessage: '“{file}”不在这台电脑上，需要先下载。要下载吗？',
   downloadButton: '下载',
   newProjectTitle: '新建项目',
-  newProjectName: '新项目',
-  newProjectButton: '创建',
   useExistingMessage: '要把这个文件夹用作项目吗？',
   useExistingButton: '使用',
   pickFolderTitle: '选择用作项目的文件夹',
@@ -54,12 +55,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Use',
     trustWithout: 'Use without instructions',
     cancel: 'Cancel',
+    trustViewAll: 'View all',
+    trustViewHint:
+      '“View all” opens the files in the app. Come back to this window when you have read them and the question appears again.',
+    trustMoreChars: '({count} more characters)',
     downloadTitle: 'File not on this PC',
     downloadMessage: '“{file}” is not on this PC and has to be downloaded. Download it?',
     downloadButton: 'Download',
     newProjectTitle: 'New project',
-    newProjectName: 'New project',
-    newProjectButton: 'Create',
     useExistingMessage: 'Use this folder as the project?',
     useExistingButton: 'Use',
     pickFolderTitle: 'Choose a folder to use as a project',
@@ -81,13 +84,15 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: '使う',
     trustWithout: '指示なしで使う',
     cancel: 'キャンセル',
+    trustViewAll: 'すべて表示',
+    trustViewHint:
+      '「すべて表示」を押すと、ファイルをアプリで開きます。読み終えてこの画面に戻ると、もう一度確認します。',
+    trustMoreChars: '（あと {count} 文字）',
     downloadTitle: 'この PC にないファイル',
     downloadMessage:
       '「{file}」はこの PC にないため、ダウンロードが必要です。ダウンロードしますか？',
     downloadButton: 'ダウンロード',
     newProjectTitle: '新しいプロジェクト',
-    newProjectName: '新しいプロジェクト',
-    newProjectButton: '作成',
     useExistingMessage: 'このフォルダーをプロジェクトとして使いますか？',
     useExistingButton: '使う',
     pickFolderTitle: 'プロジェクトとして使うフォルダーを選ぶ',
@@ -108,12 +113,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: '쓰기',
     trustWithout: '지침 없이 쓰기',
     cancel: '취소',
+    trustViewAll: '전체 보기',
+    trustViewHint:
+      '[전체 보기]를 누르면 파일을 앱에서 엽니다. 다 읽고 이 화면으로 돌아오면 다시 묻습니다.',
+    trustMoreChars: '({count}자 더 있음)',
     downloadTitle: 'PC에 없는 파일',
     downloadMessage: '‘{file}’은 PC에 없어 내려받아야 합니다. 내려받을까요?',
     downloadButton: '내려받기',
     newProjectTitle: '새 프로젝트',
-    newProjectName: '새 프로젝트',
-    newProjectButton: '만들기',
     useExistingMessage: '이 폴더를 프로젝트로 쓸까요?',
     useExistingButton: '쓰기',
     pickFolderTitle: '프로젝트로 쓸 폴더 고르기',
@@ -135,12 +142,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Utiliser',
     trustWithout: 'Utiliser sans consignes',
     cancel: 'Annuler',
+    trustViewAll: 'Tout afficher',
+    trustViewHint:
+      '« Tout afficher » ouvre les fichiers dans l’application. Revenez à cette fenêtre après les avoir lus : la question s’affichera de nouveau.',
+    trustMoreChars: '({count} caractères de plus)',
     downloadTitle: 'Fichier absent de ce PC',
     downloadMessage: '« {file} » n’est pas sur ce PC et doit être téléchargé. Le télécharger ?',
     downloadButton: 'Télécharger',
     newProjectTitle: 'Nouveau projet',
-    newProjectName: 'Nouveau projet',
-    newProjectButton: 'Créer',
     useExistingMessage: 'Utiliser ce dossier comme projet ?',
     useExistingButton: 'Utiliser',
     pickFolderTitle: 'Choisir un dossier à utiliser comme projet',
@@ -162,13 +171,15 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Verwenden',
     trustWithout: 'Ohne Anweisungen verwenden',
     cancel: 'Abbrechen',
+    trustViewAll: 'Alles anzeigen',
+    trustViewHint:
+      '„Alles anzeigen“ öffnet die Dateien in der App. Kehren Sie nach dem Lesen zu diesem Fenster zurück, dann erscheint die Frage erneut.',
+    trustMoreChars: '({count} weitere Zeichen)',
     downloadTitle: 'Datei nicht auf diesem PC',
     downloadMessage:
       '„{file}“ ist nicht auf diesem PC und muss heruntergeladen werden. Herunterladen?',
     downloadButton: 'Herunterladen',
     newProjectTitle: 'Neues Projekt',
-    newProjectName: 'Neues Projekt',
-    newProjectButton: 'Erstellen',
     useExistingMessage: 'Diesen Ordner als Projekt verwenden?',
     useExistingButton: 'Verwenden',
     pickFolderTitle: 'Ordner als Projekt auswählen',
@@ -190,12 +201,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Usar',
     trustWithout: 'Usar sin instrucciones',
     cancel: 'Cancelar',
+    trustViewAll: 'Ver todo',
+    trustViewHint:
+      '«Ver todo» abre los archivos en la aplicación. Vuelva a esta ventana después de leerlos y la pregunta aparecerá de nuevo.',
+    trustMoreChars: '({count} caracteres más)',
     downloadTitle: 'Archivo que no está en este PC',
     downloadMessage: '«{file}» no está en este PC y hay que descargarlo. ¿Descargarlo?',
     downloadButton: 'Descargar',
     newProjectTitle: 'Nuevo proyecto',
-    newProjectName: 'Nuevo proyecto',
-    newProjectButton: 'Crear',
     useExistingMessage: '¿Usar esta carpeta como proyecto?',
     useExistingButton: 'Usar',
     pickFolderTitle: 'Elegir una carpeta para usarla como proyecto',
@@ -216,12 +229,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'ใช้',
     trustWithout: 'ใช้โดยไม่มีคำแนะนำ',
     cancel: 'ยกเลิก',
+    trustViewAll: 'ดูทั้งหมด',
+    trustViewHint:
+      '“ดูทั้งหมด” จะเปิดไฟล์ในแอป เมื่ออ่านแล้วกลับมาที่หน้าต่างนี้ คำถามจะขึ้นมาอีกครั้ง',
+    trustMoreChars: '(ยังมีอีก {count} ตัวอักษร)',
     downloadTitle: 'ไฟล์ไม่อยู่ในพีซีเครื่องนี้',
     downloadMessage: '“{file}” ไม่อยู่ในพีซีเครื่องนี้และต้องดาวน์โหลดก่อน ดาวน์โหลดไหม',
     downloadButton: 'ดาวน์โหลด',
     newProjectTitle: 'โปรเจกต์ใหม่',
-    newProjectName: 'โปรเจกต์ใหม่',
-    newProjectButton: 'สร้าง',
     useExistingMessage: 'ใช้โฟลเดอร์นี้เป็นโปรเจกต์ไหม',
     useExistingButton: 'ใช้',
     pickFolderTitle: 'เลือกโฟลเดอร์ที่จะใช้เป็นโปรเจกต์',
@@ -243,12 +258,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Gunakan',
     trustWithout: 'Gunakan tanpa petunjuk',
     cancel: 'Batal',
+    trustViewAll: 'Lihat semua',
+    trustViewHint:
+      '“Lihat semua” membuka file di aplikasi. Kembali ke jendela ini setelah membacanya, lalu pertanyaan ini muncul lagi.',
+    trustMoreChars: '({count} karakter lagi)',
     downloadTitle: 'File tidak ada di PC ini',
     downloadMessage: '“{file}” tidak ada di PC ini dan harus diunduh. Unduh sekarang?',
     downloadButton: 'Unduh',
     newProjectTitle: 'Proyek baru',
-    newProjectName: 'Proyek baru',
-    newProjectButton: 'Buat',
     useExistingMessage: 'Gunakan folder ini sebagai proyek?',
     useExistingButton: 'Gunakan',
     pickFolderTitle: 'Pilih folder untuk dijadikan proyek',
@@ -270,12 +287,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Использовать',
     trustWithout: 'Без инструкций',
     cancel: 'Отмена',
+    trustViewAll: 'Показать всё',
+    trustViewHint:
+      '«Показать всё» открывает файлы в приложении. Прочитав их, вернитесь в это окно — вопрос появится снова.',
+    trustMoreChars: '(ещё символов: {count})',
     downloadTitle: 'Файла нет на этом ПК',
     downloadMessage: 'Файла «{file}» нет на этом ПК, его нужно скачать. Скачать?',
     downloadButton: 'Скачать',
     newProjectTitle: 'Новый проект',
-    newProjectName: 'Новый проект',
-    newProjectButton: 'Создать',
     useExistingMessage: 'Использовать эту папку как проект?',
     useExistingButton: 'Использовать',
     pickFolderTitle: 'Выберите папку для проекта',
@@ -297,12 +316,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'استخدام',
     trustWithout: 'الاستخدام دون تعليمات',
     cancel: 'إلغاء',
+    trustViewAll: 'عرض الكل',
+    trustViewHint:
+      '«عرض الكل» يفتح الملفات في التطبيق. بعد قراءتها ارجع إلى هذه النافذة وسيظهر السؤال مرة أخرى.',
+    trustMoreChars: '(أحرف إضافية: {count})',
     downloadTitle: 'الملف غير موجود على هذا الحاسوب',
     downloadMessage: 'الملف «{file}» غير موجود على هذا الحاسوب ويجب تنزيله. هل تريد تنزيله؟',
     downloadButton: 'تنزيل',
     newProjectTitle: 'مشروع جديد',
-    newProjectName: 'مشروع جديد',
-    newProjectButton: 'إنشاء',
     useExistingMessage: 'هل تريد استخدام هذا المجلد كمشروع؟',
     useExistingButton: 'استخدام',
     pickFolderTitle: 'اختر مجلدًا لاستخدامه كمشروع',
@@ -324,12 +345,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Usar',
     trustWithout: 'Usar sem instruções',
     cancel: 'Cancelar',
+    trustViewAll: 'Ver tudo',
+    trustViewHint:
+      '“Ver tudo” abre os arquivos no aplicativo. Depois de lê-los, volte a esta janela e a pergunta aparecerá de novo.',
+    trustMoreChars: '(mais {count} caracteres)',
     downloadTitle: 'Arquivo fora deste PC',
     downloadMessage: '“{file}” não está neste PC e precisa ser baixado. Baixar agora?',
     downloadButton: 'Baixar',
     newProjectTitle: 'Novo projeto',
-    newProjectName: 'Novo projeto',
-    newProjectButton: 'Criar',
     useExistingMessage: 'Usar esta pasta como projeto?',
     useExistingButton: 'Usar',
     pickFolderTitle: 'Escolher uma pasta para usar como projeto',
@@ -351,12 +374,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Usa',
     trustWithout: 'Usa senza istruzioni',
     cancel: 'Annulla',
+    trustViewAll: 'Mostra tutto',
+    trustViewHint:
+      '“Mostra tutto” apre i file nell’app. Dopo averli letti, torna a questa finestra e la domanda comparirà di nuovo.',
+    trustMoreChars: '(altri {count} caratteri)',
     downloadTitle: 'File non presente su questo PC',
     downloadMessage: '“{file}” non è su questo PC e va scaricato. Scaricarlo?',
     downloadButton: 'Scarica',
     newProjectTitle: 'Nuovo progetto',
-    newProjectName: 'Nuovo progetto',
-    newProjectButton: 'Crea',
     useExistingMessage: 'Usare questa cartella come progetto?',
     useExistingButton: 'Usa',
     pickFolderTitle: 'Scegli una cartella da usare come progetto',
@@ -378,12 +403,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Użyj',
     trustWithout: 'Użyj bez instrukcji',
     cancel: 'Anuluj',
+    trustViewAll: 'Pokaż wszystko',
+    trustViewHint:
+      '„Pokaż wszystko” otwiera pliki w aplikacji. Po przeczytaniu wróć do tego okna, a pytanie pojawi się ponownie.',
+    trustMoreChars: '(pozostało znaków: {count})',
     downloadTitle: 'Pliku nie ma na tym komputerze',
     downloadMessage: 'Pliku „{file}” nie ma na tym komputerze i trzeba go pobrać. Pobrać?',
     downloadButton: 'Pobierz',
     newProjectTitle: 'Nowy projekt',
-    newProjectName: 'Nowy projekt',
-    newProjectButton: 'Utwórz',
     useExistingMessage: 'Użyć tego folderu jako projektu?',
     useExistingButton: 'Użyj',
     pickFolderTitle: 'Wybierz folder na projekt',
@@ -405,12 +432,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Použít',
     trustWithout: 'Použít bez pokynů',
     cancel: 'Zrušit',
+    trustViewAll: 'Zobrazit vše',
+    trustViewHint:
+      '„Zobrazit vše“ otevře soubory v aplikaci. Po přečtení se vraťte do tohoto okna a otázka se zobrazí znovu.',
+    trustMoreChars: '(zbývá znaků: {count})',
     downloadTitle: 'Soubor není na tomto počítači',
     downloadMessage: 'Soubor „{file}“ není na tomto počítači a je třeba ho stáhnout. Stáhnout?',
     downloadButton: 'Stáhnout',
     newProjectTitle: 'Nový projekt',
-    newProjectName: 'Nový projekt',
-    newProjectButton: 'Vytvořit',
     useExistingMessage: 'Použít tuto složku jako projekt?',
     useExistingButton: 'Použít',
     pickFolderTitle: 'Vyberte složku pro projekt',
@@ -432,12 +461,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Gebruiken',
     trustWithout: 'Gebruiken zonder instructies',
     cancel: 'Annuleren',
+    trustViewAll: 'Alles bekijken',
+    trustViewHint:
+      '‘Alles bekijken’ opent de bestanden in de app. Kom na het lezen terug naar dit venster, dan verschijnt de vraag opnieuw.',
+    trustMoreChars: '(nog {count} tekens)',
     downloadTitle: 'Bestand niet op deze pc',
     downloadMessage: '‘{file}’ staat niet op deze pc en moet worden gedownload. Downloaden?',
     downloadButton: 'Downloaden',
     newProjectTitle: 'Nieuw project',
-    newProjectName: 'Nieuw project',
-    newProjectButton: 'Maken',
     useExistingMessage: 'Deze map als project gebruiken?',
     useExistingButton: 'Gebruiken',
     pickFolderTitle: 'Kies een map om als project te gebruiken',
@@ -459,12 +490,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Guna',
     trustWithout: 'Guna tanpa arahan',
     cancel: 'Batal',
+    trustViewAll: 'Lihat semua',
+    trustViewHint:
+      '“Lihat semua” membuka fail dalam aplikasi. Selepas membacanya, kembali ke tetingkap ini dan soalan akan muncul semula.',
+    trustMoreChars: '({count} aksara lagi)',
     downloadTitle: 'Fail tiada pada PC ini',
     downloadMessage: '“{file}” tiada pada PC ini dan perlu dimuat turun. Muat turun?',
     downloadButton: 'Muat turun',
     newProjectTitle: 'Projek baharu',
-    newProjectName: 'Projek baharu',
-    newProjectButton: 'Cipta',
     useExistingMessage: 'Guna folder ini sebagai projek?',
     useExistingButton: 'Guna',
     pickFolderTitle: 'Pilih folder untuk dijadikan projek',
@@ -485,12 +518,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'שימוש',
     trustWithout: 'שימוש בלי הנחיות',
     cancel: 'ביטול',
+    trustViewAll: 'הצגת הכול',
+    trustViewHint:
+      '„הצגת הכול” פותחת את הקבצים באפליקציה. אחרי הקריאה חזרו לחלון הזה והשאלה תופיע שוב.',
+    trustMoreChars: '(עוד {count} תווים)',
     downloadTitle: 'הקובץ לא נמצא במחשב הזה',
     downloadMessage: 'הקובץ „{file}” לא נמצא במחשב הזה וצריך להוריד אותו. להוריד?',
     downloadButton: 'הורדה',
     newProjectTitle: 'פרויקט חדש',
-    newProjectName: 'פרויקט חדש',
-    newProjectButton: 'יצירה',
     useExistingMessage: 'להשתמש בתיקייה הזו כפרויקט?',
     useExistingButton: 'שימוש',
     pickFolderTitle: 'בחירת תיקייה לשימוש כפרויקט',
@@ -512,12 +547,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'इस्तेमाल करें',
     trustWithout: 'निर्देशों के बिना इस्तेमाल करें',
     cancel: 'रद्द करें',
+    trustViewAll: 'सब देखें',
+    trustViewHint:
+      '“सब देखें” फ़ाइलों को ऐप में खोलता है। पढ़ने के बाद इस विंडो पर लौटें, सवाल फिर से दिखेगा।',
+    trustMoreChars: '({count} अक्षर और)',
     downloadTitle: 'फ़ाइल इस PC पर नहीं है',
     downloadMessage: '“{file}” इस PC पर नहीं है और इसे डाउनलोड करना होगा। डाउनलोड करें?',
     downloadButton: 'डाउनलोड करें',
     newProjectTitle: 'नया प्रोजेक्ट',
-    newProjectName: 'नया प्रोजेक्ट',
-    newProjectButton: 'बनाएँ',
     useExistingMessage: 'क्या इस फ़ोल्डर को प्रोजेक्ट के रूप में इस्तेमाल करें?',
     useExistingButton: 'इस्तेमाल करें',
     pickFolderTitle: 'प्रोजेक्ट के लिए फ़ोल्डर चुनें',
@@ -537,12 +574,13 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: '使用',
     trustWithout: '不使用說明',
     cancel: '取消',
+    trustViewAll: '檢視全部',
+    trustViewHint: '按「檢視全部」會在應用程式中開啟這些檔案。讀完後回到這個視窗，就會再次詢問。',
+    trustMoreChars: '（還有 {count} 個字）',
     downloadTitle: '檔案不在這台電腦上',
     downloadMessage: '「{file}」不在這台電腦上，需要先下載。要下載嗎？',
     downloadButton: '下載',
     newProjectTitle: '新增專案',
-    newProjectName: '新專案',
-    newProjectButton: '建立',
     useExistingMessage: '要把這個資料夾用作專案嗎？',
     useExistingButton: '使用',
     pickFolderTitle: '選擇用作專案的資料夾',
@@ -564,12 +602,14 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
     trustUse: 'Dùng',
     trustWithout: 'Dùng mà không có hướng dẫn',
     cancel: 'Hủy',
+    trustViewAll: 'Xem tất cả',
+    trustViewHint:
+      '“Xem tất cả” mở các tệp trong ứng dụng. Đọc xong, hãy quay lại cửa sổ này và câu hỏi sẽ hiện lại.',
+    trustMoreChars: '(còn {count} ký tự)',
     downloadTitle: 'Tệp không có trên máy này',
     downloadMessage: '“{file}” không có trên máy này và cần được tải xuống. Tải xuống?',
     downloadButton: 'Tải xuống',
     newProjectTitle: 'Dự án mới',
-    newProjectName: 'Dự án mới',
-    newProjectButton: 'Tạo',
     useExistingMessage: 'Dùng thư mục này làm dự án?',
     useExistingButton: 'Dùng',
     pickFolderTitle: 'Chọn thư mục để dùng làm dự án',
@@ -581,7 +621,7 @@ export const PROJECT_DIALOG_STRINGS = defineStrings({
 
 export const projectDialogText = createI18n(PROJECT_DIALOG_STRINGS)
 
-/** Characters of each text the trust prompt shows; the rest is cut with an ellipsis */
+/** Characters of each file the trust prompt shows; the rest is counted ("N more characters") */
 export const TRUST_TEXT_SHOWN_CHARS = 1_500
 
 /** Chats from other PCs the trust prompt lists by name; the rest are counted */
@@ -589,8 +629,25 @@ export const TRUST_CHATS_SHOWN = 20
 
 /** `text` cut to `max` characters (whole code points) with an ellipsis */
 export function shownText(text: string, max = TRUST_TEXT_SHOWN_CHARS): string {
+  return shownExcerpt(text, max).text
+}
+
+/** `text` trimmed and cut to `max` whole characters, and how many characters were left out */
+export function shownExcerpt(
+  text: string,
+  max = TRUST_TEXT_SHOWN_CHARS,
+): { text: string; more: number } {
   const chars = Array.from(text.trim())
-  return chars.length > max ? `${chars.slice(0, max).join('')}…` : chars.join('')
+  if (chars.length <= max) return { text: chars.join(''), more: 0 }
+  return { text: `${chars.slice(0, max).join('')}…`, more: chars.length - max }
+}
+
+function shownCount(count: number, lang: Lang): string {
+  try {
+    return new Intl.NumberFormat(lang).format(count)
+  } catch {
+    return String(count)
+  }
 }
 
 function shownDate(iso: string, lang: Lang): string {
@@ -603,22 +660,35 @@ function shownDate(iso: string, lang: Lang): string {
   }
 }
 
+/**
+ * What the person picked in the trust prompt: the answer, or `view` for
+ * [view all] (open the files, then ask again). null: closed or cancelled.
+ */
+export type ProjectTrustChoice = ProjectTrustAnswer | 'view'
+
 /** The response index of each trust prompt button */
 const TRUST_USE = 0
 const TRUST_WITHOUT = 1
-const TRUST_CANCEL = 2
+const TRUST_VIEW = 2
+const TRUST_CANCEL = 3
 
 /**
- * The first-time trust prompt (spec 5.10): the texts this install did not write
- * (each cut for display) and the chats from other PCs, with [use] / [use without
- * instructions] / [cancel]. Cancel is the default and what closing means.
+ * The first-time trust prompt (spec 5.10): the texts this install did not
+ * write (each cut to its first `TRUST_TEXT_SHOWN_CHARS` characters with "N
+ * more characters") and the chats from other PCs, with [use] / [use without
+ * instructions] / [view all] / [cancel]. Cancel is the default and what closing
+ * means.
  */
 export function trustPromptOptions(lang: Lang, prompt: ProjectTrustPrompt): MessageBoxOptions {
   const t = (key: keyof typeof zh, params?: Record<string, string | number>) =>
     projectDialogText(lang, key, params)
-  const parts: string[] = [t('trustHint'), prompt.folderPath]
+  const parts: string[] = [t('trustHint'), t('trustViewHint'), prompt.folderPath]
   const section = (label: string, text: string | null) => {
-    if (text !== null && text.trim()) parts.push(`— ${label} —\n${shownText(text)}`)
+    if (text === null || !text.trim()) return
+    const shown = shownExcerpt(text)
+    const more =
+      shown.more > 0 ? `\n${t('trustMoreChars', { count: shownCount(shown.more, lang) })}` : ''
+    parts.push(`— ${label} —\n${shown.text}${more}`)
   }
   section(t('trustInstructions'), prompt.instructions)
   section(t('trustMemory'), prompt.memory)
@@ -640,17 +710,18 @@ export function trustPromptOptions(lang: Lang, prompt: ProjectTrustPrompt): Mess
     title: t('trustTitle'),
     message: t('trustMessage', { name: prompt.name }),
     detail: parts.join('\n\n'),
-    buttons: [t('trustUse'), t('trustWithout'), t('cancel')],
+    buttons: [t('trustUse'), t('trustWithout'), t('trustViewAll'), t('cancel')],
     defaultId: TRUST_CANCEL,
     cancelId: TRUST_CANCEL,
     noLink: true,
   }
 }
 
-/** The person's answer from the trust prompt's response; anything but the two choices cancels */
-export function trustAnswerOf(response: number): ProjectTrustAnswer {
+/** The person's pick from the trust prompt's response; anything but the three choices cancels */
+export function trustChoiceOf(response: number): ProjectTrustChoice {
   if (response === TRUST_USE) return 'use'
   if (response === TRUST_WITHOUT) return 'without'
+  if (response === TRUST_VIEW) return 'view'
   return null
 }
 
@@ -681,22 +752,12 @@ export function useExistingPromptOptions(lang: Lang, folderPath: string): Messag
   }
 }
 
-/**
- * "New project": a save dialog at `<parent>/<name>` where the person types the
- * name and may pick another place (spec 5.1 "[elsewhere…]")
- */
-export function newProjectDialogOptions(lang: Lang, defaultPath: string): SaveDialogOptions {
-  return {
-    title: projectDialogText(lang, 'newProjectTitle'),
-    defaultPath,
-    buttonLabel: projectDialogText(lang, 'newProjectButton'),
-    properties: ['createDirectory'],
-  }
-}
-
 export type ProjectFolderPickPurpose = 'add' | 'relocate' | 'parent'
 
-/** The folder picker for "add folder", relocating a missing project, and a new project's parent */
+/**
+ * The folder picker for "add folder", relocating a missing project, and a new
+ * project's parent folder ("create somewhere else…", spec 5.1)
+ */
 export function folderPickerOptions(
   lang: Lang,
   purpose: ProjectFolderPickPurpose,

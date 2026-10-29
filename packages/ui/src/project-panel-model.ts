@@ -51,8 +51,10 @@ function timeOf(iso: string): number {
 
 /** One row of the project list, top to bottom */
 export type ProjectPickerItem =
-  /** "'<name>' new project": only when the search text matches no project */
+  /** "'<name>' new project" under the default save folder: only when the search text matches no project */
   | { readonly kind: 'create'; readonly name: string }
+  /** "Create somewhere else…": the same name, under a folder main asks for (right below `create`) */
+  | { readonly kind: 'create-elsewhere'; readonly name: string }
   | {
       readonly kind: 'project'
       readonly project: ProjectListItem
@@ -68,8 +70,9 @@ export type ProjectPickerItem =
 /**
  * The project list for a search text. Pinned projects come first in name
  * order (they stay put), then the others by last use, newest first. A search
- * text that matches no project puts "'<text>' new project" on top. The fixed
- * rows ("+ New project", "Add folder", "No project") always follow.
+ * text that matches no project puts "'<text>' new project" and "Create
+ * somewhere else…" on top. The fixed rows ("+ New project", "Add folder", "No
+ * project") always follow.
  */
 export function projectPickerItems(
   projects: readonly ProjectListItem[],
@@ -96,7 +99,9 @@ export function projectPickerItems(
     )
   const items: ProjectPickerItem[] = []
   const name = query.normalize('NFC').trim()
-  if (name && matched.length === 0) items.push({ kind: 'create', name })
+  if (name && matched.length === 0) {
+    items.push({ kind: 'create', name }, { kind: 'create-elsewhere', name })
+  }
   for (const project of pinned) items.push({ kind: 'project', project, group: 'pinned' })
   for (const project of recent) items.push({ kind: 'project', project, group: 'recent' })
   items.push({ kind: 'new' }, { kind: 'add-folder' }, { kind: 'none' })
@@ -121,25 +126,52 @@ export type ProjectPickerAction =
   | { readonly type: 'select'; readonly projectId: ProjectId | null }
   /** A missing folder: the caller opens a folder picker to relocate it */
   | { readonly type: 'relocate'; readonly projectId: ProjectId }
-  /** "+ New project" (no name) or "'<name>' new project" */
-  | { readonly type: 'create'; readonly name?: string }
+  /**
+   * A new project named `name`: under the default save folder, or with
+   * `otherPlace` under a folder main asks for. The renderer never names the place.
+   */
+  | { readonly type: 'create'; readonly name: string; readonly otherPlace: boolean }
+  /** "+ New project" with an empty search field: the list asks for a name first */
+  | { readonly type: 'ask-name' }
   | { readonly type: 'add-folder' }
 
-export function projectPickerAction(item: ProjectPickerItem): ProjectPickerAction {
+/** What a row does; `query` is the search text ("+ New project" takes it as the name) */
+export function projectPickerAction(item: ProjectPickerItem, query = ''): ProjectPickerAction {
   switch (item.kind) {
     case 'create':
-      return { type: 'create', name: item.name }
+      return { type: 'create', name: item.name, otherPlace: false }
+    case 'create-elsewhere':
+      return { type: 'create', name: item.name, otherPlace: true }
     case 'project':
       return item.project.missing
         ? { type: 'relocate', projectId: item.project.id }
         : { type: 'select', projectId: item.project.id }
-    case 'new':
-      return { type: 'create' }
+    case 'new': {
+      const name = query.normalize('NFC').trim()
+      return name ? { type: 'create', name, otherPlace: false } : { type: 'ask-name' }
+    }
     case 'add-folder':
       return { type: 'add-folder' }
     case 'none':
       return { type: 'select', projectId: null }
   }
+}
+
+/**
+ * Where "'<name>' new project" creates the folder, for display: the default
+ * save folder joined with the name, using the separator that folder is written
+ * with. '' while the default folder is not known yet.
+ */
+export function projectCreateLocation(
+  parentFolder: string | null | undefined,
+  name: string,
+): string {
+  const parent = (parentFolder ?? '').trim()
+  if (!parent) return ''
+  // a bare drive ("D:") has no separator to copy: Windows writes a backslash
+  const separator = parent.includes('\\') || !parent.includes('/') ? '\\' : '/'
+  const base = /[\\/]$/.test(parent) && parent.length > 1 ? parent.slice(0, -1) : parent
+  return `${base}${base.endsWith(separator) ? '' : separator}${name.normalize('NFC').trim()}`
 }
 
 /** Next highlighted row for ↑/↓ (wrapping), Home and End */

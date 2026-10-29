@@ -468,6 +468,15 @@ describe('new project (spec 5.1)', () => {
     })
     expect(existsSync(join(userData, 'Nope'))).toBe(false)
   })
+
+  it('refuses a picked parent folder inside a protected folder the same way', async () => {
+    const guide = makeGuide()
+    expect(await guide.createProject({ name: 'Nope', parentDir: userData }, never)).toEqual({
+      status: 'refused',
+      reason: 'protected',
+    })
+    expect(existsSync(join(userData, 'Nope'))).toBe(false)
+  })
 })
 
 describe('context for a send (spec 5.4)', () => {

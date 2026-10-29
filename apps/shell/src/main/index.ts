@@ -447,9 +447,7 @@ import { createCachedCloudResolver } from './projects/cloud-cache'
 import {
   downloadPromptOptions,
   folderPickerOptions,
-  newProjectDialogOptions,
-  projectDialogText,
-  trustAnswerOf,
+  trustChoiceOf,
   trustPromptOptions,
   useExistingPromptOptions,
 } from './projects/project-dialog-text'
@@ -463,6 +461,7 @@ import {
 } from './projects/project-index'
 import {
   registerProjectFolderIpc,
+  waitForPageReturn,
   type ProjectIpcController,
   type ProjectWindow,
 } from './projects/project-ipc'
@@ -5684,19 +5683,14 @@ function registerProjectFolderChannels(): void {
           : await dialog.showOpenDialog(options)
         return result.canceled ? null : (result.filePaths[0] ?? null)
       },
-      newProjectPath: async (owner, defaultPath) => {
-        const options = newProjectDialogOptions(currentLang(), defaultPath)
-        const parent = projectDialogParent(owner)
-        const result = parent
-          ? await dialog.showSaveDialog(parent, options)
-          : await dialog.showSaveDialog(options)
-        return result.canceled || !result.filePath ? null : result.filePath
-      },
       confirmUseExisting: async (owner, folderPath) =>
         (await projectMessageBox(owner, useExistingPromptOptions(currentLang(), folderPath))) === 0,
       askTrust: async (owner, prompt) =>
-        trustAnswerOf(await projectMessageBox(owner, trustPromptOptions(currentLang(), prompt))),
-      defaultProjectName: () => projectDialogText(currentLang(), 'newProjectName'),
+        trustChoiceOf(await projectMessageBox(owner, trustPromptOptions(currentLang(), prompt))),
+      waitForReturn: async (owner) => {
+        const contents = webContents.fromId(owner)
+        return contents ? waitForPageReturn(contents) : false
+      },
     },
     legacyChatFor: (docPath) => legacyDocumentChatFor(docPath),
     openFolder: async (path) => {
