@@ -47,4 +47,4 @@ description: 'Bring a Korean administrative report in line with the Ministry of 
 
 ## 문서를 새로 쓸 때
 
-제목 → 요약(선택) → Ⅰ. 추진 배경 → Ⅱ. 주요 내용 → Ⅲ. 향후 일정 순으로 뼈대를 잡고, 각 항목은 서술식 문단으로 채운다. 표는 제목을 위에 두고 두 줄 이상일 때만 만든다. 한 줄짜리 표로 제목을 꾸미지 않는다.
+처음부터 쓰는 일은 `administration-report-draft` 스킬이 맡는다. 이 스킬은 이미 있는 문서를 점검하고 고치는 데 쓴다.
