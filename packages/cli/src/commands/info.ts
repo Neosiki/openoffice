@@ -88,9 +88,10 @@ async function describe(path: string, ext: string, password?: string): Promise<D
 
 async function describeDocx(bytes: Uint8Array, locked = false): Promise<Description> {
   const parsed = await parseDocx(bytes)
+  const blocks = parsed.blocks.filter((b) => !b.hidden)
   const counts: Record<string, number> = {}
-  for (const b of parsed.blocks) counts[b.type] = (counts[b.type] ?? 0) + 1
-  const headings = parsed.blocks
+  for (const b of blocks) counts[b.type] = (counts[b.type] ?? 0) + 1
+  const headings = blocks
     .filter((b) => b.type === 'heading')
     .slice(0, 20)
     .map((b) => ({
@@ -98,9 +99,9 @@ async function describeDocx(bytes: Uint8Array, locked = false): Promise<Descript
       text: (b.runs ?? []).map((r) => r.text).join(''),
     }))
   return {
-    headline: `${parsed.blocks.length} blocks, ${counts.heading ?? 0} headings, ${counts.table ?? 0} tables`,
+    headline: `${blocks.length} blocks, ${counts.heading ?? 0} headings, ${counts.table ?? 0} tables`,
     fields: {
-      blocks: parsed.blocks.length,
+      blocks: blocks.length,
       block_types: counts,
       headings,
       comments: parsed.comments.length,
