@@ -12,6 +12,7 @@ import {
   useRibbonCollapse,
 } from '@genoffice/ui'
 import { useI18n } from '../i18n/locale'
+import { SOURCE_VIEW_SHORTCUT } from '../source-view-key'
 import { MARKDOWN_THEME_IDS, type MarkdownTheme } from '../../shared/markdown-theme'
 import type { StringKey } from '../i18n/locale'
 import { uiOp, type BlockType, type ListKind, type StylableMark } from '../editor/ops'
@@ -230,12 +231,15 @@ function IconBtn({
   title,
   active,
   disabled,
+  shortcut,
   onClick,
   children,
 }: {
   title: string
   active?: boolean
   disabled?: boolean
+  /** shown after the label in the ScreenTip; the accessible name stays `title` */
+  shortcut?: string
   onClick: () => void
   children: ReactNode
 }) {
@@ -243,7 +247,7 @@ function IconBtn({
     <button
       type="button"
       className={`rb-btn${active ? ' active' : ''}`}
-      data-tip={title}
+      data-tip={shortcut ? `${title} (${shortcut})` : title}
       aria-label={title}
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
@@ -650,6 +654,7 @@ export function Ribbon({
             {!sourceMode && (
               <IconBtn
                 title={t('sourceView')}
+                shortcut={SOURCE_VIEW_SHORTCUT}
                 active={sourceViewOpen}
                 disabled={disabled}
                 onClick={onToggleSource}
