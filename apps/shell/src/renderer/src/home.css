@@ -2020,7 +2020,7 @@ html[dir='rtl'] .quick-title-row {
   font-size: 14px;
   font-weight: 500;
 }
-.kb-ask-headbar span {
+.kb-ask-headbar > span {
   font-size: 12px;
   color: var(--text-tertiary);
 }
