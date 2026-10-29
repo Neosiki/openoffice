@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
-import { flagBool, flagString } from '../args'
+import { flagBool } from '../args'
 import { BATCH_OPTIONS, batchCounts, batchMode, batchResult, failedBatch } from '../batch'
 import { HWP_PREVIEW_CHARS, hwpText } from '../formats/hwp'
 import type { HwpEditSession } from '../formats/hwp-edit'
