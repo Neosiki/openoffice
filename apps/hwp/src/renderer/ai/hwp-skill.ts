@@ -1463,7 +1463,15 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           typeof raw === 'number' && Number.isInteger(raw) && raw > 0
             ? Math.min(raw, text.length)
             : 0
-        const end = Math.min(text.length, offset + READ_PAGE_CHARS)
+        const splitsPair = (at: number) => at > 0 && (text.codePointAt(at - 1) ?? 0) > 0xffff
+        if (splitsPair(offset)) {
+          return bad(
+            call,
+            `offset is inside a UTF-16 surrogate pair; use ${offset - 1} or ${offset + 1}`,
+          )
+        }
+        const limit = Math.min(text.length, offset + READ_PAGE_CHARS)
+        const end = splitsPair(limit) ? limit - 1 : limit
         const more = end < text.length ? `\n[more: call read_document with offset ${end}]` : ''
         return {
           output: `Characters ${offset}–${end} of ${text.length}.\n${text.slice(offset, end)}${more}`,
