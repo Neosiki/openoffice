@@ -226,8 +226,8 @@ function trackFlag(args: Args): string | undefined {
 }
 
 /**
- * A received .odt is written back as itself: --out must keep the extension
- * (a format change is `convert`), and tracked changes stay off as in the app.
+ * Apply keeps the input format: --out must keep its extension (a format change is
+ * `convert`). Tracked changes stay off for ODT, as in the app.
  */
 function assertOdtApply(path: string, out: string | undefined, track: boolean): void {
   const odt = extension(path) === 'odt'
@@ -243,7 +243,7 @@ function assertOdtApply(path: string, out: string | undefined, track: boolean): 
       },
     )
   }
-  if (out && (odt || extension(out) === 'odt') && extension(out) !== extension(path)) {
+  if (out && extension(out) !== extension(path)) {
     throw new CliError(
       EXIT.usage,
       `--out must keep the input's .${extension(path) || '?'} extension; changing the format is a conversion`,
