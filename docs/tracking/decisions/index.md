@@ -84,3 +84,4 @@
 | [0081](0081-chatgpt-direct-connection.md)                     | ChatGPT는 앱이 직접 로그인해 요금제로 연결하고, Codex 프로그램은 그 안의 다른 길로 남긴다       | 2026-10-28 |
 | [0082](0082-claude-structured-output-tool.md)                 | Claude의 문서 편집 차례는 응답 형식을 프로그램에 맡기고, 그 도구 하나만 허용한다                | 2026-10-28 |
 | [0083](0083-command-line-archive.md)                          | 데스크톱 앱 없이 도는 명령줄 묶음을 따로 내고, Node는 설치 스크립트가 받는다                    | 2026-10-27 |
+| [0087](0087-key-provider-live-models.md)                      | API 키 제공자의 모델 목록은 그 회사에 물어 채우고, 추천 목록 뒤에 새 모델을 붙인다              | 2026-10-29 |
