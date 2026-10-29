@@ -62,7 +62,9 @@ describe('createKeyModelRefresher', () => {
 
   it('lists again when the key changes, and not when it does not', async () => {
     const s = store(settingsWith({ gemini: 'AIza-1' }))
-    const list = vi.fn(async () => ['gemini-4-argon'])
+    const list = vi.fn(async (_provider: AiProviderId, _config: { apiKey: string }) => [
+      'gemini-4-argon',
+    ])
     const refresher = createKeyModelRefresher({ ...s.deps, list })
     refresher.refreshChanged()
     await refresher.idle()
