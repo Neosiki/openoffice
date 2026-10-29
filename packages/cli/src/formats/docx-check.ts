@@ -89,7 +89,9 @@ export function checkDocument(doc: OpenDocument): IssueDraft[] {
       message: `${revisions.length} tracked change(s) pending (${[...kinds].map(([k, n]) => `${k} ${n}`).join(', ')}); \`ieumoffice docs read --revisions\` lists them`,
     })
   }
-  const open = listComments(doc).filter((c) => !c.done)
+  const comments = listComments(doc)
+  const ids = new Set(comments.map((c) => c.id))
+  const open = comments.filter((c) => !c.done && (!c.parentId || !ids.has(c.parentId)))
   if (open.length) {
     const first = open.find((c) => c.blockIndex !== undefined)
     issues.push({
@@ -197,25 +199,26 @@ function emptyFieldResults(xml: string | null | undefined): string[] {
     if (!RESULTLESS_FIELDS.has(keyword) && !/<w:t\b[^>]*>[^<]*\S/.test(m[2] ?? ''))
       out.push(keyword)
   }
-  let instr: string[] | null = null
-  let result: string | null = null
+  const stack: { instr: string[]; result: string | null }[] = []
   for (const t of xml.matchAll(
     /<w:fldChar\b[^>]*\bw:fldCharType="(begin|separate|end)"|<w:instrText\b[^>]*>([\s\S]*?)<\/w:instrText>|<w:t\b[^>]*>([^<]*)<\/w:t>/g,
   )) {
+    const current = stack.at(-1)
     if (t[1] === 'begin') {
-      instr = []
-      result = null
+      stack.push({ instr: [], result: null })
     } else if (t[1] === 'separate') {
-      result = ''
+      if (current) current.result = ''
     } else if (t[1] === 'end') {
-      if (instr) {
-        const keyword = keywordOf(instr.join(''))
-        if (!RESULTLESS_FIELDS.has(keyword) && !(result ?? '').trim()) out.push(keyword)
+      const ended = stack.pop()
+      if (ended) {
+        const keyword = keywordOf(ended.instr.join(''))
+        if (!RESULTLESS_FIELDS.has(keyword) && !(ended.result ?? '').trim()) out.push(keyword)
       }
-      instr = null
-      result = null
-    } else if (t[2] !== undefined && instr && result === null) instr.push(t[2])
-    else if (t[3] !== undefined && result !== null) result += t[3]
+    } else if (t[2] !== undefined && current?.result === null) current.instr.push(t[2])
+    else if (t[3] !== undefined) {
+      // A nested result also supplies text to every enclosing result, but not its instruction.
+      for (const field of stack) if (field.result !== null) field.result += t[3]
+    }
   }
   return out
 }

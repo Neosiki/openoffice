@@ -435,6 +435,11 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
         }
     const truncated =
       !opts.range && (meta.rowCount > READ_ROW_CAP || meta.columnCount > READ_COL_CAP)
+    const requestedHeight = bounds.endRow - bounds.startRow + 1
+    // Statistics describe the full scan; ordinary reads only need the rows they return.
+    const height = opts.stats
+      ? requestedHeight
+      : Math.min(requestedHeight, opts.maxRows ?? requestedHeight)
     // a range beyond the used area is simply empty, not an error; the sheet-wide
     // features still come with the read, so the request is clamped, not skipped
     const empty =
@@ -450,7 +455,10 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
         ? { startRow: 0, endRow: 0, startColumn: 0, endColumn: 0 }
         : {
             startRow: bounds.startRow,
-            endRow: Math.min(bounds.endRow, Math.max(meta.rowCount - 1, bounds.startRow)),
+            endRow: Math.min(
+              bounds.startRow + height - 1,
+              Math.max(meta.rowCount - 1, bounds.startRow),
+            ),
             startColumn: bounds.startColumn,
             endColumn: Math.min(
               bounds.endColumn,
@@ -466,7 +474,6 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
       result.merges = []
       result.hyperlinks = []
     }
-    const height = bounds.endRow - bounds.startRow + 1
     const width = bounds.endColumn - bounds.startColumn + 1
     const rows: Scalar[][] = Array.from({ length: height }, () => Array<Scalar>(width).fill(null))
     const formulas: Record<string, string> = {}
@@ -498,7 +505,7 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
     }
     const rangeLabel = `${columnLabel(bounds.startColumn)}${bounds.startRow + 1}:${columnLabel(bounds.endColumn)}${bounds.endRow + 1}`
     const stats = opts.stats ? sheetStats(wb, meta, result, rows, formulas, rangeLabel) : undefined
-    const rowsTotal = opts.range ? height : Math.max(meta.rowCount, height)
+    const rowsTotal = opts.range ? requestedHeight : Math.max(meta.rowCount, requestedHeight)
     const shownRows =
       opts.maxRows !== undefined && opts.maxRows < rows.length ? rows.slice(0, opts.maxRows) : rows
     const lastRow = bounds.startRow + Math.max(shownRows.length, 1) - 1
@@ -520,7 +527,7 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
     const read: SheetRead = {
       sheet: meta.name,
       range:
-        shownRows.length < rows.length
+        shownRows.length < requestedHeight
           ? `${columnLabel(bounds.startColumn)}${bounds.startRow + 1}:${columnLabel(bounds.endColumn)}${lastRow + 1}`
           : rangeLabel,
       rows: keptColumns

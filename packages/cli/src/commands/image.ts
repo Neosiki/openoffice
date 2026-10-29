@@ -165,7 +165,8 @@ export function siblingExtensions(outExt: string): string[] {
 async function loadImage(url: string): Promise<{ bytes: Uint8Array; mime: string }> {
   const response = await fetchRemoteImage(url)
   if (!response?.ok) throw new CliError(EXIT.app, `could not download the generated image: ${url}`)
-  const mime = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/png'
+  const mime =
+    response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || 'image/png'
   return { bytes: await readBodyCapped(response, MAX_REMOTE_IMAGE_BYTES), mime }
 }
 

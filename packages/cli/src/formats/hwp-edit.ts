@@ -245,7 +245,7 @@ export async function hwpOpTools(): Promise<AgentToolDef[]> {
     confirmMemoRemoval: async () => false,
     imageGenAvailable: () => false,
   })
-  return skill.tools.filter((tool) => !(tool.name in NOT_HEADLESS))
+  return skill.tools.filter((tool) => !Object.hasOwn(NOT_HEADLESS, tool.name))
 }
 
 /** Groups of the op reference; an op the app adds later lands in "other" until it is placed. */
@@ -351,7 +351,7 @@ export async function applyHwpOps(
   mode: BatchMode,
 ): Promise<HwpOpsOutcome> {
   const tools = new Set(session.skill.tools.map((tool) => tool.name))
-  const supported = [...tools].filter((name) => !(name in NOT_HEADLESS))
+  const supported = [...tools].filter((name) => !Object.hasOwn(NOT_HEADLESS, name))
   const results: HwpOpResult[] = []
   const failures: OpFailure[] = []
   for (const [index, op] of ops.entries()) {
@@ -364,7 +364,7 @@ export async function applyHwpOps(
         ...classifyOpError(index, name, 'expected an op object'),
         reason: 'invalid_argument',
       }
-    } else if (name in NOT_HEADLESS) {
+    } else if (Object.hasOwn(NOT_HEADLESS, name)) {
       failure = {
         ...classifyOpError(
           index,
