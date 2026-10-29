@@ -63,6 +63,8 @@ export const ja = {
   memoryReplaced: '記憶を修正: {text}',
   memoryRemoved: '記憶を削除: {text}',
   removeMemory: '削除',
+  memoryAlreadyRemoved: 'この記憶はすでに削除されています',
+  alreadyListed: 'このプロジェクトはすでに一覧にあります',
   memoryConsolidated: '記憶を整理しました（{before} 件 → {after} 件）',
   undo: '元に戻す',
   toolSummary: '{editor}「{name}」でツールを {count} 回実行',

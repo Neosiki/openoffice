@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import type { Lang } from '@genoffice/i18n'
 import type { ProjectId, ProjectListItem } from '@genoffice/project-store'
 import { aiModelPopoverStyle } from './AiModelPicker'
-import { useDismissablePopover } from './popover-dismiss'
+import { revealInList, useDismissablePopover } from './popover-dismiss'
 import {
   projectChipText,
   projectCreateLocation,
@@ -103,13 +103,14 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
   const current = Math.min(active, items.length - 1)
 
   useEffect(() => {
-    if (open) inputRef.current?.focus()
+    if (open) inputRef.current?.focus({ preventScroll: true })
   }, [open])
   useEffect(() => {
     if (!open) return
-    document
-      .getElementById(projectPickerOptionId(listId, current))
-      ?.scrollIntoView?.({ block: 'nearest' })
+    revealInList(
+      document.getElementById(projectPickerOptionId(listId, current)),
+      '.ai-project-list',
+    )
   }, [open, listId, current])
 
   const openList = () => {
@@ -133,14 +134,14 @@ export function ProjectPicker(props: ProjectPickerProps): React.JSX.Element {
 
   const finish = () => {
     setOpen(false)
-    chipRef.current?.focus()
+    chipRef.current?.focus({ preventScroll: true })
   }
 
   const run = (action: ProjectPickerAction) => {
     if (action.type === 'ask-name') {
       // nothing is created without a name: keep the list open and ask for one
       setAskName(true)
-      inputRef.current?.focus()
+      inputRef.current?.focus({ preventScroll: true })
       return
     }
     finish()

@@ -231,6 +231,44 @@ export function memoryLinesOf(
   return lines
 }
 
+/** An entry as main compares them: without its trailing date, spaces collapsed */
+function memoryEntryKey(text: string): string {
+  return text
+    .replace(/\s\(\d{4}-\d{2}-\d{2}\)$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Whether a "remembered" line's entry has left the project's memory since
+ * (removed here, in another window or outside the app), so the line reads
+ * "removed" and offers nothing to press. Memory not known yet (null) never
+ * counts as gone.
+ */
+export function memoryLineGone(
+  line: Pick<ProjectMemoryLine, 'kind' | 'text'>,
+  entries: readonly string[] | null | undefined,
+): boolean {
+  if (line.kind !== 'added' || !entries) return false
+  const key = memoryEntryKey(line.text)
+  return !entries.some((entry) => memoryEntryKey(entry) === key)
+}
+
+/** `entries` with one change applied as main applies it (for a change just made here) */
+export function memoryEntriesAfter(
+  entries: readonly string[],
+  change: ProjectMemoryOp,
+): readonly string[] {
+  const without = (text: string) =>
+    entries.filter((entry) => memoryEntryKey(entry) !== memoryEntryKey(text))
+  if (change.op === 'add')
+    return memoryLineGone({ kind: 'added', text: change.text }, entries)
+      ? [...entries, change.text]
+      : entries
+  if (change.op === 'remove') return without(change.text)
+  return [...without(change.old), change.new]
+}
+
 /**
  * "[remove]" on a memory line: takes the entry as it now stands out of
  * `memory.md` (main reads the file again right before the write).

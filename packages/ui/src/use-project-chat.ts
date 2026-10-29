@@ -5,6 +5,7 @@ import type {
   ChatMessage,
   LegacyDocumentChat,
   ProjectApi,
+  ProjectChangedEvent,
   ProjectChatAppendedEvent,
   ProjectChatListItem,
   ProjectChatMessage,
@@ -21,6 +22,7 @@ import type {
 import {
   createProjectRun,
   forgetMemoryLine,
+  memoryEntriesAfter,
   memoryLinesOf,
   windowProjectFolderBridge,
   type ProjectMemoryLine,
@@ -67,6 +69,10 @@ export type ProjectChatBridge = ProjectSkillBridge &
      * (spec 5.3.6). Not part of the bridge contract yet; called when present.
      */
     attachDocument?: ((args: ProjectChatRef) => Promise<ProjectWriteResult>) | undefined
+    /** reads the chosen project's memory entries (`memoryEntries`); without it they stay unknown */
+    getProjectDetail?: ProjectFolderApi['getProjectDetail'] | undefined
+    /** the app wrote part of a project in some window: memory and chats read again */
+    onProjectChanged?: ProjectFolderApi['onProjectChanged'] | undefined
   }
 
 /** The per-document chat store calls an earlier chat is continued with */
@@ -158,6 +164,12 @@ export interface ProjectChatState {
   legacy: LegacyDocumentChat | null
   /** `.ieumoffice/` cannot be written: chats and memory are not saved (spec 5.7) */
   unwritable: boolean
+  /**
+   * The chosen project's memory entries as last read, kept current as the app
+   * writes them (any window). A "remembered" line whose entry is no longer
+   * here reads "removed" (`memoryLineGone`). Null while unknown.
+   */
+  memoryEntries: readonly string[] | null
 }
 
 export interface ProjectChatOptions {
@@ -213,8 +225,10 @@ export interface ProjectChatController {
   finishSend(): Promise<void>
   /** the document was saved (first save, save as): chat and choice stay (spec 5.3.6) */
   documentSaved(): Promise<void>
-  /** "[remove]" on a memory line */
+  /** "[remove]" on a memory line; the memory entries are read again after it */
   forgetMemory(line: ProjectMemoryLine): Promise<ProjectMemoryEditResult | null>
+  /** read the chosen project's memory entries again */
+  refreshMemory(): Promise<void>
   /**
    * A write into the chosen project failed outside the chat records (a
    * consolidation, its undo): chats and memory are not saved from now on and
@@ -262,6 +276,19 @@ function entryOf(
   }
 }
 
+/** the skill's calls of a bridge, each still called on the bridge itself */
+function pickSkillBridge(bridge: ProjectSkillBridge): ProjectSkillBridge {
+  return {
+    readContext: (args) => bridge.readContext(args),
+    openScope: (args) => bridge.openScope(args),
+    closeScope: (args) => bridge.closeScope(args),
+    listFiles: (args) => bridge.listFiles(args),
+    search: (args) => bridge.search(args),
+    read: (args) => bridge.read(args),
+    remember: (args) => bridge.remember(args),
+  }
+}
+
 const modelOf = (messages: readonly ChatMessage[]): AgentMessage[] =>
   messages.map((m) => ({ role: m.role, text: m.text }))
 
@@ -274,6 +301,7 @@ const INITIAL_STATE: ProjectChatState = {
   chats: [],
   legacy: null,
   unwritable: false,
+  memoryEntries: null,
 }
 
 /** The chat logic without React (the hook wraps it; tests drive it directly) */
@@ -312,9 +340,47 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
     run?.markUnwritable()
   }
 
-  const run = bridge
+  /** bumped by every memory read and by every project change: only the latest read lands */
+  let memorySeq = 0
+
+  const refreshMemory = async (): Promise<void> => {
+    const mine = ++memorySeq
+    const projectId = state.projectId
+    if (!bridge || !projectId || typeof bridge.getProjectDetail !== 'function') {
+      if (state.memoryEntries !== null) setState({ memoryEntries: null })
+      return
+    }
+    let entries: readonly string[] | null
+    try {
+      entries = (await bridge.getProjectDetail({ projectId })).memoryEntries
+    } catch {
+      entries = null
+    }
+    if (mine !== memorySeq || state.projectId !== projectId) return
+    setState({ memoryEntries: entries })
+  }
+
+  /** a memory change this window just made: shown at once, before the next read lands */
+  const applyMemoryChange = (result: ProjectMemoryEditResult): void => {
+    if (result.status !== 'ok' || !state.memoryEntries) return
+    setState({ memoryEntries: memoryEntriesAfter(state.memoryEntries, result.change) })
+  }
+
+  /** the tools' bridge: the same calls, with a remembered entry shown at once */
+  const runBridge: ProjectSkillBridge | null = bridge
+    ? {
+        ...pickSkillBridge(bridge),
+        remember: async (args) => {
+          const result = await bridge.remember(args)
+          applyMemoryChange(result)
+          return result
+        },
+      }
+    : null
+
+  const run = runBridge
     ? createProjectRun({
-        bridge,
+        bridge: runBridge,
         projectId: () => state.projectId,
         onUnwritable: () => {
           if (!state.unwritable) setState({ unwritable: true })
@@ -444,7 +510,9 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       chats: [],
       legacy: null,
       unwritable: false,
+      memoryEntries: null,
     })
+    void refreshMemory()
     if (!selection.projectId) {
       options.onOpen({ kind: 'document' })
       return
@@ -471,6 +539,12 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       pendingUser = null
     }
     void refreshChats()
+  }
+
+  const onProjectChanged = (event: ProjectChangedEvent) => {
+    if (!event || event.projectId !== state.projectId) return
+    if (event.part === 'memory') void refreshMemory()
+    else if (event.part === 'chats') void refreshChats()
   }
 
   const onOpenChat = (event: ProjectChatRef) => {
@@ -503,6 +577,9 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       }
       for (const off of unsubscribe) off()
       unsubscribe = [bridge.onChatMessageAppended(onAppended), bridge.onOpenChat(onOpenChat)]
+      if (typeof bridge.onProjectChanged === 'function') {
+        unsubscribe.push(bridge.onProjectChanged(onProjectChanged))
+      }
       const mine = ++epoch
       const token = ++startToken
       started = false
@@ -523,6 +600,7 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       // a choice made meanwhile wins over the start's selection
       if (mine !== epoch) return finishStart()
       setState({ projectId: selection.projectId, hint: selection.unregisteredProjectHint ?? null })
+      void refreshMemory()
       if (selection.projectId) {
         if (selection.initialChatId) {
           await openProjectChat(selection.projectId, selection.initialChatId, mine)
@@ -668,8 +746,14 @@ export function createProjectChatController(initial: ProjectChatOptions): Projec
       if (!bridge || !projectId) return null
       const result = await forgetMemoryLine(bridge, projectId, line)
       if (result.status === 'refused' && result.reason === 'unwritable') markUnwritable()
+      if (state.projectId === projectId) {
+        // gone either way: removed now, or already gone before the click
+        if (result.status === 'ok') applyMemoryChange(result)
+        void refreshMemory()
+      }
       return result
     },
+    refreshMemory,
     markUnwritable() {
       if (state.projectId) markUnwritable()
     },
@@ -714,6 +798,7 @@ export function useProjectChat(options: ProjectChatOptions): ProjectChat {
       finishSend: controller.finishSend,
       documentSaved: controller.documentSaved,
       forgetMemory: controller.forgetMemory,
+      refreshMemory: controller.refreshMemory,
       markUnwritable: controller.markUnwritable,
       openChatRef: controller.openChatRef,
     }),

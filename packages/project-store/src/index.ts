@@ -55,6 +55,8 @@ export type {
   OpenProjectScreenArgs,
   OpenProjectScreenEvent,
   OutsideDocumentChoice,
+  ProjectChangedEvent,
+  ProjectChangedPart,
   ProjectChatAppendedEvent,
   ProjectChatInfo,
   ProjectChatListItem,

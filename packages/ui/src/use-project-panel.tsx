@@ -21,6 +21,7 @@ import {
   type ProjectProblem,
 } from './project-panel-model'
 import {
+  memoryLineGone,
   memoryLinesOf,
   windowProjectFolderBridge,
   type ProjectMemoryLine,
@@ -36,9 +37,11 @@ import {
 } from './use-project-chat'
 import { ProjectChatMenu } from './ProjectChatMenu'
 import {
+  memoryRemoveOutcome,
   ProjectFolderHintLine,
   ProjectMemoryConsolidatedLine,
   ProjectMemoryEventLine,
+  type ProjectMemoryRemoveOutcome,
   ProjectNoticeLine,
   ProjectNoticeList,
   ProjectProblemLine,
@@ -336,13 +339,14 @@ export function useProjectPanel(options: ProjectPanelOptions): ProjectPanel {
     }
   }
 
-  const forget = async (line: ProjectMemoryLine): Promise<void> => {
+  const forget = async (line: ProjectMemoryLine): Promise<ProjectMemoryRemoveOutcome> => {
     const result = await chat.forgetMemory(line).catch(() => null)
-    if (!result || !mountedRef.current) return
+    const outcome = memoryRemoveOutcome(result)
     // an entry no longer in the memory is as good as removed
-    if (result.status === 'ok' || result.reason === 'not-found') {
+    if (outcome !== 'failed' && mountedRef.current) {
       setForgotten((prev) => new Set(prev).add(memoryKey(line)))
     }
+    return outcome
   }
 
   const projectId = chat.projectId
@@ -477,11 +481,12 @@ export function useProjectPanel(options: ProjectPanelOptions): ProjectPanel {
             key={`${i}-${memoryKey(line)}`}
             lang={lang}
             change={line.change}
-            onRemove={
-              line.kind === 'added' && projectId && !forgotten.has(memoryKey(line))
-                ? () => void forget(line)
-                : undefined
+            gone={
+              chat.memoryEntries
+                ? memoryLineGone(line, chat.memoryEntries)
+                : forgotten.has(memoryKey(line))
             }
+            onRemove={line.kind === 'added' && projectId ? () => forget(line) : undefined}
           />
         ))}
       </>

@@ -53,6 +53,9 @@ import {
   ProjectFolderHintLine,
   ProjectMemoryConsolidatedLine,
   ProjectMemoryEventLine,
+  memoryLineGone,
+  memoryRemoveOutcome,
+  type ProjectMemoryRemoveOutcome,
   ProjectNoticeLine,
   ProjectNoticeList,
   ProjectPicker,
@@ -1307,16 +1310,18 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
   }
 
   /** "[Remove]" on a memory line: the entry leaves `memory.md` */
-  const forgetMemory = (line: ProjectMemoryLine): void => {
-    void projectChatRef.current
+  const forgetMemory = (line: ProjectMemoryLine): Promise<ProjectMemoryRemoveOutcome> =>
+    projectChatRef.current
       .forgetMemory(line)
       .then((result) => {
-        if (result?.status === 'ok' && mountedRef.current) {
+        const outcome = memoryRemoveOutcome(result)
+        // an entry no longer in the memory is as good as removed
+        if (outcome !== 'failed' && mountedRef.current) {
           setForgotten((prev) => new Set(prev).add(line.text))
         }
+        return outcome
       })
-      .catch(() => undefined)
-  }
+      .catch((): ProjectMemoryRemoveOutcome => 'failed')
 
   /** the memory lines and the other editor's tool line under a project chat's reply */
   const projectReplyLines = (entry: ChatEntry): ReactNode => {
@@ -1337,10 +1342,11 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
           <ProjectMemoryEventLine
             key={k}
             lang={lang}
-            change={
-              line.kind === 'added' && forgotten.has(line.text)
-                ? { op: 'remove', text: line.text }
-                : line.change
+            change={line.change}
+            gone={
+              projectChat.memoryEntries
+                ? memoryLineGone(line, projectChat.memoryEntries)
+                : forgotten.has(line.text)
             }
             onRemove={() => forgetMemory(line)}
           />

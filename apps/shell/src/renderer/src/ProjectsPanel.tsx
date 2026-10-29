@@ -7,6 +7,7 @@ import type { Lang, Params } from '@genoffice/i18n'
 import type {
   AddFolderResult,
   CreateProjectResult,
+  ProjectChangedEvent,
   ProjectChatListItem,
   ProjectChatRef,
   ProjectDetail,
@@ -113,6 +114,26 @@ function createLocation(parent: string, name: string): string {
   return `${trimmed}${trimmed.endsWith(separator) ? '' : separator}${name.normalize('NFC').trim()}`
 }
 
+/** A file of the project on disk: the folder plus its `/`-separated relative path */
+export function projectFilePath(folder: string, relPath: string): string {
+  const separator = folder.includes('\\') || !folder.includes('/') ? '\\' : '/'
+  const base = /[\\/]$/.test(folder) ? folder.slice(0, -1) : folder
+  const parts = relPath.split('/').filter((part) => part !== '' && part !== '.' && part !== '..')
+  return [base, ...parts].join(separator)
+}
+
+/**
+ * Listen for "the app wrote part of a project" from main. Returns the
+ * unsubscribe function; a window without the bridge (or an older one) hears nothing.
+ */
+export function subscribeProjectChanges(
+  bridge: Pick<ProjectFolderApi, 'onProjectChanged'> | null | undefined,
+  listener: (event: ProjectChangedEvent) => void,
+): () => void {
+  if (!bridge || typeof bridge.onProjectChanged !== 'function') return () => undefined
+  return bridge.onProjectChanged(listener)
+}
+
 function formatSize(bytes: number): string {
   if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`
   return `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -148,6 +169,8 @@ export interface ProjectsPanelProps {
   onOpenAiSettings: () => void
   /** main handed a chat to this home window (a home chat, or no document to open it in): show the ask panel with it */
   onOpenHomeAsk: (chat: ProjectChatRef) => void
+  /** open a file of the project in the app (a name in the file list); defaults to the shell's open path */
+  onOpenPath?: (path: string) => void
   /** the settings a consolidation runs with, read fresh at the click; tests inject one */
   readSettings?: () => Promise<AiSettings>
   /** the transport a consolidation runs on; tests inject one */
@@ -174,6 +197,8 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
   const [newName, setNewName] = useState('')
   const [parentFolder, setParentFolder] = useState('')
   const [busy, setBusy] = useState(false)
+  /** what the project screen says when it opens (an existing project a create or add led to) */
+  const [arrivalNote, setArrivalNote] = useState<Note | null>(null)
   const s = (key: ProjectsStringKey, params?: Params) => projectsText(lang, key, params)
   const p = (key: ProjectPanelStringKey, params?: Params) => projectPanelText(lang, key, params)
 
@@ -192,6 +217,16 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- read once per mount
   }, [])
 
+  // a rename, pin or removal made in another window shows in the list
+  useEffect(
+    () =>
+      subscribeProjectChanges(bridge, (event) => {
+        if (event.part === 'settings') void refresh()
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one subscription per mount
+    [],
+  )
+
   // a "show this project" request opens it at the asked section
   const requestSeq = props.request?.seq
   useEffect(() => {
@@ -203,9 +238,10 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new request matters
   }, [requestSeq])
 
-  const openProject = (id: ProjectId) => {
+  const openProject = (id: ProjectId, arrival: Note | null = null) => {
     setNote(null)
     setProblem(null)
+    setArrivalNote(arrival)
     setOpenId(id)
     setTabRequest((prev) => ({ tab: 'instructions', seq: prev.seq + 1 }))
   }
@@ -216,7 +252,11 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
     switch (result.status) {
       case 'added':
         await refresh()
-        openProject(result.project.id)
+        // a folder that was already a listed project just opens, and says so
+        openProject(
+          result.project.id,
+          result.identity === 'existing' ? { from: 'panel', key: 'alreadyListed' } : null,
+        )
         return
       case 'created':
         setCreating(false)
@@ -320,6 +360,8 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
             void refresh()
           }}
           onChanged={() => void refresh()}
+          initialNote={arrivalNote}
+          onOpenPath={props.onOpenPath ?? ((path) => void window.aiOffice?.openPath(path))}
           aiSettings={props.aiSettings}
           statuses={props.statuses}
           noticeDue={props.noticeDue}
@@ -400,7 +442,7 @@ export function ProjectsPanel(props: ProjectsPanelProps) {
           {p('newProject')}
         </button>
         <button type="button" className="projects-ghost" disabled={busy} onClick={addFolder}>
-          {p('addFolder')}
+          {s('addExistingFolder')}
         </button>
       </div>
       {creating && (
@@ -491,6 +533,10 @@ interface DetailProps {
   tabRequest: { tab: Tab; seq: number }
   onBack: () => void
   onChanged: () => void
+  /** a line the screen opens with (an existing project a create or add led to) */
+  initialNote: Note | null
+  /** opens a file of the project in the app */
+  onOpenPath: (path: string) => void
   aiSettings: AiSettings | null
   statuses: AiSubscriptionStatuses
   noticeDue: boolean
@@ -515,12 +561,26 @@ function ProjectDetailView(props: DetailProps) {
   const [detail, setDetail] = useState<ProjectDetail | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [tab, setTab] = useState<Tab>(props.tabRequest.tab)
-  const [headNote, setHeadNote] = useState<Note | null>(null)
+  const [headNote, setHeadNote] = useState<Note | null>(props.initialNote)
   const [nameDraft, setNameDraft] = useState('')
   const [instructionsDraft, setInstructionsDraft] = useState('')
   const [instructionsNote, setInstructionsNote] = useState<Note | null>(null)
   const [memoryEditing, setMemoryEditing] = useState<string | null>(null)
   const [memoryNote, setMemoryNote] = useState<Note | null>(null)
+  /** a save found the file changed since its text was loaded: ask before writing over it */
+  const [conflict, setConflict] = useState<'instructions' | 'memory' | null>(null)
+  // What each draft was loaded from. A draft still equal to it follows the
+  // file when the screen reads again; an edited one is kept, and its save
+  // compares the file with this first (never writes over a change unasked).
+  const nameDraftRef = useRef('')
+  nameDraftRef.current = nameDraft
+  const nameBaseRef = useRef('')
+  const instructionsDraftRef = useRef('')
+  instructionsDraftRef.current = instructionsDraft
+  const instructionsBaseRef = useRef('')
+  const memoryBaseRef = useRef('')
+  const tabRef = useRef(tab)
+  tabRef.current = tab
   const [consolidation, setConsolidation] = useState<ConsolidationView | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const [files, setFiles] = useState<{ list: ProjectFileEntry[]; total: number } | null>(null)
@@ -532,13 +592,23 @@ function ProjectDetailView(props: DetailProps) {
   const [listNote, setListNote] = useState<Note | null>(null)
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({})
 
+  /**
+   * Reads the project again. A draft nobody edited follows the file; an
+   * edited draft stays as typed. `fresh` takes the file's text for both.
+   */
   const reload = async (fresh = false): Promise<ProjectDetail | null> => {
     try {
       const next = await bridge.getProjectDetail({ projectId })
       setDetail(next)
       setLoadFailed(false)
-      if (fresh) {
+      if (fresh || nameDraftRef.current === nameBaseRef.current) {
+        nameBaseRef.current = next.project.name
+        nameDraftRef.current = next.project.name
         setNameDraft(next.project.name)
+      }
+      if (fresh || instructionsDraftRef.current === instructionsBaseRef.current) {
+        instructionsBaseRef.current = next.instructions
+        instructionsDraftRef.current = next.instructions
         setInstructionsDraft(next.instructions)
       }
       return next
@@ -547,6 +617,8 @@ function ProjectDetailView(props: DetailProps) {
       return null
     }
   }
+  const reloadRef = useRef(reload)
+  reloadRef.current = reload
 
   useEffect(() => {
     void reload(true)
@@ -554,12 +626,49 @@ function ProjectDetailView(props: DetailProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one project per mount (keyed)
   }, [])
 
-  // a new request for this project moves to its section
+  // a new request for this project (an AI panel's [View]) moves to its section
+  // and reads the folder again: what changed outside the app shows
   const tabSeq = props.tabRequest.seq
+  const mountedSeq = useRef(tabSeq)
   useEffect(() => {
     setTab(props.tabRequest.tab)
+    // the first read is the mount's own
+    if (tabSeq !== mountedSeq.current) void reloadRef.current()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new request matters
   }, [tabSeq])
+
+  // the screen reads the folder again whenever it is shown: the window or the
+  // Home tab comes back, or any window of the app wrote part of this project
+  useEffect(() => {
+    const again = () => void reloadRef.current()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') again()
+    }
+    window.addEventListener('focus', again)
+    document.addEventListener('visibilitychange', onVisible)
+    let homeActive = true
+    const tabs = window.aiOfficeTabs
+    const offTabs =
+      typeof tabs?.onChanged === 'function'
+        ? tabs.onChanged((list) => {
+            const active = list.some((item) => item.kind === 'home' && item.active)
+            if (active && !homeActive) again()
+            homeActive = active
+          })
+        : () => undefined
+    const offChanges = subscribeProjectChanges(bridge, (event) => {
+      if (event.projectId !== projectId) return
+      again()
+      if (event.part === 'chats' && tabRef.current === 'chats') void loadChatsRef.current()
+    })
+    return () => {
+      window.removeEventListener('focus', again)
+      document.removeEventListener('visibilitychange', onVisible)
+      offTabs()
+      offChanges()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one project per mount (keyed)
+  }, [])
 
   const loadFiles = async (offset: number): Promise<void> => {
     try {
@@ -592,6 +701,8 @@ function ProjectDetailView(props: DetailProps) {
       setListNote({ from: 'screen', key: 'loadFailed', tone: 'warning' })
     }
   }
+  const loadChatsRef = useRef(loadChats)
+  loadChatsRef.current = loadChats
 
   useEffect(() => {
     if (tab === 'files') void loadFiles(0)
@@ -619,6 +730,7 @@ function ProjectDetailView(props: DetailProps) {
     if (!name || name === project.name) return
     try {
       const result = await bridge.renameProject({ projectId, name })
+      if (result.status === 'ok') nameBaseRef.current = nameDraftRef.current
       setHeadNote(written(result))
       await reload()
       props.onChanged()
@@ -656,16 +768,48 @@ function ProjectDetailView(props: DetailProps) {
     }
   }
 
-  const saveInstructions = async () => {
+  /**
+   * Reads the project again before a save: true when the file is still what
+   * the draft was loaded from. Otherwise the screen asks first ([Reload] /
+   * [Save anyway]) and the save waits.
+   */
+  const unchangedSince = async (
+    part: 'instructions' | 'memory',
+    base: string,
+  ): Promise<boolean> => {
+    const now = await bridge.getProjectDetail({ projectId })
+    setDetail(now)
+    if ((part === 'instructions' ? now.instructions : now.memory) === base) return true
+    setConflict(part)
+    return false
+  }
+
+  const saveInstructions = async (overwrite = false) => {
+    const text = instructionsDraft
     try {
-      const result = await bridge.saveInstructions({ projectId, text: instructionsDraft })
+      if (!overwrite && !(await unchangedSince('instructions', instructionsBaseRef.current))) {
+        return
+      }
+      setConflict(null)
+      const result = await bridge.saveInstructions({ projectId, text })
       setInstructionsNote(written(result, { from: 'screen', key: 'saved' }))
       if (result.status === 'ok') {
-        const next = await reload()
-        if (next) setInstructionsDraft(next.instructions)
+        instructionsBaseRef.current = text
+        await reload()
       }
     } catch {
       setInstructionsNote({ from: 'screen', key: 'actionFailed', tone: 'warning' })
+    }
+  }
+
+  /** [Reload] after a conflict: the file's text replaces the draft */
+  const reloadConflict = async () => {
+    const part = conflict
+    setConflict(null)
+    const next = await reload(part === 'instructions')
+    if (next && part === 'memory') {
+      memoryBaseRef.current = next.memory
+      setMemoryEditing(next.memory)
     }
   }
 
@@ -683,9 +827,11 @@ function ProjectDetailView(props: DetailProps) {
     await reload()
   }
 
-  const saveMemory = async () => {
+  const saveMemory = async (overwrite = false) => {
     if (memoryEditing === null) return
     try {
+      if (!overwrite && !(await unchangedSince('memory', memoryBaseRef.current))) return
+      setConflict(null)
       const result = await bridge.saveMemory({ projectId, text: memoryEditing })
       setMemoryNote(written(result, { from: 'screen', key: 'saved' }))
       if (result.status === 'ok') setMemoryEditing(null)
@@ -694,6 +840,23 @@ function ProjectDetailView(props: DetailProps) {
     }
     await reload()
   }
+
+  /** the line a save shows instead of writing over a file changed elsewhere */
+  const conflictLine = (part: 'instructions' | 'memory') =>
+    conflict === part && (
+      <NoteLine lang={lang} note={{ from: 'screen', key: 'changedOutside', tone: 'warning' }}>
+        <button type="button" className="projects-small" onClick={() => void reloadConflict()}>
+          {s('reloadFile')}
+        </button>
+        <button
+          type="button"
+          className="projects-small"
+          onClick={() => void (part === 'instructions' ? saveInstructions(true) : saveMemory(true))}
+        >
+          {s('saveAnyway')}
+        </button>
+      </NoteLine>
+    )
 
   // "[Tidy up]": one request, only on this click, through the same send gate as a chat
   const consolidate = async () => {
@@ -886,16 +1049,19 @@ function ProjectDetailView(props: DetailProps) {
           )}
         </div>
         <div className="projects-trust" data-trust={trust}>
-          <span className="projects-trust-state">
-            {trust === 'use'
-              ? s('trustUse')
-              : trust === 'without'
-                ? s('trustWithout')
-                : s('trustUnconfirmed')}
+          <span className="projects-trust-state" role="status">
+            {s('trustStatus', {
+              state:
+                trust === 'use'
+                  ? s('trustUse')
+                  : trust === 'without'
+                    ? s('trustWithout')
+                    : s('trustUnconfirmed'),
+            })}
           </span>
           {trust !== 'use' && (
             <button type="button" className="projects-small" onClick={() => void chooseUseTrust()}>
-              {p('useFolder')}
+              {s('trustUseButton')}
             </button>
           )}
         </div>
@@ -964,6 +1130,7 @@ function ProjectDetailView(props: DetailProps) {
                 setInstructionsNote(null)
               }}
             />
+            {conflictLine('instructions')}
             <div className="projects-buttons">
               <button
                 type="button"
@@ -1062,6 +1229,8 @@ function ProjectDetailView(props: DetailProps) {
                     className="projects-ghost"
                     onClick={() => {
                       setMemoryNote(null)
+                      setConflict(null)
+                      memoryBaseRef.current = detail.memory
                       setMemoryEditing(detail.memory)
                     }}
                   >
@@ -1088,6 +1257,7 @@ function ProjectDetailView(props: DetailProps) {
                   value={memoryEditing}
                   onChange={(event) => setMemoryEditing(event.target.value)}
                 />
+                {conflictLine('memory')}
                 <div className="projects-buttons">
                   <button
                     type="button"
@@ -1099,7 +1269,10 @@ function ProjectDetailView(props: DetailProps) {
                   <button
                     type="button"
                     className="projects-ghost"
-                    onClick={() => setMemoryEditing(null)}
+                    onClick={() => {
+                      setConflict(null)
+                      setMemoryEditing(null)
+                    }}
                   >
                     {s('cancel')}
                   </button>
@@ -1166,9 +1339,15 @@ function ProjectDetailView(props: DetailProps) {
               <ul className="projects-list projects-file-list">
                 {files.list.map((file) => (
                   <li key={file.relPath} className="projects-row" data-rel-path={file.relPath}>
-                    <span className="projects-file-name" title={file.relPath}>
+                    <button
+                      type="button"
+                      className="projects-file-name projects-file-open"
+                      title={file.relPath}
+                      aria-label={s('openFileAria', { name: file.relPath })}
+                      onClick={() => props.onOpenPath(projectFilePath(project.path, file.relPath))}
+                    >
                       {file.relPath}
-                    </span>
+                    </button>
                     <span className="projects-file-meta">
                       {file.ext ? file.ext.toUpperCase() : s('noExt')}
                     </span>

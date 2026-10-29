@@ -13,16 +13,16 @@ Projekt je jedna složka ve vašem počítači. Když v panelu AI vyberete proje
 
 ## Nový projekt a přidání složky
 
-- **Nový projekt**: zadejte název a ve výchozí složce pro ukládání vznikne složka s tímto názvem (zpočátku je to `Dokumenty\GenOffice`, změnit ji lze v Nastavení). Tlačítkem **Vytvořit jinde…** zvolíte jiné umístění. Pokud složka s tímto názvem už existuje, aplikace se zeptá, zda ji použít jako projekt.
-- **Přidat složku**: jako projekt poslouží složka, kterou už máte, i se všemi podsložkami. Nelze vybrat celý disk, celou uživatelskou složku ani složky s přihlašovacími údaji nebo s daty aplikace.
+- **Nový projekt**: zadejte název a ve výchozí složce pro ukládání vznikne složka s tímto názvem (zpočátku je to `Dokumenty\GenOffice`, změnit ji lze v Nastavení). Tlačítkem **Vytvořit jinde…** zvolíte jiné umístění. Pokud složka s tímto názvem už existuje, aplikace se zeptá, zda ji použít jako projekt, a **Použít tuto složku** s ní začne. Pokud je tato složka už projektem ve vašem seznamu, rovnou se otevře bez dotazu.
+- **Přidat složku** (na obrazovce Projekty na stránce Domů **Použít existující složku**): jako projekt poslouží složka, kterou už máte, i se všemi podsložkami. Nelze vybrat celý disk, celou uživatelskou složku ani složky s přihlašovacími údaji nebo s daty aplikace.
 - Když otevřete dokument ze složky projektu, který ve vašem seznamu není, objeví se pod vstupním polem „Tento dokument je ve složce projektu ‚…‘“ a tlačítko **Použít**. Kliknutí na něj má stejný účinek jako Přidat složku.
-- Pokud složka, kterou jste od někoho dostali, už obsahuje pokyny nebo paměť, soubory `AGENTS.md` či `CLAUDE.md` nebo konverzace z jiného počítače, aplikace vám je jednou ukáže a zeptá se. **Použít** převezme vše. **Použít bez pokynů** tyto pokyny a tuto paměť AI neposílá, skryje konverzace z jiných počítačů a do paměti nic nepřidává; čtení souborů funguje dál. Na stránce projektu můžete později přepnout na **Použít**. Když dotaz zavřete bez volby, složka se nepřidá.
+- Pokud složka, kterou jste od někoho dostali, už obsahuje pokyny nebo paměť, soubory `AGENTS.md` či `CLAUDE.md` nebo konverzace z jiného počítače, aplikace vám je jednou ukáže a zeptá se. Tlačítkem **Zobrazit vše** si nejdřív přečtete všechno. **Použít i s pokyny** převezme vše. **Použít bez pokynů** tyto pokyny a tuto paměť AI neposílá, skryje konverzace z jiných počítačů a do paměti nic nepřidává; čtení souborů funguje dál. Na stránce projektu to můžete později změnit tlačítkem **Použít i pokyny**. Když kliknete na **Zrušit** nebo dotaz zavřete bez volby, složka se nepřidá.
 - Potom už se aplikace neptá. Pokud se pokyny nebo paměť změní mimo GenOffice, panel AI jednou zobrazí „Pokyny se změnily“ a tlačítko **Zobrazit** otevře příslušnou část stránky projektu.
 
 ## Pokyny a paměť
 
 - **Pokyny** jsou pravidla tohoto projektu, třeba „Zprávy piš v odrážkách a název organizace nikdy nezkracuj“. Napište je na stránce projektu na Domů a stiskněte **Uložit**. Pokud jsou v horní úrovni složky `AGENTS.md` nebo `CLAUDE.md`, načtou se také; na stránce projektu je lze vypnout.
-- **Paměť** jsou poznámky, které si AI dělá během konverzací: fakta, preference a rozhodnutí, která se budou později hodit, každá na jednom řádku s datem. Pokaždé, když něco zapíše, ukáže panel AI „Zapamatováno: …“ s tlačítkem **Smazat**. Předem se neptá.
+- **Paměť** jsou poznámky, které si AI dělá během konverzací: fakta, preference a rozhodnutí, která se budou později hodit, každá na jednom řádku s datem. Pokaždé, když něco zapíše, ukáže panel AI „Zapamatováno: …“ s tlačítkem **Smazat**. Pokud už byla tato poznámka smazána, řádek zní „Smazáno z paměti: …“ a tlačítko **Smazat** nemá. Předem se neptá.
 - Když paměť naroste, panel AI ukáže „Paměť je už dlouhá“ s tlačítkem **Uklidit**. Stisknutím se sloučí poznámky, které se překrývají nebo jsou zastaralé. Předchozí verze se uchová a **Zpět** ji vrátí. Úklid proběhne jen po stisknutí tlačítka a odešle jeden požadavek na AI.
 - Na stránce projektu můžete mazat poznámky, upravit celou paměť a paměť vypnout. Když je vypnutá, nic nového se nezapisuje a stávající paměť se dál čte.
 - Z velmi dlouhých pokynů se konec vynechá a panel AI vás na to upozorní. Paměť se vždy posílá celá, ať je jakkoli dlouhá.
@@ -48,17 +48,18 @@ Projekt je jedna složka ve vašem počítači. Když v panelu AI vyberete proje
 
 ## Stránka projektu na Domů
 
-V položce **Projekty** v postranním panelu Domů vytváříte projekty, přidáváte složky a otevíráte je ke správě.
+V položce **Projekty** v postranním panelu Domů vytváříte **Nový projekt**, volíte **Použít existující složku** a otevíráte projekty ke správě.
 
-- **Záhlaví**: název (přejmenováním se složka nepřejmenuje), cesta ke složce, **Zobrazit v Průzkumníkovi**.
+- **Záhlaví**: název (přejmenováním se složka nepřejmenuje), cesta ke složce, **Zobrazit v Průzkumníkovi** a stav. Když se projekt používá bez pokynů, zobrazí se **Použít i pokyny**.
 - **Pokyny**: pole pro pokyny a k němu načítané `AGENTS.md` a `CLAUDE.md`.
 - **Paměť**: seznam poznámek, **Upravit vše**, **Uklidit**, zapnutí a vypnutí paměti.
-- **Soubory**: soubory, které AI vidí, a ty, které jsou před ní skryté.
+- **Soubory**: soubory, které AI vidí, a ty, které jsou před ní skryté. Kliknutím na název souboru ho otevřete.
 - **Konverzace**: konverzace tohoto projektu. Kliknutím otevřete dokument, ve kterém byla použita naposledy, a pokračujete v jeho panelu AI.
+- Tato stránka načte složku znovu pokaždé, když se zobrazí, takže poznámku, kterou si AI právě zapamatovala, uvidíte, aniž byste stránku opouštěli. Pokud se soubor s pokyny nebo pamětí během úprav změnil mimo GenOffice, **Uložit** se nejdřív zeptá: **Znovu načíst** načte změněný soubor a **Přesto uložit** ho přepíše vašimi úpravami.
 
 ## Co zůstává ve složce a co je dobré vědět
 
-- Pokyny, paměť a konverzace se ukládají jako textové soubory ve složce `.ieumoffice` uvnitř složky projektu. Když složku přesunete nebo zkopírujete na jiný počítač, putují s ní. Na jiném počítači ji stačí jednou vybrat přes **Přidat složku**.
+- Pokyny, paměť a konverzace se ukládají jako textové soubory ve složce `.ieumoffice` uvnitř složky projektu. Když složku přesunete nebo zkopírujete na jiný počítač, putují s ní. Na jiném počítači ji stačí jednou vybrat přes **Přidat složku** v panelu AI nebo **Použít existující složku** na obrazovce Projekty na stránce Domů.
 - Složka `.ieumoffice` vznikne, až když je do ní co zapsat. Její soubory můžete otevřít a upravit v Poznámkovém bloku.
 - To, co napíšete do konverzace, se může dostat do paměti. Chcete-li něco vynechat, smažte to tlačítkem **Smazat** na řádku „Zapamatováno“, nebo paměť vypněte.
 - Pokud jako projekt vyberete synchronizovanou složku, nahrají se do dané služby i její pokyny, paměť a konverzace. Aplikace na to upozorní jednou, když ji vyberete poprvé.

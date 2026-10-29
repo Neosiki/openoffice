@@ -10,6 +10,8 @@ import {
   type LegacyDocumentChat,
   type OpenProjectChatEvent,
   type OpenProjectScreenEvent,
+  type ProjectChangedEvent,
+  type ProjectChangedPart,
   type ProjectChatAppendedEvent,
   type ProjectChatRef,
   type ProjectEditor,
@@ -36,7 +38,9 @@ import { relativeInside } from './paths'
  * names project and chat ids only, never a path or a list a scope depends on.
  *
  * It also keeps which window shows which chat, so a message one window records
- * reaches the other windows with the same chat open (spec 5.3.3), and holds an
+ * reaches the other windows with the same chat open (spec 5.3.3), tells every
+ * listening window when a request wrote a project's memory, instructions,
+ * switches or chats (`onProjectChanged`), and holds an
  * "open this chat" or "show the project screen" request for a window that is
  * not listening yet (a tab still loading) until it listens.
  *
@@ -288,6 +292,33 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     }
   }
 
+  /**
+   * A request wrote part of a project: every window listening hears it, the
+   * sender included. Sent before the request answers, so a window reading
+   * the answer already knows. Nothing is held for a window not listening yet:
+   * it reads the project when it starts.
+   */
+  const announce = (projectId: ProjectId, part: ProjectChangedPart): void => {
+    const event: ProjectChangedEvent = { projectId, part }
+    for (const [target, methods] of [...listening]) {
+      if (!methods.has('onProjectChanged')) continue
+      if (!deps.send(target, PROJECT_FOLDER_EVENTS.onProjectChanged, event)) forget(target)
+    }
+  }
+
+  /** runs a write and announces it when `wrote` says it went through */
+  const announced = async <T>(
+    projectId: ProjectId,
+    part: ProjectChangedPart,
+    write: Promise<T> | T,
+    wrote: (result: T) => boolean = (result) =>
+      (result as { status?: unknown } | null)?.status === 'ok',
+  ): Promise<T> => {
+    const result = await write
+    if (wrote(result)) announce(projectId, part)
+    return result
+  }
+
   /** sends now when the window listens, else holds the latest of its kind until it does */
   const deliver = (target: number, method: ProjectFolderEventMethod, payload: unknown): void => {
     if (listening.get(target)?.has(method)) {
@@ -415,18 +446,28 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     },
 
     removeFromList: async (_sender, raw) => {
-      await svc().guide.removeFromList(projectIdOf(raw))
+      const projectId = projectIdOf(raw)
+      await svc().guide.removeFromList(projectId)
       deps.projectsChanged()
+      announce(projectId, 'settings')
     },
 
-    setPinned: (_sender, raw) => {
+    setPinned: async (_sender, raw) => {
       const pinned = record(raw).pinned
       if (typeof pinned !== 'boolean') throw new Error(PROJECT_IPC_BAD_REQUEST)
-      return svc().guide.setPinned(projectIdOf(raw), pinned)
+      const projectId = projectIdOf(raw)
+      await svc().guide.setPinned(projectId, pinned)
+      announce(projectId, 'settings')
     },
 
-    renameProject: (_sender, raw) =>
-      svc().guide.renameProject(projectIdOf(raw), textOf(raw, 'name')),
+    renameProject: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'settings',
+        svc().guide.renameProject(projectId, textOf(raw, 'name')),
+      )
+    },
 
     relocateProject: async (sender, raw): Promise<AddFolderResult> => {
       const projectId = projectIdOf(raw)
@@ -487,26 +528,38 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
         projectId = null
       }
       if (!projectId) throw new Error(PROJECT_SCOPE_UNKNOWN)
-      return svc().guide.editMemory(projectId, memoryOpOf(record(raw).change), 'ai')
+      const change = memoryOpOf(record(raw).change)
+      return announced(projectId, 'memory', svc().guide.editMemory(projectId, change, 'ai'))
     },
 
     // ---- memory ----
-    editMemory: (_sender, raw) =>
-      svc().guide.editMemory(projectIdOf(raw), memoryOpOf(record(raw).change), 'person'),
-    saveMemory: (_sender, raw) => svc().guide.saveMemory(projectIdOf(raw), textOf(raw, 'text')),
+    editMemory: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      const change = memoryOpOf(record(raw).change)
+      return announced(projectId, 'memory', svc().guide.editMemory(projectId, change, 'person'))
+    },
+    saveMemory: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(projectId, 'memory', svc().guide.saveMemory(projectId, textOf(raw, 'text')))
+    },
     applyMemoryConsolidation: (_sender, raw) => {
       const entries = record(raw).entries
       if (!Array.isArray(entries)) throw new Error(PROJECT_IPC_BAD_REQUEST)
-      return svc().guide.applyMemoryConsolidation({
-        projectId: projectIdOf(raw),
-        entries: entries as string[],
-      })
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'memory',
+        svc().guide.applyMemoryConsolidation({ projectId, entries: entries as string[] }),
+      )
     },
-    undoMemoryConsolidation: (_sender, raw) =>
-      svc().guide.undoMemoryConsolidation({
-        projectId: projectIdOf(raw),
-        backupName: textOf(raw, 'backupName'),
-      }),
+    undoMemoryConsolidation: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'memory',
+        svc().guide.undoMemoryConsolidation({ projectId, backupName: textOf(raw, 'backupName') }),
+      )
+    },
 
     // ---- chats ----
     listChats: async (sender, raw) => {
@@ -552,16 +605,25 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
         key: sender,
       })
       watch(sender, ref)
+      // a saved message moves the chat in the lists (title, time, last editor)
+      if (result.status === 'saved') announce(ref.projectId, 'chats')
       return result
     },
 
-    renameChat: (_sender, raw) =>
-      svc().chats.renameChat({ ...chatRefOf(raw), title: textOf(raw, 'title') }),
+    renameChat: (_sender, raw) => {
+      const ref = chatRefOf(raw)
+      return announced(
+        ref.projectId,
+        'chats',
+        svc().chats.renameChat({ ...ref, title: textOf(raw, 'title') }),
+      )
+    },
 
     deleteChat: async (sender, raw) => {
       const ref = chatRefOf(raw)
       const result = await svc().chats.deleteChat(ref)
       if (result.status === 'ok' && watching.get(sender) === keyOf(ref)) unwatch(sender)
+      if (result.status === 'ok') announce(ref.projectId, 'chats')
       return result
     },
 
@@ -600,18 +662,48 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
       if (typeof patch.readAgentsFiles === 'boolean') {
         settings.readAgentsFiles = patch.readAgentsFiles
       }
-      return svc().guide.setSettings(projectIdOf(raw), settings)
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'settings',
+        svc().guide.setSettings(projectId, settings),
+        () => true,
+      )
     },
     decideTrust: (sender, raw) => {
       const decision = record(raw).decision
       if (decision !== 'use' && decision !== 'without') throw new Error(PROJECT_IPC_BAD_REQUEST)
-      return svc().guide.decideTrust(projectIdOf(raw), decision, askTrustFor(sender))
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'settings',
+        svc().guide.decideTrust(projectId, decision, askTrustFor(sender)),
+      )
     },
-    saveInstructions: (_sender, raw) =>
-      svc().guide.saveInstructions(projectIdOf(raw), textOf(raw, 'text')),
-    addIgnore: (_sender, raw) => svc().guide.addIgnore(projectIdOf(raw), textOf(raw, 'relPath')),
-    removeIgnore: (_sender, raw) =>
-      svc().guide.removeIgnore(projectIdOf(raw), textOf(raw, 'relPath')),
+    saveInstructions: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'instructions',
+        svc().guide.saveInstructions(projectId, textOf(raw, 'text')),
+      )
+    },
+    addIgnore: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'settings',
+        svc().guide.addIgnore(projectId, textOf(raw, 'relPath')),
+      )
+    },
+    removeIgnore: (_sender, raw) => {
+      const projectId = projectIdOf(raw)
+      return announced(
+        projectId,
+        'settings',
+        svc().guide.removeIgnore(projectId, textOf(raw, 'relPath')),
+      )
+    },
     listIgnoredFiles: async (_sender, raw) => {
       const visibility = await svc().guide.aiVisibility(projectIdOf(raw))
       if (!visibility) return []

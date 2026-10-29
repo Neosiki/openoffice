@@ -8,7 +8,7 @@ O ecrã Início é a página inicial do GenOffice: uma barra de navegação à e
 - **Favoritos**: os arquivos que você marcou com uma estrela. Passe o cursor sobre a linha do arquivo e clique na estrela para adicioná-lo ou removê-lo. **Mover para grupo** no menu ⋯ organiza os favoritos em grupos nomeados; a visualização Favoritos filtra por eles.
 - **Guia do Usuário**: abre este manual.
 - **Ask AI**: o painel de base de conhecimento — pergunte e receba respostas citadas dos seus arquivos favoritados (veja abaixo).
-- **Projetos**: as pastas (projetos) com que a IA pode trabalhar. Crie um projeto ou adicione uma pasta, e abra um deles para gerenciar as instruções, a memória, os arquivos e as conversas. Veja [Projetos](help://projects).
+- **Projetos**: as pastas (projetos) com que a IA pode trabalhar. Crie um projeto ou use uma pasta existente, e abra um deles para gerenciar as instruções, a memória, os arquivos e as conversas. Veja [Projetos](help://projects).
 - **Pastas**: os diretórios que adiciona à barra lateral com **Adicionar pasta…**, ou que arrasta até lá a partir do gestor de ficheiros. Cada um torna-se uma raiz que pode abrir, onde criar subpastas, renomear e remover; a que ficar indisponível aparece como indisponível e pode ser retirada da lista. **Nova pasta** cria outra.
 - **A linha ao fundo**: mostra se há uma IA conectada — **Conectar IA**, ou o nome da assinatura conectada — e abre as Configurações.
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AgentLoop,
+  CREATE_DOCUMENT_TOOL,
   USE_SKILL_TOOL,
   USER_SKILL_TOOL_NAMES,
   composeSkills,
@@ -32,6 +33,9 @@ import {
   ProjectFolderHintLine,
   ProjectMemoryConsolidatedLine,
   ProjectMemoryEventLine,
+  memoryLineGone,
+  memoryRemoveOutcome,
+  type ProjectMemoryRemoveOutcome,
   ProjectNoticeLine,
   ProjectNoticeList,
   ProjectPicker,
@@ -39,6 +43,7 @@ import {
   ProjectProblemLine,
   placeRemoteEntries,
   projectAddProblem,
+  projectPanelText,
   type ProjectProblem,
   SentSkillChips,
   panelProjectSkill,
@@ -83,6 +88,7 @@ import {
 import {
   askScopeFailure,
   isProjectTool,
+  notesAfterCreate,
   openAskScope,
   projectToolNote,
   startedToolNote,
@@ -132,6 +138,8 @@ interface AskMessage {
   usage?: AiTokenUsageView
   /** the "save as" buttons' outcome for this answer */
   saved?: { path: string; name: string } | { error: string } | 'saving'
+  /** the answer's document was saved into the chosen project's folder: no "save as" buttons */
+  createdInProject?: boolean
   /** the run stopped because its connection cannot go on: shown as the blocked notice */
   blocked?: AskBlockedRun
   /** the reason as the transport worded it, for a kind the notice has no text of its own for */
@@ -262,6 +270,8 @@ export function KbAskPanel({
   const memoryChatRef = useRef<MemoryChat | null>(null)
   /** the project list for the picker, refreshed when it opens */
   const [projects, setProjects] = useState<ProjectListItem[]>([])
+  const projectsRef = useRef(projects)
+  projectsRef.current = projects
   const [defaultParentFolder, setDefaultParentFolder] = useState<string | undefined>(undefined)
   /** what the last send of the chosen project brought up (changed, long, cut, sync folder) */
   const [projectNotices, setProjectNotices] = useState<ProjectNotice[]>([])
@@ -480,6 +490,19 @@ export function KbAskPanel({
         },
         onToolExecuted: ({ call, execution }) => {
           if (runActiveRef.current) runToolsRef.current.push(toolRecordOf(call, execution))
+          if (call.name === CREATE_DOCUMENT_TOOL) {
+            // saved into the chosen project's folder: the step is done and says where
+            const path = execution.isError ? undefined : docSkill.createdPaths().at(-1)
+            const chosen = projectChatRef.current.projectId
+            const folder = projectsRef.current.find((item) => item.id === chosen)?.path
+            patchLast((last) => {
+              const notes = notesAfterCreate(last.toolNotes, path, folder, (name) =>
+                kbAskProjectText(langRef.current, 'askSavedToProject', { name }),
+              )
+              return notes ? { toolNotes: notes, createdInProject: true } : {}
+            })
+            return
+          }
           if (isProjectTool(call.name)) {
             const note = projectToolNote(call.name, execution.summary, execution.isError)
             if (note) patchLast((last) => ({ toolNotes: [...last.toolNotes, note] }))
@@ -817,11 +840,16 @@ export function KbAskPanel({
   }
 
   /** "[remove]" on a memory line: the entry leaves memory.md and the line says so */
-  const forgetMemory = (index: number, line: ProjectMemoryLine): void => {
-    void projectChat
+  const forgetMemory = (
+    index: number,
+    line: ProjectMemoryLine,
+  ): Promise<ProjectMemoryRemoveOutcome> =>
+    projectChat
       .forgetMemory(line)
       .then((result) => {
-        if (result?.status !== 'ok') return
+        const outcome = memoryRemoveOutcome(result)
+        // an entry already gone before the click is as good as removed
+        if (outcome === 'failed') return outcome
         setMessages((prev) =>
           prev.map((m, i) =>
             i === index
@@ -840,9 +868,9 @@ export function KbAskPanel({
               : m,
           ),
         )
+        return outcome
       })
-      .catch(() => undefined)
-  }
+      .catch((): ProjectMemoryRemoveOutcome => 'failed')
 
   /** "[Tidy up]": one request on the chat's connection, only when the person presses it */
   const consolidate = (): void => {
@@ -891,6 +919,18 @@ export function KbAskPanel({
 
   const chat = projectChat.chat
   const showUnwritable = projectId !== null && (projectChat.unwritable || unwritableNotice)
+  /** the chosen project's name for the head and the input hint */
+  const projectName =
+    projects.find((item) => item.id === projectId)?.name ??
+    projectPanelText(lang, 'projectFallback')
+  const askPlaceholder =
+    projectId === null
+      ? t('askPlaceholder')
+      : kbAskProjectText(
+          lang,
+          (corpusCount ?? 0) > 0 ? 'askProjectStarsPlaceholder' : 'askProjectPlaceholder',
+          { name: projectName },
+        )
 
   const fileNav = createFileNav((path) => onOpenPath(path))
 
@@ -898,7 +938,11 @@ export function KbAskPanel({
     <div className="kb-ask">
       {corpusCount !== null && (corpusCount > 0 || projectId !== null) && (
         <div className="kb-ask-headbar">
-          <b>{t('askTitle')}</b>
+          <b>
+            {projectId !== null
+              ? kbAskProjectText(lang, 'askProjectTitle', { name: projectName })
+              : t('askTitle')}
+          </b>
           {/* the chosen project's chats (spec 5.3): only with a project */}
           {projectId !== null && chat !== null && (
             <ProjectChatMenu
@@ -917,13 +961,16 @@ export function KbAskPanel({
               onSelectLegacy={() => void projectChat.openLegacy()}
             />
           )}
-          <span>
-            {scopeGroup === null
-              ? t('askCorpusCount', { n: String(corpusCount) })
-              : scopeCount === null
-                ? scopeGroup
-                : t('askCorpusCountGroup', { group: scopeGroup, n: String(scopeCount) })}
-          </span>
+          {/* with a project and nothing starred, the star count says nothing */}
+          {(projectId === null || (corpusCount ?? 0) > 0 || scopeGroup !== null) && (
+            <span>
+              {scopeGroup === null
+                ? t('askCorpusCount', { n: String(corpusCount) })
+                : scopeCount === null
+                  ? scopeGroup
+                  : t('askCorpusCountGroup', { group: scopeGroup, n: String(scopeCount) })}
+            </span>
+          )}
           {(groups.length > 0 || scopeGroup !== null) && (
             <KbAskScopeChoice
               groups={
@@ -975,9 +1022,17 @@ export function KbAskPanel({
               <IconStar />
               {t('askCtaRecents')}
             </button>
+            {projectChat.available && (
+              <p className="kb-ask-hero-project">{kbAskProjectText(lang, 'askHeroProjectHint')}</p>
+            )}
           </div>
         )}
-        {messages.length === 0 && corpusCount !== null && corpusCount > 0 && (
+        {messages.length === 0 && projectId !== null && (
+          <p className="kb-ask-hint">
+            {kbAskProjectText(lang, 'askProjectIntro', { name: projectName })}
+          </p>
+        )}
+        {messages.length === 0 && projectId === null && corpusCount !== null && corpusCount > 0 && (
           <p className="kb-ask-hint">{t('askIntro')}</p>
         )}
         {messages.map((m, i) => (
@@ -988,16 +1043,30 @@ export function KbAskPanel({
             {m.role === 'assistant' && m.toolNotes.length > 0 && (
               <div className="kb-ask-tools">
                 {m.toolNotes.map((note, j) => (
-                  <span key={j} className="kb-ask-tool-note">
+                  <span
+                    key={j}
+                    className={`kb-ask-tool-note${note.kind === 'created' ? ' is-done' : ''}`}
+                  >
                     {note.kind === 'search' ? (
                       <IconSearch />
                     ) : note.kind === 'read' ? (
                       <IconFileText />
-                    ) : note.kind === 'create' ? (
+                    ) : note.kind === 'create' || note.kind === 'created' ? (
                       <IconFilePlus />
                     ) : null}
                     {note.label}
-                    {m.streaming && j === m.toolNotes.length - 1 ? '…' : ''}
+                    {m.streaming && note.kind !== 'created' && j === m.toolNotes.length - 1
+                      ? '…'
+                      : ''}
+                    {note.kind === 'created' && note.path && (
+                      <button
+                        type="button"
+                        className="kb-ask-tool-open"
+                        onClick={() => onOpenPath(note.path as string)}
+                      >
+                        {kbAskProjectText(lang, 'askOpenCreated')}
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>
@@ -1015,6 +1084,7 @@ export function KbAskPanel({
                 key={j}
                 lang={lang}
                 change={line.change}
+                gone={memoryLineGone(line, projectChat.memoryEntries)}
                 onRemove={line.kind === 'added' ? () => forgetMemory(i, line) : undefined}
               />
             ))}
@@ -1033,46 +1103,50 @@ export function KbAskPanel({
                 <AiUsageChip usage={m.usage} lang={lang} />
               </div>
             )}
-            {m.role === 'assistant' && m.text && !m.streaming && !m.isError && (
-              <div className="kb-ask-actions">
-                {m.saved && typeof m.saved === 'object' && 'path' in m.saved ? (
-                  <button
-                    type="button"
-                    className="kb-ask-action kb-ask-action-saved"
-                    onClick={() => onOpenPath((m.saved as { path: string }).path)}
-                  >
-                    <IconFileText />
-                    {t('askSavedAs', { name: m.saved.name })}
-                  </button>
-                ) : (
-                  <>
+            {m.role === 'assistant' &&
+              m.text &&
+              !m.streaming &&
+              !m.isError &&
+              !m.createdInProject && (
+                <div className="kb-ask-actions">
+                  {m.saved && typeof m.saved === 'object' && 'path' in m.saved ? (
                     <button
                       type="button"
-                      className="kb-ask-action"
-                      disabled={m.saved === 'saving'}
-                      onClick={() => void saveAnswer(i, 'md')}
+                      className="kb-ask-action kb-ask-action-saved"
+                      onClick={() => onOpenPath((m.saved as { path: string }).path)}
                     >
-                      <IconFilePlus />
-                      {t('askSaveMd')}
+                      <IconFileText />
+                      {t('askSavedAs', { name: m.saved.name })}
                     </button>
-                    <button
-                      type="button"
-                      className="kb-ask-action"
-                      disabled={m.saved === 'saving'}
-                      onClick={() => void saveAnswer(i, 'docx')}
-                    >
-                      <IconFilePlus />
-                      {t('askSaveDocx')}
-                    </button>
-                    {m.saved && typeof m.saved === 'object' && 'error' in m.saved && (
-                      <span className="kb-ask-action-error">
-                        {t('askSaveFailed', { error: m.saved.error })}
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="kb-ask-action"
+                        disabled={m.saved === 'saving'}
+                        onClick={() => void saveAnswer(i, 'md')}
+                      >
+                        <IconFilePlus />
+                        {t('askSaveMd')}
+                      </button>
+                      <button
+                        type="button"
+                        className="kb-ask-action"
+                        disabled={m.saved === 'saving'}
+                        onClick={() => void saveAnswer(i, 'docx')}
+                      >
+                        <IconFilePlus />
+                        {t('askSaveDocx')}
+                      </button>
+                      {m.saved && typeof m.saved === 'object' && 'error' in m.saved && (
+                        <span className="kb-ask-action-error">
+                          {t('askSaveFailed', { error: m.saved.error })}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             {m.blocked && (
               <AiBlockedNotice
                 kind={m.blocked.kind}
@@ -1195,12 +1269,12 @@ export function KbAskPanel({
       <AiComposer
         value={draft}
         busy={busy}
-        placeholder={t('askPlaceholder')}
+        placeholder={askPlaceholder}
         hintIdle={t('askHintIdle')}
         hintBusy={t('askHintBusy')}
         sendLabel={t('askSend')}
         stopLabel={t('askStop')}
-        ariaLabel={t('askPlaceholder')}
+        ariaLabel={askPlaceholder}
         iconOnly
         sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
         sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}

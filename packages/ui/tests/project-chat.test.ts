@@ -556,6 +556,76 @@ describe('memory lines', () => {
   })
 })
 
+describe('the memory a chat knows (memory lines of other windows)', () => {
+  const detail = (memoryEntries: string[]) => ({ memoryEntries }) as never
+
+  it('reads the chosen project’s memory and reads it again when the app writes it', async () => {
+    const { controller, fake } = setup({ selection: P1 })
+    fake.bridge.getProjectDetail.mockResolvedValue(detail(['a (2026-10-30)']))
+    await controller.start()
+    await flush()
+    expect(controller.getState().memoryEntries).toEqual(['a (2026-10-30)'])
+    fake.bridge.getProjectDetail.mockResolvedValue(detail([]))
+    fake.emitProjectChanged({ projectId: 'other', part: 'memory' })
+    await flush()
+    expect(controller.getState().memoryEntries).toEqual(['a (2026-10-30)'])
+    fake.emitProjectChanged({ projectId: 'p1', part: 'memory' })
+    await flush()
+    expect(controller.getState().memoryEntries).toEqual([])
+  })
+
+  it('reads the chat list again when another window wrote a chat', async () => {
+    const { controller, fake } = setup({ selection: P1 })
+    await controller.start()
+    await flush()
+    fake.bridge.listChats.mockClear()
+    fake.emitProjectChanged({ projectId: 'p1', part: 'chats' })
+    await flush()
+    expect(fake.bridge.listChats).toHaveBeenCalledWith({ projectId: 'p1' })
+  })
+
+  it('shows what this window’s tools just remembered before the next read lands', async () => {
+    const { controller, fake } = setup({ selection: P1 })
+    fake.bridge.getProjectDetail.mockResolvedValue(detail([]))
+    await controller.start()
+    await flush()
+    await controller.run!.bridge.remember({
+      scope: 's',
+      change: { op: 'add', text: 'b (2026-10-30)' },
+    })
+    expect(fake.bridge.remember).toHaveBeenCalledTimes(1)
+    expect(controller.getState().memoryEntries).toEqual(['b (2026-10-30)'])
+  })
+
+  it('reads the memory again after a [remove] that found the entry already gone', async () => {
+    const { controller, fake } = setup({ selection: P1 })
+    fake.bridge.getProjectDetail.mockResolvedValue(detail(['x (2026-10-29)']))
+    await controller.start()
+    await flush()
+    fake.bridge.editMemory.mockResolvedValueOnce({
+      status: 'refused',
+      reason: 'not-found',
+    } as never)
+    fake.bridge.getProjectDetail.mockResolvedValue(detail([]))
+    const line = {
+      kind: 'added' as const,
+      text: 'x (2026-10-29)',
+      change: { op: 'add' as const, text: 'x (2026-10-29)' },
+    }
+    expect(await controller.forgetMemory(line)).toEqual({ status: 'refused', reason: 'not-found' })
+    await flush()
+    expect(controller.getState().memoryEntries).toEqual([])
+  })
+
+  it('knows nothing of the memory with no project chosen', async () => {
+    const { controller, fake } = setup({ selection: { projectId: null, initialChatId: null } })
+    await controller.start()
+    await flush()
+    expect(controller.getState().memoryEntries).toBeNull()
+    expect(fake.bridge.getProjectDetail).not.toHaveBeenCalled()
+  })
+})
+
 describe('useProjectChat', () => {
   let host: HTMLDivElement
   let root: ReturnType<typeof createRoot>

@@ -5,7 +5,7 @@ export const fr = {
   intro:
     'Faites d’un dossier un projet : ses documents, ses consignes, sa mémoire et ses conversations deviennent le contexte du panneau IA. Tout est conservé dans ce dossier.',
   emptyHint:
-    'Aucun projet pour l’instant. Créez-en un ou ajoutez un dossier que vous utilisez déjà.',
+    'Aucun projet pour l’instant. Créez-en un ou utilisez un dossier existant comme projet.',
   newNameLabel: 'Nom du nouveau projet',
   create: 'Créer',
   cancel: 'Annuler',
@@ -15,11 +15,11 @@ export const fr = {
   renameHint: 'Le dossier garde son nom.',
   openInExplorer: 'Ouvrir dans l’Explorateur de fichiers',
   openInFinder: 'Afficher dans le Finder',
-  trustUse: 'Les consignes et la mémoire sont envoyées à l’IA',
-  trustWithout: 'Utilisé sans consignes',
+  trustUse: 'consignes et mémoire envoyées à l’IA',
+  trustWithout: 'utilisé sans consignes',
   trustWithoutDesc:
     'Les consignes, la mémoire et les conversations d’autres PC ne sont pas envoyées à l’IA, et aucune mémoire n’est conservée.',
-  trustUnconfirmed: 'Ce dossier n’a pas encore été confirmé',
+  trustUnconfirmed: 'dossier pas encore confirmé',
   retry: 'Réessayer',
   relocate: 'Choisir à nouveau le dossier',
   missingNote: 'Dossier introuvable. Si vous l’avez déplacé, choisissez son nouvel emplacement.',
@@ -58,7 +58,7 @@ export const fr = {
   consolidateNotice: 'Lisez d’abord l’avis de connexion IA, puis appuyez à nouveau.',
   consolidateNothing: 'Il n’y a pas de mémoire à mettre en ordre.',
   consolidateWithout:
-    'Ce projet est utilisé sans consignes : sa mémoire ne peut pas être envoyée à l’IA. Passez à l’utilisation des consignes ci-dessus pour la mettre en ordre.',
+    'Ce projet est utilisé sans consignes : sa mémoire ne peut pas être envoyée à l’IA. Appuyez sur [Utiliser aussi les consignes] ci-dessus pour la mettre en ordre.',
   consolidateFailed: 'Mise en ordre impossible. La mémoire est inchangée.',
   consolidateStopped: 'Arrêté. La mémoire est inchangée.',
   consolidateUndone: 'Retour à l’état d’avant la mise en ordre.',
@@ -85,4 +85,12 @@ export const fr = {
     'Les conversations de ce projet. Cliquez pour en reprendre une dans le panneau IA du dernier document qui l’a utilisée.',
   actionFailed: 'Cela n’a pas fonctionné. Veuillez réessayer.',
   loadFailed: 'Impossible de lire le projet.',
+  addExistingFolder: 'Utiliser un dossier existant',
+  trustStatus: 'État : {state}',
+  trustUseButton: 'Utiliser aussi les consignes',
+  changedOutside:
+    'Ce fichier a été modifié ailleurs pendant que vous le modifiiez. [Recharger] lit la nouvelle version ; [Enregistrer quand même] la remplace par ce que vous avez ici.',
+  reloadFile: 'Recharger',
+  saveAnyway: 'Enregistrer quand même',
+  openFileAria: 'Ouvrir dans l’application : {name}',
 } satisfies Record<keyof typeof zh, string>

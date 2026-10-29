@@ -8,7 +8,7 @@ Beranda adalah halaman awal GenOffice: bilah navigasi di sebelah kiri, daftar fi
 - **Berbintang**: file yang Anda beri bintang. Arahkan kursor ke baris file lalu klik bintang untuk menambah atau menghapusnya. **Pindahkan ke grup** di menu ⋯ menyortir berkas berbintang ke grup bernama; tampilan Berbintang menyaring menurutnya.
 - **Panduan Pengguna**: membuka panduan ini.
 - **Ask AI**: panel basis pengetahuan — ajukan pertanyaan dan dapatkan jawaban yang mengutip berkas berbintang Anda (lihat di bawah).
-- **Proyek**: folder (proyek) yang bisa dikerjakan AI. Buat proyek atau tambahkan folder, lalu buka salah satunya untuk mengelola instruksi, memori, file, dan obrolannya. Lihat [Proyek](help://projects).
+- **Proyek**: folder (proyek) yang bisa dikerjakan AI. Buat proyek atau gunakan folder yang ada, lalu buka salah satunya untuk mengelola instruksi, memori, file, dan obrolannya. Lihat [Proyek](help://projects).
 - **Folder**: direktori yang Anda tambahkan ke bilah sisi dengan **Tambah folder…**, atau Anda seret ke sana dari aplikasi file. Masing-masing menjadi akar yang bisa Anda buka, buat subfolder di dalamnya, ganti namanya, dan hapus; akar yang jadi luring ditampilkan sebagai tidak tersedia dan bisa dilepas dari daftar. **Folder baru** membuat folder lagi.
 - **Baris di bagian bawah**: menunjukkan apakah AI sudah terhubung — **Hubungkan AI**, atau nama langganan yang terhubung — dan membuka Pengaturan.
 

@@ -4,7 +4,7 @@ export const vi = {
   navProjects: 'Dự án',
   intro:
     'Biến một thư mục thành dự án thì tài liệu, hướng dẫn, bộ nhớ và cuộc trò chuyện của nó trở thành ngữ cảnh của bảng AI. Mọi thứ được lưu ngay trong thư mục đó.',
-  emptyHint: 'Chưa có dự án nào. Hãy tạo mới hoặc thêm một thư mục bạn đang dùng.',
+  emptyHint: 'Chưa có dự án nào. Hãy tạo mới hoặc dùng một thư mục có sẵn làm dự án.',
   newNameLabel: 'Tên dự án mới',
   create: 'Tạo',
   cancel: 'Hủy',
@@ -14,11 +14,11 @@ export const vi = {
   renameHint: 'Tên thư mục giữ nguyên.',
   openInExplorer: 'Mở trong File Explorer',
   openInFinder: 'Hiện trong Finder',
-  trustUse: 'Hướng dẫn và bộ nhớ được gửi cho AI',
-  trustWithout: 'Đang dùng không kèm hướng dẫn',
+  trustUse: 'đang gửi hướng dẫn và bộ nhớ cho AI',
+  trustWithout: 'đang dùng không kèm hướng dẫn',
   trustWithoutDesc:
     'Không gửi hướng dẫn, bộ nhớ và cuộc trò chuyện từ PC khác cho AI, và không ghi thêm bộ nhớ.',
-  trustUnconfirmed: 'Thư mục này chưa được xác nhận',
+  trustUnconfirmed: 'thư mục chưa được xác nhận',
   retry: 'Thử lại',
   relocate: 'Chọn lại thư mục',
   missingNote: 'Không tìm thấy thư mục. Nếu bạn đã di chuyển, hãy chọn vị trí mới.',
@@ -52,7 +52,7 @@ export const vi = {
   consolidateNotice: 'Hãy xem thông báo kết nối AI trước rồi nhấn lại.',
   consolidateNothing: 'Không có bộ nhớ nào để sắp xếp.',
   consolidateWithout:
-    'Dự án đang dùng không kèm hướng dẫn nên không thể gửi bộ nhớ cho AI. Hãy chuyển sang dùng hướng dẫn ở trên để sắp xếp.',
+    'Dự án đang dùng không kèm hướng dẫn nên không thể gửi bộ nhớ cho AI. Hãy bấm [Dùng cả chỉ dẫn] ở trên để sắp xếp.',
   consolidateFailed: 'Không sắp xếp được. Bộ nhớ vẫn như cũ.',
   consolidateStopped: 'Đã dừng. Bộ nhớ vẫn như cũ.',
   consolidateUndone: 'Đã trở lại như trước khi sắp xếp.',
@@ -78,4 +78,12 @@ export const vi = {
     'Các cuộc trò chuyện trong dự án này. Nhấp để tiếp tục trong bảng AI của tài liệu dùng nó gần nhất.',
   actionFailed: 'Không thực hiện được. Vui lòng thử lại.',
   loadFailed: 'Không đọc được dự án.',
+  addExistingFolder: 'Dùng thư mục có sẵn',
+  trustStatus: 'Trạng thái: {state}',
+  trustUseButton: 'Dùng cả chỉ dẫn',
+  changedOutside:
+    'Tệp này đã bị thay đổi ở nơi khác trong lúc bạn sửa. [Tải lại] đọc bản mới; [Vẫn lưu] ghi đè lên bản đó bằng nội dung bạn có ở đây.',
+  reloadFile: 'Tải lại',
+  saveAnyway: 'Vẫn lưu',
+  openFileAria: 'Mở trong ứng dụng: {name}',
 } satisfies Record<keyof typeof zh, string>

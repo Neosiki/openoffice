@@ -661,6 +661,21 @@ export interface OpenProjectScreenEvent {
   section?: ProjectScreenSection
 }
 
+/** What part of a project the app just wrote (`ProjectChangedEvent`) */
+export type ProjectChangedPart = 'memory' | 'instructions' | 'settings' | 'chats'
+
+/**
+ * The app wrote something of a project (memory, instructions, its switches,
+ * trust or name, or its chats), from any window. Sent to every window that
+ * listens, the writing one included, so the project screen and the panels'
+ * memory lines can read again. Changes made outside the app are not announced;
+ * the screen reads again whenever it is shown.
+ */
+export interface ProjectChangedEvent {
+  projectId: ProjectId
+  part: ProjectChangedPart
+}
+
 // ────────────────────────────────────────────────────────────
 // Bridge
 // ────────────────────────────────────────────────────────────
@@ -814,6 +829,8 @@ export interface ProjectFolderApi {
   /** Switches to the home tab and shows the project screen at a section */
   openProjectScreen(args: OpenProjectScreenArgs): Promise<void>
   onOpenProjectScreen(listener: (event: OpenProjectScreenEvent) => void): () => void
+  /** The app wrote memory, instructions, settings or chats of a project (any window) */
+  onProjectChanged(listener: (event: ProjectChangedEvent) => void): () => void
 }
 
 // ────────────────────────────────────────────────────────────
@@ -822,13 +839,14 @@ export interface ProjectFolderApi {
 
 /** The bridge's subscribe methods; each has an event channel instead of a request channel */
 export type ProjectFolderEventMethod =
-  'onChatMessageAppended' | 'onOpenChat' | 'onOpenProjectScreen'
+  'onChatMessageAppended' | 'onOpenChat' | 'onOpenProjectScreen' | 'onProjectChanged'
 
 /** Event channels (main → renderer `webContents.send`), keyed by the bridge's subscribe method */
 export const PROJECT_FOLDER_EVENTS = {
   onChatMessageAppended: 'projectFolder:event:chatMessageAppended',
   onOpenChat: 'projectFolder:event:openChat',
   onOpenProjectScreen: 'projectFolder:event:openProjectScreen',
+  onProjectChanged: 'projectFolder:event:projectChanged',
 } as const satisfies Record<ProjectFolderEventMethod, `projectFolder:event:${string}`>
 
 /** Request channels (`ipcRenderer.invoke`), one per bridge method */

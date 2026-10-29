@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type {
   AppendProjectChatArgs,
+  ProjectChangedEvent,
   ProjectChatAppendedEvent,
   ProjectChatInfo,
   ProjectChatMessage,
@@ -93,6 +94,7 @@ export function fakeProjectBridge(
   const appended: AppendProjectChatArgs[] = []
   let appendedListener: ((e: ProjectChatAppendedEvent) => void) | null = null
   let openChatListener: ((e: OpenProjectChatEvent) => void) | null = null
+  let changedListener: ((e: ProjectChangedEvent) => void) | null = null
   let scopes = 0
   const bridge = {
     listProjects: vi.fn(async () => []),
@@ -212,6 +214,12 @@ export function fakeProjectBridge(
     listIgnoredFiles: vi.fn(async () => []),
     openProjectScreen: vi.fn(async () => undefined),
     onOpenProjectScreen: vi.fn(() => () => undefined),
+    onProjectChanged: vi.fn((listener: (e: ProjectChangedEvent) => void) => {
+      changedListener = listener
+      return () => {
+        changedListener = null
+      }
+    }),
   }
   return {
     bridge: bridge as unknown as ProjectFolderApi & typeof bridge,
@@ -219,6 +227,7 @@ export function fakeProjectBridge(
     appended,
     emitAppended: (e: ProjectChatAppendedEvent) => appendedListener?.(e),
     emitOpenChat: (e: OpenProjectChatEvent) => openChatListener?.(e),
+    emitProjectChanged: (e: ProjectChangedEvent) => changedListener?.(e),
     get listening() {
       return appendedListener !== null
     },

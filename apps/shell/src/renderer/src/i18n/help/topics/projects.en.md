@@ -13,16 +13,16 @@ A project is one folder on your PC. Pick a project in an AI panel and the AI wor
 
 ## New project and Add folder
 
-- **New project**: type a name and a folder of that name is made in your default save folder (`Documents\GenOffice` at first; you can change it in Settings). **Create somewhere else…** lets you choose another place. If a folder of that name already exists, you are asked whether to use it as the project.
-- **Add folder**: use a folder you already have. Its subfolders are included. A whole drive, your whole user folder, and folders that hold sign-in data or the app's data cannot be chosen.
+- **New project**: type a name and a folder of that name is made in your default save folder (`Documents\GenOffice` at first; you can change it in Settings). **Create somewhere else…** lets you choose another place. If a folder of that name already exists, you are asked whether to use it as the project, and **Use this folder** starts with it. If that folder is already a project on your list, it just opens, without asking.
+- **Add folder** (**Use an existing folder** on Home's Projects screen): use a folder you already have. Its subfolders are included. A whole drive, your whole user folder, and folders that hold sign-in data or the app's data cannot be chosen.
 - Open a document inside a project folder that is not on your list and "This document is in the project folder '…'" appears below the input with a **Use** button. Clicking it is the same as Add folder.
-- When a folder you got from someone else already holds instructions or memory, `AGENTS.md` or `CLAUDE.md`, or chats written on another PC, the app shows them once and asks. **Use** uses all of it. **Use without instructions** keeps those instructions and that memory away from the AI, hides chats from other PCs, and stops adding memory; reading files still works. You can switch to **Use** later on the project's page. Closing the question without choosing does not add the folder.
+- When a folder you got from someone else already holds instructions or memory, `AGENTS.md` or `CLAUDE.md`, or chats written on another PC, the app shows them once and asks. **View all** lets you read everything first. **Use with instructions** uses all of it. **Use without instructions** keeps those instructions and that memory away from the AI, hides chats from other PCs, and stops adding memory; reading files still works. You can switch later with **Use instructions too** on the project's page. **Cancel**, or closing the question without choosing, does not add the folder.
 - After that it does not ask again. If the instructions or memory change outside GenOffice, the AI panel shows "Instructions changed" once, and **View** opens that part of the project's page.
 
 ## Instructions and memory
 
 - **Instructions** are the rules for this project, such as "Write reports as bullet points, and never shorten the organisation's name". Write them on the project's page on Home and press **Save**. If the top of the folder has `AGENTS.md` or `CLAUDE.md`, they are read as well, and you can turn them off on the project's page.
-- **Memory** is notes the AI writes during chats: facts, preferences and decisions that will help later, one line each with the date. Each time it writes one, the AI panel shows "Remembered: …" with a **Delete** button. It does not ask you first.
+- **Memory** is notes the AI writes during chats: facts, preferences and decisions that will help later, one line each with the date. Each time it writes one, the AI panel shows "Remembered: …" with a **Delete** button. If that note has already been deleted, the line reads "Memory removed: …" and has no **Delete** button. It does not ask you first.
 - When the memory grows long, the AI panel shows "Memory is getting long" with **Tidy up**. Pressing it merges notes that overlap or are out of date. The earlier version is kept, and **Undo** brings it back. Tidying happens only when you press the button, and it sends one AI request.
 - On the project's page you can delete notes, edit the whole memory, and turn memory off. Turned off, nothing new is written and the existing memory is still read.
 - Very long instructions lose their end part, and the AI panel tells you so. Memory is always sent in full, however long.
@@ -48,17 +48,18 @@ A project is one folder on your PC. Pick a project in an AI panel and the AI wor
 
 ## The project's page on Home
 
-**Projects** in Home's sidebar is where you create projects, add folders, and open one to manage it.
+**Projects** in Home's sidebar is where you make a **New project** or **Use an existing folder**, and open one to manage it.
 
-- **Header**: the name (renaming it does not rename the folder), the folder path, **Show in Explorer**.
+- **Header**: the name (renaming it does not rename the folder), the folder path, **Show in Explorer**, and the status. When the project is used without instructions, **Use instructions too** appears.
 - **Instructions**: the instructions box, and the `AGENTS.md` and `CLAUDE.md` read with it.
 - **Memory**: the list of notes, **Edit all**, **Tidy up**, memory on or off.
-- **Files**: the files the AI sees and the ones kept from it.
+- **Files**: the files the AI sees and the ones kept from it. Click a file name to open the file.
 - **Chats**: this project's chats. Click one to open the document it was last used in and carry on in that AI panel.
+- This screen reads the folder again each time it is shown, so a note the AI has just remembered appears without leaving it. If the instructions or memory file changed outside GenOffice while you were editing it, **Save** asks first: **Reload** reads the changed file, and **Save anyway** overwrites it with your edits.
 
 ## What stays in the folder, and things to know
 
-- Instructions, memory and chats are kept as text files in a `.ieumoffice` folder inside the project folder. Move the folder or copy it to another PC and they go along. On another PC, pick it once with **Add folder**.
+- Instructions, memory and chats are kept as text files in a `.ieumoffice` folder inside the project folder. Move the folder or copy it to another PC and they go along. On another PC, pick it once with **Add folder** in an AI panel or **Use an existing folder** on Home's Projects screen.
 - The `.ieumoffice` folder is made only when there is something to write. You can open and edit its files in Notepad.
 - What you type in a chat can end up in the memory. To keep something out, delete it with **Delete** on the "Remembered" line, or turn memory off.
 - If you pick a synced folder as a project, its instructions, memory and chats are uploaded to that service too. The app tells you once, the first time you pick it.

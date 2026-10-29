@@ -450,6 +450,20 @@ describe('new project (spec 5.1)', () => {
     expect(used.status).toBe('added')
   })
 
+  it('just opens a folder of that name that is already a listed project, without asking', async () => {
+    const guide = makeGuide()
+    const made = await guide.createProject({ name: 'Report' }, never)
+    expect(made.status).toBe('created')
+    if (made.status !== 'created') return
+    const again = await guide.createProject({ name: 'Report' }, never)
+    expect(again).toMatchObject({
+      status: 'added',
+      identity: 'existing',
+      project: { id: made.project.id },
+    })
+    expect(await guide.listProjects()).toHaveLength(1)
+  })
+
   it('uses another parent folder and refuses bad names', async () => {
     const guide = makeGuide()
     const parent = folder('elsewhere')

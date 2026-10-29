@@ -4,7 +4,7 @@ export const cs = {
   navProjects: 'Projekty',
   intro:
     'Udělejte ze složky projekt a její dokumenty, pokyny, paměť a konverzace se stanou kontextem panelu AI. Vše zůstává uvnitř té složky.',
-  emptyHint: 'Zatím žádné projekty. Vytvořte nový nebo přidejte složku, kterou už používáte.',
+  emptyHint: 'Zatím žádné projekty. Vytvořte nový nebo použijte existující složku jako projekt.',
   newNameLabel: 'Název nového projektu',
   create: 'Vytvořit',
   cancel: 'Zrušit',
@@ -14,11 +14,11 @@ export const cs = {
   renameHint: 'Složka si ponechá svůj název.',
   openInExplorer: 'Otevřít v Průzkumníku souborů',
   openInFinder: 'Zobrazit ve Finderu',
-  trustUse: 'Pokyny a paměť se posílají AI',
-  trustWithout: 'Používá se bez pokynů',
+  trustUse: 'pokyny a paměť se posílají AI',
+  trustWithout: 'používá se bez pokynů',
   trustWithoutDesc:
     'Pokyny, paměť ani konverzace z jiných počítačů se AI neposílají a paměť se neukládá.',
-  trustUnconfirmed: 'Tato složka ještě nebyla potvrzena',
+  trustUnconfirmed: 'složka zatím nepotvrzená',
   retry: 'Zkusit znovu',
   relocate: 'Vybrat složku znovu',
   missingNote: 'Složku nelze najít. Pokud jste ji přesunuli, vyberte nové umístění.',
@@ -53,7 +53,7 @@ export const cs = {
   consolidateNotice: 'Nejdřív si přečtěte upozornění k připojení AI a pak stiskněte znovu.',
   consolidateNothing: 'Není co uklízet.',
   consolidateWithout:
-    'Tento projekt se používá bez pokynů, proto jeho paměť nelze poslat AI. Nahoře přepněte na používání pokynů a pak ji ukliďte.',
+    'Tento projekt se používá bez pokynů, proto jeho paměť nelze poslat AI. Uklidit ji můžete po kliknutí na [Použít i pokyny] nahoře.',
   consolidateFailed: 'Úklid se nepodařil. Paměť zůstala beze změny.',
   consolidateStopped: 'Zastaveno. Paměť zůstala beze změny.',
   consolidateUndone: 'Vráceno do stavu před úklidem.',
@@ -79,4 +79,12 @@ export const cs = {
     'Konverzace v tomto projektu. Kliknutím ji otevřete v panelu AI dokumentu, kde byla naposledy použita.',
   actionFailed: 'Nepodařilo se. Zkuste to prosím znovu.',
   loadFailed: 'Projekt se nepodařilo přečíst.',
+  addExistingFolder: 'Použít existující složku',
+  trustStatus: 'Stav: {state}',
+  trustUseButton: 'Použít i pokyny',
+  changedOutside:
+    'Během úprav se tento soubor změnil jinde. [Znovu načíst] načte novou verzi; [Přesto uložit] ji přepíše tím, co máte tady.',
+  reloadFile: 'Znovu načíst',
+  saveAnyway: 'Přesto uložit',
+  openFileAria: 'Otevřít v aplikaci: {name}',
 } satisfies Record<keyof typeof zh, string>

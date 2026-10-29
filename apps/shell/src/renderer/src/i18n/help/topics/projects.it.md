@@ -13,16 +13,16 @@ Un progetto è una cartella del tuo PC. Scegli un progetto in un pannello IA e l
 
 ## Nuovo progetto e Aggiungi cartella
 
-- **Nuovo progetto**: scrivi un nome e nella tua cartella di salvataggio predefinita (all'inizio `Documenti\GenOffice`; puoi cambiarla nelle Impostazioni) viene creata una cartella con quel nome. **Crea altrove…** ti permette di scegliere un'altra posizione. Se una cartella con quel nome esiste già, ti viene chiesto se usarla come progetto.
-- **Aggiungi cartella**: usa una cartella che hai già. Le sue sottocartelle sono comprese. Non si possono scegliere un'intera unità, l'intera cartella utente né cartelle che contengono dati di accesso o i dati dell'app.
+- **Nuovo progetto**: scrivi un nome e nella tua cartella di salvataggio predefinita (all'inizio `Documenti\GenOffice`; puoi cambiarla nelle Impostazioni) viene creata una cartella con quel nome. **Crea altrove…** ti permette di scegliere un'altra posizione. Se una cartella con quel nome esiste già, ti viene chiesto se usarla come progetto, e **Usa questa cartella** parte da lì. Se quella cartella è già un progetto del tuo elenco, si apre subito, senza domande.
+- **Aggiungi cartella** (**Usa una cartella esistente** nella schermata Progetti della Home): usa una cartella che hai già. Le sue sottocartelle sono comprese. Non si possono scegliere un'intera unità, l'intera cartella utente né cartelle che contengono dati di accesso o i dati dell'app.
 - Se apri un documento che si trova nella cartella di un progetto non presente nel tuo elenco, sotto il campo di input compare «Questo documento è nella cartella del progetto "…"» con un pulsante **Usa**. Fare clic equivale ad Aggiungi cartella.
-- Quando una cartella ricevuta da un'altra persona contiene già istruzioni o memoria, `AGENTS.md` o `CLAUDE.md`, oppure chat scritte su un altro PC, l'app te le mostra una volta e chiede. **Usa** prende tutto. **Usa senza istruzioni** tiene quelle istruzioni e quella memoria lontane dall'IA, nasconde le chat degli altri PC e smette di aggiungere memoria; la lettura dei file continua a funzionare. Più tardi puoi passare a **Usa** dalla pagina del progetto. Se chiudi la domanda senza scegliere, la cartella non viene aggiunta.
+- Quando una cartella ricevuta da un'altra persona contiene già istruzioni o memoria, `AGENTS.md` o `CLAUDE.md`, oppure chat scritte su un altro PC, l'app te le mostra una volta e chiede. **Mostra tutto** ti fa leggere tutto prima. **Usa con le istruzioni** prende tutto. **Usa senza istruzioni** tiene quelle istruzioni e quella memoria lontane dall'IA, nasconde le chat degli altri PC e smette di aggiungere memoria; la lettura dei file continua a funzionare. Più tardi puoi cambiare con **Usa anche le istruzioni** dalla pagina del progetto. Se premi **Annulla** o chiudi la domanda senza scegliere, la cartella non viene aggiunta.
 - Dopo di che la domanda non torna. Se le istruzioni o la memoria cambiano fuori da GenOffice, il pannello IA mostra una volta «Istruzioni modificate», e **Visualizza** apre quella parte della pagina del progetto.
 
 ## Istruzioni e memoria
 
 - Le **istruzioni** sono le regole di questo progetto, per esempio «Scrivi i resoconti per punti e non abbreviare mai il nome dell'ente». Scrivile nella pagina del progetto nella Home e premi **Salva**. Se nella cartella principale ci sono `AGENTS.md` o `CLAUDE.md`, vengono letti anche quelli, e puoi disattivarli dalla pagina del progetto.
-- La **memoria** sono appunti che l'IA scrive durante le chat: fatti, preferenze e decisioni che serviranno più avanti, uno per riga con la data. Ogni volta che ne scrive uno, il pannello IA mostra «Ricordato: …» con un pulsante **Elimina**. Non ti chiede il permesso prima.
+- La **memoria** sono appunti che l'IA scrive durante le chat: fatti, preferenze e decisioni che serviranno più avanti, uno per riga con la data. Ogni volta che ne scrive uno, il pannello IA mostra «Ricordato: …» con un pulsante **Elimina**. Se quell'appunto è già stato eliminato, la riga dice «Memoria cancellata: …» e non ha il pulsante **Elimina**. Non ti chiede il permesso prima.
 - Quando la memoria si allunga, il pannello IA mostra «La memoria sta diventando lunga» con **Riordina**. Premendolo si uniscono gli appunti che si sovrappongono o non sono più attuali. La versione precedente viene conservata e **Annulla** la ripristina. Il riordino avviene solo quando premi il pulsante, e invia una richiesta all'IA.
 - Nella pagina del progetto puoi eliminare appunti, modificare tutta la memoria e disattivarla. Disattivata, non si scrive niente di nuovo e la memoria esistente continua a essere letta.
 - Le istruzioni molto lunghe perdono la parte finale, e il pannello IA te lo segnala. La memoria viene sempre inviata per intero, per quanto lunga.
@@ -48,17 +48,18 @@ Un progetto è una cartella del tuo PC. Scegli un progetto in un pannello IA e l
 
 ## La pagina del progetto nella Home
 
-**Progetti**, nella barra laterale della Home, è il posto dove crei progetti, aggiungi cartelle e ne apri uno per gestirlo.
+**Progetti**, nella barra laterale della Home, è il posto dove crei un **Nuovo progetto**, scegli **Usa una cartella esistente** e ne apri uno per gestirlo.
 
-- **Intestazione**: il nome (cambiarlo non rinomina la cartella), il percorso della cartella, **Mostra in Esplora file**.
+- **Intestazione**: il nome (cambiarlo non rinomina la cartella), il percorso della cartella, **Mostra in Esplora file** e lo stato. Quando il progetto è usato senza istruzioni, compare **Usa anche le istruzioni**.
 - **Istruzioni**: la casella delle istruzioni, e gli `AGENTS.md` e `CLAUDE.md` letti insieme.
 - **Memoria**: l'elenco degli appunti, **Modifica tutto**, **Riordina**, memoria attiva o disattivata.
-- **File**: i file che l'IA vede e quelli tenuti fuori.
+- **File**: i file che l'IA vede e quelli tenuti fuori. Fai clic sul nome di un file per aprirlo.
 - **Chat**: le chat di questo progetto. Fai clic su una per aprire il documento in cui è stata usata l'ultima volta e continuare in quel pannello IA.
+- Questa pagina rilegge la cartella ogni volta che viene mostrata, così un appunto che l'IA ha appena memorizzato compare senza uscirne. Se il file delle istruzioni o della memoria è cambiato fuori da GenOffice mentre lo modificavi, **Salva** chiede prima: **Ricarica** legge il file cambiato e **Salva comunque** lo sovrascrive con le tue modifiche.
 
 ## Cosa resta nella cartella, e cose da sapere
 
-- Istruzioni, memoria e chat sono conservate come file di testo in una cartella `.ieumoffice` dentro la cartella del progetto. Se sposti la cartella o la copi su un altro PC, viaggiano con lei. Sull'altro PC, sceglila una volta con **Aggiungi cartella**.
+- Istruzioni, memoria e chat sono conservate come file di testo in una cartella `.ieumoffice` dentro la cartella del progetto. Se sposti la cartella o la copi su un altro PC, viaggiano con lei. Sull'altro PC, sceglila una volta con **Aggiungi cartella** in un pannello IA o con **Usa una cartella esistente** nella schermata Progetti della Home.
 - La cartella `.ieumoffice` viene creata solo quando c'è qualcosa da scrivere. Puoi aprire e modificare i suoi file con il Blocco note.
 - Quello che scrivi in una chat può finire nella memoria. Per tenere fuori qualcosa, eliminalo con **Elimina** sulla riga «Ricordato» oppure disattiva la memoria.
 - Se scegli una cartella sincronizzata come progetto, anche istruzioni, memoria e chat vengono caricate su quel servizio. L'app te lo dice una volta, la prima volta che la scegli.

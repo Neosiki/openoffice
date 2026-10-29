@@ -22,6 +22,22 @@
   min-width: 0;
 }
 
+/* The chat title in a panel header gives way to the header's buttons: a long
+ * title ends in "…" and the buttons beside it never shrink or leave the
+ * panel. Anchored on the chat menu, so every header that holds it follows. */
+.ai-project-chat-menu {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+:has(> .ai-project-chat-menu) {
+  min-width: 0;
+}
+
+:has(> .ai-project-chat-menu) > :not(.ai-project-chat-menu) {
+  flex-shrink: 0;
+}
+
 .ai-project-chip,
 .ai-project-chat-button {
   display: inline-flex;
@@ -67,6 +83,7 @@
 }
 
 .ai-project-chat-button {
+  max-width: min(240px, 100%);
   font-weight: 600;
   color: var(--text);
 }
@@ -452,7 +469,7 @@
   gap: 8px;
   min-width: 0;
   padding: 2px 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.45;
 }
@@ -469,6 +486,12 @@
 }
 
 .ai-project-event .ai-project-link {
-  color: var(--text-secondary);
+  color: var(--text);
   font-weight: 500;
+}
+
+.ai-project-event-note {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-style: italic;
 }

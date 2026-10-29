@@ -13,16 +13,16 @@ Projek ialah satu folder pada PC anda. Pilih projek dalam panel AI dan AI akan b
 
 ## Projek baharu dan Tambah folder
 
-- **Projek baharu**: taip nama, dan folder dengan nama itu dicipta dalam folder simpanan lalai anda (pada mulanya `Dokumen\GenOffice`; boleh ditukar dalam Tetapan). **Cipta di tempat lain…** membolehkan anda memilih lokasi lain. Jika folder dengan nama itu sudah wujud, anda akan ditanya sama ada hendak menggunakannya sebagai projek.
-- **Tambah folder**: gunakan folder yang sudah anda ada. Subfoldernya turut disertakan. Keseluruhan pemacu, keseluruhan folder pengguna anda, dan folder yang menyimpan data log masuk atau data aplikasi tidak boleh dipilih.
+- **Projek baharu**: taip nama, dan folder dengan nama itu dicipta dalam folder simpanan lalai anda (pada mulanya `Dokumen\GenOffice`; boleh ditukar dalam Tetapan). **Cipta di tempat lain…** membolehkan anda memilih lokasi lain. Jika folder dengan nama itu sudah wujud, anda akan ditanya sama ada hendak menggunakannya sebagai projek, dan **Guna folder ini** bermula dengannya. Jika folder itu sudah menjadi projek dalam senarai anda, projek itu terus dibuka tanpa bertanya.
+- **Tambah folder** (**Guna folder sedia ada** pada skrin Projek di Laman Utama): gunakan folder yang sudah anda ada. Subfoldernya turut disertakan. Keseluruhan pemacu, keseluruhan folder pengguna anda, dan folder yang menyimpan data log masuk atau data aplikasi tidak boleh dipilih.
 - Jika anda membuka dokumen dalam folder projek yang tiada dalam senarai, "Dokumen ini berada dalam folder projek '…'" dipaparkan di bawah kotak input bersama butang **Guna**. Mengkliknya sama seperti Tambah folder.
-- Jika folder yang anda terima daripada orang lain sudah mengandungi arahan atau ingatan, `AGENTS.md` atau `CLAUDE.md`, atau perbualan yang ditulis pada PC lain, aplikasi akan memaparkannya sekali dan bertanya. **Guna** menggunakan kesemuanya. **Guna tanpa arahan** menjauhkan arahan dan ingatan itu daripada AI, menyembunyikan perbualan dari PC lain dan berhenti menambah ingatan; membaca fail masih berfungsi. Anda boleh bertukar kepada **Guna** kemudian di halaman projek. Menutup soalan itu tanpa memilih bermakna folder itu tidak ditambah.
+- Jika folder yang anda terima daripada orang lain sudah mengandungi arahan atau ingatan, `AGENTS.md` atau `CLAUDE.md`, atau perbualan yang ditulis pada PC lain, aplikasi akan memaparkannya sekali dan bertanya. **Lihat semua** membolehkan anda membaca kesemuanya dahulu. **Guna dengan arahan** menggunakan kesemuanya. **Guna tanpa arahan** menjauhkan arahan dan ingatan itu daripada AI, menyembunyikan perbualan dari PC lain dan berhenti menambah ingatan; membaca fail masih berfungsi. Anda boleh menukarnya kemudian dengan **Guna arahan juga** di halaman projek. Mengklik **Batal** atau menutup soalan itu tanpa memilih bermakna folder itu tidak ditambah.
 - Selepas itu aplikasi tidak bertanya lagi. Jika arahan atau ingatan berubah di luar GenOffice, panel AI memaparkan "Arahan telah berubah" sekali, dan **Lihat** membuka bahagian itu di halaman projek.
 
 ## Arahan dan ingatan
 
 - **Arahan** ialah peraturan untuk projek ini, contohnya "Tulis laporan dalam bentuk poin, dan jangan sekali-kali memendekkan nama organisasi". Tulis arahan di halaman projek di Laman Utama dan tekan **Simpan**. Jika bahagian atas folder mempunyai `AGENTS.md` atau `CLAUDE.md`, fail itu turut dibaca, dan anda boleh mematikannya di halaman projek.
-- **Ingatan** ialah nota yang ditulis oleh AI semasa perbualan: fakta, pilihan dan keputusan yang berguna kemudian, satu baris setiap satu bersama tarikh. Setiap kali AI menulis nota, panel AI memaparkan "Diingati: …" bersama butang **Padam**. AI tidak bertanya kepada anda dahulu.
+- **Ingatan** ialah nota yang ditulis oleh AI semasa perbualan: fakta, pilihan dan keputusan yang berguna kemudian, satu baris setiap satu bersama tarikh. Setiap kali AI menulis nota, panel AI memaparkan "Diingati: …" bersama butang **Padam**. Jika nota itu sudah dipadam, baris itu berbunyi "Memori dipadam: …" dan tiada butang **Padam**. AI tidak bertanya kepada anda dahulu.
 - Apabila ingatan menjadi panjang, panel AI memaparkan "Ingatan semakin panjang" bersama butang **Kemaskan**. Menekannya akan menggabungkan nota yang bertindih atau sudah lapuk. Versi sebelumnya disimpan, dan **Buat asal** mengembalikannya. Pengemasan hanya berlaku apabila anda menekan butang itu, dan ia menghantar satu permintaan AI.
 - Di halaman projek anda boleh memadam nota, menyunting keseluruhan ingatan dan mematikan ingatan. Apabila dimatikan, tiada nota baharu ditulis tetapi ingatan sedia ada masih dibaca.
 - Arahan yang terlalu panjang akan kehilangan bahagian hujungnya, dan panel AI memberitahu anda. Ingatan sentiasa dihantar sepenuhnya, walau sepanjang mana pun.
@@ -48,17 +48,18 @@ Projek ialah satu folder pada PC anda. Pilih projek dalam panel AI dan AI akan b
 
 ## Halaman projek di Laman Utama
 
-**Projek** dalam bar sisi Laman Utama ialah tempat anda mencipta projek, menambah folder dan membuka sesuatu projek untuk mengurusnya.
+**Projek** dalam bar sisi Laman Utama ialah tempat anda mencipta **Projek baharu**, memilih **Guna folder sedia ada** dan membuka sesuatu projek untuk mengurusnya.
 
-- **Pengepala**: nama (menamakan semula projek tidak menamakan semula folder), laluan folder dan **Tunjukkan dalam Penjelajah Fail**.
+- **Pengepala**: nama (menamakan semula projek tidak menamakan semula folder), laluan folder, **Tunjukkan dalam Penjelajah Fail** dan statusnya. Jika projek digunakan tanpa arahan, **Guna arahan juga** dipaparkan.
 - **Arahan**: kotak arahan, serta `AGENTS.md` dan `CLAUDE.md` yang dibaca bersamanya.
 - **Ingatan**: senarai nota, **Sunting semua**, **Kemaskan**, dan suis untuk menghidupkan atau mematikan ingatan.
-- **Fail**: fail yang dilihat oleh AI dan fail yang dijauhkan daripadanya.
+- **Fail**: fail yang dilihat oleh AI dan fail yang dijauhkan daripadanya. Klik nama fail untuk membukanya.
 - **Perbualan**: perbualan projek ini. Klik salah satu untuk membuka dokumen tempat perbualan itu terakhir digunakan dan teruskan dalam panel AI dokumen itu.
+- Halaman ini membaca semula folder setiap kali dipaparkan, jadi nota yang baru diingati oleh AI terus kelihatan tanpa meninggalkan halaman. Jika fail arahan atau ingatan berubah di luar GenOffice semasa anda menyuntingnya, **Simpan** bertanya dahulu: **Muat semula** membaca fail yang berubah, dan **Simpan juga** menulis ganti fail itu dengan suntingan anda.
 
 ## Apa yang disimpan dalam folder, dan perkara yang perlu diketahui
 
-- Arahan, ingatan dan perbualan disimpan sebagai fail teks dalam folder `.ieumoffice` di dalam folder projek. Jika folder itu dialihkan atau disalin ke PC lain, semuanya ikut bersama. Pada PC lain, pilih folder itu sekali dengan **Tambah folder**.
+- Arahan, ingatan dan perbualan disimpan sebagai fail teks dalam folder `.ieumoffice` di dalam folder projek. Jika folder itu dialihkan atau disalin ke PC lain, semuanya ikut bersama. Pada PC lain, pilih folder itu sekali dengan **Tambah folder** dalam panel AI atau **Guna folder sedia ada** pada skrin Projek di Laman Utama.
 - Folder `.ieumoffice` hanya dicipta apabila ada sesuatu untuk ditulis. Anda boleh membuka dan menyunting failnya dalam Notepad.
 - Apa yang anda taip dalam perbualan boleh masuk ke dalam ingatan. Untuk mengelakkan sesuatu disimpan, padamkannya dengan **Padam** pada baris "Diingati", atau matikan ingatan.
 - Jika anda memilih folder yang disegerakkan sebagai projek, arahan, ingatan dan perbualannya turut dimuat naik ke perkhidmatan itu. Aplikasi memberitahu anda sekali, pada kali pertama anda memilihnya.

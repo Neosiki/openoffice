@@ -60,6 +60,8 @@ export const zh = {
   memoryReplaced: '已修改记忆：{text}',
   memoryRemoved: '已删除记忆：{text}',
   removeMemory: '删除',
+  memoryAlreadyRemoved: '这条记忆已经删除了',
+  alreadyListed: '这个项目已经在列表中',
   memoryConsolidated: '已整理记忆（{before} 条 → {after} 条）',
   undo: '撤销',
   toolSummary: '在{editor}“{name}”中运行了 {count} 次工具',

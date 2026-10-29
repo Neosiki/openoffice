@@ -89,7 +89,7 @@ describe('the trust prompt (spec 5.10)', () => {
 
   it('offers use / use without / view all / cancel, cancel being the default and the close answer', () => {
     const options = trustPromptOptions('ko', prompt())
-    expect(options.buttons).toEqual(['쓰기', '지침 없이 쓰기', '전체 보기', '취소'])
+    expect(options.buttons).toEqual(['지침까지 사용', '지침 없이 사용', '전체 보기', '취소'])
     expect(options.defaultId).toBe(3)
     expect(options.cancelId).toBe(3)
     expect([0, 1, 2, 3, -1, 9].map(trustChoiceOf)).toEqual([
@@ -116,9 +116,11 @@ describe('the other dialogs', () => {
     expect(options.cancelId).toBe(1)
   })
 
-  it('ask before using an existing folder and show where it is', () => {
+  it('ask before using an existing folder, say why, and show where it is', () => {
     const options = useExistingPromptOptions('ko', 'D:\\문서\\예산')
-    expect(options.message).toBe('이 폴더를 프로젝트로 쓸까요?')
+    expect(options.message).toBe('‘예산’ 폴더가 이미 있습니다. 그 폴더를 프로젝트로 사용할까요?')
+    expect(options.buttons).toEqual(['이 폴더 사용', '취소'])
+    expect(useExistingPromptOptions('en', '/home/me/Budget/').message).toContain('“Budget”')
     expect(options.detail).toBe('D:\\문서\\예산')
     expect(options.cancelId).toBe(1)
   })

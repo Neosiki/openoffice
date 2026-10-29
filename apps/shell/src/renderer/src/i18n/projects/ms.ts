@@ -4,7 +4,7 @@ export const ms = {
   navProjects: 'Projek',
   intro:
     'Jadikan folder sebagai projek, dan dokumen, arahan, memori serta sembangnya menjadi konteks panel AI. Semuanya disimpan di dalam folder itu.',
-  emptyHint: 'Belum ada projek. Cipta yang baharu atau tambah folder yang sudah anda gunakan.',
+  emptyHint: 'Belum ada projek. Cipta yang baharu atau guna folder sedia ada sebagai projek.',
   newNameLabel: 'Nama projek baharu',
   create: 'Cipta',
   cancel: 'Batal',
@@ -14,11 +14,11 @@ export const ms = {
   renameHint: 'Nama folder kekal sama.',
   openInExplorer: 'Buka dalam File Explorer',
   openInFinder: 'Tunjukkan dalam Finder',
-  trustUse: 'Arahan dan memori dihantar kepada AI',
-  trustWithout: 'Digunakan tanpa arahan',
+  trustUse: 'menghantar arahan dan memori kepada AI',
+  trustWithout: 'digunakan tanpa arahan',
   trustWithoutDesc:
     'Arahan, memori dan sembang dari PC lain tidak dihantar kepada AI, dan memori tidak ditambah.',
-  trustUnconfirmed: 'Folder ini belum disahkan',
+  trustUnconfirmed: 'folder belum disahkan',
   retry: 'Cuba lagi',
   relocate: 'Pilih folder sekali lagi',
   missingNote: 'Folder tidak ditemui. Jika anda telah memindahkannya, pilih lokasi baharunya.',
@@ -57,7 +57,7 @@ export const ms = {
   consolidateNotice: 'Baca notis sambungan AI dahulu, kemudian tekan lagi.',
   consolidateNothing: 'Tiada memori untuk dikemas.',
   consolidateWithout:
-    'Projek ini digunakan tanpa arahan, jadi memorinya tidak boleh dihantar kepada AI. Tukar kepada menggunakan arahan di atas untuk mengemasnya.',
+    'Projek ini digunakan tanpa arahan, jadi memorinya tidak boleh dihantar kepada AI. Tekan [Guna arahan juga] di atas untuk mengemasnya.',
   consolidateFailed: 'Tidak dapat mengemas. Memori tidak berubah.',
   consolidateStopped: 'Dihentikan. Memori tidak berubah.',
   consolidateUndone: 'Dikembalikan seperti sebelum dikemas.',
@@ -84,4 +84,12 @@ export const ms = {
     'Sembang dalam projek ini. Klik satu untuk menyambungnya dalam panel AI dokumen yang terakhir menggunakannya.',
   actionFailed: 'Tidak berjaya. Sila cuba lagi.',
   loadFailed: 'Projek tidak dapat dibaca.',
+  addExistingFolder: 'Guna folder sedia ada',
+  trustStatus: 'Status: {state}',
+  trustUseButton: 'Guna arahan juga',
+  changedOutside:
+    'Fail ini diubah di tempat lain semasa anda menyuntingnya. [Muat semula] membaca versi baharu; [Simpan juga] menyimpan kandungan anda di sini di atasnya.',
+  reloadFile: 'Muat semula',
+  saveAnyway: 'Simpan juga',
+  openFileAria: 'Buka dalam aplikasi: {name}',
 } satisfies Record<keyof typeof zh, string>

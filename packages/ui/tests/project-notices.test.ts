@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ProjectFolderHintLine,
   ProjectMemoryConsolidatedLine,
+  MEMORY_ALREADY_GONE_MS,
+  memoryRemoveOutcome,
   ProjectMemoryEventLine,
   ProjectNoticeLine,
   ProjectNoticeList,
@@ -122,7 +124,7 @@ describe('ProjectFolderHintLine', () => {
       }),
     )
     expect(text()).toBe('이 문서는 ‘학급 운영’ 프로젝트 폴더에 있습니다')
-    expect(buttons().map((b) => b.textContent)).toEqual(['쓰기'])
+    expect(buttons().map((b) => b.textContent)).toEqual(['사용'])
     act(() => buttons()[0]!.click())
     expect(onUse).toHaveBeenCalledTimes(1)
   })
@@ -159,6 +161,51 @@ describe('memory and tool lines', () => {
     )
     expect(text()).toBe('기억 지움: c')
     expect(buttons()).toHaveLength(0)
+  })
+
+  it('reads "removed" with nothing to press once the added entry is gone from the memory', () => {
+    const onRemove = vi.fn()
+    show(
+      createElement(ProjectMemoryEventLine, {
+        lang: 'ko',
+        change: { op: 'add', text: '회비는 2만 원' },
+        gone: true,
+        onRemove,
+      }),
+    )
+    expect(text()).toBe('기억 지움: 회비는 2만 원')
+    expect(buttons()).toHaveLength(0)
+  })
+
+  it('says for a moment that a memory was already removed when [Remove] finds it gone', async () => {
+    vi.useFakeTimers()
+    try {
+      show(
+        createElement(ProjectMemoryEventLine, {
+          lang: 'ko',
+          change: { op: 'add', text: '회비는 2만 원' },
+          onRemove: async () => 'already-gone' as const,
+        }),
+      )
+      await act(async () => {
+        buttons()[0]!.click()
+        await Promise.resolve()
+      })
+      expect(host.textContent).toContain('이미 지운 기억입니다')
+      await act(async () => {
+        vi.advanceTimersByTime(MEMORY_ALREADY_GONE_MS + 10)
+      })
+      expect(host.textContent).not.toContain('이미 지운 기억입니다')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('turns an edit result into what [Remove] came to', () => {
+    expect(memoryRemoveOutcome({ status: 'ok' })).toBe('removed')
+    expect(memoryRemoveOutcome({ status: 'refused', reason: 'not-found' })).toBe('already-gone')
+    expect(memoryRemoveOutcome({ status: 'refused', reason: 'unwritable' })).toBe('failed')
+    expect(memoryRemoveOutcome(null)).toBe('failed')
   })
 
   it('reports a consolidation with [Undo]', () => {

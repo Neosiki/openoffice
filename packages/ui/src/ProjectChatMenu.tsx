@@ -3,7 +3,7 @@ import type { Lang } from '@genoffice/i18n'
 import type { LegacyDocumentChat, ProjectChatListItem, ProjectId } from '@genoffice/project-store'
 import { aiModelPopoverStyle } from './AiModelPicker'
 import { IconPencil, IconTrash } from './icons'
-import { useDismissablePopover } from './popover-dismiss'
+import { revealInList, useDismissablePopover } from './popover-dismiss'
 import {
   projectChatMenuItems,
   projectChatTitle,
@@ -104,10 +104,10 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
   const now = props.now ?? openedAt
 
   useEffect(() => {
-    if (open && !renaming && !confirming) inputRef.current?.focus()
+    if (open && !renaming && !confirming) inputRef.current?.focus({ preventScroll: true })
   }, [open, renaming, confirming])
   useEffect(() => {
-    if (confirming) confirmRef.current?.focus()
+    if (confirming) confirmRef.current?.focus({ preventScroll: true })
   }, [confirming])
   const renamingId = renaming?.id
   useEffect(() => {
@@ -115,9 +115,7 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
   }, [renamingId])
   useEffect(() => {
     if (!open) return
-    document
-      .getElementById(projectChatOptionId(listId, current))
-      ?.scrollIntoView?.({ block: 'nearest' })
+    revealInList(document.getElementById(projectChatOptionId(listId, current)), '.ai-project-list')
   }, [open, listId, current])
 
   const openMenu = () => {
@@ -143,7 +141,7 @@ export function ProjectChatMenu(props: ProjectChatMenuProps): React.JSX.Element 
 
   const finish = () => {
     close()
-    buttonRef.current?.focus()
+    buttonRef.current?.focus({ preventScroll: true })
   }
 
   const activate = (item: ProjectChatMenuItem | undefined) => {

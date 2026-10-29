@@ -63,6 +63,8 @@ export const ru = {
   memoryReplaced: 'Память изменена: {text}',
   memoryRemoved: 'Удалено из памяти: {text}',
   removeMemory: 'Удалить',
+  memoryAlreadyRemoved: 'Это уже удалено из памяти',
+  alreadyListed: 'Этот проект уже есть в списке',
   memoryConsolidated: 'Память упорядочена (записей: {before} → {after})',
   undo: 'Отменить',
   toolSummary: '{editor} «{name}»: запусков инструментов — {count}',
