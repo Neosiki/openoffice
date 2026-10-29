@@ -70,6 +70,15 @@
  *   below the merge instead of growing it. A caret in a plain cell inside another merge
  *   keeps that cell's row, because Hangul grows the merge there.
  *
+ * studio-table-props-border-bg, studio-table-props-menu-label
+ *   The studio's 표/셀 속성 dialog shows the table's border and fill tabs only with the
+ *   table object selected, so from a cell (where the menu opens it) a table's own fill,
+ *   such as a black one, could not be changed. Like Hangul, the dialog has them from a cell
+ *   too, and the cell menu names it 표/셀 속성. The dialog used to send the border and fill
+ *   it showed on every OK, and the engine gives those to the table and to every cell: an
+ *   untouched OK wiped each cell's own lines and fill. It now sends only what changed
+ *   (vendor/rhwp-core patch 0021 then keeps the rest of each cell's look).
+ *
  * studio-memo-command, studio-memo-label-ko, studio-memo-label-en
  *   The studio's Insert > Comment item is a stub. It becomes the app's memo: with a
  *   document open outside form mode it sends `ieum:memo-insert` to the window the app
@@ -686,6 +695,84 @@ const PATCHES = {
     find: '  "command.insert.comment.label": "Comments",',
     replace: '  "command.insert.comment.label": "Memo",',
   },
+  'studio-table-props-border-bg': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]ui[\\/]table-cell-props-dialog\.ts$/,
+    edits: [
+      {
+        find: "import { t as i18nText } from '../i18n/index.ts';",
+        replace: [
+          "import { t as i18nText } from '../i18n/index.ts';",
+          '',
+          '/**',
+          " * ieum: the table's border and fill go to the engine only when the dialog changed them.",
+          ' * The engine hands what it gets to the table and to every cell, so sending the values the',
+          " * dialog merely showed would overwrite each cell's own lines and fill. The dialog shows a",
+          ' * fill it cannot edit (gradient, picture) as none, and has no "no pattern" choice: an',
+          ' * unpatterned fill reads as an empty choice, and a solid fill is written with pattern -1',
+          ' * (the engine writes 0 otherwise, which Hangul draws as horizontal lines).',
+          ' */',
+          'function ieumKeepUnchangedTableLook(next: Record<string, unknown>, now: TableProperties): void {',
+          "  const sides = ['borderLeft', 'borderRight', 'borderTop', 'borderBottom'] as const;",
+          "  const color = (value: unknown) => String(value ?? '').toLowerCase();",
+          '  const pattern = (value: unknown) => {',
+          '    const n = Number(value);',
+          '    return Number.isFinite(n) && n > 0 ? n : 0;',
+          '  };',
+          '  const sameLine = (a: any, b: any) =>',
+          '    !!a && !!b && a.type === b.type && a.width === b.width && color(a.color) === color(b.color);',
+          '  if (sides.every((side) => sameLine(next[side], (now as any)[side]))) {',
+          '    for (const side of sides) delete next[side];',
+          '  }',
+          '  if (next.fillType === undefined) return;',
+          "  const wasSolid = now.fillType === 'solid';",
+          "  const unchanged = next.fillType === 'none'",
+          '    ? !wasSolid',
+          '    : wasSolid &&',
+          '      color(next.fillColor) === color(now.fillColor) &&',
+          '      pattern(next.patternType) === pattern(now.patternType) &&',
+          '      (pattern(next.patternType) === 0 || color(next.patternColor) === color(now.patternColor));',
+          '  if (unchanged) {',
+          "    for (const key of ['fillType', 'fillColor', 'patternColor', 'patternType']) delete next[key];",
+          "  } else if (next.fillType === 'solid' && pattern(next.patternType) === 0) {",
+          '    next.patternType = -1;',
+          '  }',
+          '}',
+        ].join('\n'),
+      },
+      // Hangul's 표/셀 속성 opened from a cell has the table's border and fill tabs too
+      {
+        find:
+          '      // 표 선택 시에만 테두리·배경 탭 표시 (셀 선택 시 별도 "셀 테두리/배경" 대화상자 사용)\n' +
+          "      ...(this.mode === 'table' ? [",
+        replace:
+          "      // ieum: from a cell too, like Hangul's 표/셀 속성 (the cells' own look stays in 셀 테두리/배경)\n" +
+          '      ...(true ? [',
+      },
+      {
+        find: "    if (this.mode === 'table' && this.borderTarget === 'table' && this.borderEdits) {",
+        replace: "    if (this.borderTarget === 'table' && this.borderEdits) {",
+      },
+      {
+        find: "    if (this.mode === 'table' && this.bgTarget === 'table' && this.bgColorRadio) {",
+        replace: "    if (this.bgTarget === 'table' && this.bgColorRadio) {",
+      },
+      {
+        find:
+          '    const applyProps = () => {\n' +
+          '      this.wasm.setCellProperties(sec, ppi, ci, this.cellIdx, newCellProps as Partial<CellProperties>);',
+        replace:
+          '    ieumKeepUnchangedTableLook(newTableProps, this.tableProps);\n' +
+          '    const applyProps = () => {\n' +
+          '      this.wasm.setCellProperties(sec, ppi, ci, this.cellIdx, newCellProps as Partial<CellProperties>);',
+      },
+    ],
+  },
+  'studio-table-props-menu-label': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    // the cell menu opens the whole 표/셀 속성 dialog; Hangul names it so
+    find: "      { type: 'command', commandId: 'table:cell-props', label: '셀 속성...' },",
+    replace: "      { type: 'command', commandId: 'table:cell-props', label: '표/셀 속성(P)...' },",
+  },
   'studio-memo-anchors': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
     // the memo list of vendor/rhwp-core patch 0018, ahead of a neighbour the bridge has once
@@ -800,6 +887,8 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-format-copy-state',
   'studio-single-cell-resize',
   'studio-merged-row-below',
+  'studio-table-props-border-bg',
+  'studio-table-props-menu-label',
   'studio-memo-command',
   'studio-memo-context-menu',
   'studio-memo-label-ko',
