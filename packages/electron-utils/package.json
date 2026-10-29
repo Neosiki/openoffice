@@ -15,6 +15,7 @@
     "./drive-ai-channels": "./src/drive-ai-channels.ts",
     "./outbound-bridge": "./src/outbound-bridge.ts",
     "./outbound-channels": "./src/outbound-channels.ts",
+    "./project-folder-bridge": "./src/project-folder-bridge.ts",
     "./generated-images": "./src/generated-images.ts",
     "./font-store": "./src/font-store.ts",
     "./office-encryption": "./src/office-encryption.ts",

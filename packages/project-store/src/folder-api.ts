@@ -782,6 +782,12 @@ export interface ProjectFolderApi {
   renameChat(args: RenameProjectChatArgs): Promise<ProjectWriteResult>
   /** Moves both chat files to the OS trash */
   deleteChat(args: ProjectChatRef): Promise<ProjectWriteResult>
+  /**
+   * This window's document was just saved (first save, save as): when it now sits
+   * inside the chat's project folder its path joins the chat's `documents` (spec
+   * 5.3.6). Main takes the path from the calling window, never from the request.
+   */
+  attachDocument(args: ProjectChatRef): Promise<ProjectWriteResult>
   /** Opens the chat's latest document (or the home ask panel) and tells that AI panel to open the chat */
   openDocumentChat(args: ProjectChatRef): Promise<void>
   onChatMessageAppended(listener: (event: ProjectChatAppendedEvent) => void): () => void
@@ -851,6 +857,7 @@ export const PROJECT_FOLDER_CHANNELS = {
   appendChat: 'projectFolder:appendChat',
   renameChat: 'projectFolder:renameChat',
   deleteChat: 'projectFolder:deleteChat',
+  attachDocument: 'projectFolder:attachDocument',
   openDocumentChat: 'projectFolder:openDocumentChat',
   getProjectDetail: 'projectFolder:getProjectDetail',
   getSettings: 'projectFolder:getSettings',
@@ -871,3 +878,18 @@ export type ProjectFolderChannel =
 
 export type ProjectFolderEventChannel =
   (typeof PROJECT_FOLDER_EVENTS)[keyof typeof PROJECT_FOLDER_EVENTS]
+
+/**
+ * Renderer → main (`ipcRenderer.send`): a window started or stopped listening to
+ * one event. Main holds an event addressed to a window that is not listening yet
+ * (a tab still loading) and delivers it once the window listens.
+ */
+export const PROJECT_FOLDER_LISTEN_CHANNEL = 'projectFolder:listen'
+
+export interface ProjectFolderListenMessage {
+  method: ProjectFolderEventMethod
+  listening: boolean
+}
+
+/** The global name the preloads expose the bridge under (`window.projectFolderApi`) */
+export const PROJECT_FOLDER_BRIDGE_KEY = 'projectFolderApi'
