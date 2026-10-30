@@ -16,6 +16,10 @@
  * (hancomHooks), and a release that renames one fails the build.
  */
 
+import { convertToHanja } from './hanja.mjs'
+
+export { installHanjaKey } from './hanja.mjs'
+
 export const HANCOM_KEYS_MODULE = '@ieum/hancom-keys'
 
 /**
@@ -144,6 +148,8 @@ export const ADDED_SHORTCUTS = [
   [{ key: 't', code: 'KeyT', ctrl: true, shift: true }, 'format:align-distribute'],
   [{ key: 'f10', ctrl: true }, 'insert:symbols'],
   [{ key: 'insert', code: 'Insert', alt: true }, 'table:insert-row-col'],
+  // Hangul's 한자로 바꾸기; the Hanja key itself comes up alone (installHanjaKey)
+  [{ key: 'f9', code: 'F9' }, 'ieum:hanja'],
   // the character keys of a selection (Hangul: 보통 모양, 위 첨자, 아래 첨자, 진하게, 기울임, 밑줄)
   [{ key: 'c', code: 'KeyC', alt: true, shift: true }, 'ieum:normal-shape'],
   [{ key: 'p', code: 'KeyP', alt: true, shift: true }, 'format:superscript'],
@@ -1988,6 +1994,15 @@ export function hancomCommands(locale, studio = {}) {
       },
     },
     {
+      id: 'ieum:hanja',
+      label: ko ? '한자로 바꾸기' : 'Convert to Hanja',
+      shortcutLabel: 'F9',
+      canExecute: (ctx) => ctx.hasDocument && !ctx.isFormMode,
+      execute(services) {
+        void convertToHanja(services, { ...studio, locale })
+      },
+    },
+    {
       id: 'ieum:find-backward',
       label: ko ? '거꾸로 찾기' : 'Find Backward',
       shortcutLabel: 'Ctrl+Q,L',
@@ -2129,6 +2144,7 @@ export const MENU_ITEMS = [
   ['ieum:page-number', 'page:new-page-num', '쪽 번호 매기기', 'Page Numbering'],
   ['ieum:find-backward', 'edit:find-again', '거꾸로 찾기', 'Find Backward'],
   ['ieum:insert-date', 'insert:symbols', '날짜/시간 문자열', 'Date String'],
+  ['ieum:hanja', 'ieum:insert-date', '한자로 바꾸기', 'Convert to Hanja'],
   ['ieum:table-transpose', 'table:transpose-copy', '표 뒤집기', 'Flip Table'],
 ]
 
