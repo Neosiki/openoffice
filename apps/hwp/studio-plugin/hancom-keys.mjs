@@ -778,6 +778,10 @@ export function hancomCellBlockKey(ih, e) {
     }
     return true
   }
+  // Paste keeps the block: the browser's paste event reaches hancomPasteCells with the
+  // cells still selected, where the studio would close the block and paste into one cell.
+  // A protected form block stays the studio's: it takes no key at all.
+  if (isPasteKey(e)) return !cursor.isProtectedCellSelectionMode?.()
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
     const letter = letterOf(e)
     if (letter === 'e' || letter === 'c' || letter === 'x') {
@@ -907,6 +911,235 @@ function copyCellBlock(ih, cut) {
   // the async clipboard may still be writing; the text is on its way, so a cut empties now
   if (cut) clearCellBlock(ih)
   return true
+}
+
+/** Ctrl+V or Shift+Insert, whatever the input language. */
+function isPasteKey(e) {
+  if (e.altKey) return false
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) return letterOf(e) === 'v'
+  return e.shiftKey && !e.ctrlKey && !e.metaKey && e.key === 'Insert'
+}
+
+/** The text of one table cell of pasted HTML: <br> and paragraphs become lines. */
+function htmlCellText(cell) {
+  const doc = cell.ownerDocument
+  for (const br of [...cell.querySelectorAll('br')]) br.replaceWith(doc.createTextNode('\n'))
+  for (const block of [...cell.querySelectorAll('p, div, li')]) {
+    if (block.nextSibling) block.after(doc.createTextNode('\n'))
+  }
+  return (cell.textContent ?? '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .trim()
+}
+
+/**
+ * The cells of a pasted HTML table, row by row, when the clipboard holds just a table (cells
+ * from a spreadsheet or another table). A merged source cell keeps its text in its first slot
+ * and leaves the slots it spans alone (null). Null when the HTML is not a lone table.
+ */
+export function cellGridFromHtml(html) {
+  if (!html || !/<table[\s>]/i.test(html)) return null
+  const Parser = globalThis.DOMParser
+  if (!Parser) return null
+  let doc
+  try {
+    doc = new Parser().parseFromString(html, 'text/html')
+  } catch {
+    return null
+  }
+  const tables = [...doc.querySelectorAll('table')].filter(
+    (t) => !t.parentElement?.closest('table'),
+  )
+  if (tables.length !== 1) return null
+  const table = tables[0]
+  // text beside the table (a copied paragraph around it) is not a cell paste
+  for (const style of [...doc.querySelectorAll('style, script, title')]) style.remove()
+  const outside = (doc.body?.textContent ?? '').replace(table.textContent ?? '', '')
+  if (outside.trim() !== '') return null
+  const grid = []
+  const rows = [...table.querySelectorAll('tr')].filter((tr) => tr.closest('table') === table)
+  rows.forEach((tr, r) => {
+    grid[r] ??= []
+    let c = 0
+    for (const td of [...tr.children].filter((el) => /^(TD|TH)$/.test(el.tagName))) {
+      while (grid[r][c] !== undefined) c += 1
+      const rowSpan = Math.max(1, Number(td.getAttribute('rowspan')) || 1)
+      const colSpan = Math.max(1, Number(td.getAttribute('colspan')) || 1)
+      for (let dr = 0; dr < rowSpan; dr += 1) {
+        grid[r + dr] ??= []
+        for (let dc = 0; dc < colSpan; dc += 1) grid[r + dr][c + dc] = null
+      }
+      grid[r][c] = htmlCellText(td)
+      c += colSpan
+    }
+  })
+  const width = Math.max(0, ...grid.map((row) => row.length))
+  if (grid.length === 0 || width === 0) return null
+  return grid.map((row) => Array.from({ length: width }, (_, c) => row[c] ?? null))
+}
+
+/**
+ * Tab-separated rows of plain text, as spreadsheets and this editor's cell copy put them on
+ * the clipboard. A field in double quotes may hold tabs, line breaks and doubled quotes.
+ */
+export function cellGridFromText(text) {
+  const source = text.replace(/\r\n?/g, '\n').replace(/\n$/, '')
+  if (source === '') return null
+  const rows = [[]]
+  let field = ''
+  let quoted = false
+  for (let i = 0; i < source.length; i += 1) {
+    const ch = source[i]
+    if (quoted) {
+      if (ch === '"' && source[i + 1] === '"') {
+        field += '"'
+        i += 1
+      } else if (ch === '"') {
+        quoted = false
+      } else {
+        field += ch
+      }
+    } else if (ch === '"' && field === '') {
+      quoted = true
+    } else if (ch === '\t') {
+      rows[rows.length - 1].push(field)
+      field = ''
+    } else if (ch === '\n') {
+      rows[rows.length - 1].push(field)
+      rows.push([])
+      field = ''
+    } else {
+      field += ch
+    }
+  }
+  rows[rows.length - 1].push(field)
+  const width = Math.max(...rows.map((row) => row.length))
+  return rows.map((row) => Array.from({ length: width }, (_, c) => row[c] ?? ''))
+}
+
+/** Write a value into one cell: its old content goes, its lines become paragraphs. */
+function writeCell(bridge, at, cellIdx, value) {
+  const { sec, ppi, ci } = at
+  const count = bridge.getCellParagraphCount(sec, ppi, ci, cellIdx)
+  const last = Math.max(0, count - 1)
+  const lastLength = bridge.getCellParagraphLength(sec, ppi, ci, cellIdx, last)
+  if (count > 1 || lastLength > 0)
+    bridge.deleteRangeInCell(sec, ppi, ci, cellIdx, 0, 0, last, lastLength)
+  const lines = value.split('\n')
+  lines.forEach((line, i) => {
+    if (i > 0) bridge.splitParagraphInCell(sec, ppi, ci, cellIdx, i - 1, lines[i - 1].length)
+    if (line) bridge.insertTextInCell(sec, ppi, ci, cellIdx, i, 0, line)
+  })
+}
+
+/**
+ * Paste onto a cell block, as Hangul does when cells are selected first: the copied cells
+ * (a spreadsheet range, a table, tab-separated text) overwrite the table's cells from the
+ * block's top-left cell, contents only, each cell keeping its own look. A single value fills
+ * every selected cell. One undo step, which brings the old contents and the block back.
+ * Without a block the studio pastes as before. True when this took the paste.
+ */
+export function hancomPasteCells(ih, e) {
+  const cursor = ih?.cursor
+  if (!cursor?.isInCellSelectionMode?.() || cursor.isProtectedCellSelectionMode?.()) return false
+  const context = cursor.getCellTableContext?.()
+  const range = cursor.getSelectedCellRange?.()
+  if (!context || !range || !ih.wasm || !ih.executeOperation) return false
+  const data = e?.clipboardData
+  const html = data?.getData?.('text/html') ?? ''
+  const text = data?.getData?.('text/plain') ?? ''
+  const grid = cellGridFromHtml(html) ?? cellGridFromText(text)
+  if (!grid) {
+    // not cells (a picture): close the block as the studio does for a key it leaves alone,
+    // and its paste goes to the caret as before
+    cursor.exitCellSelectionMode?.()
+    ih.cellSelectionRenderer?.clear?.()
+    ih.updateCaret?.()
+    return false
+  }
+  if ((context.cellPath?.length ?? 0) > 1) {
+    tellUser(
+      koreanUi
+        ? '표 안의 표에는 아직 칸으로 붙일 수 없습니다.'
+        : 'Cells cannot be pasted into a table inside a cell yet.',
+    )
+    return true
+  }
+  const at = { sec: context.sec, ppi: context.ppi, ci: context.ci }
+  let byPlace
+  let rowCount
+  let colCount
+  try {
+    const dims = ih.wasm.getTableDimensions(at.sec, at.ppi, at.ci)
+    rowCount = dims.rowCount
+    colCount = dims.colCount
+    byPlace = new Map()
+    for (let i = 0; i < dims.cellCount; i += 1) {
+      const info = ih.wasm.getCellInfo(at.sec, at.ppi, at.ci, i)
+      byPlace.set(`${info.row}:${info.col}`, i)
+    }
+  } catch {
+    return false
+  }
+  // cells taken out of the block with Ctrl+click (the studio keys them "row,col")
+  const excluded = cursor.getExcludedCells?.() ?? new Set()
+  const single = grid.length === 1 && grid[0].length === 1
+  const spanRows = single ? range.endRow - range.startRow + 1 : grid.length
+  const spanCols = single ? range.endCol - range.startCol + 1 : grid[0].length
+  const writes = []
+  let outside = 0
+  for (let dr = 0; dr < spanRows; dr += 1) {
+    for (let dc = 0; dc < spanCols; dc += 1) {
+      const value = single ? grid[0][0] : grid[dr][dc]
+      if (value === null) continue
+      const row = range.startRow + dr
+      const col = range.startCol + dc
+      if (row >= rowCount || col >= colCount) {
+        outside += 1
+        continue
+      }
+      // a merged cell takes the value of its first slot; the slots it covers are skipped
+      const cellIdx = byPlace.get(`${row}:${col}`)
+      if (cellIdx === undefined || excluded.has(`${row},${col}`)) continue
+      writes.push({ cellIdx, value })
+    }
+  }
+  if (writes.length === 0) {
+    if (outside > 0) tellUser(outsideMessage(outside))
+    return true
+  }
+  const selection = cursor.captureCellSelection?.() ?? null
+  const caret = cursor.getPosition?.()
+  ih.executeOperation({
+    kind: 'snapshot',
+    operationType: 'ieumPasteCells',
+    operation: (bridge) => {
+      for (const { cellIdx, value } of writes) writeCell(bridge, at, cellIdx, value)
+      // the caret's cell may now be shorter than its old offset
+      const caretWritten =
+        caret?.cellIndex !== undefined && writes.some((w) => w.cellIdx === caret.cellIndex)
+      return caretWritten ? { ...caret, cellParaIndex: 0, charOffset: 0 } : caret
+    },
+    selectionBefore: selection ? { mode: 'cellBlock', state: selection } : null,
+  })
+  // the block now covers what was pasted, as after a paste in Hangul
+  if (!single) {
+    const lastRow = Math.min(rowCount, range.startRow + spanRows) - 1
+    const lastCol = Math.min(colCount, range.startCol + spanCols) - 1
+    cursor.setCellSelectionAnchor?.(range.startRow, range.startCol)
+    cursor.setCellSelectionFocus?.(lastRow, lastCol)
+  }
+  ih.updateCellSelection?.()
+  if (outside > 0) tellUser(outsideMessage(outside))
+  return true
+}
+
+function outsideMessage(count) {
+  return koreanUi
+    ? `표 밖으로 넘친 ${count}칸은 붙이지 않았습니다.`
+    : `${count} cell(s) beyond the table were not pasted.`
 }
 
 /**
