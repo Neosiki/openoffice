@@ -6,7 +6,7 @@ import { createWriteStream, existsSync, mkdirSync, rmSync, statSync } from 'node
 // undici's WebAssembly parser, and every command reaches this module.
 import type { IncomingMessage } from 'node:http'
 import { BlockList, isIP } from 'node:net'
-import { basename, extname, join } from 'node:path'
+import { basename, dirname, extname, join, resolve } from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
@@ -77,8 +77,16 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
   // marks, which is what an NFD name (what macOS volumes and many mac clients
   // emit) is built from: dropping them would still fold `résumé.pdf` onto
   // `re_sume_.pdf`.
-  let clean = base.replace(/[^\p{L}\p{N}\p{M}._\- ()]/gu, '_').replace(/^\.+/, '')
+  let clean = base
+    .replace(/[^\p{L}\p{N}\p{M}._\- ()]/gu, '_')
+    .replace(/^\.+/, '')
+    .replace(/[ .]+$/, '')
   if (clean === '') return fallback
+  // Windows device names remain reserved when followed by an extension.
+  if (
+    /^(?:CON|PRN|AUX|NUL|(?:COM|LPT)[1-9\u00b9\u00b2\u00b3])$/i.test(clean.split('.')[0]!.trimEnd())
+  )
+    clean = '_' + clean
   if (clean.length > MAX_SAFE_NAME_CHARS || Buffer.byteLength(clean) > MAX_SAFE_NAME_BYTES) {
     const ext = headWithin(extname(clean), 16, 16 * 4)
     const stem = headWithin(
@@ -88,12 +96,13 @@ export function safeName(raw: string | undefined, fallback = 'file'): string {
     )
     clean = stem + ext
   }
-  return clean
+  return clean.replace(/[ .]+$/, '')
 }
 
 export class FileStore {
   private readonly entries = new Map<string, StoredFile & { touched: number }>()
   private readonly idsByPath = new Map<string, string>()
+  private readonly uploadDirectories = new Set<string>()
   private readonly sweeper: NodeJS.Timeout
 
   constructor(
@@ -109,6 +118,7 @@ export class FileStore {
   uploadTarget(name: string): string {
     const dir = join(this.root, 'uploads', newId())
     mkdirSync(dir, { recursive: true })
+    this.uploadDirectories.add(resolve(dir))
     return join(dir, safeName(name, 'upload.bin'))
   }
 
@@ -165,8 +175,9 @@ export class FileStore {
     if (!entry) return
     this.entries.delete(id)
     this.idsByPath.delete(entry.path)
-    if (entry.path.startsWith(join(this.root, 'uploads'))) {
-      rmSync(join(entry.path, '..'), { recursive: true, force: true })
+    const directory = dirname(resolve(entry.path))
+    if (this.uploadDirectories.delete(directory)) {
+      rmSync(directory, { recursive: true, force: true })
     }
   }
 }

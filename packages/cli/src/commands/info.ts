@@ -1,4 +1,7 @@
 import { statSync } from 'node:fs'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { parseDocx } from '@genoffice/docx-engine'
 import { protectedCellsOf } from '@genoffice/odt-engine'
 import { openPptx } from '@genoffice/pptx-engine'
@@ -7,7 +10,7 @@ import { csvInfo } from '../formats/csv'
 import { hwpInfo } from '../formats/hwp'
 import { openOdtBytes } from '../formats/odt'
 import { pdfInfo } from '../formats/pdf'
-import { workbookSummary } from '../formats/xlsx'
+import { convertLegacyWorkbook, workbookSummary } from '../formats/xlsx'
 import { extension, readInput, resolveInput } from '../fs'
 import type { CommandDef } from '../registry'
 import { CliError, EXIT } from '../result'
@@ -85,9 +88,10 @@ async function describe(path: string, ext: string, password?: string): Promise<D
 
 async function describeDocx(bytes: Uint8Array, locked = false): Promise<Description> {
   const parsed = await parseDocx(bytes)
+  const blocks = parsed.blocks.filter((b) => !b.hidden)
   const counts: Record<string, number> = {}
-  for (const b of parsed.blocks) counts[b.type] = (counts[b.type] ?? 0) + 1
-  const headings = parsed.blocks
+  for (const b of blocks) counts[b.type] = (counts[b.type] ?? 0) + 1
+  const headings = blocks
     .filter((b) => b.type === 'heading')
     .slice(0, 20)
     .map((b) => ({
@@ -95,9 +99,9 @@ async function describeDocx(bytes: Uint8Array, locked = false): Promise<Descript
       text: (b.runs ?? []).map((r) => r.text).join(''),
     }))
   return {
-    headline: `${parsed.blocks.length} blocks, ${counts.heading ?? 0} headings, ${counts.table ?? 0} tables`,
+    headline: `${blocks.length} blocks, ${counts.heading ?? 0} headings, ${counts.table ?? 0} tables`,
     fields: {
-      blocks: parsed.blocks.length,
+      blocks: blocks.length,
       block_types: counts,
       headings,
       comments: parsed.comments.length,
@@ -134,6 +138,23 @@ async function describePptx(path: string): Promise<Description> {
 }
 
 async function describeWorkbook(path: string): Promise<Description> {
+  if (['xls', 'xlsb', 'ods'].includes(extension(path))) {
+    const directory = await mkdtemp(join(tmpdir(), 'ieumoffice-workbook-info-'))
+    try {
+      const converted = join(directory, 'workbook.xlsx')
+      await convertLegacyWorkbook(path, converted)
+      const wb = await workbookSummary(converted)
+      return {
+        headline: `${wb.sheets.length} sheets (converted values and formulas)`,
+        fields: {
+          sheets: wb.sheets,
+          note: 'Inspected through a temporary XLSX conversion: row and column extents reflect converted values and formulas. Original active sheet and defined names are not inferred.',
+        },
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  }
   const wb = await workbookSummary(path)
   return {
     headline: `${wb.sheets.length} sheets`,
@@ -159,7 +180,7 @@ function describeCsv(path: string): Description {
 
 function describeText(path: string, ext: string): Description {
   const text = Buffer.from(readInput(path)).toString('utf-8')
-  const lines = text.split(/\r?\n/)
+  const lines = text.split(/\r\n|\r|\n/)
   const fields: Record<string, unknown> = { lines: lines.length, characters: text.length }
   if (ext === 'md' || ext === 'markdown') {
     fields.headings = lines.filter((l) => /^#{1,6}\s/.test(l)).length

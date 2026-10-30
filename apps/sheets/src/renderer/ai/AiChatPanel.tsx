@@ -10,6 +10,8 @@ import {
   SkillUsedNotes,
   useComposerSkills,
   type OnTemplateSkill,
+  type ProjectChatEntry,
+  type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
 } from '@genoffice/ui'
@@ -263,6 +265,24 @@ export interface AiChatMessage {
   readonly skillProposals?: readonly string[] | undefined
   /** tokens the provider billed for this reply, summed across its turns (absent when unreported) */
   readonly usage?: AiTokenUsageView | undefined
+  /** memory lines a reopened project chat gave this message */
+  readonly memory?: readonly ProjectMemoryLine[] | undefined
+  /** tools another editor ran for this message (a reopened project chat) */
+  readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
+}
+
+/** The project folder parts of the panel (built in App.tsx with `useProjectPanel` of @genoffice/ui) */
+export interface AiPanelProject {
+  /** the chat menu beside the title; null without a chosen project */
+  readonly chatMenu: React.ReactNode
+  /** the project chip under the input */
+  readonly picker: React.ReactNode
+  /** "this workbook is in the '…' project folder [Use]" above the composer */
+  readonly hint: React.ReactNode
+  /** unwritable, context and problem notices above the composer */
+  readonly notices: React.ReactNode
+  /** the other-editor summary and memory lines of one message */
+  readonly messageParts: (message: AiChatMessage) => React.ReactNode
 }
 
 const MODEL_BRIDGE: AiModelPickerBridge = {
@@ -311,6 +331,7 @@ const NO_STATUSES: AiSubscriptionStatuses = {}
 
 export function AiChatPanel({
   isOpen,
+  focusRequest = 0,
   hideRail = false,
   hasContent,
   chat,
@@ -344,8 +365,11 @@ export function AiChatPanel({
   onCitation,
   onExpand,
   onCollapse,
+  project,
 }: {
   readonly isOpen: boolean
+  /** An explicit AI action focuses the composer, including when already open. */
+  readonly focusRequest?: number | undefined
   /** true suppresses even the collapsed rail (the "show the AI sidebar" setting is off) */
   readonly hideRail?: boolean
   /** the workbook has cells with content — empty workbooks get "build me a sheet" copy instead */
@@ -399,9 +423,8 @@ export function AiChatPanel({
   readonly onStop: () => void
   readonly onNewChat: () => void
   readonly onUndo: (steps: number) => void
-  /** A1 notation of the range this run is scoped to, or null when there is no
-   *  scope — a resting single-cell selection carries no intent worth showing,
-   *  and dismissing the chip clears it until the next selection change */
+  /** A1 notation of the selected range or explicitly requested single cell;
+   *  dismissing the chip clears it until the next selection or explicit request. */
   readonly scopeRange: string | null
   /** header names when the scope covers whole columns; they label the chip in
    *  place of the range */
@@ -414,6 +437,8 @@ export function AiChatPanel({
   readonly onCitation: (href: string) => void
   readonly onExpand: () => void
   readonly onCollapse: () => void
+  /** the project folder parts; absent: the panel shows none */
+  readonly project?: AiPanelProject | undefined
 }): React.JSX.Element {
   const { t, lang } = useI18n()
   // A reply that stopped because its connection cannot go on: the queue is paused, so the next
@@ -454,6 +479,12 @@ export function AiChatPanel({
   const isRtl = lang === 'ar' || lang === 'he'
   const chatRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  useEffect(() => {
+    if (!isOpen || !focusRequest) return
+    // Let the context menu finish closing before moving focus out of the grid.
+    const frame = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [isOpen, focusRequest])
   const stickToBottomRef = useRef(true)
   const [dragOver, setDragOver] = useState(false)
   const asideRef = useRef<HTMLElement | null>(null)
@@ -709,6 +740,7 @@ export function AiChatPanel({
           <AiMark size={22} />
           {aiSubscriptionText(lang, 'aiAssistant')}
         </span>
+        {project?.chatMenu}
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
             lang={lang}
@@ -758,6 +790,7 @@ export function AiChatPanel({
                 )}
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 <SkillUsedNotes tools={entry.tools} />
+                {project?.messageParts(entry)}
                 {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.text && (
                   <div dir="auto">
@@ -810,6 +843,7 @@ export function AiChatPanel({
               <>
                 {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
                 <SkillUsedNotes tools={entry.tools} />
+                {project?.messageParts(entry)}
                 {entry.skillProposals?.map((key) => renderSkillCard?.(key))}
                 {entry.usage && (
                   <div className="ai-message-usage">
@@ -946,6 +980,8 @@ export function AiChatPanel({
           localModelCapabilities(subscription.settings).tools === false && (
             <AiToolsUnsupportedNotice lang={lang} />
           )}
+        {project?.hint}
+        {project?.notices}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           queueStrip={
@@ -964,7 +1000,7 @@ export function AiChatPanel({
           queuePlaceholder={AI_QUEUE_LABELS[lang].queuePlaceholder}
           header={
             <>
-              {/* Only a deliberate multi-cell selection shows here: it tells the
+              {/* A range or explicitly requested single cell shows here: it tells the
                   user what "this column / these rows" will resolve to, and the
                   send freezes it so mid-run clicking cannot retarget the run.
                   While that frozen scope is what shows, dropping it could not
@@ -1100,6 +1136,7 @@ export function AiChatPanel({
               {onDrivePicked && <DocAttachButton lang={lang} onPicked={onDrivePicked} />}
             </>
           }
+          footerBelow={project?.picker}
           textareaRef={inputRef}
           onChange={onPromptChange}
           onSend={send}

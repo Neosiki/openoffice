@@ -147,3 +147,21 @@ describe('genoffice render', () => {
     expect(noOut.json().message).toContain('--out')
   })
 })
+
+describe('render grid option preflight with real PDFium', () => {
+  it('preserves existing page output when a grid option is invalid', async () => {
+    const dir = tempDir()
+    const input = writeMinimalPdf(join(dir, 'input.pdf'))
+    const out = join(dir, 'shots')
+    const initial = await run(['render', input, '--out', out, '--json'])
+    expect(initial.code).toBe(0)
+    const path = join(out, 'input-01.png')
+    const sentinel = Buffer.from('do not replace this output')
+    writeFileSync(path, sentinel)
+    const before = readFileSync(input)
+    const result = await run(['render', input, '--out', out, '--grid', '--cols', '0', '--json'])
+    expect(result.code).toBe(1)
+    expect(readFileSync(path)).toEqual(sentinel)
+    expect(readFileSync(input)).toEqual(before)
+  })
+})

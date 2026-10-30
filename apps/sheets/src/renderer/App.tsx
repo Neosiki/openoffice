@@ -52,6 +52,10 @@ import {
   type UniverRuntime,
   type UniverWorksheet,
 } from './univer-state'
+import {
+  hashSheetPassword,
+  type SheetPasswordHash,
+} from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
 import { applyChangePlan, planFromOps, type OpExecutorContext } from './op-executor'
 import { installSheetsMcpBridge, type McpSheetHandlers } from './mcp-bridge'
 import { renameChartRefsForSheet } from './workbook-ops'
@@ -78,6 +82,7 @@ import {
   NO_SKILL_USE,
   skillChipRefsOf,
   panelUserSkills,
+  panelProjectSkill,
   useSkillProposals,
   useSkillTemplates,
   templateDocumentOf,
@@ -90,6 +95,12 @@ import {
   docMentionActions,
   presentationKeyOf,
   type AiComposerDocs,
+  type ProjectChatEntry,
+  type ProjectChatOpened,
+  type ProjectMemoryLine,
+  placeRemoteEntries,
+  useProjectPanel,
+  type ProjectPanel,
 } from '@genoffice/ui'
 
 import {
@@ -222,6 +233,56 @@ import {
   type SheetsSkillDeps,
 } from './ai/tools'
 import { scopeLabel, type AiChatMessage } from './ai/AiChatPanel'
+
+/** A stored message (per-document or project chat) as the AI panel keeps it */
+interface StoredChatEntry {
+  readonly role: 'user' | 'assistant'
+  readonly text: string
+  readonly tools?:
+    readonly { name: string; summary: string; isError?: boolean; output?: string }[] | undefined
+  readonly attachments?:
+    readonly { name: string; path?: string; ext?: string; sizeBytes?: number }[] | undefined
+  readonly scope?: AiScopeQuoteData | undefined
+  readonly skills?: unknown
+  readonly skillProposals?: string[] | undefined
+  readonly memory?: readonly ProjectMemoryLine[] | undefined
+  readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
+}
+
+/** One message of a stored conversation, as the read-only transcript shows it */
+function storedChatMessageOf(m: StoredChatEntry): AiChatMessage {
+  return {
+    role: m.role,
+    text: m.text,
+    tools:
+      m.tools?.map((t) => ({
+        summary: t.summary,
+        isError: !!t.isError,
+        ...(t.name ? { name: t.name } : {}),
+        ...(t.output ? { output: t.output.slice(0, 2000) } : {}),
+      })) ?? [],
+    // stored metadata only: no thumbnail read for history, the chips render name/size
+    ...(m.attachments && m.attachments.length > 0
+      ? {
+          attachments: m.attachments
+            .filter((a) => a.path)
+            .map((a) => ({
+              name: a.name,
+              path: a.path ?? '',
+              ext: a.ext ?? '',
+              sizeBytes: a.sizeBytes ?? 0,
+            })),
+        }
+      : {}),
+    ...(m.scope ? { scope: m.scope } : {}),
+    ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
+      ? { skills: skillChipRefsOf(m.skills) }
+      : {}),
+    ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
+    ...(m.memory && m.memory.length > 0 ? { memory: m.memory } : {}),
+    ...(m.otherEditorTools ? { otherEditorTools: m.otherEditorTools } : {}),
+  }
+}
 import { pruneFailedExchange } from './ai/retry-prune'
 import { parseSheetNavHref } from './ai/sheet-nav'
 import {
@@ -231,7 +292,6 @@ import {
   resolveScopeChip,
   type DataExtent,
 } from './ai/selection-scope'
-import { isSelectionDrag, type Point, type SelectionAskAnchor } from './ai/selection-ask'
 import { createAiDocument } from './ai/create-document'
 import { createWorkbookSkill } from './ai/workbook-skill'
 import { findWorkbookCells, selectWorkbookRange } from './ai/workbook-search'
@@ -382,6 +442,7 @@ import { installMenuInputEnter } from './menu-input-enter'
 import { installCellContextMenu } from './cell-context-menu'
 import { installClipboardAnchorTile } from './clipboard-anchor-tile'
 import { installSelectionWrapGuard } from './selection-wrap-fix'
+import { installSelectionAppearance } from './selection-appearance'
 import { sharedFormulaResolverFor } from './shared-formula-journal'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { installBorderOverflowExclusionFix } from './border-overflow-exclusion'
@@ -402,6 +463,7 @@ import { installForceStringMarkGate, installLongTextRender } from './long-text-r
 import { installAutofitWrapBudget } from './autofit-wrap-budget'
 import { installAutofitLinePitch } from './autofit-line-pitch'
 import { installHeaderUnhideDebounce } from './load-perf-patches'
+import { installCopyAnimationIdle } from './copy-animation-idle'
 import { installNumberAsTextAlertSeverity } from './number-as-text-alert'
 import { installFormulaStreamHold } from './formula-stream-hold'
 import { installRichTextBidiFix } from './rich-text-bidi-fix'
@@ -443,6 +505,7 @@ import { NotePicturesPane } from './NotePicturesPane'
 import type { PendingNotePicture } from './note-pictures'
 import { handleRemoveNotePicture } from './note-picture-actions'
 import { installFormulaNullResultFix } from './formula-null-result'
+import { installKoreanDateInput } from './korean-date-input'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installIfsEmptySetFix } from './ifs-empty-set'
 import { installCriteriaCompareCacheFix } from './criteria-compare-cache'
@@ -499,6 +562,7 @@ import {
   recordNoteChange,
   recordProtectedRangesChange,
   recordFilterChange,
+  recordRemoveNumfmt,
   recordSetNumfmt,
   recordSetRangeValues,
   recordSheetHidden,
@@ -536,6 +600,7 @@ import {
 } from './calc-options'
 import { applyFillSeries, fillSeriesContext } from './fill-series-apply'
 import { solveGoalSeek } from './goal-seek'
+import { applyDataTable } from './data-table'
 import {
   awaitFormulaValues,
   clearVerifiedFormulaValues,
@@ -802,17 +867,9 @@ export function App({
   /// A1 label of the active cell, echoed live by the Name Box. Updated from
   /// the same SelectionChanged refresh that keeps selectionFormat current.
   const [activeCellA1, setActiveCellA1] = useState('')
-  /// The multi-cell selection the AI composer shows as its scope chip, or null.
-  /// A resting single-cell selection carries no intent, so it gets no chip —
-  /// only a range the user deliberately dragged or shift-selected does.
+  /// The selected AI scope: a multi-cell range, or a single cell explicitly
+  /// requested through the context menu. Ordinary cell clicks carry no scope.
   const [aiScope, setAiScope] = useState<FrozenSelection | null>(null)
-  const [aiSelectionAskAnchor, setAiSelectionAskAnchor] = useState<SelectionAskAnchor | null>(null)
-  const selectionDragRef = useRef<{
-    start: Point
-    initialRangeKey: string | null
-    dragged: boolean
-    selectionChanged: boolean
-  } | null>(null)
   /// The user clicked × on the scope chip: this run targets the sheet at large.
   /// Re-arms on the next selection change, so a fresh drag means a fresh scope.
   const [aiScopeDismissed, setAiScopeDismissed] = useState(false)
@@ -1318,6 +1375,10 @@ export function App({
   const workbookOpeningRef = useRef(false)
   /** Current session's projectId/chatId (resolved when the workbook opens) */
   const chatRefIdsRef = useRef<{ projectId: string; chatId: string } | null>(null)
+  /** the project folder of the AI panel (set once its hook ran; read by callbacks) */
+  const projectRef = useRef<ProjectPanel | null>(null)
+  /** the workbook's path when its chat was last bound (a save under a new name changes it) */
+  const chatSavedPathRef = useRef<string | null>(null)
 
   // File renamed externally (in the shell Home list) → sync the title-bar file
   // name (the save path is synced by the main process)
@@ -1434,7 +1495,15 @@ export function App({
     const stale = () => chatResolveGenRef.current !== generation
     // Reset (new workbook or new session)
     chatRefIdsRef.current = null
-    if (!continues) setHistoricChat([])
+    // a project chat on screen stays: this workbook's own chat is not shown over it
+    const projectChatShown = () => !!projectRef.current?.chat.chat
+    if (!continues && !projectChatShown()) setHistoricChat([])
+    // a save under a new name: a project chat notes the workbook (spec 5.3.6)
+    const savedPath = (workbookFile ? (workbookFile.csvPath ?? workbookFile.path) : null) ?? null
+    if (continues && savedPath && savedPath !== chatSavedPathRef.current) {
+      void projectRef.current?.chat.documentSaved()
+    }
+    chatSavedPathRef.current = savedPath
     const tempChatId = `unsaved-${Date.now()}`
     const sessionId = workbookFile?.sessionId
     const resolveArgs: Parameters<typeof api.resolveChat>[0] = { filePath: null, tempChatId }
@@ -1464,48 +1533,25 @@ export function App({
           chatId: ids.chatId,
           limit: 200,
         })
-        if (stale() || stored.length === 0) return
-        // skill cards come back closed; a saved card's record is not part of the conversation
-        const msgs = skillCardsRef.current.restore(stored)
-        setHistoricChat(
-          msgs.map((m) => ({
-            role: m.role,
-            text: m.text,
-            tools:
-              m.tools?.map((t) => ({
-                summary: t.summary,
-                isError: !!t.isError,
-                ...(t.name ? { name: t.name } : {}),
-                ...(t.output ? { output: t.output.slice(0, 2000) } : {}),
-              })) ?? [],
-            // stored metadata only: no thumbnail read for history, the chips render name/size
-            ...(m.attachments && m.attachments.length > 0
-              ? {
-                  attachments: m.attachments
-                    .filter((a) => a.path)
-                    .map((a) => ({
-                      name: a.name,
-                      path: a.path ?? '',
-                      ext: a.ext ?? '',
-                      sizeBytes: a.sizeBytes ?? 0,
-                    })),
-                }
-              : {}),
-            ...(m.scope ? { scope: m.scope } : {}),
-            ...(m.role === 'user' && skillChipRefsOf(m.skills).length > 0
-              ? { skills: skillChipRefsOf(m.skills) }
-              : {}),
-            ...(m.skillProposals ? { skillProposals: m.skillProposals } : {}),
-          })),
-        )
-        // Restore model context: follow-ups after reopening the file continue the
-        // previous conversation (only when the loop is idle and has no history)
-        agentLoopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
+        if (stale() || stored.length === 0 || projectChatShown()) return
+        showStoredChat(stored)
       })
       .catch(() => {
         /* silent */
       })
+    // the path is read when the session changes, not on every rename
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workbookFile?.sessionId])
+
+  /** Show a stored conversation as the read-only transcript and hand it to the model. */
+  function showStoredChat(stored: readonly StoredChatEntry[]): void {
+    // skill cards come back closed; a saved card's record is not part of the conversation
+    const msgs = skillCardsRef.current.restore(stored)
+    setHistoricChat(msgs.map(storedChatMessageOf))
+    // Restore model context: follow-ups after reopening the file continue the
+    // previous conversation (only when the loop is idle and has no history)
+    agentLoopRef.current?.restore(msgs.map((m) => ({ role: m.role, text: m.text })))
+  }
 
   const persistChatMessage = (
     role: 'user' | 'assistant',
@@ -1521,36 +1567,35 @@ export function App({
     scope?: AiScopeQuoteData,
     skillChips?: readonly SkillChipRef[],
   ): boolean => {
+    const record = {
+      role,
+      text,
+      ...(tools && tools.length > 0
+        ? { tools: tools.map((t) => ({ ...t, name: t.name ?? '' })) }
+        : {}),
+      ...(attachments && attachments.length > 0
+        ? {
+            attachments: attachments.map((a) => ({
+              name: a.name,
+              path: a.path,
+              ext: a.ext,
+              sizeBytes: a.sizeBytes,
+            })),
+          }
+        : {}),
+      ...(scope ? { scope } : {}),
+      ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
+    }
+    // a chosen project (or this workbook's earlier chat) records it; otherwise as before
+    if (projectRef.current?.chat.persist(record)) return true
     // Reports whether a write was issued: right after a workbook opens the
     // chat refs resolve asynchronously, and a send in that window is dropped.
     const ids = chatRefIdsRef.current
     const api = (window as Window & { projectApi?: typeof window.projectApi }).projectApi
     if (!ids || !api) return false
-    void api
-      .appendChat({
-        projectId: ids.projectId,
-        chatId: ids.chatId,
-        role,
-        text,
-        ...(tools && tools.length > 0
-          ? { tools: tools.map((t) => ({ ...t, name: t.name ?? '' })) }
-          : {}),
-        ...(attachments && attachments.length > 0
-          ? {
-              attachments: attachments.map((a) => ({
-                name: a.name,
-                path: a.path,
-                ext: a.ext,
-                sizeBytes: a.sizeBytes,
-              })),
-            }
-          : {}),
-        ...(scope ? { scope } : {}),
-        ...(skillChips && skillChips.length > 0 ? { skills: [...skillChips] } : {}),
-      })
-      .catch(() => {
-        /* silent */
-      })
+    void api.appendChat({ projectId: ids.projectId, chatId: ids.chatId, ...record }).catch(() => {
+      /* silent */
+    })
     return true
   }
 
@@ -1587,16 +1632,45 @@ export function App({
   /** true once any tool of the run mutated the workbook */
   const runMutatedRef = useRef(false)
 
+  const agentTransportRef = useRef<ReturnType<typeof createElectronTransport> | null>(null)
+  if (!agentTransportRef.current) {
+    agentTransportRef.current = createElectronTransport(() => aiSettingsRef.current!, {
+      onStreamError: (error) => {
+        streamErrorRef.current = error
+      },
+      onSubscriptionUsage: setSubscriptionUsage,
+      onInputTruncated: () => setInputTruncated(true),
+    })
+  }
+
+  /**
+   * The project folder (spec 5): the chip under the input, the chat menu, the
+   * notices. With no project chosen the panel keeps the workbook's own chat.
+   */
+  const project = useProjectPanel({
+    editor: 'sheets',
+    lang: getLang(),
+    busy: aiBusy,
+    loop: () => agentLoopRef.current,
+    consolidation: () => {
+      const transport = agentTransportRef.current
+      return transport ? { transport, gate: () => sendGateRef.current.peek() } : null
+    },
+    onOpen: (opened, initial) => openProjectChat(opened, initial),
+    onRemoteMessages: (entries, running) =>
+      setChat((previous) =>
+        placeRemoteEntries(previous, entries.map(storedChatMessageOf), running),
+      ),
+    onNewChat: () => handleNewChat(),
+  })
+  projectRef.current = project
+  const sendGateRef = useRef(sendGate)
+  sendGateRef.current = sendGate
+
   const agentLoopRef = useRef<AgentLoop | null>(null)
   if (!agentLoopRef.current) {
     agentLoopRef.current = new AgentLoop({
-      transport: createElectronTransport(() => aiSettingsRef.current!, {
-        onStreamError: (error) => {
-          streamErrorRef.current = error
-        },
-        onSubscriptionUsage: setSubscriptionUsage,
-        onInputTruncated: () => setInputTruncated(true),
-      }),
+      transport: agentTransportRef.current,
       systemSuffix: aiLangDirective,
       // a local model that reported no tool support answers in text only
       toolsAllowed: () =>
@@ -1633,6 +1707,8 @@ export function App({
             }))
           },
         }),
+        // the chosen project folder: its context and its four app-run tools (spec 5.4, 5.5)
+        ...panelProjectSkill({ run: project.chat.run, lang: getLang }),
       ]),
       events: {
         onText: (text) => {
@@ -1747,6 +1823,7 @@ export function App({
             persistChatMessage('assistant', finalText, runToolsRef.current)
           }
           setAiRunScope(undefined)
+          projectRef.current?.finishSend()
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
         onError: (error) => {
@@ -1778,6 +1855,7 @@ export function App({
             return next
           })
           setAiRunScope(undefined)
+          projectRef.current?.finishSend()
           void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
         },
       },
@@ -1841,13 +1919,16 @@ export function App({
     setMessage(t('appAiThinking'))
     appendChat({ role: 'assistant', text: '', tools: [], streaming: true })
     void collectImageAttachments(sentAttachments)
-      .then((images) => {
+      .then(
+        (images): AgentImage[] | null => images,
+        () => null,
+      )
+      .then(async (images) => {
+        // the chosen project's context, read now and fixed for this request (spec 5.4)
+        await projectRef.current?.prepareSend()
         runStartingRef.current = false
-        loop.run(instruction, images)
-      })
-      .catch(() => {
-        runStartingRef.current = false
-        loop.run(instruction)
+        if (images) loop.run(instruction, images)
+        else loop.run(instruction)
       })
   }
 
@@ -1915,7 +1996,8 @@ export function App({
     if (error !== null) setMessage(error)
   }
 
-  function handleNewChat(): void {
+  /** Today's "new chat": the screen, the loop and everything the conversation carried start over. */
+  function resetConversation(): void {
     sendGate.reset()
     agentLoopRef.current?.reset()
     setAiRunScope(undefined)
@@ -1932,7 +2014,37 @@ export function App({
     sentAttachmentsRef.current = []
     setPreview(null)
     lazyPreviewRef.current = null
+  }
+
+  /** "New chat": a new chat of the chosen project, or (no project) today's reset (spec 5.3.7) */
+  function handleNewChat(): void {
+    resetConversation()
+    if (projectRef.current?.chat.projectId) void projectRef.current.chat.newChat()
     setMessage(t('appNewConversation'))
+  }
+
+  /** A project chat, this workbook's earlier chat, or (no project) the workbook's own chat opened. */
+  function openProjectChat(opened: ProjectChatOpened, initial = false): void {
+    // a send made while the panel started (a request handed to this tab) keeps its chat
+    if (initial && (chat.length > 0 || agentLoopRef.current?.busy || runStartingRef.current)) return
+    resetConversation()
+    if (opened.kind === 'document') {
+      const ids = chatRefIdsRef.current
+      const api = (window as Window & { projectApi?: typeof window.projectApi }).projectApi
+      if (!ids || !api) return
+      void api
+        .loadChat({ projectId: ids.projectId, chatId: ids.chatId, limit: 200 })
+        .then((stored) => {
+          if (stored.length === 0 || projectRef.current?.chat.chat) return
+          if (agentLoopRef.current?.busy) return
+          showStoredChat(stored)
+        })
+        .catch(() => {
+          /* silent */
+        })
+      return
+    }
+    showStoredChat(opened.entries)
   }
 
   /** DSL context the AgentSkill reads/writes through — reuses the exact same
@@ -2063,6 +2175,7 @@ export function App({
     // must precede the first render: the filter render module registers at
     // lifecycle Rendered, and Excel draws no outline around a filtered range
     installFilterRangeOutlineSuppression(runtime)
+    const selectionAppearance = installSelectionAppearance(runtime)
     installVeryHiddenSheetGuard(runtime, lazyWorkbookRef)
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
     univerRef.current = runtime
@@ -2094,6 +2207,7 @@ export function App({
     const themeService = runtime.univer.__getInjector().get(ThemeService)
     const applyUniverDark = () => {
       themeService.setDarkMode(isDarkTheme())
+      selectionAppearance.refresh()
       crossHighlightRef.current?.refresh()
     }
     const offThemeChanged = window.desktopApi?.onThemeChanged?.(applyUniverDark)
@@ -2155,6 +2269,9 @@ export function App({
     // canvas line box (Calibri 10: 12.75 pt per line, not ~10 pt).
     installAutofitLinePitch()
     installHeaderUnhideDebounce()
+    // The dashed border on a copied range is a per-frame animation. It must
+    // not keep repainting the scene while nobody is looking at it.
+    installCopyAnimationIdle()
     installNumberAsTextAlertSeverity()
     installForceStringMarkGate(runtime.univer.__getInjector().get(SheetInterceptorService))
     // Hold the formula engine's per-chunk recalculation while file data streams
@@ -2339,8 +2456,15 @@ export function App({
       threadStore.setAuthor(name),
     )
     // Univer's own UI (rule-management panels, dialogs) follows the app
-    // language instead of hard-coded English.
+    // language instead of hard-coded English. Switching language later also
+    // reloads the packs, so number formats (weekdays, month names) follow.
     void applyUniverLocale(runtime, getLang())
+    const offUniverLanguage = window.desktopApi.onLanguageChanged((lang) => {
+      void applyUniverLocale(runtime, lang)
+    })
+    // Korean cell entries such as 2026년 10월 29일 become real dates, matching
+    // Excel's input behavior (Univer's parser only knows numeric date forms).
+    const koreanDateInputDisposable = installKoreanDateInput(runtime)
     // Rule-management panels show what each rule actually does: list options /
     // source range, CF formula text, ⚠ on #REF! dead rules.
     const ruleDetailDisposable = installRuleDetail(runtime)
@@ -2375,7 +2499,6 @@ export function App({
     const scrollDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.Scroll,
       (params) => {
-        setAiSelectionAskAnchor(null)
         const { worksheet } = params
         // The event carries the true post-scroll position; getVisibleRange
         // inside loadVisibleRange lags a frame.
@@ -2418,7 +2541,6 @@ export function App({
     const zoomDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.SheetZoomChanged,
       ({ worksheet }) => {
-        setAiSelectionAskAnchor(null)
         setZoomPercent(Math.round(worksheet.getZoom() * 100))
       },
     )
@@ -2439,7 +2561,6 @@ export function App({
       () => {
         editingCellRef.current = true
         syncCellEditorPending()
-        setAiSelectionAskAnchor(null)
       },
     )
     const editEndDisposable = runtime.univerAPI.addEvent(
@@ -2452,7 +2573,6 @@ export function App({
     const sheetDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.ActiveSheetChanged,
       ({ activeSheet }) => {
-        setAiSelectionAskAnchor(null)
         void loadVisibleRange(runtime, lazyWorkbookRef, activeSheet, setMessage)
         // formula view is per-sheet (sheetView/@showFormulas)
         applyShowFormulasView(runtime, lazyWorkbookRef.current, activeSheet.getSheetId())
@@ -3071,12 +3191,14 @@ export function App({
         const recorded =
           event.id === SET_NUMFMT_MUTATION
             ? recordSetNumfmt(state.editJournal, params.subUnitId, params)
-            : recordSetRangeValues(
-                state.editJournal,
-                params.subUnitId,
-                params.cellValue,
-                sharedFormulaResolverFor(runtime, params.subUnitId),
-              )
+            : event.id === REMOVE_NUMFMT_MUTATION
+              ? recordRemoveNumfmt(state.editJournal, params.subUnitId, params)
+              : recordSetRangeValues(
+                  state.editJournal,
+                  params.subUnitId,
+                  params.cellValue,
+                  sharedFormulaResolverFor(runtime, params.subUnitId),
+                )
         if (recorded.length === 0) return
         setPendingEdits(journalSize(state.editJournal))
         const contentEdited = recorded.some(
@@ -3330,14 +3452,6 @@ export function App({
             setMessage(t('appPivotSheetNoMove'))
             return
           }
-          if (
-            FILTER_COMMAND_PATTERN.test(event.id) &&
-            subUnitId !== undefined &&
-            state.filterOrigins.get(subUnitId)?.origin === 'table'
-          ) {
-            event.cancel = true
-            setMessage(t('appTableFilterNoEdit'))
-          }
           return
         }
         if (event.id === AUTO_FILL_COMMAND && !state.flags.preloadComplete) {
@@ -3450,94 +3564,9 @@ export function App({
           },
         })
       : () => undefined
-    let selectionAskRaf: number | null = null
-    let selectionAskSettleRaf: number | null = null
-    let selectionAskSettling = false
-    const activeRangeKey = (): string | null => {
-      try {
-        const range = runtime.univerAPI.getActiveWorkbook()?.getActiveRange()?.getRange()
-        return range
-          ? `${range.startRow}:${range.startColumn}:${range.endRow}:${range.endColumn}`
-          : null
-      } catch {
-        return null
-      }
-    }
-    const onSelectionPointerDown = (event: PointerEvent): void => {
-      if (event.button !== 0 || gridHost?.classList.contains('sheet-shape-drawing')) return
-      setAiSelectionAskAnchor(null)
-      selectionDragRef.current = {
-        start: { x: event.clientX, y: event.clientY },
-        initialRangeKey: activeRangeKey(),
-        dragged: false,
-        selectionChanged: false,
-      }
-    }
-    const onSelectionPointerMove = (event: PointerEvent): void => {
-      const gesture = selectionDragRef.current
-      if (!gesture || gesture.dragged) return
-      gesture.dragged = isSelectionDrag(gesture.start, { x: event.clientX, y: event.clientY })
-    }
-    const finishSelectionPointer = (event: PointerEvent): void => {
-      const gesture = selectionDragRef.current
-      selectionDragRef.current = null
-      if (!gesture?.dragged || event.type === 'pointercancel') return
-      const pointer = { x: event.clientX, y: event.clientY }
-      selectionAskSettling = true
-      if (selectionAskRaf !== null) cancelAnimationFrame(selectionAskRaf)
-      selectionAskRaf = requestAnimationFrame(() => {
-        selectionAskRaf = null
-        if (editingCellRef.current || !gridHost) {
-          selectionAskSettling = false
-          return
-        }
-        try {
-          const bounds = runtime.univerAPI.getActiveWorkbook()?.getActiveRange()?.getRange()
-          if (
-            !bounds ||
-            (bounds.endRow === bounds.startRow && bounds.endColumn === bounds.startColumn)
-          ) {
-            setAiSelectionAskAnchor(null)
-            return
-          }
-          const finalRangeKey = activeRangeKey()
-          if (!gesture.selectionChanged && finalRangeKey === gesture.initialRangeKey) return
-          const viewport = gridHost.getBoundingClientRect()
-          setAiSelectionAskAnchor({
-            pointer,
-            bounds: {
-              left: viewport.left,
-              top: viewport.top,
-              right: viewport.right,
-              bottom: viewport.bottom,
-            },
-          })
-        } catch {
-          setAiSelectionAskAnchor(null)
-        } finally {
-          if (selectionAskSettleRaf !== null) cancelAnimationFrame(selectionAskSettleRaf)
-          selectionAskSettleRaf = requestAnimationFrame(() => {
-            selectionAskSettleRaf = null
-            selectionAskSettling = false
-          })
-        }
-      })
-    }
-    const cancelSelectionPointer = (): void => {
-      if (!selectionDragRef.current) return
-      selectionDragRef.current = null
-      setAiSelectionAskAnchor(null)
-    }
-    gridHost?.addEventListener('pointerdown', onSelectionPointerDown, true)
-    window.addEventListener('pointermove', onSelectionPointerMove, true)
-    window.addEventListener('pointerup', finishSelectionPointer, true)
-    window.addEventListener('pointercancel', finishSelectionPointer, true)
-    window.addEventListener('blur', cancelSelectionPointer)
     const selectionDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.SelectionChanged,
       () => {
-        if (selectionDragRef.current) selectionDragRef.current.selectionChanged = true
-        else if (!selectionAskSettling) setAiSelectionAskAnchor(null)
         refreshSelectionFormatRef.current()
         // A grid click ends any floating-visual selection.
         clearVisualSelection()
@@ -3591,8 +3620,10 @@ export function App({
     return () => {
       unsubscribeMenu()
       unsubscribeCloseSave()
+      offUniverLanguage()
       offThemeChanged?.()
       offDocThemeChanged?.()
+      selectionAppearance.dispose()
       offAuthorChanged?.()
       undoRedoSub.unsubscribe()
       findRevealDispose()
@@ -3610,6 +3641,7 @@ export function App({
       cachedValueDisposable.dispose()
       formulaNewlineDisposable.dispose()
       functionProbeDisposable.dispose()
+      koreanDateInputDisposable.dispose()
       numberFormatFixDisposable.dispose()
       errorAlignDisposable.dispose()
       cellFilenameDisposable.dispose()
@@ -3662,13 +3694,6 @@ export function App({
       contentDisposable.dispose()
       disposePictureTransfer()
       disposeWheelZoom()
-      gridHost?.removeEventListener('pointerdown', onSelectionPointerDown, true)
-      window.removeEventListener('pointermove', onSelectionPointerMove, true)
-      window.removeEventListener('pointerup', finishSelectionPointer, true)
-      window.removeEventListener('pointercancel', finishSelectionPointer, true)
-      window.removeEventListener('blur', cancelSelectionPointer)
-      if (selectionAskRaf !== null) cancelAnimationFrame(selectionAskRaf)
-      if (selectionAskSettleRaf !== null) cancelAnimationFrame(selectionAskSettleRaf)
       if (visualInstallTimerRef.current) clearTimeout(visualInstallTimerRef.current)
       disposeVisuals(visualDisposablesRef.current)
       visualViewportKeyRef.current = ''
@@ -4364,6 +4389,13 @@ export function App({
   }
 
   function handleRibbonCommand(command: string): void {
+    if (command === 'ai-ask-selection') {
+      const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
+      if (!range) return
+      refreshAiScope(range, true)
+      setOpenAiRequest((n) => n + 1)
+      return
+    }
     if (command === 'watch-window') {
       setWatchOpen((open) => !open)
       return
@@ -4487,10 +4519,12 @@ export function App({
     setAiScopeDismissed(false)
   }
 
-  /// Keeps the AI composer's scope chip in sync with the grid selection. Only a
-  /// multi-cell range becomes a scope; moving to a different range re-arms a
-  /// chip the user had dismissed, so a fresh drag means a fresh scope.
-  function refreshAiScope(range: NonNullable<ReturnType<ActiveWorkbook['getActiveRange']>>): void {
+  /// The context menu explicitly scopes even one cell and re-arms a dismissed
+  /// chip. Keep that scope on format refreshes until the selection changes.
+  function refreshAiScope(
+    range: NonNullable<ReturnType<ActiveWorkbook['getActiveRange']>>,
+    explicit = false,
+  ): void {
     const worksheet = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()
     const sheetId = worksheet?.getSheetId()
     let bounds: IRange
@@ -4501,8 +4535,14 @@ export function App({
       return
     }
     const multiCell = bounds.endRow > bounds.startRow || bounds.endColumn > bounds.startColumn
-    if (!multiCell || !worksheet || !sheetId) {
+    if (!worksheet || !sheetId) {
       clearAiScope()
+      return
+    }
+    if (!multiCell && !explicit) {
+      // Keep an explicitly chosen cell on refresh without scanning the sheet's
+      // data extent on every ordinary cell click.
+      if (aiScopeKeyRef.current !== `${sheetId}!${boundsToA1(bounds)}`) clearAiScope()
       return
     }
     let scope: FrozenSelection
@@ -4513,9 +4553,11 @@ export function App({
         columnCount: worksheet.getMaxColumns(),
       })
       // Display text, so a date header names itself rather than its serial.
-      const columns = columnScopeHeaders(clamped, extent, (column) =>
-        String(worksheet.getRange(0, column, 1, 1).getDisplayValue() ?? ''),
-      )
+      const columns = multiCell
+        ? columnScopeHeaders(clamped, extent, (column) =>
+            String(worksheet.getRange(0, column, 1, 1).getDisplayValue() ?? ''),
+          )
+        : null
       scope = { a1: boundsToA1(clamped), sheetId, ...(columns ? { columns } : {}) }
     } catch {
       // same disposing-workbook race as above, now over the extent/header reads
@@ -4524,7 +4566,7 @@ export function App({
     // Keyed on the clamped range: two whole-column drags of different heights
     // are the same scope, and re-selecting one must not re-arm a dismissed chip.
     const key = `${sheetId}!${scope.a1}`
-    if (aiScopeKeyRef.current === key) return
+    if (!explicit && aiScopeKeyRef.current === key) return
     aiScopeKeyRef.current = key
     setAiScope(scope)
     setAiScopeDismissed(false)
@@ -5417,6 +5459,17 @@ export function App({
           if (!runtime) return Promise.reject(new Error(t('appWorkbookNotReady')))
           return solveGoalSeek(runtime, { setCell, toValue, byCell })
         }}
+        onDataTable={(input) => {
+          const runtime = univerRef.current
+          if (!runtime) return Promise.reject(new Error(t('appWorkbookNotReady')))
+          return applyDataTable(runtime, input)
+        }}
+        onGetDataTableRange={() => {
+          // Excel's flow starts from the selected table region; a single-cell
+          // selection cannot be a data table, so the field starts empty.
+          const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
+          return range && range.getHeight() > 1 && range.getWidth() > 1 ? range.getA1Notation() : ''
+        }}
         onFillSeries={(options) => {
           const runtime = univerRef.current
           return runtime ? applyFillSeries(runtime, options, t) : t('appWorkbookNotReady')
@@ -5453,6 +5506,7 @@ export function App({
         }}
         chat={chat}
         historicChat={historicChat}
+        aiProject={project}
         renderSkillCard={skillCards.render}
         skillNotes={skillTemplates.notes}
         onTemplateSkill={(request) => skillTemplatesRef.current.onTemplateSkill(request)}
@@ -5473,11 +5527,8 @@ export function App({
         aiScopeRange={aiScopeChip.range}
         aiScopeColumns={aiScopeChip.columns ?? null}
         aiScopeLocked={aiScopeChip.locked}
-        aiSelectionAskAnchor={aiSelectionAskAnchor}
-        onAiSelectionAskDismiss={() => setAiSelectionAskAnchor(null)}
         onAiScopeDismiss={() => {
           setAiScopeDismissed(true)
-          setAiSelectionAskAnchor(null)
         }}
         onAiCitation={handleAiCitation}
         canUndo={univerHist.canUndo || (!lazyWorkbookRef.current && adapterRef.current.canUndo)}
@@ -5802,7 +5853,13 @@ export function App({
 
   /// The active sheet's allow-edit ranges, or an error the dialog surfaces.
   function protectedRangesSnapshot(): {
-    ranges: readonly { name: string; sqref: string; hasPassword: boolean }[]
+    ranges: readonly {
+      name: string
+      sqref: string
+      hasPassword: boolean
+      /** the hash, when this session computed it; a file's own hashes stay in the file */
+      password?: SheetPasswordHash
+    }[]
     error: string | null
   } {
     const state = lazyWorkbookRef.current
@@ -5815,20 +5872,43 @@ export function App({
     return { ranges: file ?? [], error: null }
   }
 
-  function applyProtectedRanges(ranges: readonly { name: string; sqref: string }[]): string | null {
+  async function applyProtectedRanges(
+    ranges: readonly { name: string; sqref: string; password?: string }[],
+  ): Promise<string | null> {
     const state = lazyWorkbookRef.current
     const sheetId = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getSheetId()
     if (!state || !sheetId) return t('appProtectionNeedsFile')
     const snapshot = protectedRangesSnapshot()
     if (snapshot.error !== null) return snapshot.error
-    // A rewrite cannot preserve per-range password hashes; fail closed.
-    if (snapshot.ranges.some((range) => range.hasPassword)) {
+    // A rewrite cannot preserve password hashes it does not know; fail closed.
+    // A hash this session computed travels in the request and survives.
+    if (snapshot.ranges.some((range) => range.hasPassword && range.password === undefined)) {
       return t('appRangesPasswordBlocked')
     }
-    state.sheetProtectedRanges.set(
-      sheetId,
-      ranges.map((range) => ({ name: range.name, sqref: range.sqref, hasPassword: false })),
+    const kept = new Map(snapshot.ranges.map((range) => [range.name, range]))
+    const hashed = await Promise.all(
+      ranges.map(async (range) => {
+        if (range.password) {
+          return {
+            name: range.name,
+            sqref: range.sqref,
+            hasPassword: true,
+            password: await hashSheetPassword(range.password),
+          }
+        }
+        const prior = kept.get(range.name)
+        if (prior?.password !== undefined) {
+          return {
+            name: range.name,
+            sqref: range.sqref,
+            hasPassword: true,
+            password: prior.password,
+          }
+        }
+        return { name: range.name, sqref: range.sqref, hasPassword: false }
+      }),
     )
+    state.sheetProtectedRanges.set(sheetId, hashed)
     recordProtectedRangesChange(state.editJournal, sheetId)
     setPendingEdits(journalSize(state.editJournal))
     setMessage(t('appRangesRecorded', { count: ranges.length }))

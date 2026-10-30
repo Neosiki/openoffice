@@ -189,6 +189,11 @@ export function readInput(abs: string): Uint8Array {
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 
+/** Drops one leading UTF-8 BOM that editors put at the start of JSON files; a U+FEFF inside the text stays. */
+export function stripBom(text: string): string {
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text
+}
+
 export function extension(path: string): string {
   return extname(path).slice(1).toLowerCase()
 }

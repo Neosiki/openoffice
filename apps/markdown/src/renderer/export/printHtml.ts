@@ -3,7 +3,7 @@ import katexCss from 'katex/dist/katex.min.css?inline'
 /** Print-theme CSS: mirrors the editor typography so the PDF matches the canvas */
 const PRINT_CSS = `
 @page {
-  margin: 2cm;
+  margin: 0;
   size: auto;
 }
 * { box-sizing: border-box; }
@@ -72,6 +72,10 @@ export function buildPrintHtml(editorRoot: HTMLElement, title: string): string {
     bar.remove()
   // a rendered diagram block prints as its picture; an unrendered one keeps its source
   for (const block of clone.querySelectorAll('[data-diagram="rendered"] pre')) block.remove()
+  // the task item view sets `checked` as a property, which innerHTML drops;
+  // the clone carries the property over, so write it back as the attribute
+  for (const box of clone.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+    box.toggleAttribute('checked', box.checked)
 
   const escapedTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;')
   // <base> lets the inlined KaTeX CSS resolve its relative font URLs from the

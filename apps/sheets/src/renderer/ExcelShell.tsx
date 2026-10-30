@@ -43,6 +43,8 @@ import { useAiDock } from './ai/use-ai-dock'
 
 import { ColorDropdown } from './ColorDropdown'
 import { FormatCellsDialog } from './FormatCellsDialog'
+import type { SheetPasswordHash } from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
+
 import { AllowEditRangesDialog } from './AllowEditRangesDialog'
 import { ProtectSheetDialog } from './ProtectSheetDialog'
 import type { SheetProtectionAllow } from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
@@ -56,7 +58,7 @@ import {
   type PasteSpecialSource,
 } from './paste-special'
 import { COLOR_SCHEMES, FONT_SCHEMES, THEME_PRESETS } from './themes'
-import { useI18n, type StringKey } from './i18n/locale'
+import { getLang, useI18n, type StringKey } from './i18n/locale'
 import { NameManagerDialog, type DefinedNameAction, type DefinedNameRow } from './NameManagerDialog'
 import {
   NUMBER_FORMAT_LABEL,
@@ -75,7 +77,8 @@ import {
   accountingStyle,
   COMMA_STYLE,
   PERCENT_STYLE,
-  RIBBON_CURRENCY_SYMBOL,
+  ribbonCurrencySymbol,
+  ribbonDatePattern,
 } from './excel-format-shortcuts'
 import { isModalOpen, resolveGlobalShortcut } from './global-shortcuts'
 import { stepFontSize } from './font-size-ladder'
@@ -83,9 +86,12 @@ import { stepFontSize } from './font-size-ladder'
 import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import type { AttachmentMeta } from '../shared/desktop-api'
-import { AiChatPanel, type AiChatMessage, type AiPanelSubscription } from './ai/AiChatPanel'
-import { AiSelectionAsk } from './ai/AiSelectionAsk'
-import type { SelectionAskAnchor } from './ai/selection-ask'
+import {
+  AiChatPanel,
+  type AiChatMessage,
+  type AiPanelProject,
+  type AiPanelSubscription,
+} from './ai/AiChatPanel'
 import {
   PivotDialog,
   type PivotCreateRequest,
@@ -102,6 +108,8 @@ import {
 } from './pivot-field-model'
 import type { GoalSeekResult } from './goal-seek'
 import { GoalSeekDialog } from './GoalSeekDialog'
+import type { DataTableInput, DataTableOutcome } from './data-table'
+import { DataTableDialog } from './DataTableDialog'
 import type { FillSeriesOptions, FillSeriesType } from './fill-series'
 import type { FillSeriesContext } from './fill-series-apply'
 import { FillSeriesDialog } from './FillSeriesDialog'
@@ -256,6 +264,8 @@ interface ExcelShellProps {
   readonly aiSubscription: AiPanelSubscription
   readonly chat: readonly AiChatMessage[]
   readonly historicChat?: readonly AiChatMessage[]
+  /** the project folder parts of the AI panel (chip, chat menu, notices) */
+  readonly aiProject?: AiPanelProject | undefined
   /** the skill card for a key a chat message carries */
   readonly renderSkillCard?: ((key: string) => ReactNode) | undefined
   /** the template flow's lines and its preview card, after the chat's messages */
@@ -290,17 +300,14 @@ interface ExcelShellProps {
   readonly onStop: () => void
   readonly onNewChat: () => void
   readonly onUndo: (steps?: number) => void
-  /// A1 notation of the multi-cell selection the AI composer offers as this
-  /// run's scope, or null when the resting single-cell selection carries none.
+  /// A1 notation of the selected AI scope, including an explicitly requested
+  /// single cell, or null when there is no scope.
   readonly aiScopeRange: string | null
   /// Header names when that scope covers whole columns: they label the chip in
   /// place of the range, because a column is a name to the user, not a letter.
   readonly aiScopeColumns: readonly string[] | null
   /// The range above belongs to a run in flight and can no longer be dropped.
   readonly aiScopeLocked: boolean
-  /// Drag endpoint and viewport bounds used to place the localized trigger.
-  readonly aiSelectionAskAnchor: SelectionAskAnchor | null
-  readonly onAiSelectionAskDismiss: () => void
   readonly onAiScopeDismiss: () => void
   /// Citation link in an AI answer: jumps the grid to the cited cell/range.
   readonly onAiCitation: (href: string) => void
@@ -369,12 +376,17 @@ interface ExcelShellProps {
   readonly crossHighlightVisible: boolean
   /// Allow-edit ranges of the active sheet, read when the dialog opens.
   readonly onGetProtectedRanges: () => {
-    ranges: readonly { name: string; sqref: string; hasPassword: boolean }[]
+    ranges: readonly {
+      name: string
+      sqref: string
+      hasPassword: boolean
+      password?: SheetPasswordHash
+    }[]
     error: string | null
   }
   readonly onApplyProtectedRanges: (
-    ranges: readonly { name: string; sqref: string }[],
-  ) => string | null
+    ranges: readonly { name: string; sqref: string; password?: string }[],
+  ) => Promise<string | null> | string | null
   /// Name Manager data + actions (actions return an error message or null).
   readonly onGetDefinedNames: () => {
     names: DefinedNameRow[]
@@ -430,6 +442,10 @@ interface ExcelShellProps {
   readonly calcManual: boolean
   /// Goal Seek solve; rejects with a user-facing Error message.
   readonly onGoalSeek: (setCell: string, toValue: number, byCell: string) => Promise<GoalSeekResult>
+  /// Data Table (What-If) run; rejects with a user-facing Error message.
+  readonly onDataTable: (input: DataTableInput) => Promise<DataTableOutcome>
+  /// Prefill for the Data Table range field (the multi-cell selection).
+  readonly onGetDataTableRange: () => string
   /// Fill > Series… OK; returns an error message, or null on success.
   readonly onFillSeries: (options: FillSeriesOptions) => string | null
   /// Series dialog defaults (selection shape, workbook date system).
@@ -489,6 +505,7 @@ export function ExcelShell({
   aiSubscription,
   chat,
   historicChat,
+  aiProject,
   renderSkillCard,
   skillNotes,
   onTemplateSkill,
@@ -545,8 +562,6 @@ export function ExcelShell({
   aiScopeRange,
   aiScopeColumns,
   aiScopeLocked,
-  aiSelectionAskAnchor,
-  onAiSelectionAskDismiss,
   onAiScopeDismiss,
   onAiCitation,
   onCommand,
@@ -580,6 +595,8 @@ export function ExcelShell({
   pageLayout,
   calcManual,
   onGoalSeek,
+  onDataTable,
+  onGetDataTableRange,
   onFillSeries,
   onGetFillSeriesContext,
 }: ExcelShellProps): React.JSX.Element {
@@ -673,6 +690,7 @@ export function ExcelShell({
   }
   const [showSubtotalDialog, setShowSubtotalDialog] = useState(false)
   const [showGoalSeek, setShowGoalSeek] = useState(false)
+  const [showDataTable, setShowDataTable] = useState(false)
   const [showFillSeries, setShowFillSeries] = useState(false)
   const [showConsolidateDialog, setShowConsolidateDialog] = useState(false)
   const [showGoTo, setShowGoTo] = useState(false)
@@ -725,6 +743,7 @@ export function ExcelShell({
     else if (command.startsWith('insert-function-open:'))
       openInsertFunction(command.slice('insert-function-open:'.length))
     else if (command === 'goal-seek-open') setShowGoalSeek(true)
+    else if (command === 'data-table-open') setShowDataTable(true)
     else if (command === 'fill-series-open') setShowFillSeries(true)
     else if (command === 'subtotal-open') setShowSubtotalDialog(true)
     else if (command === 'consolidate-open') setShowConsolidateDialog(true)
@@ -774,6 +793,8 @@ export function ExcelShell({
         cellEditing: onIsCellEditingRef.current(),
         gridTarget: isGridKeyTarget(event.target),
         formulaBarTarget: isFormulaBarKeyTarget(event.target),
+        currencySymbol: ribbonCurrencySymbol(getLang()),
+        datePattern: ribbonDatePattern(getLang()),
       })
       if (!action) return
       event.preventDefault()
@@ -1002,6 +1023,7 @@ export function ExcelShell({
       <div className={`sheet-body${!aiSidebarEnabled && !aiDock.open ? ' ai-dock-off' : ''}`}>
         <AiChatPanel
           isOpen={aiDock.open}
+          focusRequest={openAiRequest}
           hideRail={!aiSidebarEnabled}
           hasContent={sheetHasContent}
           chat={chat}
@@ -1041,6 +1063,7 @@ export function ExcelShell({
           onCitation={onAiCitation}
           onExpand={aiDock.onExpand}
           onCollapse={() => setIsCopilotOpen(false)}
+          project={aiProject}
         />
         <div className="sheet-main">
           <section className="workbook-area">
@@ -1075,18 +1098,6 @@ export function ExcelShell({
               </div>
             )}
           </section>
-          {aiSelectionAskAnchor && aiScopeRange && !aiBusy && (
-            <AiSelectionAsk
-              anchor={aiSelectionAskAnchor}
-              range={aiScopeRange}
-              onDismiss={onAiSelectionAskDismiss}
-              onSend={(instruction) => {
-                setIsCopilotOpen(true)
-                onSend(instruction)
-              }}
-            />
-          )}
-
           {/* Status bar spans the sheet column only — the AI dock keeps the full window height (unified with docs/slides). */}
           <footer className="status-bar" onContextMenu={openStatsMenu}>
             <div className="status-left">
@@ -1306,6 +1317,13 @@ export function ExcelShell({
           onClose={() => setShowGoalSeek(false)}
         />
       )}
+      {showDataTable && (
+        <DataTableDialog
+          initialRange={onGetDataTableRange()}
+          onApply={onDataTable}
+          onClose={() => setShowDataTable(false)}
+        />
+      )}
       {insertFunction !== null && (
         <InsertFunctionFlow
           functions={liveFunctions}
@@ -1364,9 +1382,21 @@ export function ExcelShell({
           const snapshot = onGetProtectedRanges()
           return (
             <AllowEditRangesDialog
-              ranges={snapshot.error === null ? snapshot.ranges : []}
+              ranges={
+                snapshot.error === null
+                  ? snapshot.ranges.map((range) => ({
+                      name: range.name,
+                      sqref: range.sqref,
+                      hasPassword: range.hasPassword,
+                      locked: range.hasPassword && range.password === undefined,
+                    }))
+                  : []
+              }
               defaultRef={activeCellA1}
-              onApply={(ranges) => snapshot.error ?? onApplyProtectedRanges(ranges)}
+              onApply={(ranges) => {
+                const failed = snapshot.error ?? onApplyProtectedRanges(ranges)
+                return failed instanceof Promise ? failed : Promise.resolve(failed)
+              }}
               onClose={() => setShowAllowEditRanges(false)}
             />
           )
@@ -3149,6 +3179,7 @@ function Ribbon({
         <RibbonGroup label={t('appGroupForecast')}>
           {largeMenu(t('appWhatIfAnalysis'), '❔', t('appWhatIfTitle'), [
             { value: 'goal-seek-open', label: t('appGoalSeek') },
+            { value: 'data-table-open', label: t('appDataTable') },
           ])}
         </RibbonGroup>
         <RibbonGroup label={t('appGroupOutline')}>
@@ -3835,9 +3866,9 @@ function Ribbon({
             <button
               data-tip={t('appCurrency')}
               aria-label={t('appCurrency')}
-              onClick={() => onCommand(`format:${accountingStyle(RIBBON_CURRENCY_SYMBOL)}`)}
+              onClick={() => onCommand(`format:${accountingStyle(ribbonCurrencySymbol(lang))}`)}
             >
-              $
+              {ribbonCurrencySymbol(lang)}
             </button>
             <button
               data-tip={t('appPercentTitle')}

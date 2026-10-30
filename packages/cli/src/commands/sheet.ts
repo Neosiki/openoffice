@@ -13,7 +13,7 @@ import {
 import { checkWorkbook, SHEET_CHECKS } from '../formats/xlsx-check'
 import { runWorkbookDsl, SUPPORTED_DSL_OPS, type DslOutcome } from '../formats/xlsx-dsl'
 import { hasGatewayPayloads, type GatewayPayloads } from '../formats/xlsx-gateway-ops'
-import { readInput, resolveInput, resolveOutput } from '../fs'
+import { readInput, resolveInput, resolveOutput, stripBom } from '../fs'
 import type { CommandContext, CommandDef } from '../registry'
 import { checkResult } from '../check'
 import { CliError, EXIT, type CommandResult, type Warning } from '../result'
@@ -196,6 +196,22 @@ async function apply(
   const path = resolveInput(file, ctx)
   const cellsSpec = flagString(args, 'cells')
   const opsSpec = flagString(args, 'ops')
+  if (cellsSpec && opsSpec) {
+    throw new CliError(EXIT.usage, 'choose either --cells or --ops, not both', undefined, {
+      reason: 'invalid_argument',
+    })
+  }
+  if (cellsSpec) {
+    const unsupported = ['dry-run', ...BATCH_OPTIONS.map((option) => option.name)].find((name) =>
+      flagBool(args, name),
+    )
+    if (unsupported) {
+      throw new CliError(EXIT.usage, `--${unsupported} requires --ops, not --cells`, undefined, {
+        reason: 'invalid_argument',
+        suggestion: 'use --ops for a dry run or a non-atomic batch; nothing was written',
+      })
+    }
+  }
   if (!cellsSpec && !opsSpec)
     throw new CliError(EXIT.usage, 'missing --cells <file|-> or --ops <file|->', undefined, {
       reason: 'missing_argument',
@@ -205,8 +221,9 @@ async function apply(
 }
 
 function readJsonList(spec: string, flag: string, ctx: CommandContext): unknown[] {
-  const text =
-    spec === '-' ? readFileSync(0, 'utf-8') : readFileSync(resolveInput(spec, ctx), 'utf-8')
+  const text = stripBom(
+    spec === '-' ? readFileSync(0, 'utf-8') : readFileSync(resolveInput(spec, ctx), 'utf-8'),
+  )
   let parsed: unknown
   try {
     parsed = JSON.parse(text)

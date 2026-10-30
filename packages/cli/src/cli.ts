@@ -105,7 +105,18 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
     stdout: (t) => process.stdout.write(t + '\n'),
     stderr: (t) => process.stderr.write(t + '\n'),
   }
-  const args = parseArgs(argv, booleanFlags(registry))
+  let args: ReturnType<typeof parseArgs>
+  try {
+    args = parseArgs(argv, booleanFlags(registry))
+  } catch (err) {
+    if (!(err instanceof CliError)) throw err
+    // Parsing failed before a command was selected; only real flags select JSON output.
+    const end = argv.indexOf('--')
+    const json = argv.slice(0, end === -1 ? argv.length : end).includes('--json')
+    if (json) io.stdout(JSON.stringify(toJsonError(null, err)))
+    else io.stderr(formatHumanError(err))
+    return err.code
+  }
   const json = flagBool(args, 'json')
   const name = args.positionals.shift() ?? null
 
