@@ -1,6 +1,6 @@
 {
   "name": "@rhwp/core",
-  "version": "0.8.7-ieum.14",
+  "version": "0.8.7-ieum.15",
   "description": "rhwp v0.8.7 HWP/HWPX engine (WebAssembly) rebuilt with the patches in ./patches",
   "private": true,
   "type": "module",
@@ -43,7 +43,8 @@
       "0022-selection-follows-drawn-lines.patch",
       "0023-duplex-master-page-shift.patch",
       "0024-picture-effect-opacity.patch",
-      "0025-page-number-pages.patch"
+      "0025-page-number-pages.patch",
+      "0026-hwpx-drop-rows-covered-by-merged-cells.patch"
     ],
     "wasmPack": "0.15.0",
     "wasmSha256": "455b77e984f3a9cb76b622dd423183e3423a972ff849e74abc692c6038e0dc60"
