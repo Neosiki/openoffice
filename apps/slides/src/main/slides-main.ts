@@ -23,7 +23,7 @@ import { execFile } from 'node:child_process'
 import { readFile, writeFile, mkdir, open } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { cleanupExpiredGeneratedPages } from './generated-page-temp'
 import { exportSlidesPdf } from './pdf-export'
 import { printSlidesHtml } from './print-window'
@@ -1285,6 +1285,17 @@ function nameGeneratedDeck(session: Session, deckName?: string): void {
   const base = sanitizeDraftBaseName(deckName)
   if (base && !session.firstSaveName) session.firstSaveName = `${base}.pptx`
   session.askPathOnFirstSave = true
+}
+
+/**
+ * The file name an untitled deck is written under in a project folder (spec
+ * 6): its suggested first-save name, else the untitled name; a bare name with
+ * the .pptx extension (the folder is the shell's to choose).
+ */
+function projectDeckFileName(firstSaveName: string | undefined): string {
+  const named = firstSaveName ? basename(firstSaveName).replace(/\.pptx$/i, '') : ''
+  const base = sanitizeDraftBaseName(named) ?? sanitizeDraftBaseName(tm('untitledDeck'))
+  return `${base ?? 'presentation'}.pptx`
 }
 
 /** Theme body (minor) Latin font: fallback shown in the ribbon font box when the selection has no text element. */
@@ -4762,11 +4773,15 @@ export function registerSlidesIpc(): void {
     // and new blank decks alike); the AutoSave pass leaves it alone until then
     if (!session.path) {
       if (auto === true) return { ok: false, reason: 'external-modified' }
+      const firstName = session.firstSaveName || `${tm('untitledDeck')}.pptx`
+      // a deck whose panel has a project is offered in that folder (spec 6)
+      const projectDir = await runtime.newDocumentDir?.(e.sender.id)
       const picked = await showSaveDialogWithMemory(
         dialog,
         dialogParent(),
         {
-          defaultPath: session.firstSaveName || `${tm('untitledDeck')}.pptx`,
+          defaultPath:
+            projectDir && !isAbsolute(firstName) ? join(projectDir, firstName) : firstName,
           filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
         },
         getDraftsDir(),
@@ -4821,6 +4836,46 @@ export function registerSlidesIpc(): void {
       }
     } catch (err) {
       return { ok: false, error: String(err) }
+    }
+  })
+
+  // Project folders (spec 6): the run a create flow handed to this untitled deck
+  // ended well. The deck's bytes go to the shell's project writer, which picks
+  // the folder from the panel's project and a free name (never over a file);
+  // the renderer names neither. The deck then becomes that file like a first
+  // save. Without a project (or a shell) nothing is written: `skipped`.
+  ipcMain.handle('slides:save-into-project', async (e) => {
+    const session = sessions.get(e.sender.id)
+    const write = runtime.writeNewDocument
+    if (!session || session.path || session.masterEdit || !write) {
+      return { ok: false, skipped: true }
+    }
+    const fileName = projectDeckFileName(session.firstSaveName)
+    try {
+      const metaRevAtSave = session.metaRev ?? 0
+      const written = await write(
+        e.sender.id,
+        fileName,
+        deckFileBytes(session, await savePptx(session.opened)),
+      )
+      // no project chosen, or a save that asked where landed meanwhile
+      if (!written || session.path) return { ok: false, skipped: true }
+      session.path = written
+      session.askPathOnFirstSave = false
+      followTemplateSelection(session, '', written)
+      await pushRecent(written)
+      slidesOpenedHook?.(e.sender, written)
+      session.diskState = (await recordDiskState(written)) ?? undefined
+      recoveryCopiesSaved(session, '')
+      commitSaved(session.opened)
+      if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+      return {
+        ok: true,
+        path: written,
+        slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
+      }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
 

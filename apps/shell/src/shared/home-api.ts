@@ -236,8 +236,10 @@ export interface HomeApi {
   /** one page of a corpus file's parsed text (path must be in kbList; with `scope`, in the run's group) */
   kbRead(path: string, offset: number, scope?: string): Promise<KbReadPage>
   /** open a run narrowed to one starred group; main mints the scope and keeps the narrowing.
-   *  Rejects when the group has no starred files (the run must not widen to all) */
-  kbOpenScope(group: string): Promise<string>
+   *  Rejects when the group has no starred files (the run must not widen to all).
+   *  With a project chosen in the home ask: `{ group, projectId }`, the project folder
+   *  plus the starred part (null: every starred file) */
+  kbOpenScope(group: string | { group?: string | null; projectId: string }): Promise<string>
   /** the narrowed run is over */
   kbCloseScope(scope: string): Promise<void>
   /** write the AI's markdown as a new .md / .docx in the save folder; resolves to its path */

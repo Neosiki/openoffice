@@ -32,6 +32,21 @@ export interface RuntimePaths {
   rendererFilePath?: string | undefined
   /** Shell router used to open exported PDFs in a new GenOffice tab. */
   openGeneratedPath?: (path: string) => boolean
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
+  /**
+   * Project folders (spec 6): write a new deck the AI made for this view into
+   * the project its panel chose (the shell picks the folder and a free name,
+   * never over a file); resolves to the path written, or null without a project.
+   */
+  writeNewDocument?: (
+    webContentsId: number,
+    fileName: string,
+    bytes: Uint8Array,
+  ) => Promise<string | null>
 }
 
 export const runtime: RuntimePaths = {
@@ -45,6 +60,8 @@ export function configureSlidesRuntime(paths: RuntimePaths): void {
   runtime.rendererDevUrl = paths.rendererDevUrl
   runtime.rendererFilePath = paths.rendererFilePath
   runtime.openGeneratedPath = paths.openGeneratedPath
+  runtime.newDocumentDir = paths.newDocumentDir
+  runtime.writeNewDocument = paths.writeNewDocument
 }
 
 // One session per renderer process (standalone window or shell tab), keyed by webContents.id

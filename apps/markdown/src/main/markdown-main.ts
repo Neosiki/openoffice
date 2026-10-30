@@ -393,6 +393,21 @@ interface RuntimePaths {
   rendererFile?: string
   /** Shell router used to open exported PDFs in a new GenOffice tab. */
   openGeneratedPath?: (path: string) => boolean
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
+  /**
+   * Project folders (spec 6): write a new document the AI made in this view
+   * into the project its panel chose (a free name, never over a file);
+   * resolves to the path written, or null when the panel has no project.
+   */
+  writeNewDocument?: (
+    webContentsId: number,
+    fileName: string,
+    bytes: Uint8Array,
+  ) => Promise<string | null>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -777,6 +792,29 @@ async function writeTextAtomic(path: string, text: string): Promise<void> {
   await atomicWriteFile(path, Buffer.from(text, 'utf8'))
 }
 
+/** A suggested name as a file name stem: no path characters, at most 80 characters */
+function suggestedBase(suggestedName: string): string {
+  return suggestedName
+    .replace(/[/\\:*?"<>|]/g, '_')
+    .slice(0, 80)
+    .trim()
+}
+
+/**
+ * The AI's silent first save while this view's panel has a project (spec 6):
+ * the note goes into that project folder through its write guard. Null (nothing
+ * written) without a project; the default save folder then takes it as before.
+ */
+async function saveIntoProject(
+  wcId: number,
+  suggestedName: string,
+  text: string,
+): Promise<string | null> {
+  const base = suggestedBase(suggestedName)
+  if (!base || !runtime.writeNewDocument) return null
+  return runtime.writeNewDocument(wcId, `${base}.md`, Buffer.from(text, 'utf8'))
+}
+
 async function resolveSaveTarget(
   e: Electron.IpcMainInvokeEvent,
   mode: SaveMode,
@@ -787,10 +825,7 @@ async function resolveSaveTarget(
   if (mode === 'save' && current) return current
   // AI auto-naming: silent first save of an untitled document
   if (mode === 'save' && !current && suggestedName) {
-    const base = suggestedName
-      .replace(/[/\\:*?"<>|]/g, '_')
-      .slice(0, 80)
-      .trim()
+    const base = suggestedBase(suggestedName)
     if (base) {
       const dir = configuredDefaultSaveDir(app)
       let target = join(dir, `${base}.md`)
@@ -803,7 +838,11 @@ async function resolveSaveTarget(
   const defaultPath = current
     ? join(dirname(current), basename(current))
     : (recovery.saveAsDefaultPath(e.sender.id) ??
-      join(configuredDefaultSaveDir(app), `${tm('untitledFile')}.md`))
+      join(
+        // an untitled note whose panel has a project starts in that folder (spec 6)
+        (await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app),
+        `${tm('untitledFile')}.md`,
+      ))
   // With PDF offered, the suggestion carries no extension: the file type chosen
   // in the dialog supplies .md or .pdf (a typed name keeps its own extension)
   const suggestedPath = allowPdf ? defaultPath.replace(/\.(md|markdown)$/i, '') : defaultPath
@@ -1013,7 +1052,13 @@ function registerMarkdownIpc(): void {
       try {
         const suggestedName =
           typeof request.suggestedName === 'string' ? request.suggestedName : undefined
-        const target = await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined)
+        // the AI's silent first save lands in the panel's project when it has one
+        const placed =
+          mode === 'save' && !pathAtRequest && suggestedName
+            ? await saveIntoProject(e.sender.id, suggestedName, request.text)
+            : null
+        const target =
+          placed ?? (await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined))
         if (target === 'canceled') return done({ ok: true, canceled: true })
         if (!target) return done({ ok: false, error: 'markdown: no save target' })
         if (pdfHtml !== undefined && /\.pdf$/i.test(target)) {
@@ -1045,7 +1090,8 @@ function registerMarkdownIpc(): void {
         const textToWrite = prepared?.text ?? request.text
         const savedImageSources = prepared?.imageSources ?? imageSources
         try {
-          await writeTextAtomic(target, textToWrite)
+          // a note placed in the project was written by the project's write guard
+          if (!placed) await writeTextAtomic(target, textToWrite)
         } catch (error) {
           if (prepared) await rollbackPreparedSaveAsAssets(prepared).catch(() => {})
           throw error

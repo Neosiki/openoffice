@@ -1626,8 +1626,30 @@ interface SheetsRuntimeConfig {
   sidecarPath?: string | undefined
   /** Shell router used to open exported/AI-generated files in a new GenOffice tab. */
   openGeneratedPath?: (path: string) => boolean
-  /** Host-owned cross-app document creator (the shell routes docx/pdf/md into Docs). */
-  createDocument?: (request: SheetsAiHostDocumentRequest) => Promise<WorkbookCreateDocumentResult>
+  /**
+   * Host-owned cross-app document creator (the shell routes docx/pdf/md into Docs).
+   * `ownerWebContentsId` is the asking view: its panel's project decides where
+   * the document goes (spec 6).
+   */
+  createDocument?: (
+    request: SheetsAiHostDocumentRequest,
+    ownerWebContentsId?: number,
+  ) => Promise<WorkbookCreateDocumentResult>
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
+  /**
+   * Project folders (spec 6): write a new document the AI made in this view
+   * into the project its panel chose (a free name, never over a file);
+   * resolves to the path written, or null when the panel has no project.
+   */
+  writeNewDocument?: (
+    webContentsId: number,
+    fileName: string,
+    bytes: Uint8Array,
+  ) => Promise<string | null>
 }
 
 let runtime: SheetsRuntimeConfig = {
@@ -3691,31 +3713,35 @@ export function registerSheetsIpc(): void {
       const request = workbookCreateDocumentRequestSchema.parse(input)
       try {
         if (request.type === 'csv') {
-          const filePath = uniquePathIn(
-            configuredDefaultSaveDir(app),
-            `${sanitizeGeneratedFileBase(request.title)}.csv`,
-          )
+          const fileName = `${sanitizeGeneratedFileBase(request.title)}.csv`
           // UTF-8 BOM so Excel decodes the reopened file correctly (same as exportCsv)
-          await atomicWriteFile(
-            filePath,
-            Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(request.content, 'utf8')]),
-          )
+          const bytes = Buffer.concat([
+            Buffer.from([0xef, 0xbb, 0xbf]),
+            Buffer.from(request.content, 'utf8'),
+          ])
+          // with a project chosen in this view's panel, into that folder (spec 6)
+          const placed = await runtime.writeNewDocument?.(event.sender.id, fileName, bytes)
+          const filePath = placed ?? uniquePathIn(configuredDefaultSaveDir(app), fileName)
+          if (!placed) await atomicWriteFile(filePath, bytes)
           openGeneratedFile(filePath)
           return { ok: true, path: filePath }
         }
         if (request.type === 'xlsx') {
           const buffer = await sheetCsvToXlsxBuffer(request.content, request.sheetName ?? 'Sheet1')
-          const filePath = uniquePathIn(
-            configuredDefaultSaveDir(app),
-            `${sanitizeGeneratedFileBase(request.title)}.xlsx`,
-          )
-          await atomicWriteFile(filePath, buffer)
+          const fileName = `${sanitizeGeneratedFileBase(request.title)}.xlsx`
+          // the workbook is made in memory first; with a project, written into its folder
+          const placed = await runtime.writeNewDocument?.(event.sender.id, fileName, buffer)
+          const filePath = placed ?? uniquePathIn(configuredDefaultSaveDir(app), fileName)
+          if (!placed) await atomicWriteFile(filePath, buffer)
           openGeneratedFile(filePath)
           return { ok: true, path: filePath }
         }
         const create = runtime.createDocument
         if (!create) return { ok: false, error: 'Document creation is unavailable in this host.' }
-        return await create({ type: request.type, title: request.title, content: request.content })
+        return await create(
+          { type: request.type, title: request.title, content: request.content },
+          event.sender.id,
+        )
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
@@ -3782,8 +3808,17 @@ export function registerSheetsIpc(): void {
         session.suggestSaveAs ?? session.restoreTarget ?? session.path,
       )
       const ext = macroEnabled ? 'xlsm' : 'xlsx'
+      // a new workbook whose panel has a project is offered in that folder (spec 6);
+      // a restored one keeps offering where its original was
+      const projectDir =
+        session.unsavedNew && session.suggestSaveAs !== undefined && !session.recoveryOriginalPath
+          ? await runtime.newDocumentDir?.(event.sender.id)
+          : null
       const selection = await saveFileDialog(event, {
         defaultPath:
+          (projectDir && session.suggestSaveAs !== undefined
+            ? join(projectDir, basename(session.suggestSaveAs))
+            : undefined) ??
           session.suggestSaveAs ??
           session.csvSourcePath?.replace(/\.[^.]+$/, '.xlsx') ??
           session.restoreTarget ??

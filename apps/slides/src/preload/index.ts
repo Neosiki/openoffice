@@ -3,6 +3,10 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
 import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
 import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import {
+  PROJECT_FOLDER_BRIDGE_KEY,
+  projectFolderBridge,
+} from '@genoffice/electron-utils/project-folder-bridge'
 import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
 import { docAttachBridge } from '@genoffice/electron-utils/doc-attach-bridge'
 import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
@@ -410,6 +414,7 @@ const api: SlidesApi = {
   printSlides: (op: PrintSlidesOp) => ipcRenderer.invoke('slides:print', op),
   save: (auto?: boolean) => ipcRenderer.invoke('slides:save', auto === true),
   saveAs: (defaultName: string) => ipcRenderer.invoke('slides:save-as', defaultName),
+  saveIntoProject: () => ipcRenderer.invoke('slides:save-into-project'),
   onCloseSaveRequest: (handler: () => void) => {
     const listener = () => handler()
     ipcRenderer.on('slides:close-save-request', listener)
@@ -575,6 +580,8 @@ const projectApi: ProjectApi = {
   rebindChat: (args) => ipcRenderer.invoke('project:rebindChat', args),
 }
 contextBridge.exposeInMainWorld('projectApi', projectApi)
+// project folders (decision 0088): main identifies this window, the bridge forwards ids only
+contextBridge.exposeInMainWorld(PROJECT_FOLDER_BRIDGE_KEY, projectFolderBridge(ipcRenderer))
 
 // The shell's split panes: which pane this view is, and focus requests for it
 contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))

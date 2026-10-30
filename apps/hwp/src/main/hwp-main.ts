@@ -76,6 +76,11 @@ interface RuntimePaths {
   goHome?: () => void
   /** a new Hangul document in a tab (Hangul's Alt+N) */
   newDocument?: () => void
+  /**
+   * Project folders (spec 6): the folder an untitled document's save dialog
+   * opens in for this view, or null for the default save folder.
+   */
+  newDocumentDir?: (webContentsId: number) => Promise<string | null>
 }
 
 let runtime: RuntimePaths = { preloadPath: '' }
@@ -601,11 +606,16 @@ function registerHwpIpc(): void {
         // a brand-new document takes the format chosen in Settings; one restored without
         // its file keeps the format of the file it came from (the recovery suggestion)
         const preferred = readHwpDefaultFormat(app)
+        // a new document whose panel has a project is offered in that folder (spec 6)
+        const newDir = current ? null : await runtime.newDocumentDir?.(wcId)
         const offered = current
           ? join(dirname(current), basename(current))
           : // a copy restored without its file is offered where that file was
             (hwpRecoverySaveAsDefault(wcId) ??
-            join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.${preferred}`))
+            join(
+              newDir ?? configuredDefaultSaveDir(app),
+              copy?.name ?? `${tm('untitledFile')}.${preferred}`,
+            ))
         const fallback: HwpFormat =
           currentFormat ?? copy?.format ?? hwpFormatOfPath(offered) ?? preferred
         const hwp = { name: tm('filterHwp'), extensions: ['hwp'] }
