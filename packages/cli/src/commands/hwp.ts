@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
-import { flagBool, flagString } from '../args'
+import { flagBool } from '../args'
 import { BATCH_OPTIONS, batchCounts, batchMode, batchResult, failedBatch } from '../batch'
 import { HWP_PREVIEW_CHARS, hwpText } from '../formats/hwp'
 import type { HwpEditSession } from '../formats/hwp-edit'
@@ -93,7 +93,7 @@ async function read(
   ctx: CommandContext,
 ): Promise<CommandResult> {
   const { path, ext } = hwpInput(file, ctx)
-  const offset = parseOffset(flagString(args, 'offset'))
+  const offset = parseOffset(args.flags.offset)
   const max = previewChars(args, HWP_PREVIEW_CHARS)
   let text: string
   try {
@@ -110,6 +110,14 @@ async function read(
       { reason: 'out_of_range' },
     )
   }
+  const high = text.charCodeAt(offset - 1)
+  const low = text.charCodeAt(offset)
+  if (high >= 0xd800 && high <= 0xdbff && low >= 0xdc00 && low <= 0xdfff) {
+    throw new CliError(EXIT.usage, `--offset ${offset} splits a Unicode character`, undefined, {
+      reason: 'invalid_argument',
+      suggestion: `use --offset ${offset - 1} or --offset ${offset + 1}`,
+    })
+  }
   const end = Math.min(text.length, cutIndex(text, offset, offset + max))
   const detail: Record<string, unknown> = {
     format: ext,
@@ -125,9 +133,9 @@ async function read(
   return { summary: `${basename(path)}: ${text.length} characters${part}`, detail }
 }
 
-function parseOffset(raw: string | undefined): number {
+function parseOffset(raw: string | true | undefined): number {
   if (raw === undefined) return 0
-  const n = Number(raw)
+  const n = typeof raw === 'string' ? Number(raw) : NaN
   if (!Number.isInteger(n) || n < 0) {
     throw new CliError(
       EXIT.usage,
@@ -223,7 +231,8 @@ export async function runHwpBatch(
   }
   // a batch of reads (list_tables, read_table ...) leaves an existing file as it was: no
   // rewrite, no .bak. A new document is written all the same.
-  if (!results.some((r) => r.changed) && target.output === target.input) {
+  const changed = results.some((r) => r.changed)
+  if (!changed && target.output === target.input) {
     return batchResult(
       {
         summary: `${results.length} of ${ops.length} ops read the document; nothing changed, nothing written`,
@@ -233,7 +242,15 @@ export async function runHwpBatch(
       failures,
     )
   }
-  const saved = await saveHwpSession(session, target.format)
+  // A same-format copy of a read-only batch needs no reserialization.
+  const original = !changed && target.input ? readInput(target.input) : undefined
+  const copy =
+    original && session.mods.savePlan.bytesMatchFormat(original, target.format)
+      ? original
+      : undefined
+  const saved = copy
+    ? { bytes: copy, tailsLost: false, memosLost: 0 }
+    : await saveHwpSession(session, target.format)
   let backupPath: string | undefined
   if (existsSync(target.output)) {
     backupPath = hwpBackupPath(target.output)
@@ -241,7 +258,7 @@ export async function runHwpBatch(
   }
   writeOutput(target.output, saved.bytes)
   const warnings: string[] = []
-  if (session.trackingDropped) {
+  if (session.trackingDropped && !copy) {
     warnings.push(
       'the document held tracked changes: it was edited and written as it reads now, without them',
     )
@@ -276,8 +293,13 @@ async function apply(
   ctx: CommandContext,
 ): Promise<CommandResult> {
   const { path } = hwpInput(file, ctx)
+  const out = args.flags.out
+  if (out === true) {
+    throw new CliError(EXIT.usage, 'missing --out <path>', undefined, {
+      reason: 'missing_argument',
+    })
+  }
   const ops = hwpOpsOf(args, ctx)
-  const out = flagString(args, 'out')
   const output = resolveOutput(out, ctx, {
     fallback: path,
     force: flagBool(args, 'force'),

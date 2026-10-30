@@ -89,8 +89,6 @@ import {
   type AiPanelProject,
   type AiPanelSubscription,
 } from './ai/AiChatPanel'
-import { AiSelectionAsk } from './ai/AiSelectionAsk'
-import type { SelectionAskAnchor } from './ai/selection-ask'
 import {
   PivotDialog,
   type PivotCreateRequest,
@@ -297,17 +295,14 @@ interface ExcelShellProps {
   readonly onStop: () => void
   readonly onNewChat: () => void
   readonly onUndo: (steps?: number) => void
-  /// A1 notation of the multi-cell selection the AI composer offers as this
-  /// run's scope, or null when the resting single-cell selection carries none.
+  /// A1 notation of the selected AI scope, including an explicitly requested
+  /// single cell, or null when there is no scope.
   readonly aiScopeRange: string | null
   /// Header names when that scope covers whole columns: they label the chip in
   /// place of the range, because a column is a name to the user, not a letter.
   readonly aiScopeColumns: readonly string[] | null
   /// The range above belongs to a run in flight and can no longer be dropped.
   readonly aiScopeLocked: boolean
-  /// Drag endpoint and viewport bounds used to place the localized trigger.
-  readonly aiSelectionAskAnchor: SelectionAskAnchor | null
-  readonly onAiSelectionAskDismiss: () => void
   readonly onAiScopeDismiss: () => void
   /// Citation link in an AI answer: jumps the grid to the cited cell/range.
   readonly onAiCitation: (href: string) => void
@@ -553,8 +548,6 @@ export function ExcelShell({
   aiScopeRange,
   aiScopeColumns,
   aiScopeLocked,
-  aiSelectionAskAnchor,
-  onAiSelectionAskDismiss,
   onAiScopeDismiss,
   onAiCitation,
   onCommand,
@@ -1010,6 +1003,7 @@ export function ExcelShell({
       <div className={`sheet-body${!aiSidebarEnabled && !aiDock.open ? ' ai-dock-off' : ''}`}>
         <AiChatPanel
           isOpen={aiDock.open}
+          focusRequest={openAiRequest}
           hideRail={!aiSidebarEnabled}
           hasContent={sheetHasContent}
           chat={chat}
@@ -1084,18 +1078,6 @@ export function ExcelShell({
               </div>
             )}
           </section>
-          {aiSelectionAskAnchor && aiScopeRange && !aiBusy && (
-            <AiSelectionAsk
-              anchor={aiSelectionAskAnchor}
-              range={aiScopeRange}
-              onDismiss={onAiSelectionAskDismiss}
-              onSend={(instruction) => {
-                setIsCopilotOpen(true)
-                onSend(instruction)
-              }}
-            />
-          )}
-
           {/* Status bar spans the sheet column only — the AI dock keeps the full window height (unified with docs/slides). */}
           <footer className="status-bar" onContextMenu={openStatsMenu}>
             <div className="status-left">

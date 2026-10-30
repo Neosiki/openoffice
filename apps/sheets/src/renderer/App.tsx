@@ -288,7 +288,6 @@ import {
   resolveScopeChip,
   type DataExtent,
 } from './ai/selection-scope'
-import { isSelectionDrag, type Point, type SelectionAskAnchor } from './ai/selection-ask'
 import { createAiDocument } from './ai/create-document'
 import { createWorkbookSkill } from './ai/workbook-skill'
 import { findWorkbookCells, selectWorkbookRange } from './ai/workbook-search'
@@ -439,6 +438,7 @@ import { installMenuInputEnter } from './menu-input-enter'
 import { installCellContextMenu } from './cell-context-menu'
 import { installClipboardAnchorTile } from './clipboard-anchor-tile'
 import { installSelectionWrapGuard } from './selection-wrap-fix'
+import { installSelectionAppearance } from './selection-appearance'
 import { sharedFormulaResolverFor } from './shared-formula-journal'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { installBorderOverflowExclusionFix } from './border-overflow-exclusion'
@@ -859,17 +859,9 @@ export function App({
   /// A1 label of the active cell, echoed live by the Name Box. Updated from
   /// the same SelectionChanged refresh that keeps selectionFormat current.
   const [activeCellA1, setActiveCellA1] = useState('')
-  /// The multi-cell selection the AI composer shows as its scope chip, or null.
-  /// A resting single-cell selection carries no intent, so it gets no chip —
-  /// only a range the user deliberately dragged or shift-selected does.
+  /// The selected AI scope: a multi-cell range, or a single cell explicitly
+  /// requested through the context menu. Ordinary cell clicks carry no scope.
   const [aiScope, setAiScope] = useState<FrozenSelection | null>(null)
-  const [aiSelectionAskAnchor, setAiSelectionAskAnchor] = useState<SelectionAskAnchor | null>(null)
-  const selectionDragRef = useRef<{
-    start: Point
-    initialRangeKey: string | null
-    dragged: boolean
-    selectionChanged: boolean
-  } | null>(null)
   /// The user clicked × on the scope chip: this run targets the sheet at large.
   /// Re-arms on the next selection change, so a fresh drag means a fresh scope.
   const [aiScopeDismissed, setAiScopeDismissed] = useState(false)
@@ -2175,6 +2167,7 @@ export function App({
     // must precede the first render: the filter render module registers at
     // lifecycle Rendered, and Excel draws no outline around a filtered range
     installFilterRangeOutlineSuppression(runtime)
+    const selectionAppearance = installSelectionAppearance(runtime)
     installVeryHiddenSheetGuard(runtime, lazyWorkbookRef)
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
     univerRef.current = runtime
@@ -2206,6 +2199,7 @@ export function App({
     const themeService = runtime.univer.__getInjector().get(ThemeService)
     const applyUniverDark = () => {
       themeService.setDarkMode(isDarkTheme())
+      selectionAppearance.refresh()
       crossHighlightRef.current?.refresh()
     }
     const offThemeChanged = window.desktopApi?.onThemeChanged?.(applyUniverDark)
@@ -2487,7 +2481,6 @@ export function App({
     const scrollDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.Scroll,
       (params) => {
-        setAiSelectionAskAnchor(null)
         const { worksheet } = params
         // The event carries the true post-scroll position; getVisibleRange
         // inside loadVisibleRange lags a frame.
@@ -2530,7 +2523,6 @@ export function App({
     const zoomDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.SheetZoomChanged,
       ({ worksheet }) => {
-        setAiSelectionAskAnchor(null)
         setZoomPercent(Math.round(worksheet.getZoom() * 100))
       },
     )
@@ -2551,7 +2543,6 @@ export function App({
       () => {
         editingCellRef.current = true
         syncCellEditorPending()
-        setAiSelectionAskAnchor(null)
       },
     )
     const editEndDisposable = runtime.univerAPI.addEvent(
@@ -2564,7 +2555,6 @@ export function App({
     const sheetDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.ActiveSheetChanged,
       ({ activeSheet }) => {
-        setAiSelectionAskAnchor(null)
         void loadVisibleRange(runtime, lazyWorkbookRef, activeSheet, setMessage)
         // formula view is per-sheet (sheetView/@showFormulas)
         applyShowFormulasView(runtime, lazyWorkbookRef.current, activeSheet.getSheetId())
@@ -3562,94 +3552,9 @@ export function App({
           },
         })
       : () => undefined
-    let selectionAskRaf: number | null = null
-    let selectionAskSettleRaf: number | null = null
-    let selectionAskSettling = false
-    const activeRangeKey = (): string | null => {
-      try {
-        const range = runtime.univerAPI.getActiveWorkbook()?.getActiveRange()?.getRange()
-        return range
-          ? `${range.startRow}:${range.startColumn}:${range.endRow}:${range.endColumn}`
-          : null
-      } catch {
-        return null
-      }
-    }
-    const onSelectionPointerDown = (event: PointerEvent): void => {
-      if (event.button !== 0 || gridHost?.classList.contains('sheet-shape-drawing')) return
-      setAiSelectionAskAnchor(null)
-      selectionDragRef.current = {
-        start: { x: event.clientX, y: event.clientY },
-        initialRangeKey: activeRangeKey(),
-        dragged: false,
-        selectionChanged: false,
-      }
-    }
-    const onSelectionPointerMove = (event: PointerEvent): void => {
-      const gesture = selectionDragRef.current
-      if (!gesture || gesture.dragged) return
-      gesture.dragged = isSelectionDrag(gesture.start, { x: event.clientX, y: event.clientY })
-    }
-    const finishSelectionPointer = (event: PointerEvent): void => {
-      const gesture = selectionDragRef.current
-      selectionDragRef.current = null
-      if (!gesture?.dragged || event.type === 'pointercancel') return
-      const pointer = { x: event.clientX, y: event.clientY }
-      selectionAskSettling = true
-      if (selectionAskRaf !== null) cancelAnimationFrame(selectionAskRaf)
-      selectionAskRaf = requestAnimationFrame(() => {
-        selectionAskRaf = null
-        if (editingCellRef.current || !gridHost) {
-          selectionAskSettling = false
-          return
-        }
-        try {
-          const bounds = runtime.univerAPI.getActiveWorkbook()?.getActiveRange()?.getRange()
-          if (
-            !bounds ||
-            (bounds.endRow === bounds.startRow && bounds.endColumn === bounds.startColumn)
-          ) {
-            setAiSelectionAskAnchor(null)
-            return
-          }
-          const finalRangeKey = activeRangeKey()
-          if (!gesture.selectionChanged && finalRangeKey === gesture.initialRangeKey) return
-          const viewport = gridHost.getBoundingClientRect()
-          setAiSelectionAskAnchor({
-            pointer,
-            bounds: {
-              left: viewport.left,
-              top: viewport.top,
-              right: viewport.right,
-              bottom: viewport.bottom,
-            },
-          })
-        } catch {
-          setAiSelectionAskAnchor(null)
-        } finally {
-          if (selectionAskSettleRaf !== null) cancelAnimationFrame(selectionAskSettleRaf)
-          selectionAskSettleRaf = requestAnimationFrame(() => {
-            selectionAskSettleRaf = null
-            selectionAskSettling = false
-          })
-        }
-      })
-    }
-    const cancelSelectionPointer = (): void => {
-      if (!selectionDragRef.current) return
-      selectionDragRef.current = null
-      setAiSelectionAskAnchor(null)
-    }
-    gridHost?.addEventListener('pointerdown', onSelectionPointerDown, true)
-    window.addEventListener('pointermove', onSelectionPointerMove, true)
-    window.addEventListener('pointerup', finishSelectionPointer, true)
-    window.addEventListener('pointercancel', finishSelectionPointer, true)
-    window.addEventListener('blur', cancelSelectionPointer)
     const selectionDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.SelectionChanged,
       () => {
-        if (selectionDragRef.current) selectionDragRef.current.selectionChanged = true
-        else if (!selectionAskSettling) setAiSelectionAskAnchor(null)
         refreshSelectionFormatRef.current()
         // A grid click ends any floating-visual selection.
         clearVisualSelection()
@@ -3705,6 +3610,7 @@ export function App({
       unsubscribeCloseSave()
       offThemeChanged?.()
       offDocThemeChanged?.()
+      selectionAppearance.dispose()
       offAuthorChanged?.()
       undoRedoSub.unsubscribe()
       findRevealDispose()
@@ -3774,13 +3680,6 @@ export function App({
       contentDisposable.dispose()
       disposePictureTransfer()
       disposeWheelZoom()
-      gridHost?.removeEventListener('pointerdown', onSelectionPointerDown, true)
-      window.removeEventListener('pointermove', onSelectionPointerMove, true)
-      window.removeEventListener('pointerup', finishSelectionPointer, true)
-      window.removeEventListener('pointercancel', finishSelectionPointer, true)
-      window.removeEventListener('blur', cancelSelectionPointer)
-      if (selectionAskRaf !== null) cancelAnimationFrame(selectionAskRaf)
-      if (selectionAskSettleRaf !== null) cancelAnimationFrame(selectionAskSettleRaf)
       if (visualInstallTimerRef.current) clearTimeout(visualInstallTimerRef.current)
       disposeVisuals(visualDisposablesRef.current)
       visualViewportKeyRef.current = ''
@@ -4476,6 +4375,13 @@ export function App({
   }
 
   function handleRibbonCommand(command: string): void {
+    if (command === 'ai-ask-selection') {
+      const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
+      if (!range) return
+      refreshAiScope(range, true)
+      setOpenAiRequest((n) => n + 1)
+      return
+    }
     if (command === 'watch-window') {
       setWatchOpen((open) => !open)
       return
@@ -4599,10 +4505,12 @@ export function App({
     setAiScopeDismissed(false)
   }
 
-  /// Keeps the AI composer's scope chip in sync with the grid selection. Only a
-  /// multi-cell range becomes a scope; moving to a different range re-arms a
-  /// chip the user had dismissed, so a fresh drag means a fresh scope.
-  function refreshAiScope(range: NonNullable<ReturnType<ActiveWorkbook['getActiveRange']>>): void {
+  /// The context menu explicitly scopes even one cell and re-arms a dismissed
+  /// chip. Keep that scope on format refreshes until the selection changes.
+  function refreshAiScope(
+    range: NonNullable<ReturnType<ActiveWorkbook['getActiveRange']>>,
+    explicit = false,
+  ): void {
     const worksheet = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()
     const sheetId = worksheet?.getSheetId()
     let bounds: IRange
@@ -4613,8 +4521,14 @@ export function App({
       return
     }
     const multiCell = bounds.endRow > bounds.startRow || bounds.endColumn > bounds.startColumn
-    if (!multiCell || !worksheet || !sheetId) {
+    if (!worksheet || !sheetId) {
       clearAiScope()
+      return
+    }
+    if (!multiCell && !explicit) {
+      // Keep an explicitly chosen cell on refresh without scanning the sheet's
+      // data extent on every ordinary cell click.
+      if (aiScopeKeyRef.current !== `${sheetId}!${boundsToA1(bounds)}`) clearAiScope()
       return
     }
     let scope: FrozenSelection
@@ -4625,9 +4539,11 @@ export function App({
         columnCount: worksheet.getMaxColumns(),
       })
       // Display text, so a date header names itself rather than its serial.
-      const columns = columnScopeHeaders(clamped, extent, (column) =>
-        String(worksheet.getRange(0, column, 1, 1).getDisplayValue() ?? ''),
-      )
+      const columns = multiCell
+        ? columnScopeHeaders(clamped, extent, (column) =>
+            String(worksheet.getRange(0, column, 1, 1).getDisplayValue() ?? ''),
+          )
+        : null
       scope = { a1: boundsToA1(clamped), sheetId, ...(columns ? { columns } : {}) }
     } catch {
       // same disposing-workbook race as above, now over the extent/header reads
@@ -4636,7 +4552,7 @@ export function App({
     // Keyed on the clamped range: two whole-column drags of different heights
     // are the same scope, and re-selecting one must not re-arm a dismissed chip.
     const key = `${sheetId}!${scope.a1}`
-    if (aiScopeKeyRef.current === key) return
+    if (!explicit && aiScopeKeyRef.current === key) return
     aiScopeKeyRef.current = key
     setAiScope(scope)
     setAiScopeDismissed(false)
@@ -5586,11 +5502,8 @@ export function App({
         aiScopeRange={aiScopeChip.range}
         aiScopeColumns={aiScopeChip.columns ?? null}
         aiScopeLocked={aiScopeChip.locked}
-        aiSelectionAskAnchor={aiSelectionAskAnchor}
-        onAiSelectionAskDismiss={() => setAiSelectionAskAnchor(null)}
         onAiScopeDismiss={() => {
           setAiScopeDismissed(true)
-          setAiSelectionAskAnchor(null)
         }}
         onAiCitation={handleAiCitation}
         canUndo={univerHist.canUndo || (!lazyWorkbookRef.current && adapterRef.current.canUndo)}
