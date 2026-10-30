@@ -56,7 +56,7 @@ import {
   type PasteSpecialSource,
 } from './paste-special'
 import { COLOR_SCHEMES, FONT_SCHEMES, THEME_PRESETS } from './themes'
-import { useI18n, type StringKey } from './i18n/locale'
+import { getLang, useI18n, type StringKey } from './i18n/locale'
 import { NameManagerDialog, type DefinedNameAction, type DefinedNameRow } from './NameManagerDialog'
 import {
   NUMBER_FORMAT_LABEL,
@@ -75,7 +75,8 @@ import {
   accountingStyle,
   COMMA_STYLE,
   PERCENT_STYLE,
-  RIBBON_CURRENCY_SYMBOL,
+  ribbonCurrencySymbol,
+  ribbonDatePattern,
 } from './excel-format-shortcuts'
 import { isModalOpen, resolveGlobalShortcut } from './global-shortcuts'
 import { stepFontSize } from './font-size-ladder'
@@ -767,6 +768,8 @@ export function ExcelShell({
         cellEditing: onIsCellEditingRef.current(),
         gridTarget: isGridKeyTarget(event.target),
         formulaBarTarget: isFormulaBarKeyTarget(event.target),
+        currencySymbol: ribbonCurrencySymbol(getLang()),
+        datePattern: ribbonDatePattern(getLang()),
       })
       if (!action) return
       event.preventDefault()
@@ -3817,9 +3820,9 @@ function Ribbon({
             <button
               data-tip={t('appCurrency')}
               aria-label={t('appCurrency')}
-              onClick={() => onCommand(`format:${accountingStyle(RIBBON_CURRENCY_SYMBOL)}`)}
+              onClick={() => onCommand(`format:${accountingStyle(ribbonCurrencySymbol(lang))}`)}
             >
-              $
+              {ribbonCurrencySymbol(lang)}
             </button>
             <button
               data-tip={t('appPercentTitle')}

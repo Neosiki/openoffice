@@ -1881,6 +1881,31 @@ export function recordSetNumfmt(
   return recorded
 }
 
+/// Ingests a `sheet.mutation.remove.numfmt` payload (`{ranges}`): undoing a
+/// format edit, or a culture-specific input that inserted a date format.
+export function recordRemoveNumfmt(
+  journal: EditJournal,
+  sheetId: string,
+  params: unknown,
+): JournalEntry[] {
+  if (typeof params !== 'object' || params === null) return []
+  const { ranges } = params as { ranges?: unknown }
+  if (!Array.isArray(ranges)) return []
+  const recorded: JournalEntry[] = []
+  for (const range of ranges) {
+    if (typeof range !== 'object' || range === null) continue
+    const { startRow, endRow, startColumn, endColumn } = range as Record<string, unknown>
+    if (![startRow, endRow, startColumn, endColumn].every(isBoundedIndex)) continue
+    for (let row = startRow as number; row <= (endRow as number); row += 1) {
+      for (let column = startColumn as number; column <= (endColumn as number); column += 1) {
+        const entry = mergeIntoJournal(journal, sheetId, row, column, { s: { n: null } })
+        if (entry) recorded.push(entry)
+      }
+    }
+  }
+  return recorded
+}
+
 /// Guards the numfmt range expansion: a malformed huge range must not spin.
 function isBoundedIndex(value: unknown): boolean {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 1_048_576
@@ -2240,10 +2265,14 @@ export function toNeutralStyle(s: Record<string, unknown>): WorkbookStyleEdit | 
       }
     }
   }
-  const pattern =
-    typeof s.n === 'object' && s.n !== null ? (s.n as Record<string, unknown>).pattern : undefined
-  if (typeof pattern === 'string' && pattern.length > 0 && pattern.length <= 255) {
-    style.numberFormat = pattern
+  if ('n' in s) {
+    if (s.n === null) style.numberFormat = null
+    else if (typeof s.n === 'object') {
+      const pattern = (s.n as Record<string, unknown>).pattern
+      if (typeof pattern === 'string' && pattern.length > 0 && pattern.length <= 255) {
+        style.numberFormat = pattern
+      }
+    }
   }
   if ('bd' in s && typeof s.bd === 'object' && s.bd !== null) {
     const bd = s.bd as Record<string, unknown>

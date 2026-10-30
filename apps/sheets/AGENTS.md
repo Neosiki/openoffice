@@ -47,6 +47,7 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - `dependencies`에 올린 `@genoffice/*` 패키지는 `electron.vite.config.ts`의 `externalizeDepsPlugin` `exclude`에도 있어야 한다. preload는 샌드박스에서 임의의 npm 패키지를 require할 수 없으므로 `@genoffice/ai-provider`(구독 채널 이름)와 `@genoffice/electron-utils`를 번들에 넣는다.
 - 디자인 템플릿 글꼴은 쓸 때만 불러온다. 시작할 때는 면마다 `genoffice-docx-media://template-fonts/<file>` 주소의 `FontFace`를 바이트를 읽지 않고 등록만 한다. shell 안에서는 워드 편집기의 메인이 이 주소에 답하고(`apps/docs/src/main/lazy-media.ts`, 응답은 `@genoffice/electron-utils/template-font-response`, 면 목록과 주소는 `@genoffice/ui/template-fonts`), 시트를 단독으로 띄우면 시트 메인이 직접 답한다(`src/main/template-fonts.ts`, 목록에 있는 파일 이름만). 통합 문서를 열면 그 문서가 쓰는 템플릿 패밀리를 먼저 불러(최대 3초) 첫 레이아웃이 실제 글꼴로 재게 하고, 면 하나가 다 불러지면 글자 측정 캐시를 버리고 시트를 다시 그린다. PDF 내보내기와 인쇄의 숨은 창은 페이지가 선언한 글꼴만 보므로 같은 파일을 `file://` `@font-face`로 적는다. 저장되는 .xlsx는 바뀌지 않는다.
 - 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `dialogs/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
+- **숫자 서식의 요일·월 이름과 구분 기호는 화면 언어를 따른다.** Univer의 셀 숫자 서식 컨트롤러(`SheetsNumfmtCellContentController`)는 `setNumfmtLocal`을 부르기 전까지 `en`으로 시작하고 `LocaleService`를 보지 않는다. `applyUniverLocale`이 화면 언어를 넘기므로, 이 호출을 빼면 한국어 화면에서도 `aaa`/`dddd`·`mmm`·오전/오후가 영어로 나온다(2026-10-29 신고). 서식 미리보기·클립보드·차트 범주 이름도 같은 태그(`numfmtLocaleFor`)를 넘긴다. 저장되는 .xlsx의 서식 코드는 바뀌지 않는다. 한국어 화면에서는 `2026년 10월 29일`·`2026년 10월 29일 (목)`·`10월 29일` 입력을 날짜로 바꾼다(`korean-date-input.ts`, 셀 서식이 텍스트면 그대로 둔다).
 
 ## 로컬 AI (결정 0067)
 

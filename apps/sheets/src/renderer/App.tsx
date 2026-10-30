@@ -443,6 +443,7 @@ import { NotePicturesPane } from './NotePicturesPane'
 import type { PendingNotePicture } from './note-pictures'
 import { handleRemoveNotePicture } from './note-picture-actions'
 import { installFormulaNullResultFix } from './formula-null-result'
+import { installKoreanDateInput } from './korean-date-input'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installIfsEmptySetFix } from './ifs-empty-set'
 import { installCriteriaCompareCacheFix } from './criteria-compare-cache'
@@ -499,6 +500,7 @@ import {
   recordNoteChange,
   recordProtectedRangesChange,
   recordFilterChange,
+  recordRemoveNumfmt,
   recordSetNumfmt,
   recordSetRangeValues,
   recordSheetHidden,
@@ -2333,8 +2335,15 @@ export function App({
       threadStore.setAuthor(name),
     )
     // Univer's own UI (rule-management panels, dialogs) follows the app
-    // language instead of hard-coded English.
+    // language instead of hard-coded English. Switching language later also
+    // reloads the packs, so number formats (weekdays, month names) follow.
     void applyUniverLocale(runtime, getLang())
+    const offUniverLanguage = window.desktopApi.onLanguageChanged((lang) => {
+      void applyUniverLocale(runtime, lang)
+    })
+    // Korean cell entries such as 2026년 10월 29일 become real dates, matching
+    // Excel's input behavior (Univer's parser only knows numeric date forms).
+    const koreanDateInputDisposable = installKoreanDateInput(runtime)
     // Rule-management panels show what each rule actually does: list options /
     // source range, CF formula text, ⚠ on #REF! dead rules.
     const ruleDetailDisposable = installRuleDetail(runtime)
@@ -3061,12 +3070,14 @@ export function App({
         const recorded =
           event.id === SET_NUMFMT_MUTATION
             ? recordSetNumfmt(state.editJournal, params.subUnitId, params)
-            : recordSetRangeValues(
-                state.editJournal,
-                params.subUnitId,
-                params.cellValue,
-                sharedFormulaResolverFor(runtime, params.subUnitId),
-              )
+            : event.id === REMOVE_NUMFMT_MUTATION
+              ? recordRemoveNumfmt(state.editJournal, params.subUnitId, params)
+              : recordSetRangeValues(
+                  state.editJournal,
+                  params.subUnitId,
+                  params.cellValue,
+                  sharedFormulaResolverFor(runtime, params.subUnitId),
+                )
         if (recorded.length === 0) return
         setPendingEdits(journalSize(state.editJournal))
         const contentEdited = recorded.some(
@@ -3496,6 +3507,7 @@ export function App({
     return () => {
       unsubscribeMenu()
       unsubscribeCloseSave()
+      offUniverLanguage()
       offThemeChanged?.()
       offDocThemeChanged?.()
       selectionAppearance.dispose()
@@ -3516,6 +3528,7 @@ export function App({
       cachedValueDisposable.dispose()
       formulaNewlineDisposable.dispose()
       functionProbeDisposable.dispose()
+      koreanDateInputDisposable.dispose()
       numberFormatFixDisposable.dispose()
       errorAlignDisposable.dispose()
       cellFilenameDisposable.dispose()

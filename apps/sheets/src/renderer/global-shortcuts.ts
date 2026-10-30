@@ -38,6 +38,10 @@ export interface GlobalShortcutGuards {
   readonly cellEditing: boolean
   readonly gridTarget: boolean
   readonly formulaBarTarget: boolean
+  /// Ctrl+Shift+4 currency symbol from the UI language (default "$").
+  readonly currencySymbol?: string
+  /// Ctrl+Shift+3 date pattern from the UI language (default "d-mmm-yy").
+  readonly datePattern?: string
 }
 
 type Gate = 'grid' | 'sheet' | 'idle' | 'formulaBar'
@@ -198,7 +202,12 @@ export function resolveGlobalShortcut(
   }
   // number-format / border chords (Ctrl+Shift+digit, Ctrl+Shift+&/_, mac ⌘⌥
   // borders) write to the range: same gate as the table's `sheet` rows
-  const formatCommand = formatShortcutCommand(event, guards.isMac)
+  const formatCommand = formatShortcutCommand(
+    event,
+    guards.isMac,
+    guards.currencySymbol,
+    guards.datePattern,
+  )
   if (formatCommand && gateOpen('sheet', guards)) return { kind: 'command', command: formatCommand }
   return null
 }
