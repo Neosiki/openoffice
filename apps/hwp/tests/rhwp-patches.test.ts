@@ -664,6 +664,7 @@ describe('the studio source the build fetched', () => {
     'src/command/commands/insert.ts',
     'src/command/commands/table.ts',
     'src/command/shortcut-map.ts',
+    'src/ui/table-cell-props-dialog.ts',
     'src/command/registry.ts',
     'src/i18n/locales/ko.ts',
     'src/i18n/locales/en.ts',
