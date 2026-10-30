@@ -478,6 +478,8 @@ export function AiPanel({
   const settingsRef = useRef<AiSettings | null>(null)
   /** whether generate_image can run, as the main process answers (refreshed on mount and window focus) */
   const imageGenAvailableRef = useRef(false)
+  /** whether a connected AI can look at a picture; null until the main process answers */
+  const imageAnalysisAvailableRef = useRef<boolean | null>(null)
   useEffect(() => {
     let alive = true
     const refresh = () => {
@@ -485,8 +487,10 @@ export function AiPanel({
       Promise.resolve()
         .then(() => window.hwpApi.aiToolCapabilities())
         .then((capabilities) => {
-          if (alive)
+          if (alive) {
             imageGenAvailableRef.current = capabilities?.imageGeneration?.available === true
+            imageAnalysisAvailableRef.current = capabilities?.imageAnalysis?.available ?? null
+          }
         })
         .catch(() => {
           if (alive) imageGenAvailableRef.current = false
@@ -619,6 +623,7 @@ export function AiPanel({
       },
       confirmMemoRemoval: (refusal) => memoGateRef.current!.ask(refusal),
       imageGenAvailable: () => imageGenAvailableRef.current,
+      pictureAnalysisAvailable: () => imageAnalysisAvailableRef.current !== false,
       // the model names an attachment; only files the panel shows can be found
       attachmentPath: (name) =>
         availableAttachmentsRef.current().find((attachment) => attachment.name === name)?.path ??
