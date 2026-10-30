@@ -46,7 +46,7 @@ export const de = {
     'Diese Anmeldung nutzt einen API-Schlüssel oder ein Konto mit nutzungsbasierter Abrechnung, oder ihre Art ließ sich nicht feststellen. Mit „Trotzdem verwenden“ läuft die KI über diese Verbindung, und jede Anfrage wird diesem Konto berechnet.',
   connectTitle: 'KI verbinden, um loszulegen',
   connectBody:
-    'Die KI läuft über Ihr vorhandenes Claude- oder Codex-Abonnement. Ein API-Schlüssel ist nicht nötig.',
+    'Die KI läuft über Ihr vorhandenes Claude- oder ChatGPT-Abonnement. Ein API-Schlüssel ist nicht nötig.',
   connectProviderTitle: 'Die Verbindung {provider} ist derzeit nicht nutzbar',
   connectKeyBody:
     'Die Einrichtung von {provider} ist noch nicht abgeschlossen. Schließen Sie sie in den Einstellungen ab oder wählen Sie eine andere KI.',

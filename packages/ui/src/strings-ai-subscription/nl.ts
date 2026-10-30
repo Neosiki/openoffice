@@ -45,7 +45,7 @@ export const nl = {
     'Deze aanmelding gebruikt een API-sleutel of een account met betaling per verbruik, of het type kon niet worden vastgesteld. Met ‘Toch gebruiken’ draait AI via deze verbinding en wordt elk verzoek bij dat account in rekening gebracht.',
   connectTitle: 'Koppel een AI om te beginnen',
   connectBody:
-    'AI draait op het Claude- of Codex-abonnement dat je al hebt. Een API-sleutel is niet nodig.',
+    'AI draait op het Claude- of ChatGPT-abonnement dat je al hebt. Een API-sleutel is niet nodig.',
   connectProviderTitle: 'De verbinding {provider} is nu niet bruikbaar',
   connectKeyBody:
     'De configuratie van {provider} is nog niet af. Rond die af in Instellingen of kies een andere AI.',

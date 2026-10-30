@@ -44,7 +44,7 @@ export const ms = {
     'Log masuk ini menggunakan kunci API atau akaun bayar ikut guna, atau jenisnya tidak dapat disahkan. Dengan "Guna juga", AI berjalan melalui sambungan ini dan setiap permintaan dicaj kepada akaun tersebut.',
   connectTitle: 'Sambungkan AI untuk bermula',
   connectBody:
-    'AI berjalan dengan langganan Claude atau Codex yang anda sudah ada. Kunci API tidak diperlukan.',
+    'AI berjalan dengan langganan Claude atau ChatGPT yang anda sudah ada. Kunci API tidak diperlukan.',
   connectProviderTitle: 'Sambungan {provider} tidak boleh digunakan sekarang',
   connectKeyBody:
     'Persediaan {provider} belum selesai. Lengkapkannya dalam Tetapan, atau pilih AI lain.',

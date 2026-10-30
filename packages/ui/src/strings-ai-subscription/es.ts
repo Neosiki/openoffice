@@ -44,7 +44,7 @@ export const es = {
     'Este inicio de sesión usa una clave de API o una cuenta de pago por consumo, o no se pudo confirmar su tipo. «Usar de todos modos» permite que la IA funcione con esta conexión, y cada solicitud se factura a esa cuenta.',
   connectTitle: 'Conecta una IA para empezar',
   connectBody:
-    'La IA funciona con la suscripción de Claude o Codex que ya tienes. No hace falta ninguna clave de API.',
+    'La IA funciona con la suscripción de Claude o ChatGPT que ya tienes. No hace falta ninguna clave de API.',
   connectProviderTitle: 'La conexión de {provider} no se puede usar ahora',
   connectKeyBody:
     'La configuración de {provider} no está terminada. Complétala en Ajustes o elige otra IA.',

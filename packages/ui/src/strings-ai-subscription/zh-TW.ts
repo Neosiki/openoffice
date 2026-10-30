@@ -40,7 +40,7 @@ export const zhTW = {
   meteredMeaning:
     '目前是以 API 金鑰或依用量付費的帳戶登入，或無法確認登入方式。選擇「仍要使用」後，AI 會透過這個連線執行，每次要求都會向該帳戶計費。',
   connectTitle: '連結 AI 即可開始使用',
-  connectBody: 'AI 會以你現有的 Claude 或 Codex 訂閱執行，不需要 API 金鑰。',
+  connectBody: 'AI 會以你現有的 Claude 或 ChatGPT 訂閱執行，不需要 API 金鑰。',
   connectProviderTitle: '{provider} 連線目前無法使用',
   connectKeyBody: '{provider} 的設定尚未完成。請在設定中完成，或選擇其他 AI。',
   errNotConnected: '尚未連結任何 AI。請先連結 Claude 或 Codex 訂閱，或連結免費 AI。',

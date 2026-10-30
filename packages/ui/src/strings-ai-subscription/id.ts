@@ -42,7 +42,7 @@ export const id = {
     'Login ini memakai kunci API atau akun bayar sesuai pemakaian, atau jenisnya tidak dapat dipastikan. Dengan "Tetap gunakan", AI berjalan melalui koneksi ini dan setiap permintaan ditagihkan ke akun tersebut.',
   connectTitle: 'Hubungkan AI untuk memulai',
   connectBody:
-    'AI berjalan dengan langganan Claude atau Codex yang sudah Anda miliki. Kunci API tidak diperlukan.',
+    'AI berjalan dengan langganan Claude atau ChatGPT yang sudah Anda miliki. Kunci API tidak diperlukan.',
   connectProviderTitle: 'Koneksi {provider} belum bisa dipakai saat ini',
   connectKeyBody:
     'Penyiapan {provider} belum selesai. Selesaikan di Pengaturan, atau pilih AI lain.',

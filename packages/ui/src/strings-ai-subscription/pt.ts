@@ -44,7 +44,7 @@ export const pt = {
     'Este login usa uma chave de API ou uma conta de pagamento por consumo, ou não foi possível confirmar o tipo. “Usar mesmo assim” permite que a IA funcione com esta conexão, e cada solicitação é cobrada dessa conta.',
   connectTitle: 'Conecte uma IA para começar',
   connectBody:
-    'A IA funciona com a assinatura do Claude ou do Codex que você já tem. Nenhuma chave de API é necessária.',
+    'A IA funciona com a assinatura do Claude ou do ChatGPT que você já tem. Nenhuma chave de API é necessária.',
   connectProviderTitle: 'A conexão {provider} não pode ser usada agora',
   connectKeyBody:
     'A configuração de {provider} não foi concluída. Conclua-a nas Configurações ou escolha outra IA.',

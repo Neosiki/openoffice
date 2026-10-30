@@ -46,7 +46,7 @@ export const it = {
     'Questo accesso usa una chiave API o un account a consumo, oppure non è stato possibile confermarne il tipo. Con “Usa comunque” l’IA funziona su questa connessione e ogni richiesta viene addebitata a quell’account.',
   connectTitle: 'Collega un’IA per iniziare',
   connectBody:
-    'L’IA funziona con l’abbonamento Claude o Codex che hai già. Non serve alcuna chiave API.',
+    'L’IA funziona con l’abbonamento Claude o ChatGPT che hai già. Non serve alcuna chiave API.',
   connectProviderTitle: 'La connessione {provider} non è utilizzabile al momento',
   connectKeyBody:
     'La configurazione di {provider} non è completa. Completala nelle Impostazioni oppure scegli un’altra IA.',
