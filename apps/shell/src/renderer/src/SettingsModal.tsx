@@ -30,6 +30,8 @@ import {
   activeCustomEndpoint,
   clampMaxOutputTokens,
   customEndpointLabel,
+  isSubscriptionProvider,
+  keyProviderModels,
   newCustomEndpointId,
   normalizeAiSettings,
   removeCustomEndpoint,
@@ -343,6 +345,9 @@ function Field({
  */
 const CUSTOM_MODELS_DEBOUNCE_MS = 400
 
+/** the model list's last entry, which turns the field into a text box */
+const TYPE_MODEL_OPTION = '<type-model>'
+
 /** replace one catalog entry's model list, leaving every other entry untouched */
 function foldModels(providerId: string, models: string[]) {
   return (current: AiCatalogEntry[]): AiCatalogEntry[] =>
@@ -444,6 +449,8 @@ function AiModelPane({ t }: { t: TFunc }) {
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null)
   /** free-typed value of the output-cap field; committed (and clamped) on blur */
   const [maxTokensDraft, setMaxTokensDraft] = useState<string | null>(null)
+  /** the model field is a text box for an id the list does not have, until it loses focus */
+  const [typingModel, setTypingModel] = useState(false)
 
   const refreshCodexModels = useCallback(async (cliPath = '', selectedModel = '') => {
     if (!window.aiOffice.getCodexModels) return
@@ -573,6 +580,11 @@ function AiModelPane({ t }: { t: TFunc }) {
     cliPath: undefined,
   }
   const isCodex = provider === 'codex'
+  /** an API-key provider: the fixed catalog plus what the vendor listed for the key (decision 0087) */
+  const keyProvider = !meta?.needsBaseUrl && !isSubscriptionProvider(provider)
+  const modelOptions = keyProvider
+    ? keyProviderModels(provider, config.model, config.models)
+    : (meta?.models ?? [])
 
   const touch = () => {
     setDirty(true)
@@ -636,6 +648,7 @@ function AiModelPane({ t }: { t: TFunc }) {
   const selectProvider = (id: AiProviderId) => {
     // switches the fields on show; the settings (and the AI in use) are untouched
     setEditing(id)
+    setTypingModel(false)
     setTestResult(null)
   }
   const save = () => {
@@ -816,13 +829,19 @@ function AiModelPane({ t }: { t: TFunc }) {
         <div className="set-field-text">
           <label className="set-field-label">{t('setAiModelId')}</label>
         </div>
-        {meta && meta.models.length > 0 ? (
+        {meta && modelOptions.length > 0 && !typingModel ? (
           <Dropdown
             className="set-dd"
             value={config.model || meta.defaultModel}
             ariaLabel={t('setAiModelId')}
-            options={meta.models.map((m) => ({ value: m, label: m }))}
-            onPick={(m) => updateConfig({ model: m })}
+            options={[
+              ...modelOptions.map((m) => ({ value: m, label: m })),
+              // a model the vendor released after this list and has not listed yet
+              ...(keyProvider ? [{ value: TYPE_MODEL_OPTION, label: t('setAiModelType') }] : []),
+            ]}
+            onPick={(m) =>
+              m === TYPE_MODEL_OPTION ? setTypingModel(true) : updateConfig({ model: m })
+            }
           />
         ) : (
           <input
@@ -832,7 +851,9 @@ function AiModelPane({ t }: { t: TFunc }) {
             value={config.model}
             placeholder="model-id"
             spellCheck={false}
+            autoFocus={typingModel}
             onChange={(e) => updateConfig({ model: e.target.value })}
+            onBlur={() => setTypingModel(false)}
           />
         )}
       </div>

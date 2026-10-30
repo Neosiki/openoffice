@@ -71,6 +71,8 @@ export const nl = {
   errFreeLimit:
     'Het gratis tegoed van vandaag is op. Probeer het morgen opnieuw of kies een andere AI in Instellingen.',
   errFreeLimitReset: 'Het gratis tegoed van vandaag is op. Je kunt het weer gebruiken om {time}.',
+  errFreeTierModel:
+    'Dit model heeft geen gratis niveau, dus een gratis sleutel kan het niet gebruiken. Kies een model dat onder het gratis niveau valt (zoals een Flash-model) of zet facturering aan in de console van de aanbieder.',
   continueWith: 'Doorgaan met {provider}',
   continueMeteredNote:
     'De verbinding {provider} is geen abonnement: doorgaan wordt per verbruik in rekening gebracht.',

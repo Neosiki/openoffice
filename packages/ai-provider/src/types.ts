@@ -145,6 +145,12 @@ export interface AiProviderConfig {
   baseUrl?: string | undefined
   /** optional Codex CLI override; empty means auto-detect the current authenticated install */
   cliPath?: string | undefined
+  /**
+   * key providers: the chat models the vendor listed for this key, newest first
+   * where it dates them (decision 0087). Written by the main process only; the
+   * pickers show it after the fixed catalog.
+   */
+  models?: string[] | undefined
 }
 
 /** Where one value of a local model profile came from */

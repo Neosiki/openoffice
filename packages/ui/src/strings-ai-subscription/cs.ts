@@ -66,6 +66,8 @@ export const cs = {
   errFreeLimit:
     'Dnešní bezplatný limit je vyčerpán. Zkuste to zítra, nebo v Nastavení zvolte jinou AI.',
   errFreeLimitReset: 'Dnešní bezplatný limit je vyčerpán. Znovu ho můžete použít v {time}.',
+  errFreeTierModel:
+    'Tento model nemá bezplatnou úroveň, takže ho bezplatný klíč nemůže používat. Vyberte model z bezplatné úrovně (třeba model Flash), nebo zapněte fakturaci v konzoli poskytovatele.',
   continueWith: 'Pokračovat s {provider}',
   continueMeteredNote:
     'Připojení {provider} není předplatné: pokračování se účtuje podle spotřeby.',

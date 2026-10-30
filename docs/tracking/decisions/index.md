@@ -85,4 +85,5 @@
 | [0082](0082-claude-structured-output-tool.md)                 | Claude의 문서 편집 차례는 응답 형식을 프로그램에 맡기고, 그 도구 하나만 허용한다                | 2026-10-28 |
 | [0083](0083-command-line-archive.md)                          | 데스크톱 앱 없이 도는 명령줄 묶음을 따로 내고, Node는 설치 스크립트가 받는다                    | 2026-10-27 |
 | [0085](0085-drive-file-scope-and-training-check.md)           | 드라이브는 Google 선택 창에서 고른 파일만 열고, AI에 넘기기 전에 학습 설정을 확인받는다         | 2026-10-29 |
+| [0087](0087-key-provider-live-models.md)                      | API 키 제공자의 모델 목록은 그 회사에 물어 채우고, 추천 목록 뒤에 새 모델을 붙인다              | 2026-10-29 |
 | [0090](0090-epub-book-preview.md)                             | EPUB 미리보기는 단말기처럼 쪽을 넘기는 화면이고, 그 설정은 미리보기에만 쓴다                    | 2026-10-29 |

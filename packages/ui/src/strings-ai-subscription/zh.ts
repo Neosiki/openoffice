@@ -56,6 +56,8 @@ export const zh = {
   actionConnectFree: '连接免费 AI',
   errFreeLimit: '今日免费额度已用完。请明天再试，或在设置中选择其他 AI。',
   errFreeLimitReset: '今日免费额度已用完。{time} 后可再次使用。',
+  errFreeTierModel:
+    '此模型不提供免费额度，使用免费密钥无法调用。请在模型列表中选择可免费使用的模型（例如 Flash），或在该服务的控制台中开通付费。',
   continueWith: '改用 {provider} 继续',
   continueMeteredNote: '{provider} 连接不是订阅：继续使用将按用量收费。',
   usageLine: '已用 {percent}% · {time} 重置',

@@ -74,6 +74,8 @@ export const de = {
     'Das kostenlose Kontingent für heute ist aufgebraucht. Versuchen Sie es morgen erneut oder wählen Sie in den Einstellungen eine andere KI.',
   errFreeLimitReset:
     'Das kostenlose Kontingent für heute ist aufgebraucht. Ab {time} können Sie es wieder nutzen.',
+  errFreeTierModel:
+    'Für dieses Modell gibt es keine kostenlose Stufe, ein kostenloser Schlüssel kann es nicht nutzen. Wählen Sie ein Modell der kostenlosen Stufe (etwa ein Flash-Modell) oder aktivieren Sie die Abrechnung in der Konsole des Anbieters.',
   continueWith: 'Mit {provider} fortfahren',
   continueMeteredNote:
     'Die Verbindung {provider} ist kein Abonnement: Beim Fortfahren wird nach Verbrauch abgerechnet.',

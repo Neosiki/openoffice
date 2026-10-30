@@ -47,6 +47,9 @@ export default defineConfig({
       '@genoffice/ai-provider/custom-models': local(
         '../../packages/ai-provider/src/custom-models.ts',
       ),
+      '@genoffice/ai-provider/key-models': local(
+        '../../packages/ai-provider/src/key-model-refresh.ts',
+      ),
       '@genoffice/ai-provider/free-connect': local(
         '../../packages/ai-provider/src/free-connect.ts',
       ),
