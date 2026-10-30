@@ -82,6 +82,7 @@ import {
   type RecoveryOpenUntitledRequest,
   type SaveDiskState,
 } from '@genoffice/electron-utils'
+import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
 import {
   encryptOoxml,
   isCfbHeader,
@@ -4335,6 +4336,8 @@ export function registerSheetsAiIpc(): void {
     const target = resolveAiRunTarget(request.settings, sharedSubscriptionStatuses())
     if (!target.ok) return { ok: false, error: target.block.error }
     const { provider, config } = target
+    const refusal = aiRunRefusal({ senderId: event.sender.id, provider, model: config.model })
+    if (refusal) return { ok: false, error: refusal }
     try {
       const result = await chatForProvider(provider, config, request.system, request.user)
       // the one-shot path reports HTTP failures as ok:false with the raw body —
@@ -4365,6 +4368,11 @@ export function registerSheetsAiIpc(): void {
       return
     }
     const { provider, config } = target
+    const refusal = aiRunRefusal({ senderId: event.sender.id, provider, model: config.model })
+    if (refusal) {
+      send({ requestId, type: 'error', error: refusal })
+      return
+    }
     const controller = new AbortController()
     entry.aiStreams.set(requestId, controller)
     const unwatchSender = abortOnDestroyed(event.sender, controller)

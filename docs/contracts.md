@@ -353,16 +353,16 @@ metadata:
 - 앱 안에서 이름을 바꾸거나 옮기면 `derived`와 `sources`의 경로가 따라간다. 디스크에 없는 파일이라는 이유로 기록을 지우지 않는다.
 - 터미널 명령어와 MCP는 이 파일을 읽지도 쓰지도 않는다.
 
-## Google 드라이브 (결정 0033)
+## Google 드라이브 (결정 0033, 0085)
 
 같은 데이터 폴더에 둘이 있다. 터미널 명령어와 MCP는 둘 다 읽지도 쓰지도 않는다.
 
-- `google-drive.json`: `{ "version": 1, "token": "<base64>" }`. `token`은 운영체제 암호화(Electron `safeStorage`, Windows는 DPAPI)로 감싼 갱신 토큰이다. 다른 사용자나 다른 PC에서는 풀리지 않고, 풀리지 않는 파일은 연결이 없는 것으로 읽는다. 암호화를 쓸 수 없는 PC에서는 이 파일을 만들지 않는다. 연결 끊기와 Google의 연결 종료(`invalid_grant`)에 지운다.
+- `google-drive.json`: `{ "version": 1, "token": "<base64>" }`. `token`은 운영체제 암호화(Electron `safeStorage`: Windows는 DPAPI, macOS는 키체인, Linux는 키링이 있을 때만)로 감싼 갱신 토큰이다. 다른 사용자나 다른 PC에서는 풀리지 않고, 풀리지 않는 파일은 연결이 없는 것으로 읽는다. 암호화를 쓸 수 없는 PC에서는 이 파일을 만들지 않는다. 연결 끊기와 Google의 연결 종료(`invalid_grant`)에 지운다.
 - `drive-cache/`: 연 드라이브 파일의 PC 사본. 파일마다 `drive-cache/<드라이브 파일 id>/<이름>`이고, `drive-cache/index.json`이 사본과 드라이브 파일을 잇는다. 항목에는 드라이브 파일 id, 이름, 상위 폴더 id, PC 경로, 마지막으로 맞춘 내용의 해시(SHA-256)와 드라이브 쪽 해시(MD5)·변경 시각, 저장이 갈 드라이브 파일 id, "이 PC에만 저장"을 골랐는지, 마지막으로 연 시각이 있다. 문서 내용은 사본 파일에만 있다. 한 달 동안 열지 않았고 올리지 못한 변경이 없는 사본은 시작할 때 지운다.
 
-`app-settings.json`의 `driveAiAccess`(참/거짓, 기본 참)는 편집기의 AI가 드라이브를 찾고 읽어도 되는지다. 드라이브가 연결돼 있을 때만 뜻이 있다.
+`app-settings.json`의 `driveAiAccess`(참/거짓, 기본 참)는 편집기의 AI가 드라이브를 찾고 읽어도 되는지다. 드라이브가 연결돼 있을 때만 뜻이 있다. `driveTrainingAck`(참일 때만 확인, 기본 없음)는 사람이 "드라이브 파일과 함께 쓰는 AI 계정에서 모델 학습을 껐습니다"에 체크했는지다. 참이 아니면 연결, 고르기, 첨부, AI의 드라이브 도구가 멈춘다.
 
-창구 이름은 `drive:state`, `drive:connect`, `drive:cancel-connect`, `drive:disconnect`, `drive:set-ai-access`, `drive:list`, `drive:open`과 변경 알림 `drive:state-changed`, 편집기 AI용 `drive:ai-enabled`, `drive:ai-search`, `drive:ai-read`, 편집기 첨부용 `drive:connected`, `drive:pick-attachments`다. 고르기 창만 쓰는 창구는 `drive-picker:get-init`, `-list`, `-choose`, `-cancel`이고, 그 창이 아닌 곳에서 오면 답하지 않는다. 토큰은 어느 창구로도 화면에 나가지 않는다.
+창구 이름은 `drive:state`, `drive:connect`, `drive:cancel-connect`, `drive:disconnect`, `drive:set-ai-access`, `drive:set-training-ack`, `drive:list`(`recent`·`search`만), `drive:open`, `drive:pick-open`(Google 선택 창을 열고 고른 파일을 탭으로 연다)과 변경 알림 `drive:state-changed`, 편집기 AI용 `drive:ai-enabled`, `drive:ai-search`, `drive:ai-read`, 편집기 첨부용 `drive:connected`, `drive:pick-attachments`다. 앱이 그리던 고르기 창과 그 창구(`drive-picker:*`)는 없앴다(결정 0085). 토큰은 어느 창구로도 화면에 나가지 않는다.
 
 빌드: `GENOFFICE_GOOGLE_CLIENT_ID`(`….apps.googleusercontent.com`)와 `GENOFFICE_GOOGLE_CLIENT_SECRET`이 껍데기 앱을 빌드하는 환경에 있을 때만 드라이브가 들어간다. 없으면 상태는 `unavailable`이고 화면에 드라이브가 나오지 않는다.
 

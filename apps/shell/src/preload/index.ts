@@ -679,8 +679,8 @@ const resultStoreApi: ResultStoreApi = {
 }
 contextBridge.exposeInMainWorld('aiOfficeResultStore', resultStoreApi)
 
-// Google Drive (decision 0033): state, browsing and opening. Main keeps the
-// tokens; this bridge only carries states, file lists and file ids.
+// Google Drive (decisions 0033, 0085): state, picking, listing and opening.
+// Main keeps the tokens; this bridge only carries states, file lists and file ids.
 const driveApi: DriveApi = {
   state: () => ipcRenderer.invoke(DRIVE_CHANNELS.state) as Promise<DriveUiState>,
   onStateChanged(listener) {
@@ -698,8 +698,10 @@ const driveApi: DriveApi = {
     await ipcRenderer.invoke(DRIVE_CHANNELS.disconnect)
   },
   setAiAccess: (on) => ipcRenderer.invoke(DRIVE_CHANNELS.setAiAccess, on === true),
+  setTrainingAck: (on) => ipcRenderer.invoke(DRIVE_CHANNELS.setTrainingAck, on === true),
   list: (listing, pageToken) => ipcRenderer.invoke(DRIVE_CHANNELS.list, listing, pageToken),
   open: (fileId) => ipcRenderer.invoke(DRIVE_CHANNELS.open, fileId),
+  pickOpen: () => ipcRenderer.invoke(DRIVE_CHANNELS.pickOpen),
 }
 contextBridge.exposeInMainWorld('aiOfficeDrive', driveApi)
 
