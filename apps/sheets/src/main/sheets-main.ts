@@ -4420,7 +4420,8 @@ export function registerSheetsAiIpc(): void {
 
   // Shared search tools (content + images): Serper with DuckDuckGo fallback
   // (same source as slides/docs)
-  ipcMain.handle('ai:web-search', async (_event, query: unknown, maxResults?: unknown) => {
+  ipcMain.handle('ai:web-search', async (event, query: unknown, maxResults?: unknown) => {
+    sessionFor(event)
     try {
       return await webSearchTool(
         SETTINGS_PATH(),
@@ -4431,7 +4432,8 @@ export function registerSheetsAiIpc(): void {
       return { results: [], method: 'error', error: String(err) }
     }
   })
-  ipcMain.handle('ai:image-search', async (_event, query: unknown, maxResults?: unknown) => {
+  ipcMain.handle('ai:image-search', async (event, query: unknown, maxResults?: unknown) => {
+    sessionFor(event)
     try {
       return await imageSearchTool(
         SETTINGS_PATH(),
@@ -4445,6 +4447,7 @@ export function registerSheetsAiIpc(): void {
   // Read one web page as text (the read_url tool), paged by character offset.
   // A long download ends with the tab or when the tab's AI run is stopped.
   ipcMain.handle('ai:read-url', async (event, url: unknown, offset?: unknown) => {
+    sessionFor(event)
     try {
       return await withMediaCallSignal(event.sender, (signal) =>
         readUrlTool(
@@ -4465,7 +4468,8 @@ export function registerSheetsAiIpc(): void {
   // match the local add_image limit.
   ipcMain.handle(
     'ai:fetch-image',
-    async (_event, url: unknown): Promise<{ base64: string; mime: string } | null> => {
+    async (event, url: unknown): Promise<{ base64: string; mime: string } | null> => {
+      sessionFor(event)
       try {
         const resp = await fetchRemoteImage(z.string().parse(url))
         if (!resp || !resp.ok || !resp.body) return null

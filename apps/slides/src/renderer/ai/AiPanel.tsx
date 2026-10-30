@@ -82,6 +82,7 @@ import {
   useSubscriptionConnection,
   type BlockedRun,
 } from './subscription'
+import { isGenerationStopKind } from './generation-stop'
 import { renderSlidesToPngBase64 } from '../export-render'
 import {
   isQcEnabled,
@@ -934,6 +935,8 @@ export function AiPanel({
   const queueRunResolverRef = useRef<((ok: boolean) => void) | null>(null)
   /** Pages landed by this run's generation calls, pending the post-generation layout QC pass */
   const qcPagesRef = useRef<number[]>([])
+  /** A stop kind hit in this run (limit used up, signed out, …); cleared before each send */
+  const generationStoppedRef = useRef<string | null>(null)
   const qcAbortRef = useRef<AbortController | null>(null)
   const qcRunningRef = useRef(false)
   /** Latest runQcPass closure; the loop's onDone (built once) calls through this ref */
@@ -1026,6 +1029,8 @@ export function AiPanel({
       text?: string
       error?: string
       errKind?: 'timeout' | 'empty' | 'stopped'
+      /** the run cannot go on (rate limit, signed out, …): no retry, no model fallback */
+      stopKind?: string
     }
     // These calls skip the panel's transport, so they get its context check
     // here: the same window and dialog, asked once per run (the loop's signal),
@@ -1117,6 +1122,9 @@ export function AiPanel({
                   : undefined) ??
                 chunk.error ??
                 tGlobal('aiErrUnknown'),
+              ...(isGenerationStopKind(chunk.errorCode) && chunk.errorCode
+                ? { stopKind: chunk.errorCode }
+                : {}),
               // Empty gateway streams surface as errors now (ai-provider stream.ts
               // tags them with this suffix); keep classifying them as empty output
               // so retry ladders fail fast instead of burning billed attempts
@@ -1159,8 +1167,9 @@ export function AiPanel({
         maxTokens,
       )
       if (first.ok || !useGenModel || signal?.aborted) return first
-      // Only "request errors" fall back to the user's model for a retry; timeouts/empty output don't switch models (mostly network/output problems, switching won't help)
-      if (first.errKind) return first
+      // Only "request errors" fall back to the user's model for a retry; a
+      // stopped connection and timeouts/empty output don't switch models
+      if (first.stopKind || first.errKind) return first
       const cur = settingsRef.current
       if (cur.provider !== 'anthropic') return first // The gen-model override only applies with anthropic
       if (cur.providers.anthropic?.model === SLIDES_GEN_MODEL) return first
@@ -1318,6 +1327,7 @@ export function AiPanel({
           const r = await runLlmOnce(sys, msg, 120000, true, args.signal, 16384)
           if (!r.ok || !r.text) {
             lastErr = r.error ?? tGlobal('aiErrEmptyOutput')
+            if (r.stopKind) return { ok: false, error: lastErr, stopKind: r.stopKind }
             continue
           }
           try {
@@ -1360,7 +1370,11 @@ export function AiPanel({
         const r = await runLlmOnce(sys, userMsg, undefined, true, a.signal)
         return r.ok && r.text
           ? { ok: true, styleSkill: r.text.trim() }
-          : { ok: false, error: r.error ?? tGlobal('aiErrEmptyOutput') }
+          : {
+              ok: false,
+              error: r.error ?? tGlobal('aiErrEmptyOutput'),
+              ...(r.stopKind ? { stopKind: r.stopKind } : {}),
+            }
       },
       planDeckOutline: async (a) => {
         // style is already produced independently by generateStyleSkill; this function only outputs core_hook + per-page outlines (layout chosen per the Style Skill).
@@ -1410,6 +1424,7 @@ export function AiPanel({
           const r = await runLlmOnce(sys, userMsg, undefined, true, a.signal)
           if (!r.ok || !r.text) {
             lastErr = r.error ?? tGlobal('aiErrEmptyOutput')
+            if (r.stopKind) return { ok: false, error: lastErr, stopKind: r.stopKind }
             // Empty output/timeout doesn't burn another attempt; request-level errors may retry
             if (r.errKind === 'timeout' || r.errKind === 'empty' || r.errKind === 'stopped') break
             continue
@@ -1419,6 +1434,10 @@ export function AiPanel({
           lastErr = parsed.error
         }
         return { ok: false, error: lastErr }
+      },
+      generationStopped: () => generationStoppedRef.current ?? undefined,
+      markGenerationStopped: (kind) => {
+        generationStoppedRef.current = kind
       },
       fitWidthPx,
       onProgress: (event: DeckProgressEvent) => {
@@ -1968,6 +1987,7 @@ export function AiPanel({
       { role: 'assistant', text: '', streaming: true },
     ])
     runStartedAtRef.current = Date.now()
+    generationStoppedRef.current = null
     setBusy(true)
     // Persist the user message (store display text + attachment metadata; loop.restore rebuilds model context on file reopen)
     persistMessage('user', shown, undefined, sentAtts, scope, skillUse.chips)
@@ -2027,6 +2047,7 @@ export function AiPanel({
         { role: 'assistant', text: '', streaming: true },
       ])
       runStartedAtRef.current = Date.now()
+      generationStoppedRef.current = null
       setBusy(true)
       queueRunResolverRef.current = resolve
       void Promise.resolve(onBeforeRunRef.current?.())

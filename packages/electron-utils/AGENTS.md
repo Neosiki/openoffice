@@ -27,7 +27,7 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 ## 항상 지켜야 하는 것
 
 - `shell.openExternal`로 가는 모든 URL은 `safeExternalUrl`을 거친다. 허용 프로토콜은 http·https이고(호출자가 옵션으로 넓힌 경우만 추가) `file:`, `javascript:`, 사용자 정의 스킴은 항상 거절한다. 반환값이 `null`이면 열지 않는다. 원래 입력으로 되돌아가 여는 코드를 쓰지 않는다. 검사한 값이 아니라 반환된(공백이 잘린) 문자열을 연다.
-- AI 도구 호출에서 온 주소는 프롬프트 주입으로 조작될 수 있다. 원격 요청은 `fetchWithSsrfGuard`로 하고, 리다이렉트를 자동으로 따라가게 두지 않는다. `isSafeRemoteUrl`로 한 번 검사하고 일반 `fetch`를 부르는 것은 충분하지 않다(검사와 요청 사이에 DNS가 바뀔 수 있다). 응답 본문은 `readBodyCapped`로 상한을 둔다.
+- AI 도구 호출에서 온 주소는 프롬프트 주입으로 조작될 수 있다. 원격 요청은 `fetchWithSsrfGuard`로 하고, 리다이렉트를 자동으로 따라가게 두지 않는다. `isSafeRemoteUrl`로 한 번 검사하고 일반 `fetch`를 부르는 것은 충분하지 않다(검사와 요청 사이에 DNS가 바뀔 수 있다). 응답 본문은 `readBodyCapped`로 상한을 둔다. 가드가 받은 `signal`은 DNS lookup에도 걸린다 — 요청 전체에 상한을 두는 호출자(`read_url`의 30초)가 느린 이름 풀이에서 그 상한을 넘기지 않게 하기 위해서다.
 - `safe-remote-url.ts`는 `undici`를 요청이 실제로 나갈 때만(`loadUndici`) 불러온다. 최상위 import로 되돌리면 이 모듈을 import하는 것만으로 llhttp wasm이 초기화되어, 가상 메모리 상한(`ulimit -v`)이 낮은 환경에서 명령줄의 문서 명령이 아무 출력도 없이 죽는다.
 - 로컬 파일을 URL로 읽어 주지 않는다. `readGeneratedImage`는 `GENERATED_IMAGE_DIR` 안의, uuid 이름에 이미지 확장자를 가진 파일만 읽고 그 밖의 `file://`에는 `null`을 준다. `saveImageFromUrl`은 `file:`을 받지 않는다.
 - 모든 webContents는 한 번 로드된 뒤 다른 곳으로 탐색하지 않는다. `installNavigationGuard`가 같은 주소의 새로 고침 외의 탐색을 막고 `window.open`을 기본 거절한다. 외부 링크를 열어야 하는 에디터는 특정 webContents에만 자기 핸들러를 다시 건다. 이 잠금을 푸는 예외를 여기에 추가하지 않는다.
