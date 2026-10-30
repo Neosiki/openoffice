@@ -2376,10 +2376,13 @@ function paragraphTextOf(doc, sec, para) {
 }
 
 function foldText(text) {
-  return String(text)
-    .replace(/[\u0000-\u001f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    String(text)
+      // eslint-disable-next-line no-control-regex -- control characters are what this folds away
+      .replace(/[\u0000-\u001f]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**
@@ -2471,14 +2474,14 @@ function profileOf(doc) {
         break
       }
       paragraphs.push({ index: para, section: sec, text: textAt(sec, para) })
-      let length = 0
+      let length
       try {
         length = doc.getParagraphLength(sec, para)
       } catch {
         length = 0
       }
       if (length <= 0) continue
-      let runs = []
+      let runs
       try {
         runs = parse(doc.getCharShapeRuns(sec, para, 0, length))
       } catch {
@@ -2543,7 +2546,7 @@ function profileOf(doc) {
       cellParagraphs < MAX_PROFILE_CELL_PARAGRAPHS;
       cell++
     ) {
-      let count = 0
+      let count
       try {
         count = doc.getCellParagraphCountByPath(
           table.sec,
@@ -2561,14 +2564,14 @@ function profileOf(doc) {
         cellParagraphs += 1
         const path = cellAt(table.path, cell, k)
         const json = JSON.stringify(path)
-        let length = 0
+        let length
         try {
           length = doc.getCellParagraphLengthByPath(table.sec, table.para, json)
         } catch {
           length = 0
         }
         if (length <= 0) continue
-        let runs = []
+        let runs
         try {
           runs = parse(doc.getCharShapeRunsInCellByPath(table.sec, table.para, json, 0, length))
         } catch {
@@ -2587,7 +2590,7 @@ function profileOf(doc) {
   for (let sec = 0; sec < doc.getSectionCount(); sec++) {
     const count = doc.getParagraphCount(sec)
     for (let para = 0; para < count && pictures.length < MAX_PROFILE_PICTURES; para++) {
-      let positions = []
+      let positions
       try {
         positions = parse(doc.getControlTextPositions(sec, para))
       } catch {
@@ -2595,7 +2598,7 @@ function profileOf(doc) {
       }
       for (let control = 0; control < positions.length; control++) {
         if (pictures.length >= MAX_PROFILE_PICTURES) break
-        let mime = ''
+        let mime
         try {
           mime = doc.getControlImageMime(sec, para, '[]', control)
         } catch {
@@ -4670,14 +4673,14 @@ export const agentPlugin = {
           for (let sec = 0; sec < doc.getSectionCount(); sec++) {
             const count = doc.getParagraphCount(sec)
             for (let para = 0; para < count; para++) {
-              let length = 0
+              let length
               try {
                 length = doc.getParagraphLength(sec, para)
               } catch {
                 length = 0
               }
               if (length <= 0) continue
-              let runs = []
+              let runs
               try {
                 runs = parse(doc.getCharShapeRuns(sec, para, 0, length))
               } catch {
@@ -4694,7 +4697,7 @@ export const agentPlugin = {
 
           for (const table of tablesOf(doc).tables) {
             for (let cell = 0; cell < table.cells; cell++) {
-              let count = 0
+              let count
               try {
                 count = doc.getCellParagraphCountByPath(
                   table.sec,
@@ -4707,14 +4710,14 @@ export const agentPlugin = {
               for (let k = 0; k < count; k++) {
                 const path = cellAt(table.path, cell, k)
                 const json = JSON.stringify(path)
-                let length = 0
+                let length
                 try {
                   length = doc.getCellParagraphLengthByPath(table.sec, table.para, json)
                 } catch {
                   length = 0
                 }
                 if (length <= 0) continue
-                let runs = []
+                let runs
                 try {
                   runs = parse(
                     doc.getCharShapeRunsInCellByPath(table.sec, table.para, json, 0, length),

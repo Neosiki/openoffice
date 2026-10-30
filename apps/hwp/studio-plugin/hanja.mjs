@@ -66,7 +66,7 @@ const isSyllables = (text) => text.length > 0 && [...text].every(isSyllable)
 /**
  * Parses the cut-down dictionary: one line per Hangul reading, then tab-separated candidates in
  * the order the dictionary gives them; a single syllable's candidate carries its meaning after
- * a slash ("學/배울 학").
+ * a slash (a hanja, "/", then its Hangul gloss and reading).
  */
 export function parseDictionary(text) {
   const map = new Map()
