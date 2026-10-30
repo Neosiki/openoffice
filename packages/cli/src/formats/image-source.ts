@@ -29,7 +29,7 @@ export async function readImageSource(
   ctx: PathContext,
   baseDir?: string,
 ): Promise<ImageSource | null> {
-  if (url.startsWith('data:')) {
+  if (/^data:/i.test(url)) {
     const m = /^data:image\/([a-z0-9.+-]+);base64,(.*)$/is.exec(url)
     if (!m) return null
     // Size the base64 text before decoding it: Buffer.from allocated the full

@@ -2,7 +2,7 @@ import {
   csvToXlsxBuffer,
   decodeCsvBuffer,
   parseCsv,
-  sniffDelimiter,
+  resolveImportDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { normalizeLang, type Lang } from '@genoffice/i18n'
 import { cutIndex } from '../preview'
@@ -41,7 +41,7 @@ export interface CsvInfo {
 
 export function csvInfo(bytes: Uint8Array): CsvInfo {
   const text = decodeCsv(bytes)
-  const delimiter = sniffDelimiter(text)
+  const delimiter = resolveImportDelimiter(text)
   const rows = parseCsv(text, delimiter)
   return {
     rows: rows.length,

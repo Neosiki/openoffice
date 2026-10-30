@@ -98,6 +98,7 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
     params: { by },
   })
   return [
+    shell('genoffice.ctx.ask-ai', 'aiAskBtn', 'ai-ask-selection', ContextMenuGroup.OTHERS, -1),
     {
       id: PASTE_SPECIAL_OPEN_COMMAND_ID,
       title: t('appCtxPasteSpecial'),
