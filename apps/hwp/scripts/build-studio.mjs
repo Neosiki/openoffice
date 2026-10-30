@@ -29,6 +29,7 @@ import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
 import {
   AGENT_PLUGIN_MODULE,
+  CLIPBOARD_HTML_MODULE,
   FORMAT_COPY_MODULE,
   HANCOM_KEYS_MODULE,
   STUDIO_PATCHES,
@@ -76,6 +77,7 @@ const AGENT_PLUGIN = join(APP, 'studio-plugin', 'agent-plugin.mjs')
 const DIALOG_THEME = join(APP, 'studio-plugin', 'dialog-theme.mjs')
 const HANCOM_KEYS = join(APP, 'studio-plugin', 'hancom-keys.mjs')
 const FORMAT_COPY = join(APP, 'studio-plugin', 'format-copy.mjs')
+const CLIPBOARD_HTML = join(APP, 'studio-plugin', 'clipboard-html.mjs')
 const STAMP = join(OUT, '.stamp')
 
 function git(args, cwd) {
@@ -95,6 +97,7 @@ function stampValue() {
   hash.update(readFileSync(DIALOG_THEME))
   hash.update(readFileSync(HANCOM_KEYS))
   hash.update(readFileSync(FORMAT_COPY))
+  hash.update(readFileSync(CLIPBOARD_HTML))
   // and so is the engine: a rebuilt WASM must reach the studio
   hash.update(readFileSync(join(CORE_DIR, 'rhwp_bg.wasm')))
   return hash.digest('hex')
@@ -187,6 +190,7 @@ async function buildStudio() {
         [AGENT_PLUGIN_MODULE]: AGENT_PLUGIN,
         [HANCOM_KEYS_MODULE]: HANCOM_KEYS,
         [FORMAT_COPY_MODULE]: FORMAT_COPY,
+        [CLIPBOARD_HTML_MODULE]: CLIPBOARD_HTML,
       },
     },
     // upstream registers a service worker for its website build; this build
