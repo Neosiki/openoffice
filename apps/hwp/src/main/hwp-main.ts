@@ -23,6 +23,7 @@ import { getUiLang } from '@genoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { registerHwpImageIpc } from './ai-image'
 import { atomicWriteFile } from './atomic-write'
+import { readHwpDefaultFormat } from './default-format'
 import { badJob, printJobToPdf, printJobToPrinter } from './print-document'
 import { tm } from './dialog-strings'
 import { fieldKindsOf } from './field-kinds'
@@ -587,18 +588,23 @@ function registerHwpIpc(): void {
         const win =
           BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
         const copy = untitledCopyByWc.get(wcId)
-        const fallback: HwpFormat = currentFormat ?? copy?.format ?? 'hwp'
+        // a brand-new document takes the format chosen in Settings; one restored without
+        // its file keeps the format of the file it came from (the recovery suggestion)
+        const preferred = readHwpDefaultFormat(app)
+        const offered = current
+          ? join(dirname(current), basename(current))
+          : // a copy restored without its file is offered where that file was
+            (hwpRecoverySaveAsDefault(wcId) ??
+            join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.${preferred}`))
+        const fallback: HwpFormat =
+          currentFormat ?? copy?.format ?? hwpFormatOfPath(offered) ?? preferred
         const hwp = { name: tm('filterHwp'), extensions: ['hwp'] }
         const hwpx = { name: tm('filterHwpx'), extensions: ['hwpx'] }
         const picked = await showSaveDialogWithMemory(dialog, win, {
           title: tm('dlgSaveTitle'),
           // a new document has no file yet: it is offered under the untitled name in the
           // default save folder, where the shell moves it into the folder it was made from
-          defaultPath: current
-            ? join(dirname(current), basename(current))
-            : // a copy restored without its file is offered where that file was
-              (hwpRecoverySaveAsDefault(wcId) ??
-              join(configuredDefaultSaveDir(app), copy?.name ?? `${tm('untitledFile')}.hwp`)),
+          defaultPath: offered,
           // one type per format, so the user can pick the other one; the document's
           // own format comes first, so it is the dialog's default type
           filters: fallback === 'hwpx' ? [hwpx, hwp] : [hwp, hwpx],

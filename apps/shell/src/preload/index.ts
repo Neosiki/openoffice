@@ -36,6 +36,7 @@ import type {
   FileSearchPage,
   FileSearchRerank,
   FileSearchSettings,
+  HwpDefaultFormat,
 } from '../shared/home-api'
 import { HOME_CHANNELS } from '../shared/home-api'
 import { RECOVERY_LIST_CHANNELS } from '../shared/recovery-list-api'
@@ -514,6 +515,14 @@ const homeApi: HomeApi = {
   async pickDefaultSaveDir() {
     const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.pickDefaultSaveDir)
     return typeof result === 'string' && result ? result : null
+  },
+  async getHwpDefaultFormat() {
+    const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.getHwpDefaultFormat)
+    return (result === 'hwpx' ? 'hwpx' : 'hwp') satisfies HwpDefaultFormat
+  },
+  async setHwpDefaultFormat(format) {
+    const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.setHwpDefaultFormat, format)
+    return (result === 'hwpx' ? 'hwpx' : 'hwp') satisfies HwpDefaultFormat
   },
   onThemeChanged(handler) {
     const listener = (_event: Electron.IpcRendererEvent, theme: unknown) => {

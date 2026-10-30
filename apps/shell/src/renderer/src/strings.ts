@@ -173,6 +173,8 @@ export const strings = {
     themeSystem: '跟随系统',
     documentTheme: '文档页面主题',
     docThemeFollowApp: '跟随应用主题',
+    setHwpSaveFormat: '新建韩文文档的保存格式',
+    setHwpSaveFormatDesc: '新建韩文文档首次保存时优先提供此格式。已打开的文档仍按其原有格式保存。',
     saveLocation: '默认保存位置',
     setAutoSave: '所有文档自动保存',
     setAutoSaveDesc: '在每个编辑器中默认开启自动保存，仍可在单个窗口中关闭。',
@@ -732,6 +734,9 @@ export const strings = {
     themeSystem: 'Follow System',
     documentTheme: 'Document page theme',
     docThemeFollowApp: 'Follow app theme',
+    setHwpSaveFormat: 'Save format for new HWP documents',
+    setHwpSaveFormatDesc:
+      'When you first save a new HWP document, this format is offered first. Documents you open keep their own format.',
     saveLocation: 'Save Location',
     setAutoSave: 'Auto-save all documents',
     setAutoSaveDesc:
@@ -1316,6 +1321,9 @@ export const strings = {
     themeSystem: 'Theo hệ thống',
     documentTheme: 'Chủ đề trang tài liệu',
     docThemeFollowApp: 'Theo chủ đề ứng dụng',
+    setHwpSaveFormat: 'Định dạng lưu cho tài liệu HWP mới',
+    setHwpSaveFormatDesc:
+      'Lần lưu đầu tiên của tài liệu HWP mới sẽ ưu tiên định dạng này. Tài liệu đã mở vẫn được lưu theo định dạng của nó.',
     saveLocation: 'Vị trí lưu',
     setAutoSave: 'Tự động lưu tất cả tài liệu',
     setAutoSaveDesc:
@@ -1909,6 +1917,9 @@ export const strings = {
     themeSystem: 'システムに従う',
     documentTheme: 'ドキュメントページのテーマ',
     docThemeFollowApp: 'アプリのテーマに従う',
+    setHwpSaveFormat: '新規 HWP 文書の保存形式',
+    setHwpSaveFormatDesc:
+      '新規 HWP 文書を初めて保存するとき、この形式を優先して提案します。開いた文書は元の形式のまま保存されます。',
     saveLocation: '保存先',
     setAutoSave: 'すべてのドキュメントを自動保存',
     setAutoSaveDesc:
@@ -2508,6 +2519,9 @@ export const strings = {
     themeSystem: '시스템 설정 따르기',
     documentTheme: '문서 페이지 테마',
     docThemeFollowApp: '앱 테마 따르기',
+    setHwpSaveFormat: '새 한글 문서 저장 형식',
+    setHwpSaveFormatDesc:
+      '새 한글 문서를 처음 저장할 때 이 형식을 먼저 제안합니다. 이미 연 문서는 그 문서의 형식 그대로 저장합니다.',
     saveLocation: '저장 위치',
     setAutoSave: '모든 문서 자동 저장',
     setAutoSaveDesc: '모든 편집기에서 자동 저장을 기본으로 켭니다. 개별 창에서는 끌 수 있습니다.',
@@ -3096,6 +3110,9 @@ export const strings = {
     themeSystem: 'Suivre le système',
     documentTheme: 'Thème de la page de document',
     docThemeFollowApp: 'Suivre le thème de l’application',
+    setHwpSaveFormat: "Format d'enregistrement des nouveaux documents HWP",
+    setHwpSaveFormatDesc:
+      "Le premier enregistrement d'un nouveau document HWP propose ce format. Les documents ouverts conservent leur propre format.",
     saveLocation: "Emplacement d'enregistrement",
     setAutoSave: 'Enregistrer automatiquement tous les documents',
     setAutoSaveDesc:
@@ -3705,6 +3722,9 @@ export const strings = {
     themeSystem: 'System folgen',
     documentTheme: 'Dokumentseitenthema',
     docThemeFollowApp: 'App-Thema übernehmen',
+    setHwpSaveFormat: 'Speicherformat für neue HWP-Dokumente',
+    setHwpSaveFormatDesc:
+      'Beim ersten Speichern eines neuen HWP-Dokuments wird dieses Format zuerst angeboten. Geöffnete Dokumente behalten ihr eigenes Format.',
     saveLocation: 'Speicherort',
     setAutoSave: 'Alle Dokumente automatisch speichern',
     setAutoSaveDesc:
@@ -4317,6 +4337,9 @@ export const strings = {
     themeSystem: 'Seguir el sistema',
     documentTheme: 'Tema de la página del documento',
     docThemeFollowApp: 'Seguir el tema de la aplicación',
+    setHwpSaveFormat: 'Formato de guardado de nuevos documentos HWP',
+    setHwpSaveFormatDesc:
+      'El primer guardado de un documento HWP nuevo propone este formato. Los documentos abiertos conservan su propio formato.',
     saveLocation: 'Ubicación de guardado',
     setAutoSave: 'Guardar automáticamente todos los documentos',
     setAutoSaveDesc:
@@ -4914,6 +4937,9 @@ export const strings = {
     themeSystem: 'ตามระบบ',
     documentTheme: 'ธีมหน้าเอกสาร',
     docThemeFollowApp: 'ตามธีมของแอป',
+    setHwpSaveFormat: 'รูปแบบการบันทึกสำหรับเอกสาร HWP ใหม่',
+    setHwpSaveFormatDesc:
+      'การบันทึกครั้งแรกของเอกสาร HWP ใหม่จะเสนอรูปแบบนี้ก่อน เอกสารที่เปิดอยู่จะบันทึกตามรูปแบบเดิมของเอกสาร',
     saveLocation: 'ตำแหน่งบันทึก',
     setAutoSave: 'บันทึกอัตโนมัติทุกเอกสาร',
     setAutoSaveDesc: 'เปิดบันทึกอัตโนมัติเป็นค่าเริ่มต้นในทุกตัวแก้ไข คุณยังปิดได้ในแต่ละหน้าต่าง',
@@ -5501,6 +5527,9 @@ export const strings = {
     themeSystem: 'Ikuti Sistem',
     documentTheme: 'Tema halaman dokumen',
     docThemeFollowApp: 'Ikuti tema aplikasi',
+    setHwpSaveFormat: 'Format penyimpanan dokumen HWP baru',
+    setHwpSaveFormatDesc:
+      'Penyimpanan pertama dokumen HWP baru menawarkan format ini. Dokumen yang dibuka tetap disimpan dalam formatnya sendiri.',
     saveLocation: 'Lokasi penyimpanan',
     setAutoSave: 'Simpan otomatis semua dokumen',
     setAutoSaveDesc:
@@ -6099,6 +6128,9 @@ export const strings = {
     themeSystem: 'Как в системе',
     documentTheme: 'Тема страницы документа',
     docThemeFollowApp: 'Как в теме приложения',
+    setHwpSaveFormat: 'Формат сохранения новых документов HWP',
+    setHwpSaveFormatDesc:
+      'При первом сохранении нового документа HWP этот формат предлагается первым. Открытые документы сохраняются в своём формате.',
     saveLocation: 'Папка сохранения',
     setAutoSave: 'Автосохранение всех документов',
     setAutoSaveDesc:
@@ -6697,6 +6729,9 @@ export const strings = {
     themeSystem: 'اتباع النظام',
     documentTheme: 'سمة صفحة المستند',
     docThemeFollowApp: 'اتباع سمة التطبيق',
+    setHwpSaveFormat: 'صيغة حفظ مستندات HWP الجديدة',
+    setHwpSaveFormatDesc:
+      'يعرض الحفظ الأول لمستند HWP جديد هذه الصيغة أولاً. تحتفظ المستندات المفتوحة بصيغتها الخاصة.',
     saveLocation: 'موقع الحفظ',
     setAutoSave: 'حفظ جميع المستندات تلقائيًا',
     setAutoSaveDesc:
@@ -7279,6 +7314,9 @@ export const strings = {
     themeSystem: 'Seguir o Sistema',
     documentTheme: 'Tema da página do documento',
     docThemeFollowApp: 'Seguir o tema do aplicativo',
+    setHwpSaveFormat: 'Formato de salvamento de novos documentos HWP',
+    setHwpSaveFormatDesc:
+      'O primeiro salvamento de um novo documento HWP oferece este formato. Os documentos abertos mantêm o próprio formato.',
     saveLocation: 'Local de salvamento',
     setAutoSave: 'Salvar automaticamente todos os documentos',
     setAutoSaveDesc:
@@ -7873,6 +7911,9 @@ export const strings = {
     themeSystem: 'Segui il sistema',
     documentTheme: 'Tema della pagina del documento',
     docThemeFollowApp: 'Segui il tema dell’applicazione',
+    setHwpSaveFormat: 'Formato di salvataggio dei nuovi documenti HWP',
+    setHwpSaveFormatDesc:
+      'Il primo salvataggio di un nuovo documento HWP propone questo formato. I documenti aperti mantengono il proprio formato.',
     saveLocation: 'Posizione di salvataggio',
     setAutoSave: 'Salva automaticamente tutti i documenti',
     setAutoSaveDesc:
@@ -8467,6 +8508,9 @@ export const strings = {
     themeSystem: 'Zgodnie z systemem',
     documentTheme: 'Motyw strony dokumentu',
     docThemeFollowApp: 'Zgodnie z motywem aplikacji',
+    setHwpSaveFormat: 'Format zapisu nowych dokumentów HWP',
+    setHwpSaveFormatDesc:
+      'Przy pierwszym zapisie nowego dokumentu HWP ten format jest proponowany jako pierwszy. Otwarte dokumenty zachowują swój format.',
     saveLocation: 'Lokalizacja zapisu',
     setAutoSave: 'Automatycznie zapisuj wszystkie dokumenty',
     setAutoSaveDesc:
@@ -9055,6 +9099,9 @@ export const strings = {
     themeSystem: 'Podle systému',
     documentTheme: 'Motiv stránky dokumentu',
     docThemeFollowApp: 'Podle motivu aplikace',
+    setHwpSaveFormat: 'Formát ukládání nových dokumentů HWP',
+    setHwpSaveFormatDesc:
+      'Při prvním uložení nového dokumentu HWP se nabídne nejprve tento formát. Otevřené dokumenty se ukládají ve svém formátu.',
     saveLocation: 'Umístění pro ukládání',
     settings: 'Nastavení',
     setSecAccount: 'Účet',
@@ -9641,6 +9688,9 @@ export const strings = {
     themeSystem: 'Systeem volgen',
     documentTheme: 'Documentpaginathema',
     docThemeFollowApp: 'App-thema volgen',
+    setHwpSaveFormat: 'Opslagformaat voor nieuwe HWP-documenten',
+    setHwpSaveFormatDesc:
+      'Bij de eerste opslag van een nieuw HWP-document wordt dit formaat als eerste aangeboden. Geopende documenten behouden hun eigen formaat.',
     saveLocation: 'Opslaglocatie',
     setAutoSave: 'Alle documenten automatisch opslaan',
     setAutoSaveDesc:
@@ -10232,6 +10282,9 @@ export const strings = {
     themeSystem: 'Ikut Sistem',
     documentTheme: 'Tema halaman dokumen',
     docThemeFollowApp: 'Ikut tema aplikasi',
+    setHwpSaveFormat: 'Format simpanan dokumen HWP baharu',
+    setHwpSaveFormatDesc:
+      'Simpanan pertama dokumen HWP baharu menawarkan format ini dahulu. Dokumen yang dibuka kekal dalam formatnya sendiri.',
     saveLocation: 'Lokasi simpanan',
     setAutoSave: 'Simpan automatik semua dokumen',
     setAutoSaveDesc:
@@ -10822,6 +10875,9 @@ export const strings = {
     themeSystem: 'עקוב אחר המערכת',
     documentTheme: 'ערכת נושא של דף המסמך',
     docThemeFollowApp: 'לפי ערכת הנושא של האפליקציה',
+    setHwpSaveFormat: 'תבנית שמירה למסמכי HWP חדשים',
+    setHwpSaveFormatDesc:
+      'בשמירה הראשונה של מסמך HWP חדש מוצעת תבנית זו תחילה. מסמכים שנפתחו נשמרים בתבנית שלהם.',
     saveLocation: 'מיקום שמירה',
     setAutoSave: 'שמירה אוטומטית של כל המסמכים',
     setAutoSaveDesc: 'מפעיל שמירה אוטומטית כברירת מחדל בכל עורך. עדיין אפשר לכבות אותה בחלון בודד.',
@@ -11391,6 +11447,9 @@ export const strings = {
     themeSystem: 'सिस्टम का अनुसरण करें',
     documentTheme: 'दस्तावेज़ पृष्ठ थीम',
     docThemeFollowApp: 'ऐप थीम के अनुसार',
+    setHwpSaveFormat: 'नए HWP दस्तावेज़ों का सहेजने का प्रारूप',
+    setHwpSaveFormatDesc:
+      'नए HWP दस्तावेज़ को पहली बार सहेजते समय यह प्रारूप पहले सुझाया जाता है। खोले गए दस्तावेज़ अपने ही प्रारूप में सहेजे जाते हैं।',
     saveLocation: 'सहेजने का स्थान',
     setAutoSave: 'सभी दस्तावेज़ स्वतः सहेजें',
     setAutoSaveDesc:
@@ -11970,6 +12029,8 @@ export const strings = {
     themeSystem: '跟隨系統',
     documentTheme: '文件頁面主題',
     docThemeFollowApp: '跟隨應用程式主題',
+    setHwpSaveFormat: '新增 HWP 文件的儲存格式',
+    setHwpSaveFormatDesc: '新增 HWP 文件首次儲存時優先提供此格式。已開啟的文件仍按其原有格式儲存。',
     saveLocation: '預設儲存位置',
     setAutoSave: '所有文件自動儲存',
     setAutoSaveDesc: '在每個編輯器中預設開啟自動儲存，仍可在單一視窗中關閉。',

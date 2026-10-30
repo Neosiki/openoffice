@@ -287,6 +287,11 @@ import {
   setHwpFileSavedHook,
 } from '../../../hwp/src/main/hwp-main'
 import {
+  HWP_DEFAULT_FORMAT_KEY,
+  normalizeHwpDefaultFormat,
+  readHwpDefaultFormat,
+} from '../../../hwp/src/main/default-format'
+import {
   configureHtmlRuntime,
   exportHtmlHeadless,
   htmlDiscardPendingAssets,
@@ -6259,6 +6264,14 @@ function registerHomeIpc(): void {
     writeAppSetting(APP_SETTINGS_PATH(), DEFAULT_SAVE_DIR_KEY, picked)
     ensureFolderWatchers()
     return picked
+  })
+
+  ipcMain.handle(HOME_CHANNELS.getHwpDefaultFormat, () => readHwpDefaultFormat(app))
+
+  ipcMain.handle(HOME_CHANNELS.setHwpDefaultFormat, (_event, format: unknown) => {
+    const next = normalizeHwpDefaultFormat(format)
+    writeAppSetting(APP_SETTINGS_PATH(), HWP_DEFAULT_FORMAT_KEY, next)
+    return next
   })
 
   ipcMain.handle(HOME_CHANNELS.openGitHubRepo, () => {
