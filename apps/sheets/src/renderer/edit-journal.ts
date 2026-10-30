@@ -1,4 +1,4 @@
-import { CellValueType } from '@univerjs/core'
+import { BorderStyleTypes, CellValueType } from '@univerjs/core'
 
 import type {
   WorkbookCellEdit,
@@ -1183,6 +1183,12 @@ export function toSaveVisualAdds(journal: EditJournal): WorkbookVisualAdd[] {
                   ]),
                 ),
               }),
+          // Combo Select Data tags ride along; other families never reach a
+          // 'combo' chartType above.
+          ...(series.plot === 'barChart' || series.plot === 'lineChart'
+            ? { plot: series.plot }
+            : {}),
+          ...(series.secondaryAxis === undefined ? {} : { secondaryAxis: series.secondaryAxis }),
         })),
         ...(visual.chart.legend === undefined ? {} : { legend: visual.chart.legend }),
         // The read-only combined mode narrows to the closest writable one.
@@ -1210,6 +1216,10 @@ export function toSaveVisualAdds(journal: EditJournal): WorkbookVisualAdd[] {
         ...(visual.chart.holeSizePct === undefined
           ? {}
           : { holeSizePct: Math.round(visual.chart.holeSizePct) }),
+        // PivotChart marker rides along so the save writes c:pivotSource.
+        ...(visual.chart.pivotTablePath === undefined
+          ? {}
+          : { pivotTablePath: visual.chart.pivotTablePath }),
       },
     })
   }
@@ -2198,6 +2208,14 @@ const UNIVER_VERTICAL: Record<number, WorkbookStyleEdit['verticalAlignment']> = 
 /// for every painter that checks bg.rgb. Shared by the file installer, the
 /// journal overlay replay, and the ribbon's No Fill.
 export const NO_FILL_STYLE: { readonly rgb: '' } = { rgb: '' }
+
+/// "No border" as a Univer bd value, the border twin of NO_FILL_STYLE: an
+/// empty bd is dropped by the set-range-values sanitizer, so one NONE edge
+/// keeps the key defined (blocks a <col style=> border at compose time) while
+/// the renderer skips NONE edges and the save path has no xlsx name for it.
+export const NO_BORDER_STYLE: {
+  readonly t: { readonly s: BorderStyleTypes.NONE; readonly cl: { readonly rgb: '#000000' } }
+} = { t: { s: BorderStyleTypes.NONE, cl: { rgb: '#000000' } } }
 
 /// Converts a Univer IStyleData delta (from a set-range-values mutation) to
 /// the renderer-neutral wire format. Unknown keys are ignored; `null` values
