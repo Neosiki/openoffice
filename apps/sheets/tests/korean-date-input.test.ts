@@ -77,14 +77,15 @@ describe('converted cell journal', () => {
       value: 46324,
       style: { numberFormat: 'yyyy. m. d.' },
     })
-    // Undoing the inserted format removes it; the cell keeps its prior value.
+    // Undoing the inserted format removes it (General on save); the cell
+    // keeps its prior value.
     recordSetRangeValues(journal, 's1', { 0: { 0: { v: 42 } } })
     recordRemoveNumfmt(journal, 's1', {
       ranges: [{ startRow: 0, endRow: 0, startColumn: 0, endColumn: 0 }],
     })
     expect(journal.cells.get('s1')?.get('0:0')).toMatchObject({
       value: 42,
-      style: { numberFormat: null },
+      style: { numberFormat: 'General' },
     })
   })
 })

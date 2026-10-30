@@ -2266,7 +2266,11 @@ export function toNeutralStyle(s: Record<string, unknown>): WorkbookStyleEdit | 
     }
   }
   if ('n' in s) {
-    if (s.n === null) style.numberFormat = null
+    // A removed format (numfmt undo, a paste of unformatted cells, which
+    // carries `n: null` in every pasted style) saves as General. The save wire
+    // takes only a pattern string, so null failed the whole save; General is
+    // numFmtId 0, the file's own "no number format".
+    if (s.n === null) style.numberFormat = 'General'
     else if (typeof s.n === 'object') {
       const pattern = (s.n as Record<string, unknown>).pattern
       if (typeof pattern === 'string' && pattern.length > 0 && pattern.length <= 255) {
