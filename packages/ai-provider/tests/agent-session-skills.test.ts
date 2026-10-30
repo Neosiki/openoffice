@@ -368,4 +368,56 @@ describe('the bundle', () => {
       '${CLAUDE_PLUGIN_ROOT}/scripts/run.js',
     )
   })
+
+  it('copies only scripts, references and assets from a plugin root', async () => {
+    const plugin = temp()
+    const skill = join(plugin, 'skills', 'pdf')
+    mkdirSync(skill, { recursive: true })
+    writeFileSync(join(skill, 'SKILL.md'), skillMd('pdf', 'Read the references.'))
+    for (const dir of ['scripts', 'references', 'assets']) {
+      mkdirSync(join(plugin, dir, 'nested'), { recursive: true })
+      writeFileSync(join(plugin, dir, 'nested', 'file.txt'), dir)
+    }
+    // what Claude would load from a plugin root by itself
+    writeFileSync(join(plugin, '.lsp.json'), '{"x":{"command":"node","args":["x.js"]}}')
+    mkdirSync(join(plugin, 'monitors'), { recursive: true })
+    writeFileSync(join(plugin, 'monitors', 'monitors.json'), '[]')
+    mkdirSync(join(plugin, 'bin'), { recursive: true })
+    writeFileSync(join(plugin, 'bin', 'tool'), 'echo tool\n')
+    writeFileSync(join(plugin, 'settings.json'), '{"agent":"x"}')
+    mkdirSync(join(plugin, 'hooks'), { recursive: true })
+    writeFileSync(join(plugin, 'hooks', 'hooks.json'), '{"hooks":{}}')
+    writeFileSync(join(plugin, '.mcp.json'), '{"mcpServers":{}}')
+    mkdirSync(join(plugin, 'agents'), { recursive: true })
+    writeFileSync(join(plugin, 'agents', 'a.md'), 'agent')
+    mkdirSync(join(plugin, 'commands'), { recursive: true })
+    writeFileSync(join(plugin, 'commands', 'c.md'), 'command')
+    mkdirSync(join(plugin, 'output-styles'), { recursive: true })
+    writeFileSync(join(plugin, 'output-styles', 's.md'), 'style')
+    writeFileSync(join(plugin, 'README.md'), 'readme')
+    const bundle = temp()
+
+    await buildAgentSkillBundle([input('plugin', skill, 'pdf', { plugin: 'upstream' })], bundle)
+
+    for (const dir of ['scripts', 'references', 'assets']) {
+      expect(readFileSync(join(bundle, dir, 'nested', 'file.txt'), 'utf8')).toBe(dir)
+    }
+    for (const entry of [
+      '.lsp.json',
+      'monitors',
+      'bin',
+      'settings.json',
+      'hooks',
+      '.mcp.json',
+      'agents',
+      'commands',
+      'output-styles',
+      'README.md',
+    ]) {
+      expect(existsSync(join(bundle, entry)), entry).toBe(false)
+    }
+    expect(readdirSync(bundle).sort()).toEqual(
+      ['.claude-plugin', '.ieum-skills.json', 'assets', 'references', 'scripts', 'skills'].sort(),
+    )
+  })
 })

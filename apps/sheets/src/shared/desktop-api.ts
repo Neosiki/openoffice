@@ -2594,6 +2594,8 @@ export const aiSettingsInputSchema = z
     headlessSubscriptionEnabled: z.boolean().optional(),
     headlessSubscriptionConsentVersion: z.number().int().nonnegative().optional(),
     subscriptionNoticeSeen: z.boolean().optional(),
+    subscriptionNoticeVersion: z.number().int().nonnegative().optional(),
+    pdfSendNoticeSeen: z.number().int().nonnegative().optional(),
   })
   .strict()
 

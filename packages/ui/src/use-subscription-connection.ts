@@ -28,7 +28,10 @@ import { AI_SUBSCRIPTION_INSTALL_HELP_URLS } from './ai-subscription'
 export interface SubscriptionApiLike {
   statuses(): Promise<SubscriptionStatusMap>
   recheck(providers?: AiSubscriptionProviderId[]): Promise<SubscriptionStatusMap>
-  login(provider: AiSubscriptionProviderId, mode?: SubscriptionLoginMode): Promise<SubscriptionLaunchResult>
+  login(
+    provider: AiSubscriptionProviderId,
+    mode?: SubscriptionLoginMode,
+  ): Promise<SubscriptionLaunchResult>
   install(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   update(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>
   cancelLogin(provider: AiSubscriptionProviderId): Promise<SubscriptionLaunchResult>

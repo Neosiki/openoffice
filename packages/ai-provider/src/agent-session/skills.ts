@@ -24,10 +24,12 @@
  *
  * A skill from an installed Claude plugin may name files beside its `skills`
  * folder with `${CLAUDE_PLUGIN_ROOT}`. The copy is one plugin folder of the
- * app's own, so the plugin's other files (scripts, references, assets) are
- * copied to its root as well. Only the parts that would make Claude run
- * something by itself are left out: `hooks`, `agents`, `commands`, `.mcp.json`
- * and `.claude-plugin` (the app writes its own `plugin.json`).
+ * app's own, so three of the plugin's root folders are copied to its root as
+ * well: `scripts`, `references` and `assets`. Nothing else at the plugin root
+ * is copied. Claude loads more from a plugin root than skills (hooks, MCP and
+ * LSP servers, monitors, `bin`, settings, agents, commands), and some of those
+ * start a process with no tool call and no permission request, so only
+ * folders Claude never loads by themselves are taken.
  */
 import { createHash } from 'node:crypto'
 import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -178,17 +180,12 @@ async function copyFiles(files: readonly SkillFolderFile[], to: string): Promise
   }
 }
 
-/** Root entries of a plugin that would run something by themselves, or are the app's to write */
-const PLUGIN_SKIPPED_DIRS = new Set([
-  'skills',
-  'hooks',
-  'agents',
-  'commands',
-  'node_modules',
-  '.git',
-  '.claude-plugin',
-])
-const PLUGIN_SKIPPED_FILES = new Set(['.mcp.json'])
+/**
+ * The only plugin root folders copied. Everything else at the root is left
+ * out, including what Claude would load and run by itself (`.lsp.json`,
+ * `monitors`, `hooks`, `.mcp.json`, `bin`, `settings.json`).
+ */
+const PLUGIN_COPIED_DIRS = new Set(['scripts', 'references', 'assets'])
 
 /** The plugin folder a plugin skill belongs to (`<plugin>/skills/<skill>`) */
 function pluginRootOf(skill: AgentSkillInput): string | undefined {
@@ -217,15 +214,15 @@ async function copyPluginSupport(pluginRoot: string, bundleDir: string): Promise
     for (const entry of entries) {
       if (bytes > MAX_USER_SKILL_BYTES || files > MAX_USER_SKILL_FILES) return
       if (entry.isSymbolicLink()) continue
+      // at the plugin root, only the listed folders: no file and no other folder
+      if (!rel && !(entry.isDirectory() && PLUGIN_COPIED_DIRS.has(entry.name))) continue
       const path = join(current, entry.name)
       const childRel = rel ? `${rel}/${entry.name}` : entry.name
       if (entry.isDirectory()) {
-        if (!rel && PLUGIN_SKIPPED_DIRS.has(entry.name)) continue
         await walk(path, childRel)
         continue
       }
       if (!entry.isFile()) continue
-      if (!rel && PLUGIN_SKIPPED_FILES.has(entry.name)) continue
       const info = await stat(path).catch(() => undefined)
       if (!info?.isFile()) continue
       if (bytes + info.size > MAX_USER_SKILL_BYTES || files + 1 > MAX_USER_SKILL_FILES) return

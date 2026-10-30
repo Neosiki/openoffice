@@ -60,7 +60,7 @@
 - Claude에 `bypassPermissions`·`--dangerously-skip-permissions`를 주지 않는다. "믿고 맡기기"는 Claude Code의 `auto` 모드다. Windows에서 Claude의 명령은 격리되지 않기 때문이다.
 - Codex 에이전트 세션은 MXC 격리(`windows.sandbox="mxc"`)와 `deny`가 든 권한 프로필로만 연다. 승인 정책에 `on-request`를 쓰지 않는다. 그 정책에서 허락한 명령은 격리 밖에서 돈다. `thread/start`의 답에서 프로필과 승인 정책이 요청과 같은지 확인한다. Windows에서는 그 전에 `probeCodexSandbox`(`codex-sandbox-probe.ts`)로 격리가 뜨고 거부를 지키는지 시험하고, 통과하지 못하면 시작하지 않는다.
 - 에이전트 세션도 명령줄에 사용자 글을 올리지 않는다. 설정과 MCP 토큰은 세션 폴더의 파일로, 지시문은 표준 입력(Claude `initialize`의 `appendSystemPrompt`, Codex `developerInstructions`)으로 넘긴다.
-- 스킬은 사용자 설정을 읽게 해서 싣지 않는다(훅이 실행된다). `buildAgentSkillBundle`이 스킬 폴더만 복사한 플러그인 폴더를 만들고, 디렉터리 연결은 쓰지 않는다(연결이 실제 위치로 풀려 작업 폴더 밖으로 막힌다). 설치는 플러그인이 `skills` 옆의 파일을 `${CLAUDE_PLUGIN_ROOT}`로 가리킬 수 있으므로, 그 플러그인의 다른 파일(scripts·references·assets)은 복사본의 루트로 함께 복사한다. 실행을 스스로 여는 `hooks`·`agents`·`commands`·`.mcp.json`과 앱이 다시 쓰는 `.claude-plugin`은 복사하지 않는다. Codex에는 `${CLAUDE_PLUGIN_ROOT}`가 복사본 루트를 뜻한다고 지시문에 적는다.
+- 스킬은 사용자 설정을 읽게 해서 싣지 않는다(훅이 실행된다). `buildAgentSkillBundle`이 스킬 폴더만 복사한 플러그인 폴더를 만들고, 디렉터리 연결은 쓰지 않는다(연결이 실제 위치로 풀려 작업 폴더 밖으로 막힌다). 설치는 플러그인이 `skills` 옆의 파일을 `${CLAUDE_PLUGIN_ROOT}`로 가리킬 수 있으므로, 그 플러그인 루트의 `scripts`·`references`·`assets` 세 폴더만 복사본의 루트로 함께 복사한다(허용 목록). 루트의 다른 파일·폴더는 복사하지 않는다. Claude가 플러그인 루트에서 스스로 읽어 프로세스를 띄우는 것(`hooks`, `.mcp.json`, `.lsp.json`, `monitors`)이 있기 때문이다. Codex에는 `${CLAUDE_PLUGIN_ROOT}`가 복사본 루트를 뜻한다고 지시문에 적는다.
 - 사용자 스킬은 `~/.codex` 안을 어떤 경로로도 읽지 않고, 스킬 폴더 밖으로 이어지는 링크를 따라가지 않는다. 이름이 `genoffice`·`ieumoffice`인 스킬은 어느 출처에서든 목록에 넣지 않는다. 파일을 쓰는 곳은 내 스킬 폴더(`~/.ieumoffice/skills`) 하나이고, 깃허브 요청에는 쿠키와 인증 머리글을 싣지 않는다(결정 0048).
 
 - **ChatGPT 직접 연결(결정 0081).** 토큰은 이 앱이 OpenAI에 자기 이름으로 등록해 받은 것이고, Codex의 로그인을 읽지 않는다. 지킬 것:
