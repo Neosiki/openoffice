@@ -47,6 +47,6 @@
       "0026-hwpx-drop-rows-covered-by-merged-cells.patch"
     ],
     "wasmPack": "0.15.0",
-    "wasmSha256": "455b77e984f3a9cb76b622dd423183e3423a972ff849e74abc692c6038e0dc60"
+    "wasmSha256": "044a322b23e60332b9c3ebc90aecd18e0c6405c7efc99d1950d22d5b9c07984e"
   }
 }
