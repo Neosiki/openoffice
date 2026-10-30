@@ -31,6 +31,7 @@ import {
   AiUsageChip,
   addTokenUsage,
   aiSubscriptionText,
+  changeStoredAiSettings,
   useAiSendGate,
   useChatRunQueue,
   NO_SKILL_USE,
@@ -55,7 +56,13 @@ import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
-import { aiBlockedRunOf, mergeSubscriptionUsage, type AiBlockedRun } from './ai-connection'
+import {
+  aiBlockedRunOf,
+  mergeSubscriptionUsage,
+  pdfSendNoticeDue,
+  PDF_SEND_NOTICE_VERSION,
+  type AiBlockedRun,
+} from './ai-connection'
 import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref, type PdfNavTarget } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
@@ -450,6 +457,10 @@ export function AiPanel({
     statuses: connection.statuses,
     store: MODEL_BRIDGE,
     start: (held) => send(held.text, held.scope, held.skillUse),
+    acknowledgeNoticeExtra: (latest) => ({
+      ...latest,
+      pdfSendNoticeSeen: PDF_SEND_NOTICE_VERSION,
+    }),
     onSettingsSaved: (next) => {
       aiSettingsRef.current = next
       setAiSettings(next)
@@ -463,6 +474,18 @@ export function AiPanel({
   const streamErrorRef = useRef<AiBlockedRun | null>(null)
   /** the provider a request would run on right now (null until the settings are read) */
   const providerChoice = aiSettings ? selectAiProvider(aiSettings, connection.statuses) : null
+  /** the PDF-only sentence: kept apart from the general notice, which another editor may have acknowledged */
+  const pdfNoticeDue = pdfSendNoticeDue(aiSettings, providerChoice?.connected === true)
+  const acknowledgePdfNotice = useCallback(() => {
+    void changeStoredAiSettings(MODEL_BRIDGE, (latest) => ({
+      ...latest,
+      pdfSendNoticeSeen: PDF_SEND_NOTICE_VERSION,
+    })).then((next) => {
+      if (!next) return
+      aiSettingsRef.current = next
+      setAiSettings(next)
+    })
+  }, [])
   const langRef = useRef(lang)
   langRef.current = lang
   const apiRef = useRef(api)
@@ -1136,6 +1159,14 @@ export function AiPanel({
             codexKeepsHistory
             sendsWholeDocument
             onAcknowledge={sendGate.acknowledgeNotice}
+          />
+        )}
+        {!sendGate.noticeDue && pdfNoticeDue && (
+          <AiFirstConnectionNotice
+            lang={lang}
+            codexKeepsHistory
+            sendsWholeDocument
+            onAcknowledge={acknowledgePdfNotice}
           />
         )}
         {inputTruncated && (

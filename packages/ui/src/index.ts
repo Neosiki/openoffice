@@ -372,10 +372,13 @@ export {
   type AiSubscriptionCardView,
 } from './ai-subscription'
 export {
+  AI_SUBSCRIPTION_NOTICE_VERSION,
   aiConnectPromptChoice,
   aiHeldRequestStep,
   aiHoldReason,
   aiSendGate,
+  aiSubscriptionNoticeDue,
+  aiSubscriptionNoticeVersion,
   changeStoredAiSettings,
   withAiContinueProvider,
   withAiSubscriptionNoticeSeen,
@@ -386,6 +389,13 @@ export {
   type AiSettingsStore,
 } from './ai-send-gate'
 export { useAiSendGate, type AiSendGateArgs, type AiSendGateController } from './use-ai-send-gate'
+export {
+  useSubscriptionConnection,
+  type SubscriptionApiLike,
+  type SubscriptionConnection,
+  type SubscriptionLaunchKind,
+  type UseSubscriptionConnectionOptions,
+} from './use-subscription-connection'
 export {
   AI_SUBSCRIPTION_STRINGS,
   aiSubscriptionText,

@@ -6,7 +6,7 @@
 
 - 디자인 토큰 `src/tokens.css`. UI 크롬 색의 유일한 정의처다.
 - 리본·도구 단추의 말풍선 `src/screentip.ts`(`installScreenTips`, 모든 화면이 하나를 쓴다). 포인터가 띄운 말풍선은 포인터 그림이 차지하는 칸(끝점에서 오른쪽 아래로 `--os-pointer-size`, 없으면 32px)과 겹치면 그 아래로, 창 아래에 자리가 없으면 단추 위로 비킨다. 포인터를 크게 키워 쓰는 사람이 말풍선을 못 읽던 신고로 넣었다. 키보드 초점으로 뜬 말풍선은 원래 자리다.
-- AI 패널 공용 부품: 작성기 `AiComposer`, 모델 선택 `AiModelPicker`(`src/ai-model-picker-options.ts`의 `aiProviderPickerGroups`·`withAiProviderSelection`), 대기열 `useChatRunQueue`(`src/chat-run-queue.ts`), 패널 표시 설정(`src/ai-panel-prefs.ts`).
+- AI 패널 공용 부품: 작성기 `AiComposer`, 모델 선택 `AiModelPicker`(`src/ai-model-picker-options.ts`의 `aiProviderPickerGroups`·`withAiProviderSelection`), 대기열 `useChatRunQueue`(`src/chat-run-queue.ts`), 패널 표시 설정(`src/ai-panel-prefs.ts`), 구독 연결 상태 기계 `useSubscriptionConnection`(`src/use-subscription-connection.ts`).
 - 구독 연결 화면 부품과 그 규칙: `AiSubscriptionCard`·`AiConnectPrompt`, 연결 도우미 `AiConnectGuide`(규칙은 `src/connect-guide.ts`), `AiBlockedNotice`, `AiSubscriptionUsageLine`, `AiFirstConnectionNotice`·`AiCodexNotice`·`AiMeteredWarning`·`AiInputTruncatedNotice`, `AiMark`. 무엇을 보여 줄지는 순수 함수(`src/ai-subscription.ts`)가 정하고 컴포넌트는 배치만 한다.
 - AI 창의 "Google 드라이브에서 첨부" 버튼 `DriveAttachButton`과 그 문구(`src/strings-drive-attach.ts`, 결정 0033, 0085). 편집기 preload의 `window.aiOfficeDriveAi`가 있고 드라이브가 연결돼 있을 때만 그린다. Google 선택 창과 내려받기, 학습 확인·무료 연결 거절은 껍데기 앱의 일이고, 이 부품은 돌아온 경로와 알림 글을 편집기에 넘길 뿐이다.
 - AI 창의 "이음오피스 문서에서 첨부" 버튼 `DocAttachButton`과 그 문구(`src/strings-doc-attach.ts`, 결정 0035). 편집기 preload의 `window.aiOfficeDocs`가 있을 때만(껍데기 앱 안에서 돌 때만) 그린다. 열린 문서·최근 문서의 고르기 창은 껍데기 앱의 일이고, 이 부품은 고른 파일 경로와 알림 글(`docPickedOf`로 거른 `{ paths, notes }`)을 편집기에 넘길 뿐이다. 고르는 동안에는 잠긴다.
@@ -20,7 +20,7 @@
 
 ## 맡지 않는 것 (경계)
 
-- 연결 상태를 알아내거나 로그인·설치를 실행하는 일은 이 모듈의 범위가 아니다. 그것은 `packages/ai-provider`(메인 프로세스)가 하고, 여기 컴포넌트는 상태를 props로 받고 버튼은 콜백(`AiSubscriptionCardActions`)만 부른다. IPC를 직접 부르지 않는다.
+- 연결 상태를 알아내거나 로그인·설치를 실행하는 일은 이 모듈이 직접 하지 않는다. `useSubscriptionConnection`은 호스트가 넘긴 preload 다리(`SubscriptionApiLike`)만 부르고, IPC 이름을 갖지 않는다. 채널과 프로그램 실행은 `packages/ai-provider`(메인 프로세스)의 범위다.
 - 이 패키지는 `@genoffice/ai-provider/browser`만 import한다. Node에 묶인 루트·`/subscription` 진입점을 import하면 렌더러 번들이 깨진다.
 - 에디터 고유의 화면(리본, 문서 캔버스, 에디터별 문자열)과 앱별 강조색(`--accent` 계열)은 각 `apps/*/src/renderer`의 범위다.
 - 문서 내용의 색은 범위가 아니다. `src/wordart-presets.ts`의 색처럼 문서에 저장되는 값은 문서 데이터이고 토큰을 참조하지 않는다.
@@ -75,5 +75,5 @@
 - 실행: `npm run test -w @genoffice/ui`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ui`. Windows에서 전부 통과한다.
 - 기본 환경은 `node`다. DOM이 필요한 테스트는 파일 첫 줄에 `/** @vitest-environment jsdom */`를 달고 `react-dom/client`의 `createRoot`와 `act`로 렌더링한다.
 - `tests/editors-consistency.test.ts`는 저장소의 `apps/*` 소스를 읽는다. 에디터의 패널·리본 파일을 옮기거나 이름을 바꾸면 이 테스트의 `EDITORS` 표도 함께 고친다. 이 패키지만 떼어 놓고는 돌릴 수 없다.
-- 바꾸면 반드시 테스트하는 것: `aiSendGate`의 네 결과(`run`, `checking`, `notice`, `connect`)와 붙잡힌 요청의 전이, 설정이나 상태가 아직 없을 때(`null`), `auto`에서 한쪽만 확인이 끝났을 때, 모델 선택기 목록이 `selectAiProvider`를 통과하는 항목만 담는지, 프로그램의 모델 목록이 있을 때와 없을 때의 항목과 칩 글, 계정과 계정 버튼이 요청받은 카드에만 나오는지, 새 문자열 키가 21개 언어에 있고 `{name}` 자리 표시가 언어마다 같은지.
+- 바꾸면 반드시 테스트하는 것: `aiSendGate`의 네 결과(`run`, `checking`, `notice`, `connect`)와 붙잡힌 요청의 전이, 설정이나 상태가 아직 없을 때(`null`), `auto`에서 한쪽만 확인이 끝났을 때, 모델 선택기 목록이 `selectAiProvider`를 통과하는 항목만 담는지, 프로그램의 모델 목록이 있을 때와 없을 때의 항목과 칩 글, 계정과 계정 버튼이 요청받은 카드에만 나오는지, 새 문자열 키가 21개 언어에 있고 `{name}` 자리 표시가 언어마다 같은지, 연결 상태 기계가 다리 없음·변경 알림·로그인 뒤 초점 확인·새로 고침 모드·도움말 대체 경로를 지키는지(`tests/use-subscription-connection.test.ts`).
 - 토큰 변경은 자동 검사가 없다. 밝은 테마, 어두운 테마, 시스템 모드 세 경우를 실제 화면으로 확인한다.

@@ -132,6 +132,7 @@ import {
   type AiStreamRequest,
   type AiSubscriptionProviderId,
   sealAiSecrets,
+  withMigratedSubscriptionNoticeVersion,
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
@@ -3958,7 +3959,20 @@ function broadcastAiSettingsChanged(): void {
  */
 /** the settings file as every reader gets it: removed and unknown selections read as their defaults */
 function storedAiSettings(): AiSettings {
-  return normalizeAiSettings(readJson<unknown>(SETTINGS_PATH(), {}))
+  const raw = readJson<unknown>(SETTINGS_PATH(), {})
+  return normalizeAiSettings(migratedNoticeVersion(raw))
+}
+
+/**
+ * An ai-settings.json written before the notice carried a version acknowledged
+ * version 1. Record that, so the user sees the PDF sentence added in version 2
+ * once; a file that already has a version is left exactly as it is.
+ */
+function migratedNoticeVersion(raw: unknown): unknown {
+  const next = withMigratedSubscriptionNoticeVersion(raw)
+  if (!next) return raw
+  writeJsonAtomic(SETTINGS_PATH(), next)
+  return next
 }
 
 /** where the image and media tools may run: the screen path, with the live subscription statuses */

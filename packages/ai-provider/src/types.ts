@@ -341,6 +341,19 @@ export interface AiSettings {
   /** the first-connection notice has been shown; absent = false */
   subscriptionNoticeSeen?: boolean | undefined
   /**
+   * Which version of the first-connection notice was acknowledged. The notice
+   * is shown again when its wording gains something new (the PDF sentence is
+   * version 2); old files that only carry `subscriptionNoticeSeen` read as the
+   * previous version, so those users see the addition once.
+   */
+  subscriptionNoticeVersion?: number | undefined
+  /**
+   * Which version of the PDF editor's extra sentence was acknowledged. It is
+   * kept separately because the general notice may have been acknowledged in
+   * another editor, where that sentence is not shown.
+   */
+  pdfSendNoticeSeen?: number | undefined
+  /**
    * "Let AI use internet tools" (decision 0062): only false turns the editors'
    * outbound tools off; absent = on. The terminal command and MCP do not read it.
    */
