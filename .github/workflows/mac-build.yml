@@ -87,6 +87,11 @@ jobs:
       # this host (target/release/xlsx-sidecar, where the mac config reads it)
       - name: Build apps
         run: npm run build:all
+        # the Google Drive client (decisions 0033, 0085) goes into the shell build;
+        # without it the build ships without Drive
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
       # both packages ship one sidecar path, so it must hold both CPUs; the
       # packaging hook refuses a host-only one (assertUniversalSidecar)
@@ -95,6 +100,9 @@ jobs:
 
       - name: Package
         run: npm run dist:mac -w @genoffice/shell -- --publish never
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
       - name: Check the signatures and the bundled programs
         run: |
