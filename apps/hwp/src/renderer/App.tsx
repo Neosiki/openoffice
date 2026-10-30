@@ -12,6 +12,7 @@ import {
   type TemplateDocument,
 } from '@genoffice/ui'
 import { HwpAiDock } from './ai/AiDock'
+import { DocCheckPanel } from './check/DocCheckPanel'
 import { createAgentBridge } from './ai/agent-bridge'
 import {
   DIRTY_EVENT,
@@ -136,6 +137,8 @@ export default function App() {
   const lastInputAtRef = useRef(0)
   /** the format the document was opened in: what it is exported as when it is read */
   const formatRef = useRef<HwpFormat>('hwp')
+  /** the same format for the screen: the check panel passes it to the rules */
+  const [docFormat, setDocFormat] = useState<HwpFormat>('hwp')
   const [phase, setPhase] = useState<Phase>('booting')
   /** Ctrl+F5: the document alone in fullscreen, with the editor's own chrome hidden */
   const [presenting, setPresenting] = useState(false)
@@ -151,6 +154,11 @@ export default function App() {
   const prePresentChromeRef = useRef<ChromeVisibility | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [aiOpen, setAiOpen] = useState(() => aiPanelInitiallyOpen(AI_OPEN_KEY))
+  const [checkOpen, setCheckOpen] = useState(false)
+  /** a request the check panel hands to the AI input box; `nonce` says it is a new one */
+  const [aiPrefill, setAiPrefill] = useState<{ text: string; nonce: number } | null>(null)
+  /** counts changes made through the bridge, so the check panel can read the document again */
+  const [docRevision, setDocRevision] = useState(0)
   /** the memo column beside the document: out or not, independent of the AI dock */
   const [memoOpen, setMemoOpen] = useState(memoPanelInitiallyOpen)
   /** a memo editor is open here or in another tab: save, close and quit must wait */
@@ -175,7 +183,10 @@ export default function App() {
     () =>
       withChangeNotes(
         createAgentBridge(() => editorRef.current),
-        () => copierRef.current?.noteChange(),
+        () => {
+          copierRef.current?.noteChange()
+          setDocRevision((revision) => revision + 1)
+        },
       ),
     [],
   )
@@ -227,11 +238,13 @@ export default function App() {
           return
         }
         formatRef.current = hwpFormatOfPath(path) ?? 'hwp'
+        setDocFormat(formatRef.current)
         // an untitled copy (a skill template's, spec 5.7) is read from its temp file but
         // has no file of its own: the AI conversation and the first save treat it as new
         const copy = (await window.hwpApi.untitledCopy?.().catch(() => null)) ?? null
         if (copy) {
           formatRef.current = copy.format
+          setDocFormat(copy.format)
           copyNameRef.current = copy.name
         } else setFilePath(path)
         const bytes = await window.hwpApi.readFile(path)
@@ -867,6 +880,14 @@ export default function App() {
     <div className={`hwp-app${presenting ? ' hwp-presenting' : ''}`} data-phase={phase}>
       {phase === 'ready' && (
         <div className="hwp-topbar">
+          <button
+            type="button"
+            className="hwp-topbar-button"
+            aria-pressed={checkOpen}
+            onClick={() => setCheckOpen((open) => !open)}
+          >
+            {t('checkTitle')}
+          </button>
           <MemoToggle open={memoOpen} onToggle={() => setMemoOpen((open) => !open)} />
           <label className={`autosave-toggle${autoSave ? ' on' : ''}`} data-tip={t('autoSaveTip')}>
             <span className="autosave-knob" />
@@ -889,6 +910,7 @@ export default function App() {
             bridge={agentBridge}
             filePath={filePath}
             templateDocument={templateDocument}
+            prefill={aiPrefill}
           />
         )}
         {phase === 'ready' && (
@@ -904,6 +926,18 @@ export default function App() {
         )}
         <div className="hwp-stage">
           <div ref={hostRef} className="hwp-editor-host" />
+          {phase === 'ready' && checkOpen && (
+            <DocCheckPanel
+              bridge={agentBridge}
+              format={docFormat}
+              revision={docRevision}
+              onClose={() => setCheckOpen(false)}
+              onHandOff={(request) => {
+                setAiPrefill({ text: request, nonce: Date.now() })
+                setAiOpen(true)
+              }}
+            />
+          )}
           {phase === 'booting' && <div className="hwp-cover">{t('loading')}</div>}
           {notice && (
             <div

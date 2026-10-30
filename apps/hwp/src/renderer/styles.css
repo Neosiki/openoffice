@@ -79,6 +79,7 @@ body {
 .hwp-app.hwp-presenting .ai-dock,
 .hwp-app.hwp-presenting .memo-side,
 .hwp-app.hwp-presenting .hwp-topbar,
+.hwp-app.hwp-presenting .doc-check,
 .hwp-app.hwp-presenting .hwp-notice {
   display: none !important;
 }
@@ -89,6 +90,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   min-height: 30px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border-strong);
@@ -265,6 +267,300 @@ body {
 .hwp-notice-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* the document check lives beside the autosave toggle: it is the app's own chrome */
+.hwp-topbar-button {
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.hwp-topbar-button:hover {
+  background: var(--hover);
+}
+
+.hwp-topbar-button:focus-visible {
+  outline: 2px solid var(--hwp-focus-ring-blue);
+  outline-offset: 1px;
+}
+
+.hwp-topbar-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---- document check: the format rules of @genoffice/doc-rules over the open document ---- */
+
+.doc-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100% - 16px));
+  max-height: calc(100% - 16px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  color: var(--text);
+  font-size: var(--text-small);
+}
+
+.doc-check-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.doc-check-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.doc-check-close {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.doc-check-close:hover {
+  background: var(--hover);
+}
+
+.doc-check-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  padding: 10px 12px;
+}
+
+.doc-check-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.doc-check-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.doc-check-badge.violation {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.doc-check-badge.check {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.doc-check-badge.suggestion {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+
+.doc-check-finding {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.doc-check-finding-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.doc-check-finding-title {
+  flex: 1;
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.doc-check-count {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-check-why,
+.doc-check-detail,
+.doc-check-source {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}
+
+.doc-check-detail {
+  overflow-wrap: anywhere;
+}
+
+.doc-check-source {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.doc-check-places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.doc-check-place {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--text-caption);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.doc-check-place:hover {
+  text-decoration: underline;
+}
+
+.doc-check-place:focus-visible {
+  outline: 2px solid var(--hwp-focus-ring-blue);
+  outline-offset: 1px;
+}
+
+.doc-check-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}
+
+.doc-check-failed {
+  color: var(--danger);
+}
+
+.doc-check-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.doc-check-extra {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1 1 100%;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.35;
+  cursor: pointer;
+  user-select: none;
+}
+
+.doc-check-again {
+  flex: none;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+}
+
+.doc-check-again:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.doc-check-again:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* the font finding: one row per font, with a plain edit that needs no model */
+.doc-check-fonts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-check-font {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.doc-check-fix {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+}
+
+.doc-check-fix:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.doc-check-fix:focus-visible {
+  outline: 2px solid var(--hwp-focus-ring-blue);
+  outline-offset: 1px;
+}
+
+.doc-check-fix:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.doc-check-hint {
+  margin: 0;
+  padding: 6px 12px 10px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.4;
 }
 
 /* ---- print preview: a read-only screen over the editor, one paper sheet per page ---- */

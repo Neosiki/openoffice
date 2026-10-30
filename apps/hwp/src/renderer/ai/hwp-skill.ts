@@ -143,6 +143,7 @@ const SYSTEM_PROMPT = [
   '- Add a picture in a new paragraph after or before an anchor paragraph, or at the end: a real picture found on the web (image_search, then insert_image with its address) or an illustration the app draws (generate_image). A picture is saved inside the document, so it travels with the file. Only insert pictures the user asked for.',
   '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), tick the choice boxes of a form (check_boxes), add or remove rows and columns (add_to_table, remove_from_table), and remove a whole table (delete_table).',
   '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour, highlight and the character style of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
+  '- Use one font instead of another everywhere in the document, body and table cells (replace_font). The format check hands the font names over; without it, ask which font the user means.',
   '- Work with the styles of the document: see what one looks like (read_style), add a paragraph or character style (create_style), and change a style: its name, the style that follows it and its look (edit_style).',
   '- Merge table cells into one (merge_cells; their text goes into it, one cell after another) or split a cell into several, or a merged cell back (split_cell). Read the table first: rows and columns count as read_table shows them.',
   '- Fill the form fields of the document (list_fields, fill_field). In Hangul these are called 누름틀. A field is picked by its number in list_fields, because several fields often share one name.',
@@ -556,6 +557,26 @@ const TOOLS: AgentToolDef[] = [
         ...TEXT_FORMAT_SCHEMA,
       },
       required: ['find'],
+    },
+  },
+  {
+    name: 'replace_font',
+    description:
+      'Use another font for every piece of text that uses one font: body text and table cells alike, in one undo step. Give both names exactly. This is how a document written in a font other computers do not have is made to open as it looks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: {
+          type: 'string',
+          description: 'the font to replace, exactly as the document names it',
+        },
+        to: {
+          type: 'string',
+          description:
+            'the font to use instead; for Korean documents 함초롬바탕, 함초롬돋움 or 맑은고딕',
+        },
+      },
+      required: ['from', 'to'],
     },
   },
   {
@@ -1946,6 +1967,35 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           output: `Formatted ${result.count} occurrence(s).`,
           mutated: true,
           summary: label('aiToolFormat', { text: quote(find) }),
+        }
+      }
+      case 'replace_font': {
+        const from = textArg(call, 'from')
+        if (!from) return bad(call, 'from must be a non-empty string')
+        const to = textArg(call, 'to')
+        if (!to) return bad(call, 'to must be a non-empty string')
+        const result = await bridge.replaceFont(from, to)
+        if (result.ranges === 0) {
+          return {
+            output: `No text uses the font "${from}". Nothing was changed.`,
+            mutated: false,
+            summary: `${from} → ${to}`,
+          }
+        }
+        deps.onChange({
+          kind: 'format',
+          from,
+          to,
+          count: result.ranges,
+        })
+        return {
+          output:
+            `Changed ${result.ranges} run(s) of text in ${result.paragraphs} paragraph(s) from "${from}" to "${to}".` +
+            (result.truncated
+              ? ' It stopped at the cap: some text still uses the old font, so run it again.'
+              : ''),
+          mutated: true,
+          summary: `${from} → ${to}`,
         }
       }
       case 'format_paragraph': {

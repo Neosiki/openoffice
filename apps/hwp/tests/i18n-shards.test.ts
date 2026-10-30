@@ -26,6 +26,7 @@ describe('hwp renderer strings', () => {
       expect(strings[lang].saveFailed, lang).not.toBe(strings.en.saveFailed)
       expect(strings[lang].aiEmptyBody, lang).not.toBe(strings.en.aiEmptyBody)
       expect(strings[lang].aiRevertRefused, lang).not.toBe(strings.en.aiRevertRefused)
+      expect(strings[lang].checkTitle, lang).not.toBe(strings.en.checkTitle)
     }
   })
 
@@ -57,6 +58,8 @@ describe('hwp renderer strings', () => {
       aiFmtOff: ['{name}'],
       aiChangesTitle: ['{count}'],
       aiWorkedSteps: ['{n}'],
+      checkMorePlaces: ['{count}'],
+      checkReplaceWith: ['{font}'],
     } as const
     for (const lang of LANGS) {
       for (const [key, tokens] of Object.entries(placeholders)) {
