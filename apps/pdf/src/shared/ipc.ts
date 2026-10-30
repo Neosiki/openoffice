@@ -319,6 +319,14 @@ export type PdfConvertFormat = 'docx' | 'xlsx' | 'pptx'
 /** the reflowable formats the conversion dialog writes (document-structure jobs) */
 export type PdfReflowFormat = 'md' | 'epub'
 
+/** Shell File menu / Save As → the conversion dialog. `outPath` is a Markdown
+    target the shell's own save dialog picked (Save As › Markdown): the dialog
+    converts to it right away instead of asking for a page range and a target. */
+export interface PdfConvertDialogRequest {
+  format: PdfReflowFormat
+  outPath?: string
+}
+
 /** a converted file and the open PDF it came from (the shell checks the view owns that PDF) */
 export interface PdfConvertOutputRequest {
   /** the open file of this view */
@@ -1541,8 +1549,8 @@ export interface PdfApi {
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
   /** Convert the current PDF to Word / Excel / PowerPoint via the shell's local conversion flows */
   convertOffice(format: PdfConvertFormat): Promise<void>
-  /** Shell File menu → open the Markdown / EPUB conversion dialog */
-  onConvertDialogRequest(handler: (format: PdfReflowFormat) => void): () => void
+  /** Shell File menu / Save As → open the Markdown / EPUB conversion dialog */
+  onConvertDialogRequest(handler: (request: PdfConvertDialogRequest) => void): () => void
   /** Before a Markdown job writes: close a Markdown tab showing that file (its unsaved-changes guard applies). False = still open */
   releaseConvertTarget(request: PdfConvertOutputRequest): Promise<boolean>
   /** Open a converted Markdown file in a Markdown tab (same routing as File > Open) */

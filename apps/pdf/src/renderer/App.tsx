@@ -278,6 +278,7 @@ import type {
   NoteEditInput,
   PageImageRef,
   PdfConvertFormat,
+  PdfConvertDialogRequest,
   PdfConvertOutputRequest,
   PdfReflowFormat,
   PdfSignatureInfo,
@@ -660,8 +661,8 @@ export default function App() {
   const [highlightColorOpen, setHighlightColorOpen] = useState(false)
   const [convertOpen, setConvertOpen] = useState(false)
   const [convertBusy, setConvertBusy] = useState(false)
-  /** the Markdown / EPUB conversion dialog that is open */
-  const [convertDialog, setConvertDialog] = useState<PdfReflowFormat | null>(null)
+  /** the Markdown / EPUB conversion dialog that is open; `outPath` = a Save As target */
+  const [convertDialog, setConvertDialog] = useState<PdfConvertDialogRequest | null>(null)
   /** AI page reading: this tab's document jobs, the window's handle, the ribbon menu */
   const jobSession = useMemo(() => new DocumentJobSession(), [])
   const aiReadApi = useMemo(() => {
@@ -7687,8 +7688,9 @@ export default function App() {
     return window.pdfApi.onPrintRequest(openPrintDlg)
   })
 
-  // Shell File menu › Markdown / EPUB → the same dialog as the converter dropdown
-  useEffect(() => window.pdfApi.onConvertDialogRequest((format) => setConvertDialog(format)), [])
+  // Shell File menu › Markdown / EPUB or Save As › Markdown → the same dialog
+  // (Save As carries the target it already picked)
+  useEffect(() => window.pdfApi.onConvertDialogRequest((request) => setConvertDialog(request)), [])
 
   // Shortcuts: ⌘S/⌘F/⌘P/⌘±/⌘0 + page navigation (only ⌘ combos kept while an input control is focused)
   useEffect(() => {
@@ -8016,7 +8018,7 @@ export default function App() {
   /** Converter dropdown › Markdown / EPUB → the conversion dialog */
   const openConvertDialog = (format: PdfReflowFormat): void => {
     setConvertOpen(false)
-    setConvertDialog(format)
+    setConvertDialog({ format })
   }
 
   /** Conversion jobs read the file on disk: save pending edits first */
@@ -11911,8 +11913,9 @@ export default function App() {
             )}
             {convertDialog && (
               <ConvertDialog
-                key={convertDialog}
-                format={convertDialog}
+                key={`${convertDialog.format}:${convertDialog.outPath ?? ''}`}
+                format={convertDialog.format}
+                initialTarget={convertDialog.outPath}
                 filePath={filePath}
                 fileName={fileName}
                 pageCount={pageCount}

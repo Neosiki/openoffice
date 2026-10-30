@@ -177,8 +177,14 @@ const api: PdfApi = {
   exportImages: (request) => ipcRenderer.invoke(PDF_CHANNELS.exportImages, request),
   convertOffice: (format) => ipcRenderer.invoke(PDF_CHANNELS.convertOffice, format),
   onConvertDialogRequest: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, format: unknown) => {
-      if (format === 'md' || format === 'epub') handler(format)
+    const listener = (_e: Electron.IpcRendererEvent, request: unknown) => {
+      if (!request || typeof request !== 'object') return
+      const { format, outPath } = request as { format?: unknown; outPath?: unknown }
+      if (format !== 'md' && format !== 'epub') return
+      if (outPath !== undefined && (typeof outPath !== 'string' || !outPath)) return
+      // only a Markdown target may be preset (Save As › Markdown)
+      if (outPath !== undefined && format !== 'md') return
+      handler(outPath === undefined ? { format } : { format, outPath })
     }
     ipcRenderer.on(PDF_CHANNELS.convertDialogRequest, listener)
     return () => ipcRenderer.removeListener(PDF_CHANNELS.convertDialogRequest, listener)

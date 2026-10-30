@@ -204,12 +204,20 @@ export interface SaveMarkdownRequest {
    * direct save omits this and asks.
    */
   auto?: boolean
+  /**
+   * Save As only, rendered documents only: the print HTML of what is on screen.
+   * A picked target ending in .pdf writes this HTML as a PDF (and opens it)
+   * instead of the Markdown text; the document keeps its path and unsaved edits.
+   */
+  pdfHtml?: string
 }
 
 export type SaveMarkdownResult =
   | {
       ok: true
       path: string
+      /** the target was written as a PDF copy of the document, not as its save */
+      exported?: 'pdf'
       /** Save As may relocate local images into the new document's assets directory. */
       imageRewrites?: Array<{ from: string; to: string }>
       /** Actual persisted source after Save As image rewrites. */

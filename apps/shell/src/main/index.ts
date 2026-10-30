@@ -262,7 +262,12 @@ import { convertPdfFileToPptxLocalWithPrompt } from './pdf2pptx-local'
 import { convertPdfFileToXlsxLocalWithPrompt } from './pdf2xlsx-local'
 import { closePdfPasswordDialog, promptPdfPassword } from './pdf-password-dialog'
 import { createDocumentPasswordPrompt } from './document-password-prompt'
-import { cancelWindowJob, registerPdfStructureIpc, runWindowJob } from './pdf-structure-ipc'
+import {
+  cancelWindowJob,
+  grantPdfStructureTarget,
+  registerPdfStructureIpc,
+  runWindowJob,
+} from './pdf-structure-ipc'
 import { registerPdfConvertUiIpc, requestPdfConvertDialog } from './pdf-convert-ui'
 import {
   configureMarkdownRuntime,
@@ -7888,8 +7893,11 @@ function buildMindmapMenu(): void {
 
 /**
  * Save As for pdf tabs: write pending edits to the picked path only, then open the copy.
- * Non-destructive: the original file is never written, and a cancelled dialog changes
- * nothing on disk (dialog first, no flush into the source).
+ * Non-destructive: the original file is never written with the copy, and a cancelled
+ * dialog changes nothing on disk (dialog first, no flush into the source). A Markdown
+ * target is a conversion, not a PDF copy: the path is granted to the view's conversion
+ * dialog, which saves pending edits first and then writes the .md there (the File menu's
+ * Markdown conversion does the same).
  */
 /** In-flight guard (same pattern as exportPdfAsDocxLocal): a re-trigger while the dialog
     or write is active must not start a second flow that overwrites the first one's
@@ -7905,11 +7913,33 @@ async function savePdfAs(tab = activePdfTarget()): Promise<void> {
   setPdfSaveAsInFlight(tab.webContents, true)
   try {
     const picked = await showSaveDialogWithMemory(dialog, host, {
-      defaultPath: tab.filePath,
-      filters: [{ name: tm('filterPdf'), extensions: ['pdf'] }],
+      // No extension in the suggestion: the file type chosen in the dialog supplies
+      // .pdf or .md. A typed name keeps the extension it was given.
+      defaultPath: tab.filePath.replace(/\.pdf$/i, ''),
+      filters: [
+        { name: tm('filterPdf'), extensions: ['pdf'] },
+        // Save As › Markdown: the tab's conversion dialog converts to the picked
+        // name; a name with another extension stays a plain PDF copy
+        { name: 'Markdown', extensions: ['md'] },
+      ],
     })
-    const target = pdfSaveAsTarget(picked, tab.filePath)
+    if (picked.canceled || !picked.filePath) return
+    // A dialog that does not add the chosen type's extension (some Linux desktops)
+    // leaves a bare name: the default type is PDF
+    const pickedPath = extname(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
+    const target = pdfSaveAsTarget({ canceled: false, filePath: pickedPath }, tab.filePath)
     if (!target) return
+    if (/\.md$/i.test(target)) {
+      // The path came from this dialog, never from the renderer: grant it to the
+      // view's own conversion dialog, which then writes exactly there
+      if (!grantPdfStructureTarget(tab.webContents, tab.filePath, target, 'md')) {
+        console.error('[shell] pdf save as markdown: target was not granted')
+        await dialog.showMessageBox(host, { type: 'error', message: tm('errPdfSaveAsFailed') })
+        return
+      }
+      requestPdfConvertDialog(tab.webContents, 'md', target)
+      return
+    }
     // Always ask the renderer: it shows the annotation choices for the copy and,
     // with no pending edits and annotations kept, asks the pdf main process for a
     // byte-identical copy instead of rewriting the file here.
