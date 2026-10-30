@@ -630,6 +630,26 @@ export default function App(): React.JSX.Element {
     [api, save],
   )
 
+  // An MCP read needs the same pending edits as a save, without writing the file.
+  useEffect(
+    () =>
+      api.onFlushRequest?.((requestId) => {
+        if (phaseRef.current.kind !== 'open') {
+          api.sendFlushResult(requestId, false)
+          return
+        }
+        if (editor.composing) {
+          api.sendFlushResult(requestId, 'composing')
+          return
+        }
+        void editor.flush().then(
+          () => api.sendFlushResult(requestId, true),
+          () => api.sendFlushResult(requestId, false),
+        )
+      }),
+    [api, editor],
+  )
+
   // auto save: every 30 seconds and when the app loses focus, with the shell-wide setting
   const bookWritable = phase.kind === 'open' && phase.readOnly === null
   useEffect(() => {
