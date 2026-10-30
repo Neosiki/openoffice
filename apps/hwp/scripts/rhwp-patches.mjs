@@ -983,6 +983,33 @@ const PATCHES = {
     replace:
       'descriptor.set!.call(this, scopedHostCanvasFont(String(value)) ?? memoSubstituteCssFontFamily(String(value)));',
   },
+  // Paste onto a cell block fills the selected cells (hancom-keys.mjs); the key handler
+  // keeps the block for Ctrl+V, and the paste event asks the module before the studio
+  // pastes at the caret. Menu "paste" comes through the same event.
+  'studio-cell-block-paste': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler-keyboard\.ts$/,
+    edits: [
+      {
+        find: "import { matchShortcut, defaultShortcuts } from '@/command/shortcut-map';",
+        replace:
+          "import { matchShortcut, defaultShortcuts } from '@/command/shortcut-map';\n" +
+          `import { hancomPasteCells } from '${HANCOM_KEYS_MODULE}';`,
+      },
+      {
+        find: [
+          '  if (this.isFormMode?.()) return;',
+          '',
+          '  // 개체/표 선택 모드 해제 후 붙여넣기 진행',
+        ].join('\n'),
+        replace: [
+          '  if (this.isFormMode?.()) return;',
+          '  if (hancomPasteCells(this, e)) return;',
+          '',
+          '  // 개체/표 선택 모드 해제 후 붙여넣기 진행',
+        ].join('\n'),
+      },
+    ],
+  },
 }
 
 /** The patches the studio build applies, in order; the SDK's own is applied by the renderer builds. */
@@ -1017,6 +1044,7 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-memo-delete-undo',
   'studio-font-memo-state',
   'studio-font-memo-use',
+  'studio-cell-block-paste',
 ])
 
 /** Whether a patch is written against this file. */
@@ -1129,6 +1157,9 @@ export const hancomHooks = [
       'moveToCellByIndex(',
       'moveTo(pos: DocumentPosition): void',
       'clearSelection(): void',
+      'isProtectedCellSelectionMode(): boolean',
+      'getExcludedCells(): Set<string>',
+      'captureCellSelection(): CellBlockSelectionState | null',
     ],
   },
   {
@@ -1142,6 +1173,8 @@ export const hancomHooks = [
       'applyStyle(styleId: number): void',
       'executeOperation(desc: OperationDescriptor): void',
       'updateCellSelection(',
+      'private cellSelectionRenderer: CellSelectionRenderer | null',
+      'private updateCaret(skipScroll',
       'clearSelectedCellBlock(',
       'isFormMode(): boolean',
       'hasCopiedFormat(): boolean { return this.formatCopyState !== null; }',
@@ -1172,6 +1205,10 @@ export const hancomHooks = [
       'setTableProperties(sec: number, parentPara: number, controlIdx: number, props: Partial<TableProperties>)',
       'changeShapeZOrder(',
       'getCellInfo(sec: number, parentPara: number, controlIdx: number, cellIdx: number): CellInfo',
+      'getTableDimensions(sec: number, parentPara: number, controlIdx: number): TableDimensions',
+      'insertTextInCell(sec: number, parentPara: number, controlIdx: number, cellIdx: number, cellParaIdx: number, charOffset: number, text: string)',
+      'splitParagraphInCell(sec: number, parentPara: number, controlIdx: number, cellIdx: number, cellParaIdx: number, charOffset: number',
+      'deleteRangeInCell(sec: number, parentPara: number, controlIdx: number, cellIdx: number, startCellPara: number',
       'getTableCellBboxes(sec: number,',
       'searchText(query: string, fromSec: number, fromPara: number, fromChar: number, forward: boolean',
       'getCharPropertiesAt(sec: number, para: number, charOffset: number)',
