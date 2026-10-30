@@ -31,7 +31,7 @@ import {
 import { DriveAi, entryType, type ParseToText } from './drive-ai'
 import { DriveFiles, type SyncAnswer, type SyncNotice, type SyncQuestion } from './drive-files'
 import { copyFileName, driveText } from './drive-strings'
-import { createDriveVault } from './drive-vault'
+import { createDriveVault, driveTokenSeals } from './drive-vault'
 import { createDrivePicker } from './drive-picker-window'
 import type { DriveAttachResult, DrivePickerTheme } from '../../shared/drive-picker-api'
 
@@ -78,7 +78,7 @@ export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
   const connection = new DriveConnection({
     client: buildGoogleClient(),
     vault: createDriveVault(join(deps.userData(), 'google-drive.json'), {
-      available: () => safeStorage.isEncryptionAvailable(),
+      available: () => driveTokenSeals(safeStorage, process.platform),
       encrypt: (text) => safeStorage.encryptString(text),
       decrypt: (bytes) => safeStorage.decryptString(bytes),
     }),
