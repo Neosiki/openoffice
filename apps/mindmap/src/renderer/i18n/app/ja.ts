@@ -46,6 +46,8 @@ export const ja = {
   layoutRight: '右',
   layoutBoth: '両側',
   layoutDown: '下',
+  layoutTree: 'ツリー',
+  layoutTimeline: 'タイムライン',
   layoutStandIn:
     'このマップ本来のレイアウトはここでは描けないため、別のレイアウトで表示しています。レイアウトを選ぶと、そのときファイルに書き込まれます。',
   sheetTabs: 'シート',

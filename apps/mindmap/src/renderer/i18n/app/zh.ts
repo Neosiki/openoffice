@@ -44,6 +44,8 @@ export const zh = {
   layoutRight: '向右',
   layoutBoth: '两侧',
   layoutDown: '向下',
+  layoutTree: '树状图',
+  layoutTimeline: '时间轴',
   layoutStandIn: '此导图原有的布局无法在此绘制，因此显示为另一种布局。选择布局后才会写入文件。',
   sheetTabs: '画布',
   sheetAdd: '添加画布',

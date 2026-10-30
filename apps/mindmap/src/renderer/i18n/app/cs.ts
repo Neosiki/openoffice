@@ -46,6 +46,8 @@ export const cs = {
   layoutRight: 'Vpravo',
   layoutBoth: 'Na obě strany',
   layoutDown: 'Dolů',
+  layoutTree: 'Strom',
+  layoutTimeline: 'Časová osa',
   layoutStandIn:
     'Vlastní rozložení této mapy zde nelze nakreslit, proto se zobrazuje jiné. Rozložení se do souboru zapíše, až když ho vyberete.',
   sheetTabs: 'Listy',

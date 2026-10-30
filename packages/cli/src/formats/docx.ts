@@ -310,9 +310,16 @@ function setContentControl(
     side.contentControls = { ...controls, unwrap: [...(controls.unwrap ?? []), { tag }] }
     return { output: `unwrap the content control tagged ${tag}` }
   }
-  const start = Number(op.startBlockIndex)
-  const end = Number(op.endBlockIndex ?? op.startBlockIndex)
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start) {
+  const start = op.startBlockIndex
+  const end = op.endBlockIndex === undefined ? start : op.endBlockIndex
+  if (
+    typeof start !== 'number' ||
+    typeof end !== 'number' ||
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start
+  ) {
     return {
       error:
         'wrap_content_control needs startBlockIndex and endBlockIndex (endBlockIndex >= startBlockIndex)',

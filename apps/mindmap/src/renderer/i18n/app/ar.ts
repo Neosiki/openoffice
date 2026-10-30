@@ -46,6 +46,8 @@ export const ar = {
   layoutRight: 'يمين',
   layoutBoth: 'الجانبان',
   layoutDown: 'للأسفل',
+  layoutTree: 'شجرة',
+  layoutTimeline: 'خط زمني',
   layoutStandIn:
     'لا يمكن رسم التخطيط الأصلي لهذه الخريطة هنا، لذلك تُعرض بتخطيط آخر. لا يُكتب التخطيط في الملف إلا عندما تختاره.',
   sheetTabs: 'الأوراق',

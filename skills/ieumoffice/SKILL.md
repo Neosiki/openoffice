@@ -64,6 +64,8 @@ Always add `--json` when a program reads the output: one JSON object on stdout, 
 - `--http`: files travel with the calls (`PUT /files/<name>` uploads one and returns a URL, every path parameter also takes an http(s) URL, `out` omitted returns the file as a download URL).
 - The IeumOffice app runs its own MCP server on `127.0.0.1:3093` (Settings → Integrations) whose tools (`create_session`, `read_document`, `apply_ops`, `insert_picture`, `apply_slide_ops`, `apply_sheet_ops`, `read_pdf`, `open_documents`) edit the documents already open in the visible editor; `ieumoffice mcp` works on files on disk.
 
+For Word templates, `detail.unresolved_placeholders[].reason` can also be `unsupported_location`: a placeholder in a header, footer, footnote or endnote that body replacement cannot fill. These parts stay intact. `location.part` identifies the part kind, with `location.relationship` for headers/footers or `location.note` for notes. Fill these placeholders in Word; strict mode refuses to write while any remain.
+
 ## Which command
 
 | Task                                                       | Command path                                                                                                                                   | Not for                                                                                  |

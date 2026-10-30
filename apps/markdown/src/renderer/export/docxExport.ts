@@ -206,12 +206,19 @@ function allocOrderedNumId(ctx: WalkContext): string {
   return numId
 }
 
+/** GFM column alignment (`:---`, `:---:`, `---:`), which the table extension stores on every cell */
+function cellAlign(cell: JSONContent): Pick<ParaFormat, 'align'> {
+  const align = cell.attrs?.align
+  return align === 'left' || align === 'center' || align === 'right' ? { align } : {}
+}
+
 function tableParagraphs(cell: JSONContent): TableParagraph[] {
+  const format = cellAlign(cell)
   const paras: TableParagraph[] = []
   for (const child of cell.content ?? []) {
-    if (child.type === 'paragraph') paras.push({ runs: runsFromInline(child.content) })
+    if (child.type === 'paragraph') paras.push({ runs: runsFromInline(child.content), ...format })
   }
-  return paras.length > 0 ? paras : [{ runs: [] }]
+  return paras.length > 0 ? paras : [{ runs: [], ...format }]
 }
 
 function mapTable(node: JSONContent): TableModel {

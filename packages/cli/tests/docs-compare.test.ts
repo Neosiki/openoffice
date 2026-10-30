@@ -105,6 +105,66 @@ describe('genoffice docs compare', () => {
     })
   })
 
+  it.each([
+    '2023-02-29T12:00:00Z',
+    '2024-02-30T12:00:00Z',
+    '2026-04-31T00:00:00Z',
+    '2100-02-29T00:00:00Z',
+    '1900-02-29T00:00:00Z',
+    '2026-02-31T23:30:00-05:00',
+  ])('rejects the nonexistent calendar date %s without overwriting output', async (date) => {
+    const { dir, original, revised } = await fixtures()
+    const originalBytes = readFileSync(original)
+    const revisedBytes = readFileSync(revised)
+    const out = join(dir, 'existing.docx')
+    const before = Buffer.from('preserve the existing output')
+    writeFileSync(out, before)
+    const result = await run([
+      'docs',
+      'compare',
+      original,
+      revised,
+      '--date',
+      date,
+      '--out',
+      out,
+      '--force',
+      '--json',
+    ])
+    expect(result.code).toBe(1)
+    expect(result.json().error).toBe('invalid_argument')
+    expect(readFileSync(out)).toEqual(before)
+    expect(readFileSync(original)).toEqual(originalBytes)
+    expect(readFileSync(revised)).toEqual(revisedBytes)
+  })
+
+  it.each([
+    '2024-02-29T12:00:00Z',
+    '2000-02-29',
+    '2026-04-30T23:30:00-05:00',
+    '2024-03-01T00:15:00+14:00',
+  ])('retains the valid civil date %s even when its UTC day differs', async (date) => {
+    const { dir, original, revised } = await fixtures()
+    const out = join(dir, 'valid.docx')
+    const result = await run([
+      'docs',
+      'compare',
+      original,
+      revised,
+      '--date',
+      date,
+      '--out',
+      out,
+      '--json',
+    ])
+    expect(result.code).toBe(0)
+    expect(result.json().detail.date).toBe(date)
+    const xml = await documentXml(out)
+    const revisions = [...xml.matchAll(/<w:(?:ins|del)\b[^>]*>/g)]
+    expect(revisions.length).toBeGreaterThan(0)
+    for (const revision of revisions) expect(revision[0]).toContain(`w:date="${date}"`)
+  })
+
   it('records the author and the date on every revision', async () => {
     const { dir, original, revised } = await fixtures()
     const out = join(dir, 'redline.docx')

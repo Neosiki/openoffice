@@ -44,10 +44,12 @@ import {
   emptyMeta,
   layoutOfDirection,
   type MapNode,
+  type MapStructure,
   type MapNodeMeta,
   mindToState,
   nodePatch,
   normaliseTree,
+  structureOfLayout,
   type Summary,
   topicIdsOf,
   viewToMind,
@@ -58,6 +60,7 @@ import { type DecorationStrings, TopicDecorator } from './decorate'
 import { PictureStore } from './images'
 import { libraryTheme, lookOfSheet } from './look'
 import { escapeMapText } from './text-guard'
+import { isArrowKey, timelineArrowTarget } from './timeline-keys'
 
 type MenuOption = Exclude<NonNullable<Options['contextMenu']>, boolean>
 /** The library's context menu texts. All twelve are passed in the user's language. */
@@ -135,6 +138,8 @@ export class MapController {
   /** the library's data as it was then, to tell at a glance whether anything moved */
   #syncedData = ''
   #layoutPicked = false
+  /** how the library's direction is drawn: as it is, as a tree or as a timeline */
+  #structure: MapStructure = 'map'
   readonly #removedSummaries = new Set<string>()
   readonly #removedRelationships = new Set<string>()
   readonly #libraryUndo: () => void
@@ -240,6 +245,7 @@ export class MapController {
     })
 
     const started = performance.now()
+    this.#setStructure(structureOfLayout(this.#lastView.layout))
     const problem = mind.init(viewToMind(this.#lastView))
     if (problem) throw problem
     this.#syncedData = mind.getDataString()
@@ -302,7 +308,7 @@ export class MapController {
   // ---- reading ----
 
   get layout(): ViewLayout {
-    return layoutOfDirection(this.mind.direction)
+    return layoutOfDirection(this.mind.direction, this.#structure)
   }
 
   /** false while the layout shown only stands in for one the editor cannot draw */
@@ -497,10 +503,22 @@ export class MapController {
   /** The user picks a layout. This is what writes a layout to the file. */
   setLayout(layout: ViewLayout): void {
     const mind = this.mind
+    // the rules for a tree or a timeline are in place before the library lays the map out again
+    this.#setStructure(structureOfLayout(layout))
     if (layout === 'left') mind.initLeft()
-    else if (layout === 'right') mind.initRight()
-    else if (layout === 'down') mind.initDown()
+    else if (layout === 'right' || layout === 'tree') mind.initRight()
+    else if (layout === 'down' || layout === 'timeline') mind.initDown()
     else mind.initSide()
+  }
+
+  /** The rules of `map.css` and the branch lines follow this mark on the map's container. */
+  #setStructure(structure: MapStructure): void {
+    this.#structure = structure
+    const { dataset } = this.mind.container
+    if (structure === 'map') delete dataset.mmStructure
+    else dataset.mmStructure = structure
+    // a tree grows from its top left: centring the central topic would leave half the screen empty
+    this.mind.alignment = structure === 'tree' ? 'nodes' : 'root'
   }
 
   /**
@@ -1021,6 +1039,7 @@ export class MapController {
       layoutPicked: this.#layoutPicked,
       removedSummaries: this.#removedSummaries,
       removedRelationships: this.#removedRelationships,
+      structure: this.#structure,
     })
     const result = this.#session.apply(this.#key, state, {
       step: options.step,
@@ -1054,6 +1073,7 @@ export class MapController {
       layoutPicked: false,
       removedSummaries: this.#removedSummaries,
       removedRelationships: this.#removedRelationships,
+      structure: this.#structure,
     })
     const check = this.#session.apply(this.#key, state, { step: false })
     if (!check.ok || check.changed || !check.inSync) {
@@ -1068,6 +1088,7 @@ export class MapController {
   #draw(view: ViewSheet): void {
     const mind = this.mind
     const selected = this.selectedTopicIds()
+    this.#setStructure(structureOfLayout(view.layout))
     mind.direction = directionOfLayout(view.layout)
     mind.refresh(viewToMind(view))
     this.#lastView = view
@@ -1084,6 +1105,11 @@ export class MapController {
     }
     // While a title is typed, every key belongs to the text (Ctrl+arrow moves by words).
     if (event.target instanceof Element && event.target.closest('#input-box')) return
+    if (this.#timelineArrow(event)) {
+      event.stopImmediatePropagation()
+      event.preventDefault()
+      return
+    }
     // The library switches the layout on Ctrl+arrow. A layout is written to the
     // file when it is picked, so it is picked on purpose (the toolbar), not by a key.
     const layoutKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
@@ -1091,6 +1117,20 @@ export class MapController {
       event.stopImmediatePropagation()
       event.preventDefault()
     }
+  }
+
+  /** In a timeline the plain arrow keys move the way the map looks (`timeline-keys.ts`). True when the key was taken. */
+  #timelineArrow(event: KeyboardEvent): boolean {
+    if (this.#structure !== 'timeline' || !isArrowKey(event.key)) return false
+    // Alt+arrow reorders and Ctrl+arrow is the library's layout switch: those are not moves
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false
+    const mind = this.mind
+    const current = mind.currentNode ?? mind.currentNodes?.[0]
+    if (!current?.nodeObj) return false
+    const target = timelineArrowTarget(current.nodeObj, event.key)
+    const element = target ? this.#element(target.id) : null
+    if (element) mind.selectNode(element)
+    return true
   }
 
   #onClick(event: MouseEvent): void {

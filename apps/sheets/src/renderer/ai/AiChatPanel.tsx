@@ -311,6 +311,7 @@ const NO_STATUSES: AiSubscriptionStatuses = {}
 
 export function AiChatPanel({
   isOpen,
+  focusRequest = 0,
   hideRail = false,
   hasContent,
   chat,
@@ -346,6 +347,8 @@ export function AiChatPanel({
   onCollapse,
 }: {
   readonly isOpen: boolean
+  /** An explicit AI action focuses the composer, including when already open. */
+  readonly focusRequest?: number | undefined
   /** true suppresses even the collapsed rail (the "show the AI sidebar" setting is off) */
   readonly hideRail?: boolean
   /** the workbook has cells with content — empty workbooks get "build me a sheet" copy instead */
@@ -399,9 +402,8 @@ export function AiChatPanel({
   readonly onStop: () => void
   readonly onNewChat: () => void
   readonly onUndo: (steps: number) => void
-  /** A1 notation of the range this run is scoped to, or null when there is no
-   *  scope — a resting single-cell selection carries no intent worth showing,
-   *  and dismissing the chip clears it until the next selection change */
+  /** A1 notation of the selected range or explicitly requested single cell;
+   *  dismissing the chip clears it until the next selection or explicit request. */
   readonly scopeRange: string | null
   /** header names when the scope covers whole columns; they label the chip in
    *  place of the range */
@@ -454,6 +456,12 @@ export function AiChatPanel({
   const isRtl = lang === 'ar' || lang === 'he'
   const chatRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  useEffect(() => {
+    if (!isOpen || !focusRequest) return
+    // Let the context menu finish closing before moving focus out of the grid.
+    const frame = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [isOpen, focusRequest])
   const stickToBottomRef = useRef(true)
   const [dragOver, setDragOver] = useState(false)
   const asideRef = useRef<HTMLElement | null>(null)
@@ -964,7 +972,7 @@ export function AiChatPanel({
           queuePlaceholder={AI_QUEUE_LABELS[lang].queuePlaceholder}
           header={
             <>
-              {/* Only a deliberate multi-cell selection shows here: it tells the
+              {/* A range or explicitly requested single cell shows here: it tells the
                   user what "this column / these rows" will resolve to, and the
                   send freezes it so mid-run clicking cannot retarget the run.
                   While that frozen scope is what shows, dropping it could not

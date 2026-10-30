@@ -87,6 +87,8 @@ export function Toolbar(p: ToolbarProps) {
     { value: 'left', label: t('layoutLeft') },
     { value: 'both', label: t('layoutBoth') },
     { value: 'down', label: t('layoutDown') },
+    { value: 'tree', label: t('layoutTree') },
+    { value: 'timeline', label: t('layoutTimeline') },
   ]
   const topicOff = p.disabled || !p.hasTopic
   return (

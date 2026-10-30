@@ -128,6 +128,13 @@ export const docsCommand: CommandDef = {
     },
   ],
   async run(args, ctx) {
+    for (const option of docsCommand.options ?? []) {
+      if (option.value && args.flags[option.name] === true) {
+        throw new CliError(EXIT.usage, `missing --${option.name} <${option.value}>`, undefined, {
+          reason: 'missing_argument',
+        })
+      }
+    }
     const [verb, file, second] = args.positionals
     switch (verb) {
       case 'read':
@@ -226,8 +233,8 @@ function trackFlag(args: Args): string | undefined {
 }
 
 /**
- * A received .odt is written back as itself: --out must keep the extension
- * (a format change is `convert`), and tracked changes stay off as in the app.
+ * Apply keeps the input format: --out must keep its extension (a format change is
+ * `convert`). Tracked changes stay off for ODT, as in the app.
  */
 function assertOdtApply(path: string, out: string | undefined, track: boolean): void {
   const odt = extension(path) === 'odt'
@@ -243,7 +250,7 @@ function assertOdtApply(path: string, out: string | undefined, track: boolean): 
       },
     )
   }
-  if (out && (odt || extension(out) === 'odt') && extension(out) !== extension(path)) {
+  if (out && extension(out) !== extension(path)) {
     throw new CliError(
       EXIT.usage,
       `--out must keep the input's .${extension(path) || '?'} extension; changing the format is a conversion`,
@@ -386,7 +393,12 @@ function parseIgnore(spec: string | undefined): (typeof COMPARE_IGNORES)[number]
 function parseDate(spec: string | undefined): string {
   if (spec === undefined) return new Date().toISOString()
   const value = spec.trim()
-  if (!ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
+  // Date.parse normalizes dates such as February 30; compare the civil date independently of its offset.
+  if (
+    !ISO_DATE.test(value) ||
+    Number.isNaN(Date.parse(value)) ||
+    new Date(`${value.slice(0, 10)}T00:00:00Z`).toISOString().slice(0, 10) !== value.slice(0, 10)
+  ) {
     throw new CliError(
       EXIT.usage,
       '--date must be an ISO timestamp, e.g. 2026-10-16T00:00:00Z',

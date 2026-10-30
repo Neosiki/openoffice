@@ -185,7 +185,7 @@ function refuse(message: string, detail: Record<string, unknown>, suggestion: st
  * An empty input is an input problem (exit 2), not a failed conversion.
  */
 export function assertNotEmptyPackage(path: string, ext: string): void {
-  if (!FAMILY[ext]) return
+  if (!Object.hasOwn(FAMILY, ext)) return
   if (statSync(path).size > 0) return
   throw new CliError(
     EXIT.file,
@@ -204,6 +204,7 @@ export function assertNotEmptyPackage(path: string, ext: string): void {
  * that escape the archive. Non-OOXML extensions and non-zip files pass.
  */
 export function assertPackageWithinLimits(path: string, ext: string): void {
+  if (!Object.hasOwn(FAMILY, ext)) return
   const family = FAMILY[ext]
   if (!family) return
   const limits = LIMITS[family]

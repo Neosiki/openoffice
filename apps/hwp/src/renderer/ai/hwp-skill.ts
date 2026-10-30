@@ -1463,7 +1463,15 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           typeof raw === 'number' && Number.isInteger(raw) && raw > 0
             ? Math.min(raw, text.length)
             : 0
-        const end = Math.min(text.length, offset + READ_PAGE_CHARS)
+        const splitsPair = (at: number) => at > 0 && (text.codePointAt(at - 1) ?? 0) > 0xffff
+        if (splitsPair(offset)) {
+          return bad(
+            call,
+            `offset is inside a UTF-16 surrogate pair; use ${offset - 1} or ${offset + 1}`,
+          )
+        }
+        const limit = Math.min(text.length, offset + READ_PAGE_CHARS)
+        const end = splitsPair(limit) ? limit - 1 : limit
         const more = end < text.length ? `\n[more: call read_document with offset ${end}]` : ''
         return {
           output: `Characters ${offset}–${end} of ${text.length}.\n${text.slice(offset, end)}${more}`,
@@ -1997,6 +2005,12 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
         const table = call.input.table
         if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
         const fromRow = call.input.from_row
+        if (
+          fromRow !== undefined &&
+          (typeof fromRow !== 'number' || !Number.isInteger(fromRow) || fromRow < 1)
+        ) {
+          return bad(call, 'from_row must be a whole number from 1')
+        }
         const read = await bridge.readTable(table, typeof fromRow === 'number' ? fromRow : null)
         if (!read.ok) return bad(call, noSuchTable(table, read.count))
         const more = read.nextRow

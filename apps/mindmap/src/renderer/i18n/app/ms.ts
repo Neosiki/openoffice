@@ -46,6 +46,8 @@ export const ms = {
   layoutRight: 'Kanan',
   layoutBoth: 'Kedua-dua belah',
   layoutDown: 'Ke bawah',
+  layoutTree: 'Pepohon',
+  layoutTimeline: 'Garis masa',
   layoutStandIn:
     'Susun atur asal peta ini tidak dapat dilukis di sini, maka susun atur lain dipaparkan. Susun atur hanya ditulis ke fail apabila anda memilihnya.',
   sheetTabs: 'Helaian',
