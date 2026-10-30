@@ -42,6 +42,7 @@ import {
 } from './markdown/docText'
 import { buildSourceMap, spliceMarkdown, type SourceMap } from './markdown/sourceSplice'
 import { applySourceText } from './markdown/sourceView'
+import { isSourceViewKey } from './source-view-key'
 import { isSourceMode, textModeForPath, type TextMode } from '../shared/text-mode'
 import { renameAction } from '../shared/rename-mode'
 import { readSourceText, writeSourceText, type SourceTextFormat } from '../shared/source-text'
@@ -593,9 +594,12 @@ export default function App() {
   }, [flushSource])
 
   const toggleSource = useCallback(() => {
+    // A .txt/.json has no block document to swap with, and F5 hides the source
+    // pane for the show: the chord must not leave an invisible view behind.
+    if (sourceMode || presenting) return
     if (sourceViewOpenRef.current) closeSource()
     else openSource()
-  }, [closeSource, openSource])
+  }, [closeSource, openSource, presenting, sourceMode])
 
   const restoreAfterPresent = useCallback(() => {
     setPresenting(false)
@@ -1110,8 +1114,9 @@ export default function App() {
         // its ⌘H belongs to the system Hide role, so the menu keeps that key
         event.preventDefault()
         openFind(true)
-      } else if (key === 'e' && !event.shiftKey) {
-        // Obsidian's edit/preview toggle: the source view
+      } else if (isSourceViewKey(event)) {
+        // Obsidian's edit/preview toggle: the source view. Shift is excluded so
+        // Ctrl+Shift+E (and Ctrl+Shift+V, paste without formatting) stay free.
         event.preventDefault()
         toggleSource()
       } else if (key === 'o' && event.shiftKey) {
