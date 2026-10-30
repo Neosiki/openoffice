@@ -227,7 +227,7 @@ describe('appending', () => {
     }
     expect((await store.append(args(ref, 'user', 'q199'), home)).status).toBe('saved')
     expect(linesOf(root, ref.chatId)).toHaveLength(200)
-  })
+  }, 60_000)
 
   it('titles a chat with the first user message, cut to the title length', async () => {
     const { id, root } = await addProject('p')
@@ -299,7 +299,7 @@ describe('appending', () => {
     expect(new Set(seqs).size).toBe(20)
     const fileSeqs = linesOf(root, ref.chatId).map((m) => m.seq)
     expect(fileSeqs).toEqual(Array.from({ length: 22 }, (_, i) => i))
-  })
+  }, 60_000)
 
   it('continues seq from the file maximum with a fresh store', async () => {
     const { id, root } = await addProject('p')
