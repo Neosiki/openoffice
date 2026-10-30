@@ -84,6 +84,7 @@ const FILE_MENU = [
   { command: 'save', id: 'ext:ieum-save', shortcut: 'Ctrl+S' },
   { command: 'saveAs', id: 'ext:ieum-save-as', shortcut: 'Ctrl+Shift+S' },
   { command: 'pdf', id: 'ext:ieum-export-pdf' },
+  { command: 'preview', id: 'ext:ieum-preview' },
   { command: 'print', id: 'ext:ieum-print', shortcut: 'Ctrl+P' },
 ]
 /** The command that reads what the user has selected in the editor. */
@@ -96,6 +97,16 @@ const MARK_COMMAND = 'ext:ieum-mark-changes'
 const MAX_MARKS = 500
 /** How long one call of printPages draws pages for; the bridge gives a call ten seconds. */
 const PRINT_BATCH_MS = 2000
+
+/** One page as the print path draws it: the SVG and its size in CSS pixels. */
+function printPageOf(doc, page) {
+  const info = JSON.parse(doc.getPageInfo(page))
+  return {
+    svg: doc.renderPageSvgWithProfile(page, 'print'),
+    width: info.width,
+    height: info.height,
+  }
+}
 /**
  * How a mark looks: a light fill over the changed text and a line under it, warm so it is
  * not taken for the editor's blue selection. The page is paper white in every theme.
@@ -4564,17 +4575,80 @@ export const agentPlugin = {
             const began = Date.now()
             const pages = []
             for (let page = start; page < pageCount; page++) {
-              const info = JSON.parse(doc.getPageInfo(page))
-              pages.push({
-                svg: doc.renderPageSvgWithProfile(page, 'print'),
-                width: info.width,
-                height: info.height,
-              })
+              pages.push(printPageOf(doc, page))
               if (Date.now() - began > PRINT_BATCH_MS) break
             }
             return { pageCount, from: start, pages }
           }),
         ),
+      ),
+
+      /**
+       * One page as the print path draws it, for the print preview. `page` is 0-based.
+       * The page count comes back with it, so the preview can show "1 / N" before any
+       * other page is drawn. Like printPages, the call lays the page out with the
+       * portable text widths and puts the screen's back before it returns.
+       */
+      previewPage: guarded((page) =>
+        host.read((doc) =>
+          withPortableWidths(doc, () => {
+            const pageCount = doc.pageCount()
+            if (!Number.isInteger(page) || page < 0 || page >= pageCount) {
+              throw fail('BAD_ARGUMENT', 'page out of range')
+            }
+            const info = JSON.parse(doc.getPageInfo(page))
+            return {
+              pageCount,
+              page,
+              svg: doc.renderPageSvgWithProfile(page, 'print'),
+              width: info.width,
+              height: info.height,
+              margins: {
+                left: info.marginLeft,
+                top: info.marginTop,
+                right: info.marginRight,
+                bottom: info.marginBottom,
+              },
+            }
+          }),
+        ),
+      ),
+
+      /**
+       * The first body paragraph that starts on `page` (0-based), as the target
+       * focusTarget takes. Ctrl+Enter in the preview closes it and puts the caret
+       * there. A page whose text is one long paragraph starting earlier has no
+       * target: the caller keeps the preview open and says so.
+       */
+      pageTarget: guarded((page) =>
+        host.read((doc) => {
+          const pageCount = doc.pageCount()
+          if (!Number.isInteger(page) || page < 0 || page >= pageCount) {
+            throw fail('BAD_ARGUMENT', 'page out of range')
+          }
+          const sections = doc.getSectionCount()
+          for (let sec = 0; sec < sections; sec++) {
+            const paragraphs = doc.getParagraphCount(sec)
+            for (let para = 0; para < paragraphs; para++) {
+              const at = parse(doc.getPageOfPosition(sec, para))
+              if (!at.ok || !Number.isInteger(at.page)) continue
+              if (at.page > page) break
+              if (at.page !== page) continue
+              return {
+                ok: true,
+                page,
+                target: {
+                  kind: 'body_paragraph',
+                  section: sec,
+                  paragraph: para,
+                  charOffset: 0,
+                  length: doc.getParagraphLength(sec, para),
+                },
+              }
+            }
+          }
+          return { ok: false, reason: 'no_paragraph' }
+        }),
       ),
 
       /**
@@ -5503,11 +5577,12 @@ export const agentPlugin = {
       }),
 
       /**
-       * Put Save, Save As, Export as PDF and Print at the top of the editor's File menu. The
-       * embedded editor leaves out its own (the app owns the file), which left the menu with
-       * no way to save. Each item fires FILE_COMMAND_EVENT on the editor's window and the app
-       * does the rest. `labels` holds the four names in the app's language, by command. A
-       * second call puts the items back where they were; the names stay the first ones.
+       * Put Save, Save As, Export as PDF, Print Preview and Print at the top of the editor's
+       * File menu. The embedded editor leaves out its own (the app owns the file), which left
+       * the menu with no way to save. Each item fires FILE_COMMAND_EVENT on the editor's window
+       * and the app does the rest. `labels` holds the five names in the app's language, by
+       * command. A second call puts the items back where they were; the names stay the first
+       * ones.
        */
       installFileMenu: guarded((labels) => {
         for (const item of FILE_MENU) {

@@ -479,7 +479,7 @@ export type AgentDeleteTableResult =
   | { ok: false; reason: 'has_objects'; count: number }
 
 /** What a File menu item of the editor asks the app to do. */
-export type AgentFileCommand = 'save' | 'saveAs' | 'pdf' | 'print'
+export type AgentFileCommand = 'save' | 'saveAs' | 'pdf' | 'preview' | 'print'
 
 /** The event those items fire on the editor's window; `detail` is the AgentFileCommand. */
 export declare const FILE_COMMAND_EVENT: 'ieum:file-command'
@@ -902,6 +902,10 @@ export interface AgentPluginSurface {
   ): AgentStyleResult
   /** pages for printing from `from`, as many as are drawn in about two seconds */
   printPages(from: number): AgentPrintPages
+  /** one page as the print path draws it, for the preview; `page` is 0-based */
+  previewPage(page: number): AgentPreviewPage
+  /** the first body paragraph that starts on `page`, for Ctrl+Enter in the preview */
+  pageTarget(page: number): AgentPageTarget
   mergeCells(
     table: number,
     from: AgentCellPlace,
@@ -954,6 +958,31 @@ export interface AgentPrintPages {
   from: number
   pages: { svg: string; width: number; height: number }[]
 }
+
+/** One page for the print preview, with the count it belongs to. */
+export interface AgentPreviewPage {
+  pageCount: number
+  page: number
+  svg: string
+  width: number
+  height: number
+  /** the page's text margins, in CSS pixels, for the preview's margin guide */
+  margins: { left: number; top: number; right: number; bottom: number }
+}
+
+export type AgentPageTarget =
+  | {
+      ok: true
+      page: number
+      target: {
+        kind: 'body_paragraph'
+        section: number
+        paragraph: number
+        charOffset: 0
+        length: number
+      }
+    }
+  | { ok: false; reason: 'no_paragraph' }
 
 /** The part of the studio's plugin host this plugin uses. */
 export interface AgentPluginHost {

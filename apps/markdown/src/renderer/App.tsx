@@ -75,6 +75,7 @@ import { addQueueAnchor, clearQueueAnchors, removeQueueAnchors } from './editor/
 import { DOCX_MAX_IMAGE_PX, exportDocxBytes } from './export/docxExport'
 import { decodeImageDataUrl, toDocxImage } from './export/exportImage'
 import { buildPrintHtml } from './export/printHtml'
+import { PrintPreviewDialog } from './print/PrintPreviewDialog'
 import { diagramSvgToPng, renderDiagram } from './editor/diagrams'
 import type { DiagramLanguage } from './editor/diagrams'
 import type { ExportFormat, SaveMode } from '../shared/ipc'
@@ -933,10 +934,9 @@ export default function App() {
   }, [runExport])
 
   /**
-   * Print through the same self-contained HTML the PDF export uses, loaded into a
-   * hidden same-session iframe (md-asset:// images keep resolving) — printing the
-   * live page would drag the ribbon/panels along, and Electron has no built-in
-   * preview to crop them out.
+   * Print through the same self-contained HTML the PDF export uses. The preview
+   * shows the PDF that HTML makes and printing sends the same HTML and options,
+   * so the paper is what the dialog drew — not the ribbon/panels around it.
    */
   const sourceHistory = useMemo(
     () => ({
@@ -956,11 +956,10 @@ export default function App() {
     [sourceRev, sourceMode],
   )
 
-  const printingRef = useRef(false)
-  const printDoc = useCallback(async () => {
+  const [printPreviewHtml, setPrintPreviewHtml] = useState<string | null>(null)
+  const printDoc = useCallback(() => {
     const current = editorRef.current
-    if (!current || statusRef.current !== 'ready' || printingRef.current) return
-    printingRef.current = true
+    if (!current || statusRef.current !== 'ready' || printPreviewHtml !== null) return
     const title =
       (filePathRef.current
         ? filePathRef.current.replace(/^.*[/\\]/, '').replace(/\.(md|markdown|txt|json)$/i, '')
@@ -972,39 +971,8 @@ export default function App() {
       pre.textContent = sourceTextRef.current
       printRoot.appendChild(pre)
     }
-    const frame = document.createElement('iframe')
-    frame.style.position = 'fixed'
-    frame.style.right = '100%'
-    frame.style.bottom = '100%'
-    frame.style.width = '0'
-    frame.style.height = '0'
-    frame.style.border = '0'
-    try {
-      await new Promise<void>((resolve) => {
-        frame.onload = () => resolve()
-        frame.srcdoc = buildPrintHtml(printRoot, title)
-        document.body.appendChild(frame)
-      })
-      const fdoc = frame.contentDocument
-      const fwin = frame.contentWindow
-      if (!fdoc || !fwin) return
-      // the export path passes printToPDF margins instead; the dialog needs @page
-      const pageStyle = fdoc.createElement('style')
-      pageStyle.textContent = '@page { margin: 0.6in; }'
-      fdoc.head.appendChild(pageStyle)
-      await Promise.all([...fdoc.images].map((img) => img.decode().catch(() => {})))
-      // resolve on afterprint so the frame survives until the dialog closes (cancel included)
-      await new Promise<void>((resolve) => {
-        fwin.addEventListener('afterprint', () => resolve())
-        fwin.print()
-      })
-    } catch (err) {
-      console.error('[markdown] print failed:', err)
-    } finally {
-      frame.remove()
-      printingRef.current = false
-    }
-  }, [sourceMode])
+    setPrintPreviewHtml(buildPrintHtml(printRoot, title))
+  }, [printPreviewHtml, sourceMode])
 
   useEffect(() => {
     const offExport = window.markdownApi.onExportRequest((format) => void runExport(format))
@@ -1597,6 +1565,9 @@ export default function App() {
           onQueueUpdate={queueUpdate}
           onQueueRemove={queueRemove}
         />
+      )}
+      {printPreviewHtml !== null && (
+        <PrintPreviewDialog html={printPreviewHtml} onClose={() => setPrintPreviewHtml(null)} />
       )}
     </div>
   )

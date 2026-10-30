@@ -173,6 +173,8 @@ const api: MarkdownApi = {
   exportDocx: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.exportDocx, request),
   exportOdt: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.exportOdt, request),
   exportPdf: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.exportPdf, request),
+  renderPrintPreview: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.printPreview, request),
+  printDocument: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.printDocument, request),
   prepareImageExport: (request) =>
     ipcRenderer.invoke(MARKDOWN_CHANNELS.prepareImageExport, request),
   writeExportImage: (id, page, base64) =>

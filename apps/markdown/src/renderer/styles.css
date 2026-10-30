@@ -41,6 +41,8 @@
   --md-diagram-bg: #ffffff;
   /* preview paper under an explicit light document page (genoffice#1811) */
   --md-paper-light: #ffffff;
+  /* the print preview's sheet: the document, white in both app themes */
+  --md-print-paper: var(--md-paper-light);
 }
 
 [data-theme='dark'] {
@@ -3739,4 +3741,223 @@ div.tiptap-mathematics-render {
   justify-content: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+/* ---- print preview: the PDF the export writes, one page at a time ---- */
+
+.md-print-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-bg-overlay);
+}
+
+.md-print-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 94vw);
+  height: min(760px, 92vh);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-modal-strong);
+}
+
+.md-print-dialog:focus {
+  outline: none;
+}
+
+.md-print-header {
+  flex: none;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.md-print-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.md-print-preview {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px;
+  background: var(--canvas);
+}
+
+.md-print-canvas {
+  display: block;
+  flex: none;
+  margin: auto;
+  background: var(--md-print-paper);
+  box-shadow: var(--md-page-shadow);
+}
+
+.md-print-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--canvas) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.md-print-overlay.error {
+  background: var(--md-error-bg);
+  color: var(--md-error);
+}
+
+.md-print-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: none;
+  width: 260px;
+  padding: 16px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.md-print-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.md-print-gap {
+  flex: 1;
+}
+
+.md-print-button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.md-print-button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.md-print-button:focus-visible {
+  outline: 2px solid var(--md-focus-ring-blue);
+  outline-offset: 1px;
+}
+
+.md-print-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.md-print-button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.md-print-button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--md-on-accent);
+}
+
+.md-print-button.primary:hover:not(:disabled) {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
+}
+
+.md-print-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 13px;
+}
+
+.md-print-fieldset legend {
+  margin-bottom: 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.md-print-fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.md-print-range {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.md-print-range.invalid {
+  border-color: var(--md-error-border);
+}
+
+.md-print-hint {
+  color: var(--md-error);
+  font-size: 12px;
+}
+
+.md-print-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.md-print-field select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.md-print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
 }
