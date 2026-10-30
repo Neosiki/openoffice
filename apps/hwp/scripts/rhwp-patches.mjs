@@ -51,6 +51,12 @@
  *   The bridge gains the two engine calls of vendor/rhwp-core patch 0014, setting and
  *   reading a section's page number (Hangul's 쪽 번호 매기기).
  *
+ * studio-quick-correct
+ *   Hangul's 빠른 교정 turns a straight quote typed into the document into a curly one,
+ *   opening after a blank (도구 → 빠른 교정 → 빠른 교정 내용 → 입력 자동 서식). The typed text
+ *   goes through studio-plugin/hancom-keys.mjs (quickCorrectTyped) before the editor puts it
+ *   in the document, so what is pasted, dropped or still composing is left alone.
+ *
  * studio-format-copy-safety, studio-format-copy, studio-format-copy-state
  *   The studio's format copy takes the cell's field name and form-edit flag with
  *   the cell's look; copying a plain cell over a named cell in a cell block
@@ -332,6 +338,22 @@ const PATCHES = {
       '',
       '  applyStyle(sec: number, para: number, styleId: number): { ok: boolean } {',
     ].join('\n'),
+  },
+  'studio-quick-correct': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler-text\.ts$/,
+    edits: [
+      {
+        find: "import { showConfirm } from '@/ui/confirm-dialog';",
+        replace:
+          "import { showConfirm } from '@/ui/confirm-dialog';\n" +
+          `import { quickCorrectTyped } from '${HANCOM_KEYS_MODULE}';`,
+      },
+      // the typed character, before the editor decides what to do with it
+      {
+        find: '  const text = this.textarea.value;',
+        replace: '  const text = quickCorrectTyped(this, this.textarea.value, e?.inputType);',
+      },
+    ],
   },
   'studio-format-copy-safety': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
@@ -891,6 +913,7 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-hancom-equal-cells',
   'studio-hancom-chords',
   'studio-hancom-page-number',
+  'studio-quick-correct',
   'studio-format-copy-safety',
   'studio-format-copy',
   'studio-format-copy-state',
@@ -1038,6 +1061,8 @@ export const hancomHooks = [
       'getCursorPosition(): DocumentPosition',
       'focus(): void',
       "eventBus.on('format-char'",
+      // the typed character, for 빠른 교정 (quickCorrectTyped in hancom-keys.mjs)
+      'private getTextAt(pos: DocumentPosition, count: number): string',
     ],
   },
   {
@@ -1088,6 +1113,17 @@ export const hancomHooks = [
       'getTableDimensionsByPath(sec: number, parentPara: number, pathJson: string)',
       'getCellInfoByPath(sec: number, parentPara: number, pathJson: string)',
       'runInBatch<T>(fn: () => T): T',
+      // 문서 정보 reads the document through these (studio-plugin/document-info.mjs)
+      'getSectionCount(): number {',
+      'getTextRange(sec: number, para: number, charOffset: number, count: number): string {',
+      'getTextInCellByPath(sec: number, parentPara: number, pathJson: string, charOffset: number, count: number): string {',
+      'getControlTextPositions(sec: number, para: number): number[] {',
+      'getTableDimensions(sec: number, parentPara: number, controlIdx: number): TableDimensions {',
+      'getTextBoxControlIndex(sec: number, para: number): number {',
+      'getLineInfo(sec: number, para: number, charOffset: number): LineInfo {',
+      'getLineInfoInCell(sec: number, parentPara: number, controlIdx: number, cellIdx: number, cellParaIdx: number, charOffset: number): LineInfo {',
+      'getControlImageMime(sec: number, para: number, ci: number,',
+      'getDocumentInfo(): DocumentInfo {',
     ],
   },
   // the studio parts the studio-hancom-commands patch hands to the new commands
