@@ -9,6 +9,7 @@ import {
   recalcReadRanges,
   recalculableDefinedNames,
   shiftPinnedCells,
+  usedDefinedNames,
   type ClosureSheetInput,
 } from '../src/renderer/formula-closure'
 import {
@@ -101,11 +102,29 @@ describe('containsUnresolvedNames', () => {
   })
 })
 
+describe('usedDefinedNames', () => {
+  it('lists the names a formula uses, lowercased, skipping calls, references and strings', () => {
+    expect(usedDefinedNames('IFERROR(계산,0)+SUM(Data!$A$1:$A$3)*VAT_Rate')).toEqual([
+      '계산',
+      'vat_rate',
+    ])
+    expect(usedDefinedNames('CONCAT("Rate",A1)+TRUE')).toEqual([])
+  })
+})
+
 describe('recalculableDefinedNames', () => {
   const names = (
     list: { name: string; formula: string; sheetIndex?: number }[],
     rejected: string[] = [],
-  ): string[] => [...recalculableDefinedNames(list, new Set(rejected))].sort()
+  ): string[] => [...recalculableDefinedNames(list, new Set(rejected)).keys()].sort()
+
+  it('maps each accepted name to its body', () => {
+    const accepted = recalculableDefinedNames(
+      [{ name: 'VAT_RATE', formula: 'Data!$B$1' }],
+      new Set(),
+    )
+    expect([...accepted]).toEqual([['vat_rate', 'Data!$B$1']])
+  })
 
   it('accepts workbook names over absolute references, constants and formulas', () => {
     expect(
@@ -153,6 +172,20 @@ describe('recalculableDefinedNames', () => {
       ),
     ).toEqual([])
   })
+
+  it('leaves out INDIRECT, whose text may be relative to the using cell', () => {
+    expect(
+      names([
+        { name: 'HereRow', formula: 'ROW()-1' },
+        { name: 'HereColumn', formula: 'COLUMN( )' },
+        { name: 'HereSheet', formula: 'SHEET()' },
+        { name: '계산', formula: 'EVALUATE(INDIRECT("rc[-1]",FALSE))' },
+        { name: 'Left', formula: 'indirect("rc[-1]",FALSE)' },
+        { name: 'ByText', formula: 'INDIRECT("Data!B1")' },
+        { name: 'Label', formula: '"INDIRECT(B1)"' },
+      ]),
+    ).toEqual(['herecolumn', 'hererow', 'heresheet', 'label'])
+  })
 })
 
 describe('formulaKeepsCache', () => {
@@ -171,12 +204,12 @@ describe('formulaKeepsCache', () => {
 
   it('recalculates formulas over the open workbook names the engine resolves', () => {
     expect(formulaKeepsCache('B2*VAT_RATE')).toBe(true)
-    setRecalculableNames(new Set(['vat_rate']))
+    setRecalculableNames(new Map([['vat_rate', 'Data!$B$1']]))
     try {
       expect(formulaKeepsCache('B2*VAT_RATE')).toBe(false)
       expect(formulaKeepsCache('B2*OTHER_NAME')).toBe(true)
     } finally {
-      setRecalculableNames(new Set())
+      setRecalculableNames(new Map())
     }
     // The memo must not carry the previous workbook's verdict.
     expect(formulaKeepsCache('B2*VAT_RATE')).toBe(true)

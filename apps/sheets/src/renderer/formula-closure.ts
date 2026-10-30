@@ -112,12 +112,29 @@ export function parseFormulaReferences(formula: string): FormulaReference[] {
 
 const EXTERNAL_WORKBOOK_PATTERN = /\[(?:\d+|[^[\]]*\.xl\w*)\]/i
 
+/// Identifiers in an unquoted formula segment that are neither references,
+/// function calls nor TRUE/FALSE: the defined names it uses.
+function namesInSegment(segment: string): string[] {
+  // Strip references (and their qualifiers) so ref letters don't register.
+  const stripped = segment.replace(FORMULA_REFERENCE_PATTERN, (_full, lead: string) => `${lead} `)
+  const names: string[] = []
+  for (const match of stripped.matchAll(/[\p{L}_][\p{L}\p{N}_.]*/gu)) {
+    const before = match.index === 0 ? '' : (stripped[match.index - 1] ?? '')
+    if (/[\p{L}\p{N}_.$'!]/u.test(before)) continue
+    const name = match[0]
+    if (name === 'TRUE' || name === 'FALSE') continue
+    const rest = stripped.slice(match.index + name.length)
+    if (!/^\s*\(/.test(rest)) names.push(name)
+  }
+  return names
+}
+
 /// True when the formula uses an identifier that is not a function call —
 /// a defined name or an external reference the closure cannot resolve.
 /// Names in `resolvedNames` (lowercase) count as resolved.
 export function containsUnresolvedNames(
   formula: string,
-  resolvedNames?: ReadonlySet<string>,
+  resolvedNames?: { has(name: string): boolean },
 ): boolean {
   const segments = formula.split('"')
   for (let index = 0; index < segments.length; index += 2) {
@@ -126,21 +143,21 @@ export function containsUnresolvedNames(
     // as an ordinary sheet reference, but the closure can never resolve
     // another workbook.
     if (EXTERNAL_WORKBOOK_PATTERN.test(segments[index] ?? '')) return true
-    // Strip references (and their qualifiers) so ref letters don't register.
-    const stripped = (segments[index] ?? '').replace(
-      FORMULA_REFERENCE_PATTERN,
-      (_full, lead: string) => `${lead} `,
-    )
-    for (const match of stripped.matchAll(/[\p{L}_][\p{L}\p{N}_.]*/gu)) {
-      const before = match.index === 0 ? '' : (stripped[match.index - 1] ?? '')
-      if (/[\p{L}\p{N}_.$'!]/u.test(before)) continue
-      const name = match[0]
-      if (name === 'TRUE' || name === 'FALSE') continue
-      const rest = stripped.slice(match.index + name.length)
-      if (!/^\s*\(/.test(rest) && !resolvedNames?.has(name.toLowerCase())) return true
+    for (const name of namesInSegment(segments[index] ?? '')) {
+      if (!resolvedNames?.has(name.toLowerCase())) return true
     }
   }
   return false
+}
+
+/// The defined names the formula uses, lowercased.
+export function usedDefinedNames(formula: string): string[] {
+  const segments = formula.split('"')
+  const names: string[] = []
+  for (let index = 0; index < segments.length; index += 2) {
+    for (const name of namesInSegment(segments[index] ?? '')) names.push(name.toLowerCase())
+  }
+  return names
 }
 
 export interface DefinedNameInput {
@@ -164,15 +181,33 @@ function hasRelativeReference(formula: string): boolean {
   return false
 }
 
-/// Lowercased defined names whose formulas the engine recalculates the way
-/// Excel does: a single workbook-scoped definition the engine accepted, with
-/// absolute references only, using no names outside this set. Names defined
-/// at more than one scope stay out (the engine keys names by text alone and
+/// INDIRECT's text may be an R1C1 address relative to the using cell
+/// (`"rc[-1]"`), which the engine evaluates to 0, in plain cells too. The form
+/// is only known at run time, so a name calling INDIRECT keeps the cache it
+/// kept before names were recalculated. ROW(), COLUMN() and SHEET() without
+/// an argument already resolve against the using cell.
+const INDIRECT_CALL = /(?:^|[^\p{L}\p{N}_.])INDIRECT\s*\(/iu
+
+function callsIndirect(formula: string): boolean {
+  const segments = formula.split('"')
+  for (let index = 0; index < segments.length; index += 2) {
+    if (INDIRECT_CALL.test(segments[index] ?? '')) return true
+  }
+  return false
+}
+
+/// Defined names whose formulas the engine recalculates the way Excel does,
+/// lowercased and mapped to their bodies: a single workbook-scoped
+/// definition the engine accepted, with absolute references only, no
+/// INDIRECT call, and no names outside this set. Names defined at
+/// more than one scope stay out (the engine keys names by text alone and
 /// ignores the sheet-scope precedence), as do names in a reference cycle.
+/// The functions a body calls are checked per using formula, where the
+/// engine's function registry is known (see formulaKeepsCache).
 export function recalculableDefinedNames(
   definedNames: readonly DefinedNameInput[],
   rejected: ReadonlySet<string>,
-): Set<string> {
+): Map<string, string> {
   const byName = new Map<string, DefinedNameInput[]>()
   for (const defined of definedNames) {
     const key = defined.name.toLowerCase()
@@ -182,16 +217,16 @@ export function recalculableDefinedNames(
   for (const [key, list] of byName) {
     const only = list.length === 1 ? list[0] : undefined
     if (!only || only.sheetIndex !== undefined || rejected.has(only.name)) continue
-    if (hasRelativeReference(only.formula)) continue
+    if (hasRelativeReference(only.formula) || callsIndirect(only.formula)) continue
     pending.set(key, only.formula)
   }
   // Accept names bottom-up: a name joins once every name its body uses has.
-  const accepted = new Set<string>()
+  const accepted = new Map<string, string>()
   for (let grew = true; grew;) {
     grew = false
     for (const [key, formula] of pending) {
       if (containsUnresolvedNames(formula, accepted)) continue
-      accepted.add(key)
+      accepted.set(key, formula)
       pending.delete(key)
       grew = true
     }
