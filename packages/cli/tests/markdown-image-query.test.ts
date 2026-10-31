@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
@@ -43,6 +44,20 @@ describe('Markdown local image paths with a query or fragment', () => {
     expect(images).toHaveLength(1)
     expect(Buffer.from(images[0]!)).toEqual(PNG)
   })
+
+  it.each(['file:', 'FILE:'])(
+    'does not cut a %s URL at a decoded hash in its file name',
+    async (scheme) => {
+      const dir = tempDir()
+      writeFileSync(join(dir, 'menu'), PNG)
+      const markdown = join(dir, 'menu.md')
+      const output = join(dir, 'menu.docx')
+      const url = pathToFileURL(join(dir, 'menu#1.png')).href.replace(/^file:/, scheme)
+      writeFileSync(markdown, `![dish](${url})\n`)
+      expect((await run(['convert', markdown, '--to', 'docx', '--out', output])).code).toBe(0)
+      expect(await embeddedImages(output)).toHaveLength(0)
+    },
+  )
 
   it('still drops a reference whose file does not exist even without its query', async () => {
     const dir = tempDir()
