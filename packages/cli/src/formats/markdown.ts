@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ensureDom } from '../dom'
-import { assertAllowed, type PathContext } from '../fs'
+import { assertAllowed, stripBom, type PathContext } from '../fs'
 import { imageSize } from './image-size'
 
 /**
@@ -41,7 +41,8 @@ async function withMarkdownEditor<T>(
     content: '',
   })
   try {
-    const nodes = mods.ops.parseMarkdownToNodes(editor, markdown)
+    // a UTF-8 BOM (Notepad's "UTF-8 with BOM") would otherwise sit in front of a leading heading
+    const nodes = mods.ops.parseMarkdownToNodes(editor, stripBom(markdown))
     editor.commands.setContent({ type: 'doc', content: nodes.map((n) => n.toJSON()) })
     return await fn(editor, mods)
   } finally {
@@ -68,11 +69,13 @@ async function loadLocalImage(src: string, images?: MarkdownImageSource) {
   if (!images || !src) return null
   // only real URL schemes are remote; a Windows drive letter (C:\...) is a path
   if (/^(https?|data|blob):/i.test(src)) return null
-  const local = src.startsWith('file:') ? fileURLToPath(src) : src
+  // URL schemes are case-insensitive: FILE:///x.png is the same file URL as file:///x.png
+  const isFileUrl = /^file:/i.test(src)
+  const local = isFileUrl ? fileURLToPath(src) : src
   const candidates = [local]
   try {
     // fileURLToPath already decodes file URLs; authored paths need one decoding pass.
-    const decoded = src.startsWith('file:') ? local : decodeURIComponent(local)
+    const decoded = isFileUrl ? local : decodeURIComponent(local)
     if (decoded !== local) candidates.push(decoded)
   } catch {
     // a literal % in the file name is not an escape; the raw spelling is tried
