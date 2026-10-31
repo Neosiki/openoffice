@@ -30,7 +30,8 @@ export async function readImageSource(
   baseDir?: string,
 ): Promise<ImageSource | null> {
   if (/^data:/i.test(url)) {
-    const m = /^data:image\/([a-z0-9.+-]+);base64,(.*)$/is.exec(url)
+    // RFC 2397 allows media type parameters (charset, name, ...) before the base64 marker
+    const m = /^data:image\/([a-z0-9.+-]+)(?:;[^;,]+)*;base64,(.*)$/is.exec(url)
     if (!m) return null
     // Size the base64 text before decoding it: Buffer.from allocated the full
     // payload first (measured: a 400 MB data URL peaked at ~1 GB RSS before
