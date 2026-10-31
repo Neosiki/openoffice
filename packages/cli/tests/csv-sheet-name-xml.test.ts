@@ -21,17 +21,21 @@ describe('sheet names derived from file stems', () => {
     expect(sheetNameFromStem(stem)).toBe(stem.replace(/[\\/?*[\]:]/g, '_'))
   })
 
-  it('writes a well-formed workbook when the CSV file name has a control character', async () => {
-    const dir = tempDir()
-    const csv = join(dir, 'sales\u0001.csv')
-    const output = join(dir, 'sales.xlsx')
-    writeFileSync(csv, 'a,b\n1,2\n')
-    const result = await run(['convert', csv, '--to', 'xlsx', '--out', output, '--json'])
-    expect(result.code).toBe(0)
-    const zip = await JSZip.loadAsync(readFileSync(output))
-    const workbook = await zip.file('xl/workbook.xml')!.async('string')
-    expect(workbook).toContain('<sheet name="sales_"')
-    // eslint-disable-next-line no-control-regex
-    expect(workbook).not.toMatch(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/)
-  })
+  // Windows refuses control characters in file names, so the file cannot exist there
+  it.skipIf(process.platform === 'win32')(
+    'writes a well-formed workbook when the CSV file name has a control character',
+    async () => {
+      const dir = tempDir()
+      const csv = join(dir, 'sales\u0001.csv')
+      const output = join(dir, 'sales.xlsx')
+      writeFileSync(csv, 'a,b\n1,2\n')
+      const result = await run(['convert', csv, '--to', 'xlsx', '--out', output, '--json'])
+      expect(result.code).toBe(0)
+      const zip = await JSZip.loadAsync(readFileSync(output))
+      const workbook = await zip.file('xl/workbook.xml')!.async('string')
+      expect(workbook).toContain('<sheet name="sales_"')
+      // eslint-disable-next-line no-control-regex
+      expect(workbook).not.toMatch(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/)
+    },
+  )
 })
