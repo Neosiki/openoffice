@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ensureDom } from '../dom'
-import { assertAllowed, type PathContext } from '../fs'
+import { assertAllowed, stripBom, type PathContext } from '../fs'
 import { imageSize } from './image-size'
 
 /**
@@ -41,7 +41,8 @@ async function withMarkdownEditor<T>(
     content: '',
   })
   try {
-    const nodes = mods.ops.parseMarkdownToNodes(editor, markdown)
+    // a UTF-8 BOM (Notepad's "UTF-8 with BOM") would otherwise sit in front of a leading heading
+    const nodes = mods.ops.parseMarkdownToNodes(editor, stripBom(markdown))
     editor.commands.setContent({ type: 'doc', content: nodes.map((n) => n.toJSON()) })
     return await fn(editor, mods)
   } finally {
