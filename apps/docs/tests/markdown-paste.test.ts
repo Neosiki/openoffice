@@ -19,6 +19,10 @@ describe('looksLikeMarkdown', () => {
     expect(markdownPasteHtml('  # Title\n\nBody')).toContain('<h1>')
   })
 
+  it('does not treat a tab-indented "#" line as a heading (CommonMark: tab indents a code block)', () => {
+    expect(looksLikeMarkdown('\t# Hello')).toBe(false)
+  })
+
   it('requires repetition for list and quote markers', () => {
     expect(looksLikeMarkdown('- one item only')).toBe(false)
     expect(looksLikeMarkdown('- one\n- two')).toBe(true)
