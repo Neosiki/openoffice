@@ -160,28 +160,50 @@ function notesParagraphs(notesXml: string): string[] {
   return out
 }
 
+// preserveOrder: a comment's rich-text body has the same a:p/a:r/a:br/a:fld
+// shape as slide and notes text, grouped by tag name it loses run order
+// (a line break or a field can land before text that precedes it).
 const commentParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,
   parseTagValue: false,
+  preserveOrder: true,
   removeNSPrefix: true,
-  isArray: (_name, jPath) =>
-    jPath === 'cmLst.cm' ||
-    jPath === 'cmLst.cm.replyLst.reply' ||
-    jPath === 'cmAuthorLst.cmAuthor' ||
-    jPath === 'authorLst.author',
 })
+
+type XmlNode = Record<string, unknown>
+
+/** every sibling in `nodes` that carries a `name` child array, in document order */
+function elementsNamed(nodes: readonly unknown[], name: string): XmlNode[] {
+  const out: XmlNode[] = []
+  for (const node of nodes) {
+    if (node != null && typeof node === 'object' && Array.isArray((node as XmlNode)[name])) {
+      out.push(node as XmlNode)
+    }
+  }
+  return out
+}
+
+/** the first element named `name`'s own children, or none if there is no such element */
+function childrenOf(nodes: readonly unknown[], name: string): XmlNode[] {
+  return (elementsNamed(nodes, name)[0]?.[name] as XmlNode[] | undefined) ?? []
+}
+
+function attrsOf(node: XmlNode): Record<string, unknown> {
+  const attrs = node[':@']
+  return attrs && typeof attrs === 'object' ? (attrs as Record<string, unknown>) : {}
+}
 
 /**
  * A comments/author part is optional decoration on a deck. Missing, malformed or
  * unreadable parts just mean there is nothing to add, never a failed attachment.
  */
-function parseCommentPart(xml: string | undefined): unknown {
+function parseCommentPart(xml: string | undefined): XmlNode[] | undefined {
   if (xml === undefined) return undefined
   try {
     if (XMLValidator.validate(xml) !== true) return undefined
-    return commentParser.parse(xml)
+    return commentParser.parse(xml) as XmlNode[]
   } catch {
     return undefined
   }
@@ -193,107 +215,64 @@ interface SlideCommentLine {
   text: string
 }
 
-function commentRunText(node: unknown): string {
-  if (node == null) return ''
-  if (typeof node === 'string' || typeof node === 'number') return String(node)
-  if (typeof node === 'object' && typeof (node as { '#text'?: unknown })['#text'] === 'string') {
-    return (node as { '#text': string })['#text']
-  }
+/** 2006 `<p:text>`: plain character data, no sub-elements. undefined when there is no such element. */
+function plainCommentText(children: XmlNode[]): string | undefined {
+  const textEl = elementsNamed(children, 'text')[0]
+  if (!textEl) return undefined
+  const parts = (textEl['text'] as XmlNode[] | undefined) ?? []
+  return parts.map((p) => (typeof p['#text'] === 'string' ? (p['#text'] as string) : '')).join('')
+}
+
+/** Office 365 `<p188:txBody>`: read the same order-preserving walk as slide and notes text. */
+function richCommentText(children: XmlNode[]): string | undefined {
+  const bodyEl = elementsNamed(children, 'txBody')[0]
+  if (!bodyEl) return undefined
+  const paras: string[] = []
+  collectParagraphs((bodyEl['txBody'] as XmlNode[] | undefined) ?? [], paras)
+  return paras.join('\n')
+}
+
+function commentBodyText(children: XmlNode[]): string {
+  return plainCommentText(children) ?? richCommentText(children) ?? ''
+}
+
+function commentTimestamp(attrs: Record<string, unknown>): string {
+  if (typeof attrs['@_dt'] === 'string' && attrs['@_dt']) return attrs['@_dt'] as string
+  if (typeof attrs['@_created'] === 'string') return attrs['@_created'] as string
   return ''
 }
 
-function collectGroupedRuns(node: unknown, texts: string[]): void {
-  if (node == null) return
-  if (Array.isArray(node)) {
-    for (const item of node) collectGroupedRuns(item, texts)
-    return
-  }
-  if (typeof node !== 'object') return
-  const rec = node as Record<string, unknown>
-  if ('t' in rec) {
-    for (const item of asArray(rec.t)) texts.push(commentRunText(item))
-  }
-  if ('br' in rec) texts.push('\n')
-  if ('tab' in rec) texts.push('\t')
-  for (const [key, value] of Object.entries(rec)) {
-    if (key === 't' || key === 'br' || key === 'tab' || key.startsWith('@_') || key === '#text')
-      continue
-    collectGroupedRuns(value, texts)
-  }
-}
-
-function collectGroupedParagraphs(node: unknown, paras: string[]): void {
-  if (node == null || typeof node !== 'object') return
-  if (Array.isArray(node)) {
-    for (const item of node) collectGroupedParagraphs(item, paras)
-    return
-  }
-  const rec = node as Record<string, unknown>
-  if ('p' in rec) {
-    for (const paragraph of asArray(rec.p)) {
-      const texts: string[] = []
-      collectGroupedRuns(paragraph, texts)
-      const line = texts.join('')
-      if (line.trim()) paras.push(line)
-    }
-  }
-  for (const [key, value] of Object.entries(rec)) {
-    if (key === 'p' || key.startsWith('@_')) continue
-    collectGroupedParagraphs(value, paras)
-  }
-}
-
-function commentBodyText(node: Record<string, unknown>): string {
-  const rawText = node['text']
-  if (typeof rawText === 'string') return rawText
-  if (
-    rawText &&
-    typeof rawText === 'object' &&
-    typeof (rawText as { '#text'?: unknown })['#text'] === 'string'
-  ) {
-    return (rawText as { '#text': string })['#text']
-  }
-  if (node.txBody !== undefined) {
-    const paras: string[] = []
-    collectGroupedParagraphs(node.txBody, paras)
-    return paras.join('\n')
-  }
-  return ''
-}
-
-function commentTimestamp(node: Record<string, unknown>): string {
-  if (typeof node['@_dt'] === 'string' && node['@_dt']) return node['@_dt']
-  if (typeof node['@_created'] === 'string') return node['@_created']
-  return ''
-}
-
-function pushComment(out: SlideCommentLine[], entry: unknown, authors: Map<string, string>): void {
-  if (entry === null || typeof entry !== 'object') return
-  const node = entry as Record<string, unknown>
-  const authorId = node['@_authorId'] === undefined ? '' : String(node['@_authorId'])
+/** `node` is the sibling object `{ [tag]: children, ':@': attrs }` for one `<p:cm>` or `<p188:reply>`. */
+function pushComment(
+  out: SlideCommentLine[],
+  node: XmlNode,
+  tag: string,
+  authors: Map<string, string>,
+): void {
+  const attrs = attrsOf(node)
+  const children = (node[tag] as XmlNode[] | undefined) ?? []
+  const authorId = attrs['@_authorId'] === undefined ? '' : String(attrs['@_authorId'])
   const known = authorId ? authors.get(authorId) : undefined
   out.push({
     author: known && known.trim() ? known : 'Unknown author',
-    dt: commentTimestamp(node),
-    text: commentBodyText(node),
+    dt: commentTimestamp(attrs),
+    text: commentBodyText(children),
   })
 }
 
-function addAuthors(authors: Map<string, string>, doc: unknown): void {
-  if (doc === null || typeof doc !== 'object') return
-  const rec = doc as Record<string, unknown>
-  for (const list of [rec.cmAuthorLst, rec.authorLst]) {
-    if (list === null || typeof list !== 'object') continue
-    const entries =
-      (list as Record<string, unknown>).cmAuthor ?? (list as Record<string, unknown>).author
-    for (const entry of asArray(entries)) {
-      if (entry === null || typeof entry !== 'object') continue
-      const node = entry as Record<string, unknown>
-      const id = node['@_id']
-      const name = node['@_name']
-      if (id === undefined || id === null || typeof name !== 'string') continue
-      const key = String(id)
-      if (key && name.trim()) authors.set(key, name)
+function addAuthors(authors: Map<string, string>, tree: XmlNode[] | undefined): void {
+  if (!tree) return
+  for (const listTag of ['cmAuthorLst', 'authorLst'] as const) {
+    const list = childrenOf(tree, listTag)
+    for (const entryTag of ['cmAuthor', 'author'] as const) {
+      for (const entry of elementsNamed(list, entryTag)) {
+        const attrs = attrsOf(entry)
+        const id = attrs['@_id']
+        const name = attrs['@_name']
+        if (id === undefined || id === null || typeof name !== 'string') continue
+        const key = String(id)
+        if (key && name.trim()) authors.set(key, name)
+      }
     }
   }
 }
@@ -337,16 +316,22 @@ async function slideCommentsForSlide(
   slidePath: string,
   authors: Map<string, string>,
 ): Promise<SlideCommentLine[]> {
-  const doc = parseCommentPart(await commentsXmlForSlide(zip, slidePath)) as
-    { cmLst?: { cm?: unknown } } | undefined
+  const rawXml = await commentsXmlForSlide(zip, slidePath)
+  // Withheld runs become their {{label}} marker before anything reads the part,
+  // the same gate slide and notes text go through (redactPptxPartXml, above) —
+  // comments share the a:r/a:rPr run shape. A mark that cannot be processed
+  // throws here, uncaught, so the deck fails instead of leaking it; only the
+  // zip-read and malformed-XML failures below are treated as "nothing to add."
+  const xml = rawXml === undefined ? undefined : redactPptxPartXml(rawXml)
+  const tree = parseCommentPart(xml)
   const out: SlideCommentLine[] = []
-  for (const entry of asArray(doc?.cmLst?.cm)) {
-    pushComment(out, entry, authors)
-    if (entry === null || typeof entry !== 'object') continue
-    const replyLst = (entry as Record<string, unknown>).replyLst
-    if (replyLst === null || typeof replyLst !== 'object') continue
-    for (const reply of asArray((replyLst as Record<string, unknown>).reply)) {
-      pushComment(out, reply, authors)
+  if (!tree) return out
+  const cmList = childrenOf(tree, 'cmLst')
+  for (const cm of elementsNamed(cmList, 'cm')) {
+    pushComment(out, cm, 'cm', authors)
+    const replyList = childrenOf((cm['cm'] as XmlNode[] | undefined) ?? [], 'replyLst')
+    for (const reply of elementsNamed(replyList, 'reply')) {
+      pushComment(out, reply, 'reply', authors)
     }
   }
   return out
