@@ -744,11 +744,10 @@ describe('commonUnixBinDirs nvm versions', () => {
     for (const version of ['v8.17.0', 'v18.20.4', 'v20.11.1', 'v6.14.4']) {
       await mkdir(join(nvmRoot, version, 'bin'), { recursive: true })
     }
-    // Lexicographic reverse would put v8 before v20; numeric newest-first puts v20 first.
-    expect(['v8.17.0', 'v18.20.4', 'v20.11.1', 'v6.14.4'].sort().reverse()[0]).toBe('v8.17.0')
-
     const dirs = await commonUnixBinDirs(root)
-    const nvmBins = dirs.filter((dir) => dir.startsWith(nvmRoot + sep) || dir.startsWith(nvmRoot + '/'))
+    const nvmBins = dirs.filter(
+      (dir) => dir.startsWith(nvmRoot + sep) || dir.startsWith(nvmRoot + '/'),
+    )
     expect(nvmBins).toEqual([
       join(nvmRoot, 'v20.11.1', 'bin'),
       join(nvmRoot, 'v18.20.4', 'bin'),
