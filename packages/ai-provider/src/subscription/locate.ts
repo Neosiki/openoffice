@@ -506,11 +506,6 @@ async function programInDir(
   return programFromFile(context, candidate, source)
 }
 
-/**
- * Finder/Dock-launched Electron inherits a minimal PATH, so the directories
- * npm, Homebrew, version managers and the Claude installer (`~/.local/bin`)
- * install into are probed explicitly.
- */
 /** nvm installs under `~/.nvm/versions/node/vX.Y.Z`. Prefer higher X.Y.Z first. */
 function compareNvmVersionDirsNewestFirst(a: string, b: string): number {
   const parts = (name: string): number[] => {
@@ -526,6 +521,11 @@ function compareNvmVersionDirsNewestFirst(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+/**
+ * Finder/Dock-launched Electron inherits a minimal PATH, so the directories
+ * npm, Homebrew, version managers and the Claude installer (`~/.local/bin`)
+ * install into are probed explicitly.
+ */
 export async function commonUnixBinDirs(home: string): Promise<string[]> {
   const dirs = ['/opt/homebrew/bin', '/usr/local/bin']
   if (home) {
