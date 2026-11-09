@@ -25,7 +25,26 @@ describe('docxToText image alternative text', () => {
     const drawing =
       '<w:p><w:r><w:drawing><wp:inline><wp:docPr id="1" name="Picture 1" descr="Revenue chart 2026"/></wp:inline></w:drawing></w:r></w:p>'
     const text = await docxToText(await docx(drawing))
-    expect(text).toContain('Revenue chart 2026')
+    expect(text).toContain('[image: Revenue chart 2026]')
+  })
+
+  it('wraps the alt text so it does not run into the words around it', async () => {
+    const drawing =
+      '<w:p>' +
+      '<w:r><w:t>See figure</w:t></w:r>' +
+      '<w:r><w:drawing><wp:inline><wp:docPr id="1" name="Picture 1" descr="Revenue chart"/></wp:inline></w:drawing></w:r>' +
+      '<w:r><w:t> below.</w:t></w:r>' +
+      '</w:p>'
+    const text = await docxToText(await docx(drawing))
+    expect(text).toBe('See figure[image: Revenue chart] below.')
+  })
+
+  it('skips the alt text of a drawing marked hidden, like a vanish run', async () => {
+    const drawing =
+      '<w:p><w:r><w:drawing><wp:inline><wp:docPr id="1" name="Picture 1" hidden="1" descr="Revenue chart 2026"/></wp:inline></w:drawing></w:r></w:p>'
+    const text = await docxToText(await docx(drawing))
+    expect(text).not.toContain('Revenue chart 2026')
+    expect(text).toMatch(/image-only document: 1 image/)
   })
 
   it('marks a picture-only document that has no alt text, like picture-only slides', async () => {

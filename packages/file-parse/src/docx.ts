@@ -313,11 +313,13 @@ function scanBody(
         }
         break
       case 'wp:docPr':
-        if (opening && !runHidden) {
+        // hidden="1"/"true" is the drawing's own flag, same intent as a run's w:vanish
+        if (opening && !runHidden && !/(?:^|\s)hidden="(?:1|true)"/.test(attrs!)) {
           const descr = /(?:^|\s)descr="([^"]*)"/.exec(attrs!)?.[1]
           const title = /(?:^|\s)title="([^"]*)"/.exec(attrs!)?.[1]
           const alt = decodeEntities(descr || title || '')
-          if (alt) appendText(alt)
+          // bracketed so it never runs into the words around it ("See figure[image: …]below.")
+          if (alt) appendText(`[image: ${alt}]`)
         }
         break
       case 'w:drawing':
