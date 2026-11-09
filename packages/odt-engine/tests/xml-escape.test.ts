@@ -6,6 +6,7 @@ describe('escapeXmlText / escapeXmlAttr', () => {
     const input = 'Report Q1\u0001Draft & <tag>'
     expect(escapeXmlText(input)).toBe('Report Q1Draft &amp; &lt;tag&gt;')
     expect(escapeXmlAttr('a\u0001"b')).toBe('a&quot;b')
+    // eslint-disable-next-line no-control-regex -- asserting the controls are gone IS the check
     expect(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(escapeXmlText(input))).toBe(false)
   })
 
