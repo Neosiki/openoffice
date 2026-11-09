@@ -239,12 +239,19 @@ describe('project folder creation', () => {
 })
 
 describe('Windows reserved device names', () => {
-  it('isPlainSegment rejects CON/PRN/… including CON.docx stems', () => {
+  it('isPlainSegment rejects CON/PRN/… including CON.docx stems on win32 only', () => {
     for (const name of ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'LPT9', 'CON.docx', 'prn.txt']) {
-      expect(isPlainSegment(name)).toBe(false)
+      expect(isPlainSegment(name, 'win32')).toBe(false)
     }
-    expect(isPlainSegment('report.docx')).toBe(true)
-    expect(isPlainSegment('my CON file.docx')).toBe(true)
+    expect(isPlainSegment('report.docx', 'win32')).toBe(true)
+    expect(isPlainSegment('my CON file.docx', 'win32')).toBe(true)
+  })
+
+  it('isPlainSegment allows reserved-looking names on macOS and Linux', () => {
+    for (const name of ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'LPT9', 'CON.docx', 'prn.txt']) {
+      expect(isPlainSegment(name, 'darwin')).toBe(true)
+      expect(isPlainSegment(name, 'linux')).toBe(true)
+    }
   })
 
   it('writeNewDocument refuses a reserved final segment on win32', async () => {
@@ -254,5 +261,12 @@ describe('Windows reserved device names', () => {
       reason: 'bad-path',
     })
     expect(existsSync(target)).toBe(false)
+  })
+
+  it('writeNewDocument allows a reserved-looking name on darwin/linux', async () => {
+    const macGuard = new ProjectWriteGuard('darwin')
+    const target = join(root, 'CON.docx')
+    await macGuard.writeNewDocument(root, target, Buffer.from('x'))
+    expect(existsSync(target)).toBe(true)
   })
 })
