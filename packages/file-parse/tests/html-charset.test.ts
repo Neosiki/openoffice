@@ -67,4 +67,61 @@ describe('parseFileToText HTML charset', () => {
     expect(text).toContain('iso-2022-kr')
     expect(text).toContain('AB')
   })
+
+  it('never honors "x-user-defined", which would scatter bytes into the PUA', () => {
+    // real EUC-KR bytes, invalid as UTF-8, so the decoder falls through to
+    // the declared label; x-user-defined would map every high byte to a
+    // Private Use Area code point instead of a readable character
+    const korean = Buffer.from([0xc7, 0xd1, 0xb1, 0xdb]) // "한글" in EUC-KR
+    const html = Buffer.concat([
+      Buffer.from('<html><head><meta charset="x-user-defined"></head><body>', 'ascii'),
+      korean,
+      Buffer.from('</body></html>', 'ascii'),
+    ])
+    const text = decodeHtmlBytes(html)
+    // skipping the label falls through to windows-1252, which never produces
+    // a PUA code point (U+F780-U+F7FF, x-user-defined's range for 0x80-0xFF)
+    expect(text).not.toMatch(/[-]/)
+  })
+
+  it('prefers whichever declaration form comes first in the document, not meta-charset by default', async () => {
+    const korean = '한글 본문'
+    // http-equiv declares euc-kr and comes first; a later meta charset
+    // declares utf-8. The page's actual bytes are EUC-KR, so document order
+    // (not type-based priority) must pick the http-equiv declaration.
+    const eucKrBody = Buffer.from([0xc7, 0xd1, 0xb1, 0xdb, 0x20, 0xba, 0xbb, 0xb9, 0xae])
+    const html = Buffer.concat([
+      Buffer.from(
+        '<!doctype html><html><head>' +
+          '<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">' +
+          '<meta charset="utf-8">' +
+          '</head><body><p>',
+        'ascii',
+      ),
+      eucKrBody,
+      Buffer.from('</p></body></html>', 'ascii'),
+    ])
+    const result = await readHtml(html)
+    expect(result.ok).toBe(true)
+    expect(result.text).toContain(korean)
+  })
+
+  it('prefers a meta-charset that comes first over a later http-equiv declaration', async () => {
+    const korean = '한글 본문'
+    const eucKrBody = Buffer.from([0xc7, 0xd1, 0xb1, 0xdb, 0x20, 0xba, 0xbb, 0xb9, 0xae])
+    const html = Buffer.concat([
+      Buffer.from(
+        '<!doctype html><html><head>' +
+          '<meta charset="euc-kr">' +
+          '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
+          '</head><body><p>',
+        'ascii',
+      ),
+      eucKrBody,
+      Buffer.from('</p></body></html>', 'ascii'),
+    ])
+    const result = await readHtml(html)
+    expect(result.ok).toBe(true)
+    expect(result.text).toContain(korean)
+  })
 })
